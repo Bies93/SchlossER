@@ -51,6 +51,9 @@ canvas{touch-action:none;outline:none}
 .shortcuts{font-size:12px}
 kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;padding:1px 4px}
 #drag-hint{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right));background:#141d1bf5;border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--ink);font-size:12px;pointer-events:none}
+#portal-action{position:absolute;z-index:2;left:50%;bottom:calc(clamp(74px,12%,130px) + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;min-height:40px;max-width:calc(100% - 24px);width:max-content;padding:7px 12px;background:#151e1cef;border-color:#7c7a64;color:var(--ink);box-shadow:0 8px 28px #0006}
+#portal-action kbd{color:var(--accent);border-color:#a39577}
+#portal-action:disabled{cursor:default}#portal-action:disabled kbd{display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
 #stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
 dialog{max-width:min(460px,calc(100% - 24px));max-height:calc(100% - 24px);border:1px solid var(--line);border-radius:8px;padding:22px;background:var(--panel);color:var(--ink);box-shadow:0 16px 44px #0008}
@@ -58,6 +61,7 @@ dialog::backdrop{background:#080e0cd0}
 dialog h2{font-size:29px}
 dialog form{margin-top:16px}
 @media(pointer:coarse){.desktop-copy{display:none}.touch-copy{display:block}}
+body[data-input=touch] #portal-action kbd{display:none}
 @media(max-width:560px){.brand span{display:none}.tools{gap:4px}.tool{padding-inline:8px}.tool.icon{padding:0}}
 @media(max-height:420px){.panel{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px}.panel h1,.panel h2{font-size:24px}.panel p:not(.eyebrow){margin:5px 0}.actions{margin-top:8px}}
 </style>
@@ -101,8 +105,8 @@ THE SOFTWARE.
     <p class="eyebrow">Erlangen zu Fuß</p>
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
     <h2 class="paused-copy">Rundgang pausiert</h2>
-    <p class="ready-copy">Vom Schlossplatz durch den Garten, in deinem Tempo.</p>
-    <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen<br>Maus oder Pfeile zum Umsehen · <kbd>Esc</kbd> Pause</p>
+    <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
+    <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen<br><kbd>E</kbd> Tür bedienen · Maus oder Pfeile zum Umsehen · <kbd>Esc</kbd> Pause</p>
     <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Den Stick weiter nach außen ziehen zum Rennen.</p>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
@@ -121,16 +125,18 @@ THE SOFTWARE.
     <button class="primary" type="button" onclick="location.reload()">Erneut versuchen</button>
   </section>
   <div id="drag-hint">Zum Umsehen ziehen oder Pfeiltasten nutzen</div>
+  <button id="portal-action" type="button" hidden><kbd aria-hidden="true">E</kbd><span id="portal-text">Tür öffnen</span></button>
   <div id="stick" aria-hidden="true"><span></span></div>
 </main>
 <dialog id="about" aria-labelledby="help-title">
   <h2 id="help-title">So erkundest du das Schloss</h2>
   <p><strong>Maus &amp; Tastatur:</strong> Gehe mit WASD. Halte Umschalt zum Rennen. Bewege die Maus zum Umsehen. Ohne Mausfang: Ziehe im Bild oder nutze die Pfeiltasten. Mit Escape pausierst du.</p>
   <p><strong>Touch:</strong> Ziehe links zum Gehen und rechts zum Umsehen. Ziehe den Stick über den Rand zum Rennen; lass links los zum Anhalten. „Pause“ öffnet das Menü.</p>
+  <p><strong>Schlosstüren:</strong> Geh zum mittleren Portal am Platz oder im Garten und drücke <kbd>E</kbd> oder tippe auf den eingeblendeten Knopf. Beide Türen führen in dieselbe Halle. Der Innenraum ist frei gestaltet, kein Nachbau des heutigen Grundrisses.</p>
   <p><strong>Impulsgeräte:</strong> Am Desktop wechselst du mit dem Mausrad oder 1–3. Mit 0 blendest du das Gerät aus. Linksklick sendet einen Lichtimpuls, Rechtsklick halten richtet das Visier aus. Nur die kleinen Marken am Gassenrand reagieren.</p>
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","light":"assets/tageslicht.hdr?v=e3f27189b1e8","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=fc9f2d351122"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","light":"assets/tageslicht.hdr?v=e3f27189b1e8","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=669776201d35"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@ import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
 
 // A stylized museum-game rig, not a model of a real weapon. Its short visual
 // pulses affect only the authored abstract markers, never the world meshes.
-export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh){
+export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xf5ede1,0x788994,2.1),key=new T.DirectionalLight(0xf7dcac,1.65);
   key.position.set(-1,.9,.6);stage.add(h,key);
@@ -73,7 +73,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   pending=matchMedia('(pointer:coarse)').matches?-1:0;display(pending);
   function pulse(){
-    if(selected<0||swap)return;
+    if(selected<0||swap||!equipmentAllowed())return;
     const age=performance.now();if(age-pressed<130)return;
     pressed=age;kick=.035+(selected*.009);
     camera.getWorldPosition(from);camera.getWorldDirection(dir);camera.getWorldQuaternion(headQ);
@@ -100,7 +100,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   const relevant=e=>isActive()&&(document.pointerLockElement===canvas||e.target===canvas);
   window.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='touch'||!relevant(e))return;
+    if(e.pointerType==='touch'||!relevant(e)||!equipmentAllowed())return;
     if(e.button===2&&selected>=0){e.preventDefault();aiming=true;refresh()}
     else if(e.button===0){pulse()}
   });
@@ -108,11 +108,11 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   window.addEventListener('pointercancel',()=>{aiming=false});
   canvas.addEventListener('contextmenu',e=>{if(isActive())e.preventDefault()});
   window.addEventListener('keydown',e=>{
-    if(!isActive()||e.ctrlKey||e.altKey||e.metaKey)return;
+    if(!isActive()||e.ctrlKey||e.altKey||e.metaKey||!equipmentAllowed())return;
     if(/^Digit[0123]$/.test(e.code)&&!e.repeat){e.preventDefault();select(Number(e.code.slice(-1))-1)}
   });
   window.addEventListener('wheel',e=>{
-    if(e.ctrlKey||!relevant(e)||!e.deltaY)return;
+    if(e.ctrlKey||!relevant(e)||!e.deltaY||!equipmentAllowed())return;
     e.preventDefault();
     const now=performance.now(),raw=e.deltaY*(e.deltaMode===1?17:e.deltaMode===2?120:1);
     if(now-wheelAt>160||Math.sign(wheel)!==Math.sign(raw))wheel=0;
@@ -140,6 +140,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       if(age>=swap.down+swap.up){display(pending);swap=null}
       else holster=age<swap.down?smooth(age/swap.down):1-smooth((age-swap.down)/swap.up);
     }
+    const permitted=equipmentAllowed();
+    if(!permitted){aiming=false;flight=null;orb.visible=ribbon.visible=false}
     const oldAds=ads;ads=relax(ads,aiming&&!swap&&selected>=0?1:0,17,dt);
     const oldKick=kick;kick*=Math.exp(-dt*17);
     const n=style[Math.max(0,selected)],sway=Math.sin(step)*moving*(1-ads*.93),
@@ -190,7 +192,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     return delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||oldKick>.0001||effect||transition;
   }
   function draw(renderer){
-    if(!isActive()||selected<0)return;
+    if(!isActive()||selected<0||!equipmentAllowed())return;
     eye.aspect=camera.aspect;const fov=(camera.aspect<.8?60:54)-ads*4;
     if(eye.fov!==fov||eye.aspect!==eye.userData.aspect){eye.fov=fov;eye.userData.aspect=eye.aspect;eye.updateProjectionMatrix()}
     const reset=renderer.autoClear;renderer.autoClear=false;renderer.clearDepth();

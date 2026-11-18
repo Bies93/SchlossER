@@ -1,3 +1,5 @@
+import {HALL} from './palace-openings.js';
+
 // Existing model coordinates: metres, Y up, positive Z toward Schlossplatz.
 export const SPAWN = {x: 8, z: 43, yaw: .19, pitch: .12};
 export const BENCH_ROW = {x: 36, depths: [-36,-57,-93,-122,-160,-193]};
@@ -88,9 +90,11 @@ export function distanceToPerimeter(x,z) {
 }
 
 export function addFixedColliders(world) {
-  world.box(-33.9, -10.35, 33.9, 10.35); // main palace volume
-  world.box(-7.35, 10, 7.35, 13.1);      // west portal/risalit
-  world.box(-14.5, -13, 14.5, -10);      // projecting garden facade
+  // The center is reserved for the passage. Moving door thresholds are
+  // installed with the same coordinates as their facade meshes.
+  for(const [width,z0,z1] of [[33.9,-10.35,10.35],[7.35,10,13.02],[14.5,-12.53,-10]]){
+    world.box(-width,z0,-HALL.half,z1);world.box(HALL.half,z0,width,z1);
+  }
   world.box(-1.8, 29.35, 1.8, 32.65);   // Friedrich monument granite base
 
   // Rounded basin: a 9.82 m radius around a 9.5 m central span.

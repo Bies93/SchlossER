@@ -8,7 +8,10 @@ import {makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
 import {sculptureMaterials} from './surface-detail.js';
-import {addMonumentFooting,addPalaceDetail} from './palace-detail.js';
+import {addMonumentFooting} from './palace-detail.js';
+import {cutPalaceOpenings} from './palace-openings.js';
+import {addPortalFacade,palaceMaterials} from './palace-facade.js';
+import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
@@ -42,7 +45,8 @@ async function start(){
  if(key==='GRAVEL')importedGravel.push(o);
  if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;return;}
  o.receiveShadow=true;o.castShadow=key!=='GLASS';});s.add(model);
- addPalaceDetail(T,model,finish);
+ cutPalaceOpenings(T,model);
+ const stonework=palaceMaterials(T,finish),leaves=addPortalFacade(T,model,stonework);
  if(sculptures){
    sculptureMaterials(sculptures,finish);
    sculptures.traverse(o=>{if(o.isMesh){o.castShadow=!/Fountain_water|Water_jets|Aerated_spray/i.test(o.name);o.receiveShadow=true}});
@@ -52,6 +56,7 @@ async function start(){
  const fountain=makeFountain(T,s,sculptures);
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
+ const hall=makeHall(T,model,stonework,world,leaves);
  const perimeter=addPerimeter(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
@@ -59,6 +64,8 @@ async function start(){
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z)=>{
+   const entry=hallFloor(x,z);
+   if(entry!==null)return entry;
    const terrain=garden.heightAt(x,z);
    if(terrain!==null)return terrain;
    ray.ray.origin.set(x,2,z);
@@ -76,15 +83,42 @@ async function start(){
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
- let frame=0, dirty=true;
+ let frame=0, dirty=true,lastDoorTime=null,activePortal='';
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
- const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh);
+ const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,()=>hall.allowGear(player.body.position));
+ const portalAction=$('portal-action'),portalText=$('portal-text');
+ function doorPrompt(){
+   const target=active()?hall.targetFor(player,c):null;
+   const usable=target&&hall.usable(target,player);
+   const uid=target?target.id+':'+target.target+':'+usable:'';
+   if(uid===activePortal)return;
+   activePortal=uid;portalAction.hidden=!target;
+   if(target){
+     portalAction.disabled=!usable;
+     portalText.textContent=!usable?'Tür offen':(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
+   }
+ }
+ function handleDoor(){
+   if(!active()||!hall.commit(player,c))return;
+   doorPrompt();refresh();
+ }
+ window.addEventListener('keydown',event=>{
+   if(!active()||event.code!=='KeyE'||event.repeat||event.ctrlKey||event.altKey||event.metaKey)return;
+   if(event.target.closest?.('button:not(#portal-action), input, textarea, select, a'))return;
+   event.preventDefault();handleDoor();
+ });
+ portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
  function draw(){const p=player.body.position;lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
  function render(time){
    frame=0;
    if(active()){
      if(input.tick(time))dirty=true;
+     const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
+     const state=hall.update(dt,player.body.position);
+     if(state.changed)dirty=true;
+     if(state.shadow)r.shadowMap.needsUpdate=true;
+     doorPrompt();
      if(fountain.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
    }
@@ -94,7 +128,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   input.clear();fountain.stop?.();viewmodel.stop();
+   input.clear();fountain.stop?.();viewmodel.stop();lastDoorTime=null;doorPrompt();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
@@ -120,6 +154,7 @@ async function start(){
  function selectLight(id,remember=false){
    if(!lighting.applyLighting(id))return false;
    fountain.setPreset(id);
+   hall.setPreset(id);hall.update(0,player.body.position);
    viewmodel.preset(id);
    for(const b of choices)b.setAttribute('aria-pressed',String(b.dataset.light===id));
    if(remember){try{localStorage.setItem('schlosser.light',id)}catch{}}

@@ -13,7 +13,7 @@ export function collisionWorld(bounds, radius, contains) {
       }
     }
   }
-  const polygon = vertices => {
+  const polygon = (vertices,enabled=()=>true) => {
     let v = vertices;
     const area = v.reduce((sum, a, i) => {
       const b = v[(i + 1) % v.length];
@@ -27,6 +27,7 @@ export function collisionWorld(bounds, radius, contains) {
     }).filter(e => e.len2 > 0);
     const xs = v.map(p => p[0]), zs = v.map(p => p[1]);
     insert(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), p => {
+      if(!enabled())return false;
       let side = -Infinity, nearest, distance2 = Infinity, offX, offZ;
       for (const e of edges) {
         const dx = p.x - e.x, dz = p.z - e.z, d = dx * e.nx + dz * e.nz;
@@ -52,7 +53,7 @@ export function collisionWorld(bounds, radius, contains) {
   }
   return {
     polygon,
-    box: (x0, z0, x1, z1) => polygon([[x0,z0],[x1,z0],[x1,z1],[x0,z1]]),
+    box: (x0, z0, x1, z1,enabled) => polygon([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],enabled),
     circle(x, z, r) {
       insert(x-r, z-r, x+r, z+r, p => {
         const dx = p.x - x, dz = p.z - z, limit = r + radius, d2 = dx*dx + dz*dz;

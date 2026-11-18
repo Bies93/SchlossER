@@ -22,9 +22,9 @@ export function surfaceLibrary(THREE, maps) {
   const turf = grain(3, 20), gravel = grain(73, 38);
   // Material tints are sRGB. Texture sizes below are metric world-space repeats.
   const finishes = {
-    SANDSTONE: ['sandstone_facade', 3.2, '#e4cfad', .85, .26],
-    SANDSTONE_CUT: ['sandstone_trim', 1.8, '#f2e1c3', .79, .23],
-    SANDSTONE_DARK: ['sandstone_facade', 2.5, '#bc9d71', .88, .28],
+    SANDSTONE: ['sandstone_facade', 3.2, '#e1d8ca', .85, .26],
+    SANDSTONE_CUT: ['sandstone_trim', 1.8, '#e4dcd1', .79, .23],
+    SANDSTONE_DARK: ['sandstone_facade', 2.5, '#b8ab99', .88, .28],
     STATUE: ['fountain_stone', 1.5, '#d4c7ab', .82, .22],
     ROOF_DARK: ['roof_slate', 4.2, '#8c959c', .70, .34],
     ROOF_UNDERLAY: [null, 1, '#343d45', .93],
@@ -65,6 +65,30 @@ export function surfaceLibrary(THREE, maps) {
     if (key === 'GRASS') mat.map = turf;
     if (key === 'GRAVEL') mat.map = gravel;
     if (key === 'METAL' || key === 'COPPER_PATINA' || key === 'ZINC') mat.metalness = .48;
+    if (key.startsWith('SANDSTONE')) {
+      mat.onBeforeCompile=shader=>{
+        shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 erlPalaceStone;')
+          .replace('#include <begin_vertex>','#include <begin_vertex>\nerlPalaceStone=(modelMatrix*vec4(position,1.)).xyz;');
+        shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
+          varying vec3 erlPalaceStone;
+          float courseGrain(vec2 p){return fract(sin(dot(p,vec2(39.11,21.77)))*41358.662);}
+        `);
+        shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+          // Reference photos show muted buff and rose-gray stone. Preserve
+          // the mapped courses and their value contrast, without gold tint.
+          float baseStone=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
+          diffuseColor.rgb=mix(baseStone*vec3(1.065,1.0,.935),diffuseColor.rgb,.49);
+          float afterRain=.5+.25*sin(erlPalaceStone.x*.57+erlPalaceStone.z*.41)
+              +.25*sin(erlPalaceStone.x*1.78-erlPalaceStone.z*.32+erlPalaceStone.y*.12);
+          float eaves=smoothstep(15.2,16.45,erlPalaceStone.y)*(1.-smoothstep(17.3,18.2,erlPalaceStone.y));
+          float foot=1.-smoothstep(.17,.71,erlPalaceStone.y);
+          float bed=courseGrain(floor(vec2(erlPalaceStone.x+erlPalaceStone.z*1.01,erlPalaceStone.y)*vec2(.62,2.72)));
+          diffuseColor.rgb*= mix(vec3(.95,.93,.92),vec3(1.045,1.037,1.023),bed)
+            *(1.-(eaves*.18+foot*.079)*(.58+afterRain*.42));
+        `);
+      };
+      mat.customProgramCacheKey=()=> 'erl-schloss-sandstein-neutrales-tageslicht-v2';
+    }
     // Reflections follow the selected scene environment. A fixed bright
     // horizon here would put daylight back into the windows at night.
     if (key === 'GLASS') {
