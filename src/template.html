@@ -1,9 +1,102 @@
 <!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f6f4eb"><title>Erlangen · Schloss &amp; Schlossgarten</title>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141b1a">
+<title>Erlangen · Schloss &amp; Schlossgarten</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{font:14px "Segoe UI",Arial,sans-serif;color:#263a31;background:#e8e6d9}header,footer,.sheet,dialog{background:#faf9f1}header{height:67px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(16px,3vw,48px);border-bottom:1px solid #b6bbac}.brand,.tools,nav,.series{display:flex;align-items:center}.brand{gap:13px}.brand svg{width:37px;color:#486148}.brand b{font:500 25px Georgia,serif;letter-spacing:-1px}.brand span{font-size:11px;letter-spacing:.17em;border-left:1px solid #b9bdac;padding-left:16px;color:#596755}.tools{gap:8px}button{cursor:pointer;font:inherit;color:inherit;background:transparent;border:0}button:hover{background:#e6ebdf}button:focus-visible{outline:3px solid #96691c;outline-offset:-3px}.tool{height:36px;border:1px solid #b9c2b2;border-radius:30px;padding:0 14px;font-size:12px}.tool svg{width:17px;height:17px;vertical-align:middle}.tool.icon{padding:0;width:36px}main{position:absolute;inset:67px 0 67px;background-position:center;background-size:cover}canvas{display:block;width:100%;height:100%;touch-action:none}#canvas{position:absolute;inset:0}.sheet{position:absolute;left:clamp(16px,3vw,48px);bottom:22px;border-left:3px solid #708464;padding:13px 21px 15px;pointer-events:none;box-shadow:0 4px 26px #24352422}.series{gap:9px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#596959}.series i{width:20px;height:1px;background:#83917c}h1{margin:5px 0 0;font:normal clamp(24px,2.6vw,40px)/1.02 Georgia,serif;letter-spacing:-.04em}#load{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);background:#faf9f1ed;padding:12px 22px;border-radius:24px;text-align:center}footer{position:absolute;bottom:0;width:100%;height:67px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(10px,3vw,48px);border-top:1px solid #afb9ac;gap:8px}nav{gap:4px}nav button{border-radius:22px;padding:10px 13px;font-size:13px;white-space:nowrap}nav button[aria-pressed=true]{background:#354e40;color:#fff}nav small{font:10px monospace;margin-right:6px;opacity:.72}.hint{font-size:12px;color:#596755}dialog{max-width:min(450px,90vw);border:1px solid #a4b19d;border-radius:6px;padding:28px;box-shadow:0 10px 70px #0003}dialog::backdrop{background:#1d2b2577}dialog h2{font:28px Georgia;margin:0 0 12px}dialog p{line-height:1.6}dialog button{background:#354e40;color:white;border-radius:20px;padding:9px 20px}dialog button:hover{color:#24392f}.sheet[hidden],#load[hidden]{display:none}@media(max-width:900px){.hint{display:none}}@media(max-width:620px){header{height:56px}.brand span{display:none}.brand b{font-size:22px}.brand svg{width:28px}main{inset:56px 0 57px}footer{height:57px;padding:0 4px;overflow:auto}nav{margin:auto;gap:0}nav button{font-size:11px;padding:10px 7px}nav small{display:none}.sheet{bottom:13px;padding:10px 14px}.tool{padding:0 9px}}
-</style></head><body><header><div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.55" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span>SCHLOSS &amp; GARTEN</span></div><div class="tools"><button class="tool" id="light" title="Lichtstimmung wechseln">☀ Tageslicht</button><button class="tool icon" id="full" title="Vollbild" aria-label="Vollbild">⛶</button><button class="tool icon" id="info" aria-label="Information und Bedienung" title="Information">ⓘ</button></div></header>
-<main><div id="canvas"></div><div id="load" role="status">3D-Ansicht wird geladen …</div><section class="sheet"><div class="series"><span id="index">01 / 05</span><i></i><span id="meta">Westansicht</span></div><h1 id="caption">Schlossplatz</h1></section></main>
-<footer><nav aria-label="Standorte"></nav><div class="hint">Ziehen zum Drehen · Scrollen zum Zoomen</div></footer>
-<dialog id="about"><h2>Das Erlanger Schloss</h2><p>Erkunde den rund 65 Meter breiten Außenbau vom Schlossplatz bis zum Hugenottenbrunnen. Der Garten zeigt eine sommerliche Annäherung mit Blumenbeeten und Baumalleen.</p><p>Ziehe mit der Maus, um die Ansicht zu drehen. Das Mausrad zoomt, die rechte Maustaste verschiebt den Blickpunkt. Auf dem Touchscreen kannst du mit zwei Fingern zoomen und verschieben. Die Tasten 1 bis 5 wählen einen Standort.</p><p>Modellgrundlage: Erlanger Schloss, lokale Blender-Rekonstruktionen. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0. Darstellung mit Three.js.</p><button autofocus>Schließen</button></dialog>
-<script type="application/json" id="assets">__ASSETS__</script><script>__BUNDLE__</script></body></html>
+:root{color-scheme:dark;--bg:#101615;--panel:#16201e;--ink:#f1eee6;--muted:#bac4bb;--accent:#e7cf9e;--line:#3d4c46}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
+body{height:100vh;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);font:14px/1.45 system-ui,"Segoe UI",sans-serif;color:var(--ink)}
+[hidden]{display:none!important}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;padding:calc(env(safe-area-inset-top) + 3px) max(12px,env(safe-area-inset-right)) 3px max(12px,env(safe-area-inset-left));background:#141b1a;border-bottom:1px solid var(--line)}
+.brand,.tools,.actions{display:flex;align-items:center;gap:10px}
+.brand svg{width:29px;flex:none;color:var(--accent)}
+.brand b{font:500 21px/1 Georgia,serif}
+.brand span{padding-left:10px;border-left:1px solid var(--line);color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.tools{gap:5px}
+button,a{touch-action:manipulation}
+button{cursor:pointer;font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:6px;min-height:40px;padding:0 13px}
+button:hover{background:#293631;border-color:#708278}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.tool{min-width:40px;font-size:13px;white-space:nowrap}
+.tool svg{display:block;width:17px;height:17px}
+.tool.icon{display:grid;place-items:center;padding:0}
+#pause,#overlay,#error,#loading,#leave,#drag-hint,#stick,.paused-copy,.touch-copy{display:none}
+body[data-state=playing] #pause{display:inline-flex;align-items:center}
+body[data-state=playing] #info{display:none}
+body[data-state=loading] #loading,body[data-state=error] #error,
+body[data-state=ready] #overlay,body[data-state=paused] #overlay,
+body[data-state=paused] #leave,body[data-state=paused] .paused-copy{display:block}
+body[data-state=paused] .ready-copy{display:none}
+body[data-state=playing][data-input=drag] #drag-hint{display:block}
+body[data-state=playing][data-input=touch] #stick{display:grid;place-items:center}
+main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
+#canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+canvas{touch-action:none;outline:none}
+.panel{position:absolute;left:max(clamp(12px,4vw,60px),env(safe-area-inset-left));bottom:calc(clamp(12px,5vh,58px) + env(safe-area-inset-bottom));width:min(440px,calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))));
+ max-height:calc(100% - 18px - env(safe-area-inset-bottom));overflow:auto;background:#141d1bf5;border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:8px;padding:clamp(15px,2.6vw,26px);box-shadow:0 16px 44px #0006}
+.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+.panel h1,.panel h2,dialog h2{margin:0;font:normal clamp(26px,4vw,40px)/1.05 Georgia,serif;letter-spacing:-.035em}
+.panel p:not(.eyebrow),dialog p{margin:10px 0;color:var(--muted)}
+.actions{flex-wrap:wrap;margin-top:15px}
+.primary{background:var(--accent);color:#171c17;border-color:transparent;font-weight:650}
+.primary:hover{background:#f3deb6}
+.shortcuts{font-size:12px}
+kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;padding:1px 4px}
+#drag-hint{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right));background:#141d1bf5;border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--ink);font-size:12px;pointer-events:none}
+#stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
+#stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
+dialog{max-width:min(460px,calc(100% - 24px));max-height:calc(100% - 24px);border:1px solid var(--line);border-radius:8px;padding:22px;background:var(--panel);color:var(--ink);box-shadow:0 16px 44px #0008}
+dialog::backdrop{background:#080e0cd0}
+dialog h2{font-size:29px}
+dialog form{margin-top:16px}
+@media(pointer:coarse){.desktop-copy{display:none}.touch-copy{display:block}}
+@media(max-width:560px){.brand span{display:none}.tools{gap:4px}.tool{padding-inline:8px}.tool.icon{padding:0}}
+@media(max-height:420px){.panel{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px}.panel h1,.panel h2{font-size:24px}.panel p:not(.eyebrow){margin:5px 0}.actions{margin-top:8px}}
+</style>
+</head>
+<body data-state="loading">
+<header>
+  <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span>Schloss &amp; Garten</span></div>
+  <div class="tools">
+    <button class="tool" id="pause" type="button" title="Pause (Escape)">Pause</button>
+    <button class="tool" id="info" type="button" aria-haspopup="dialog">Hilfe</button>
+  </div>
+</header>
+<main aria-label="Erlanger Schloss und Schlossgarten">
+  <div id="canvas"></div>
+  <div class="panel" id="loading" role="status"><p class="eyebrow">Erlangen zu Fuß</p><p>Der Rundgang wird geladen …</p></div>
+  <section class="panel" id="overlay" aria-label="Rundgang">
+    <p class="eyebrow">Erlangen zu Fuß</p>
+    <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
+    <h2 class="paused-copy">Rundgang pausiert</h2>
+    <p class="ready-copy">Vom Schlossplatz durch den Garten, in deinem Tempo.</p>
+    <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · Maus oder Pfeile umsehen · <kbd>Esc</kbd> Pause</p>
+    <p class="touch-copy shortcuts">Links gehen, rechts zum Umsehen ziehen.</p>
+    <div class="actions">
+      <button type="button" class="primary" id="enter"><span class="ready-copy">Rundgang starten</span><span class="paused-copy">Weitergehen</span></button>
+      <button type="button" id="light" title="Lichtstimmung wechseln">Tageslicht</button>
+      <button type="button" class="tool icon" id="full" aria-label="Vollbild umschalten" title="Vollbild umschalten" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg></button>
+    </div>
+  </section>
+  <section class="panel" id="error" aria-labelledby="error-title">
+    <h2 id="error-title">Rundgang nicht verfügbar</h2>
+    <p id="error-text" role="alert">Die 3D-Szene konnte nicht geladen werden. Prüfe, ob alle Projektdateien erreichbar sind, und versuche es erneut.</p>
+    <button class="primary" type="button" onclick="location.reload()">Erneut versuchen</button>
+  </section>
+  <div id="drag-hint">Zum Umsehen ziehen oder Pfeiltasten nutzen</div>
+  <div id="stick" aria-hidden="true"><span></span></div>
+</main>
+<dialog id="about" aria-labelledby="help-title">
+  <h2 id="help-title">So erkundest du das Schloss</h2>
+  <p><strong>Maus &amp; Tastatur:</strong> Gehe mit WASD. Bewege die Maus zum Umsehen. Ohne Mausfang: Ziehe im Bild oder nutze die Pfeiltasten. Mit Escape pausierst du.</p>
+  <p><strong>Touch:</strong> Ziehe links zum Gehen und rechts zum Umsehen. Zum Anhalten lass links los. „Pause“ öffnet das Menü.</p>
+  <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
+  <form method="dialog"><button autofocus class="primary">Schließen</button></form>
+</dialog>
+<script type="application/json" id="assets">__ASSETS__</script><script>__BUNDLE__</script>
+</body>
+</html>

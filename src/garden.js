@@ -1,6 +1,10 @@
+import {BENCH_ROW, PARK_FLOOR, distanceToPerimeter, insidePerimeter} from './world-layout.js';
+import {planGeometry} from './perimeter.js';
+
 // Garden on the east side of the palace. Ground plan in metres, z points west.
-export function addGarden(T, scene) {
+export function addGarden(T, scene, world) {
   const group = new T.Group(); group.name = 'Schlossgarten'; scene.add(group);
+  const floors = [];
   let seed = 7333;
   const rand = () => ((seed = (Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   const range = (a,b) => a+(b-a)*rand(), tau = Math.PI*2;
@@ -34,10 +38,11 @@ export function addGarden(T, scene) {
     });
   }
   function bedsGround(){
-    const tex=grassGrain();tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(29,49);
+    const tex=grassGrain();tex.wrapS=tex.wrapT=T.RepeatWrapping;
     const m=mat(0xb9bb86);m.map=tex;
-    const grass=new T.Mesh(new T.PlaneGeometry(150,243),m);
-    grass.rotation.x=-Math.PI/2;grass.position.set(0,.008,-136.5);grass.receiveShadow=true;group.add(grass);
+    const grass=new T.Mesh(planGeometry(T,PARK_FLOOR,.008,5.05),m);
+    grass.receiveShadow=true;group.add(grass);
+    floors.push(grass);
   }
   bedsGround();
   const paths=[];
@@ -54,9 +59,12 @@ export function addGarden(T, scene) {
       last=[a,b];
     }
   }
-  ribbon([[0,-85.6],[0,-239]],4);
+  ribbon([[0,-85.6],[0,-239],[0,-256.7]],4);
+  ribbon([[64.4,-15.8],[65.7,-18.6],[69.5,-23],[74.65,-27.5]],2.25);
   for(const side of [-1,1]){
     const spts = a=>a.map(([x,z])=>[side*x,z]);
+    // The side passages join the square without a threshold or a second gate.
+    ribbon(spts([[38.5,0.4],[38.3,-10],[37.4,-18],[37,-25]]),3.8);
     ribbon(spts([[13,-55],[25,-62],[38,-73]]),2.5);
     ribbon(spts([[13,-39],[26,-32],[39,-24]]),2.5);
     ribbon(spts([[0,-82],[21,-75],[38,-73]]),2.3);
@@ -70,6 +78,7 @@ export function addGarden(T, scene) {
   const pg=new T.BufferGeometry();pg.setAttribute('position',new T.Float32BufferAttribute(paths,3));pg.computeVertexNormals();
   const grit=mat(0xc7b692);grit.side=T.DoubleSide;
   const lanes=new T.Mesh(pg,grit);lanes.receiveShadow=true;group.add(lanes);
+  floors.push(lanes);
   // A cutout spray is made of individual, overlapping leaves with lit tips.
   const spray=canvas(160,(ctx,s)=>{
     const dots=[];
@@ -100,10 +109,12 @@ export function addGarden(T, scene) {
   }
   function tree(x,z,h){
     if(x>18 && x<72 && z<-7 && z>-91) return;
+    if(!insidePerimeter(x,z)||distanceToPerimeter(x,z)<2.7||(z<-228&&Math.abs(x)<3.2)) return;
     const radius=h*range(.26,.34),baseH=h*range(.32,.42);
     const green=new T.Color().setHSL(range(.205,.275),range(.32,.56),range(.21,.34),T.SRGBColorSpace);
     const dx=range(-.45,.45),dz=range(-.45,.45);
     limb(x,0,z,x+dx,baseH,z+dz,h*.025);
+    world.circle(x,z,h*.025);
     stamp(shadows,x,.087,z,radius*2.9,radius*2.45,1,-Math.PI*.5,0,0,null);
     for(let k=0;k<6;k++){
       let a=k*tau/6+range(-.3,.3),r=radius*range(.48,.82);
@@ -140,8 +151,9 @@ export function addGarden(T, scene) {
   instance(herb,new T.IcosahedronGeometry(1,0),mat(0xffffff),'Blattschöpfe');
   instance(blooms,new T.IcosahedronGeometry(1,0),mat(0xffffff),'Wechselflor');
   // Benches face the lawn and give the plaza a human scale.
-  for(const side of [-1,1])for(const z of [-36,-57,-93,-122,-160,-193]){
-    const x=side*36;
+  for(const side of [-1,1])for(const z of BENCH_ROW.depths){
+    const x=side*BENCH_ROW.x;
+    world.box(Math.min(x-side*.05,x+side*.42),z-.91,Math.max(x-side*.05,x+side*.42),z+.91);
     for(let k=0;k<4;k++)stamp(lumber,x+side*k*.105,.47,z,.088,.057,1.82,0,0,0,null);
     for(let k=0;k<3;k++)stamp(lumber,x+side*(.35+k*.014),.69+k*.12,z,.056,.087,1.82,0,0,0,null);
     for(const offset of [-.68,.68]){
@@ -151,13 +163,13 @@ export function addGarden(T, scene) {
   }
   instance(lumber,new T.BoxGeometry(1,1,1),mat(0x897046),'Sitzbänke');
   instance(iron,new T.BoxGeometry(1,1,1),mat(0x40453f),'Bankgestelle');
-  orangery(T,group);
-  return group;
+  orangery(T,group,world);
+  return floors;
 }
 
 // FAU's description records a three-bay hall, two curving seven-bay wings,
 // a mansard and five-bay end faces. Dimensions here are visually approximated.
-function orangery(T,group){
+function orangery(T,group,world){
   const el=document.createElement('canvas');el.width=256;el.height=384;
   const c=el.getContext('2d');
   c.fillStyle='#d6ad72';c.fillRect(0,0,256,384);
@@ -188,6 +200,7 @@ function orangery(T,group){
     const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
     const nx=dz/len,nz=-dx/len;
     const P=(p,y,off,along=0)=>[p[0]+off*nx+along*dx/len,y,p[1]+off*nz+along*dz/len];
+    world.polygon([P(a,0,-.12),P(b,0,-.12),P(b,0,dep),P(a,0,dep)].map(([x,,z])=>[x,z]));
     // Front/window tangent, rear wall, hip transition, central roof ridge.
     face(1,P(a,0,0),P(b,0,0),P(b,h,0),P(a,h,0));
     face(0,P(b,0,dep),P(a,0,dep),P(a,h,dep),P(b,h,dep));
