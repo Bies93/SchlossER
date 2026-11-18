@@ -1,4 +1,5 @@
-import {CITY_FLOOR, PERIMETER} from './world-layout.js';
+import {CITY_FLOOR, PERIMETER, GATES} from './world-layout.js';
+import {ageMasonry, repeatSet} from './surface-detail.js';
 
 // Earcut accepts either orientation of the X/Z footprint. Explicitly face up
 // for lighting and the player's downward ray, regardless of node order.
@@ -40,17 +41,24 @@ export function addPerimeter(T,scene,world,finish) {
     cushion:tinted('GROUND',0xd2cec4),
     verge:new T.MeshStandardMaterial({color:0x767c57,vertexColors:true,roughness:1})
   };
-  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:4.7,gutter:2,cushion:3};
+  const setts=repeatSet(T,'setts',512);
+  Object.assign(materials.street,setts);
+  materials.street.color.set(0xd8d3ca);materials.street.roughness=1;materials.street.normalScale.setScalar(.69);
+  Object.assign(materials.gutter,setts);
+  materials.gutter.color.set(0xac9f8a);materials.gutter.roughness=1;materials.gutter.normalScale.setScalar(.30);
+  for(const [key,exposure] of [['stone',.54],['base',.72],['cap',.15],['joint',.43],['lintel',.28]])ageMasonry(materials[key],exposure);
+  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3};
   const bins=new Map(), white=new T.Color(0xffffff);
-  function quad(m,a,b,c,d,tint=white) {
+  function quad(m,a,b,c,d,tint=white,offsetU=0,offsetV=0) {
     if(!bins.has(m))bins.set(m,{xyz:[],uv:[],colors:[]});
     const bin=bins.get(m), scale=scales[m]??1;
     const u=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2])/scale;
     const v=Math.hypot(d[0]-a[0],d[1]-a[1],d[2]-a[2])/scale;
     const points=c===d?[a,b,c]:[a,b,c,a,c,d];
     for(const p of points){bin.xyz.push(...p);bin.colors.push(tint.r,tint.g,tint.b);}
-    bin.uv.push(0,0,u,0,u,v);
-    if(c!==d)bin.uv.push(0,0,u,v,0,v);
+    const s=offsetU/scale,t=offsetV/scale;
+    bin.uv.push(s,t,s+u,t,s+u,t+v);
+    if(c!==d)bin.uv.push(s,t,s+u,t+v,s,t+v);
   }
   function box(f,m,l,r,y0,y1,d0,d1,tint) {
     const {point:p}=f;
@@ -115,12 +123,34 @@ export function addPerimeter(T,scene,world,finish) {
     for(let j=0;j<count;j++){
       const u=l+(j+.5)*(r-l)/count;
       box(f,'iron',u-.014,u+.014,street?1.51:low,top-.02,-.015,.015);
+      if(gate&&!street){
+        const p=f.point,a=p(u-.022,top-.045,-.019),b=p(u+.022,top-.045,-.019);
+        const c=p(u+.022,top-.045,.019),d=p(u-.022,top-.045,.019),q=p(u,top+.057,0);
+        quad('iron',a,d,q,q);quad('iron',d,c,q,q);quad('iron',c,b,q,q);quad('iron',b,a,q,q);
+      }
     }
     for(const u of gate?[l+.085,(l+r)/2-.033,(l+r)/2+.033,r-.085]:[l+.05,r-.05]) {
       box(f,'iron',u-.032,u+.032,gate?.115:low,top+.025,-.040,.040);
     }
     if(gate)box(f,'iron',(l+r)/2-.13,(l+r)/2+.13,1.02,1.15,-.067,.067);
     block(f,l-.03,r+.03,-.052,.052);
+  }
+  function gatePillar(f,x,height=2.35){
+    pier(f,x,.79,height);
+    box(f,'cap',x-.44,x+.44,.36,.415,-.437,.437);
+    box(f,'cap',x-.43,x+.43,height-.125,height-.075,-.423,.423);
+  }
+  function openGate(g){
+    const f=frame(g.a,g.b), l=.24, r=f.len-.24, leaf=(r-l)*.5, p=f.point;
+    gatePillar(f,0);gatePillar(f,f.len);
+    // Wide open, with colliders on the rotated leaves rather than across the opening.
+    const hinge=(u,sign)=>{
+      const aa=p(u,0,0),bb=p(u+sign*leaf*.105,0,-leaf*.992);
+      const rotated=frame([aa[0],aa[2]],[bb[0],bb[2]]);
+      rail(rotated,0,rotated.len,true);
+    };
+    hinge(l,-1);hinge(r,1);
+    box(f,'base',.37,f.len-.37,-.052,-.004,-.86,.82);
   }
   function parkPanel(edge,f) {
     const l=0, r=f.len;
@@ -191,7 +221,8 @@ export function addPerimeter(T,scene,world,finish) {
   const houses=new Set(['house','annex','streetGate']);
   for(const e of PERIMETER){
     const f=frame(e.a,e.b), city=houses.has(e.type);
-    corner(e,city && houses.has(e.prev));
+    if(e.gate||e.prev==='parkGate')gatePillar(f,0);
+    else corner(e,city && houses.has(e.prev));
     if(e.type==='streetGate'){
       rail(f,.27,f.len-.27,true,true);
       box(f,'lintel',0,f.len,2.69,3.26,-.28,.27);
@@ -207,6 +238,7 @@ export function addPerimeter(T,scene,world,finish) {
     if(e.type==='parkGate'||e.type==='streetGate'){
       quad('street',p(.26,-.207,-.30),p(f.len-.26,-.207,-.30),
         p(f.len-.26,-.207,-10),p(.26,-.207,-10));
+      if(e.gate==='botanical')continue;
       box(f,'stucco',-1,f.len+2,-.28,3.9,-15,-10.7,new T.Color(0xa7a394));
       box(f,'base',-1,f.len+2,-.23,.52,-15.14,-10.66);
       const a=p(-1.22,3.92,-10.43),b=p(f.len+2.22,3.92,-10.43);
@@ -216,6 +248,23 @@ export function addPerimeter(T,scene,world,finish) {
       quad('stucco',d,a,ridgeL,ridgeL,new T.Color(0xa7a394));
       quad('stucco',b,c,ridgeR,ridgeR,new T.Color(0xa7a394));
     }
+  }
+  for(const gate of Object.values(GATES))openGate(gate);
+  // The interior boundary ties into the palace and the Orangerie rather than
+  // drawing another fictitious perimeter across either exterior square.
+  for(const [a,b,wallPanel] of [
+    [[33.35,-7.4],GATES.palaceNorth.a,false],
+    [GATES.palaceNorth.b,[42.95,-7.4],false],
+    [[42.95,-7.4],[42.95,-15.8],false],
+    [[42.95,-15.8],GATES.wasserturm.a,false],
+    [GATES.wasserturm.b,[49.8,-15.8],false],
+    [[57.1,-15.8],[73,-17],false],
+    [[-73,-17],GATES.palaceSouth.a,true],
+    [GATES.palaceSouth.b,[-33.35,-7.5],false]
+  ]){
+    const f=frame(a,b);
+    parkPanel({type:wallPanel?'wall':'iron',id:54},f);
+    if(f.len>6&&Math.abs(a[0])<57)pier(f,0,.62,2.03);
   }
 
   const plaza=new T.Mesh(planGeometry(T,CITY_FLOOR,-.046,6),materials.paving.clone());
@@ -230,7 +279,11 @@ export function addPerimeter(T,scene,world,finish) {
       const dx=b[0]-a[0],dz=b[1]-a[1],h=Math.hypot(dx,dz);
       return [offset0,offset1].map(d=>[x-dz*d/h,height,z+dx*d/h]);
     });
-    for(let i=1;i<section.length;i++)quad(m,section[i-1][0],section[i][0],section[i][1],section[i-1][1]);
+    let at=0;
+    for(let i=1;i<section.length;i++){
+      quad(m,section[i-1][0],section[i][0],section[i][1],section[i-1][1],white,at,offset0);
+      at+=Math.hypot(section[i][0][0]-section[i-1][0][0],section[i][0][2]-section[i-1][0][2]);
+    }
   }
   band('street',-2.55,2.55,-.026);
   for(const side of [-1,1]){
@@ -249,44 +302,5 @@ export function addPerimeter(T,scene,world,finish) {
     const mesh=new T.Mesh(geo,materials[m]);mesh.name='Einfriedung / '+m;
     mesh.castShadow=!surf;mesh.receiveShadow=true;root.add(mesh);
   }
-  addDistantCanopy(T,root);
   return [plaza];
-}
-
-function addDistantCanopy(T,root) {
-  const crowns=[], trunks=[];
-  for(const e of PERIMETER){
-    if(!['wall','iron','parkGate','streetGate'].includes(e.type))continue;
-    const f=frame(e.a,e.b);
-    const count=Math.max(1,Math.floor(f.len/7.8));
-    for(let i=0;i<count;i++){
-      const s=(e.id*71+i*17)*1.31, offset=(i+.5)*f.len/count;
-      const h=5.1+1.7*Math.sin(s);
-      trunks.push({position:f.point(offset,h*.35-.14,-8.5),height:h*.78});
-      for(let j=0;j<4;j++){
-        const a=j*2.395+s;
-        crowns.push({
-          position:f.point(offset+Math.cos(a)*2.05,h+j*.88,-8.5-Math.sin(a)*2.1),
-          scale:[3.4+Math.sin(a)*.49,3.4+j*.19,3.2+Math.cos(a)*.42],
-          angle:a
-        });
-      }
-    }
-  }
-  const trees=new T.InstancedMesh(new T.IcosahedronGeometry(1,2),
-    new T.MeshLambertMaterial({color:0xffffff}),crowns.length);
-  const leaf=[0x636f46,0x748054,0x536241,0x6b784e].map(v=>new T.Color(v));
-  const o=new T.Object3D();
-  crowns.forEach(({position,scale,angle},i)=>{
-    o.position.set(...position);o.scale.set(...scale);o.rotation.y=angle;o.updateMatrix();
-    trees.setMatrixAt(i,o.matrix);trees.setColorAt(i,leaf[i%leaf.length]);
-  });
-  trees.name='Stadtsaum / Kronen jenseits der Einfriedung';trees.computeBoundingSphere();root.add(trees);
-  const bark=new T.InstancedMesh(new T.CylinderGeometry(.15,.30,1,7),
-    new T.MeshLambertMaterial({color:0x645947}),trunks.length);
-  trunks.forEach(({position,height},i)=>{
-    o.position.set(...position);o.scale.set(1,height,1);o.rotation.y=0;o.updateMatrix();
-    bark.setMatrixAt(i,o.matrix);
-  });
-  bark.name='Stadtsaum / Stämme';bark.computeBoundingSphere();root.add(bark);
 }

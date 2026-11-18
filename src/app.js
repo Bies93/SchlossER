@@ -38,6 +38,7 @@ async function start(){
  s.add(sky);s.fog=new T.FogExp2(0xd7ded2,.0022);
  const hemi=new T.HemisphereLight(0xf1f7ff,0xa8a18a,1.48);
  const sun=new T.DirectionalLight(0xffecce,2.65);sun.position.set(60,76,65);sun.target.position.set(0,0,-24);
+ const sunOffset=new T.Vector3(60,76,89);
  Object.assign(sun.shadow.camera,{left:-82,right:82,top:82,bottom:-82,near:1,far:270});
  sun.shadow.mapSize.set(2048,2048);sun.shadow.normalBias=.045;sun.shadow.bias=-.00020;sun.castShadow=true;
  s.add(sun,sun.target,hemi);
@@ -49,11 +50,11 @@ async function start(){
  const [model,mapPairs,sculptures,environment]=await Promise.all([decode(payload.model),mapsP,decode(payload.sculptures),new HDRLoader().loadAsync(payload.light)]);
  environment.mapping=T.EquirectangularReflectionMapping;s.environment=environment;s.environmentIntensity=.45;
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
- const walkSurfaces=[];
+ const walkSurfaces=[], importedGravel=[];
  model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name;o.material=finish(key);
- // The original plaza is replaced by a continuous polygon out to the street ends.
- if(key==='GROUND'){o.visible=false;return;}
- if(['GRASS','GRAVEL'].includes(key))walkSurfaces.push(o);
+ // The original broad lawn and plaza are replaced rather than overlaid.
+ if(key==='GROUND'||key==='GRASS'){o.visible=false;return;}
+ if(key==='GRAVEL'){walkSurfaces.push(o);importedGravel.push(o);}
  o.receiveShadow=true;o.castShadow=!['GROUND','GRASS','GRAVEL','GLASS'].includes(key);});s.add(model);
  // The individual slates have open joints. A continuous dark deck sits underneath.
  const deck=new T.BufferGeometry();
@@ -66,7 +67,9 @@ async function start(){
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
  walkSurfaces.push(...addPerimeter(T,s,world,finish));
- walkSurfaces.push(...addGarden(T,s,world));
+ const garden=addGarden(T,s,world);
+ walkSurfaces.push(...garden.floors);
+ for(const heap of importedGravel)heap.material=garden.gravel;
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const player=createPlayer(T,c,world,(x,z)=>{
@@ -85,10 +88,21 @@ async function start(){
  let frame=0, dirty=true;
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
+ function draw(){
+   const p=player.body.position;
+   // Reuse the static shadow map within a district. Recenter only after
+   // walking well away from its anchor; the world-space sun angle is fixed.
+   if(Math.abs(sun.target.position.x-p.x)>35||Math.abs(sun.target.position.z-p.z)>35){
+     sun.target.position.set(Math.round(p.x/48)*48,0,Math.round(p.z/48)*48);
+     sun.position.copy(sun.target.position).add(sunOffset);
+     r.shadowMap.needsUpdate=true;
+   }
+   garden.update(p);r.render(s,c);
+ }
  function render(time){
    frame=0;
    if(active()&&input.tick(time)) dirty=true;
-   if(dirty){r.render(s,c);dirty=false}
+   if(dirty){draw();dirty=false}
    if(active()) schedule();
  }
  function pause(focus=false){
@@ -119,7 +133,8 @@ async function start(){
  let warm=false;
  $('light').onclick=()=>{
    warm=!warm;sun.color.setHex(warm?0xffcd89:0xffecce);
-   sun.position.set(...(warm?[90,38,12]:[60,76,65]));sun.intensity=warm?2.8:2.65;
+   sunOffset.set(...(warm?[90,38,36]:[60,76,89]));
+   sun.position.copy(sun.target.position).add(sunOffset);sun.intensity=warm?2.8:2.65;
    hemi.intensity=warm?1.22:1.48;sky.material.uniforms.warm.value=+warm;
    sky.material.uniforms.solar.value.copy(sun.position).sub(sun.target.position).normalize();
    $('light').textContent=warm?'Abendlicht':'Tageslicht';r.shadowMap.needsUpdate=true;refresh();
@@ -134,7 +149,7 @@ async function start(){
  }
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
- r.render(s,c);dirty=false;
+ draw();dirty=false;
  document.body.dataset.state='ready';
 }
 start().catch(err=>{

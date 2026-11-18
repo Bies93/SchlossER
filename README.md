@@ -1,8 +1,8 @@
 # Erlanger Schloss und Schlossgarten
 
-Begehbarer Three.js-Rundgang für Browser mit WebGL 2. Mit **Rundgang starten** geht es auf dem Schlossplatz los. Mit **WASD** gehen und mit der **Maus** umsehen; ohne Mausfang funktioniert auch Ziehen im Bild, alternativ drehen die **Pfeiltasten** den Blick. Auf Touchscreens links zum Gehen und rechts zum Umsehen ziehen. **Esc** oder **Pause** öffnet das Menü mit Lichtwechsel und Vollbild.
+Begehbarer Three.js-Rundgang für Browser mit WebGL 2. Mit **Rundgang starten** geht es auf dem Schlossplatz los. Mit **WASD** gehen, **Umschalt** zum Rennen halten und mit der **Maus** umsehen. Ohne Mausfang funktioniert Ziehen im Bild, alternativ drehen die **Pfeiltasten** den Blick. Auf Touchscreens links zum Gehen und rechts zum Umsehen ziehen; über den Stickrand hinaus ziehen zum Rennen. **Esc** oder **Pause** öffnet das Menü mit Lichtwechsel und Vollbild.
 
-Der begehbare Außenrundgang ist durch Gartenmauer, Gitter und geschlossene Tore sowie durch die Bebauung am Schlossplatz eingefasst. Die gepflasterten Straßenstücke enden an sichtbaren Hofdurchgängen. Die Straßenabschlüsse sind Ergänzungen für den Rundgang, keine Rekonstruktion realer Sperren.
+Der begehbare Außenrundgang ist durch Gartenmauer, Gitter und Tore sowie durch die Bebauung am Schlossplatz eingefasst. Beide Gartentore am Schlossplatz und der modellierte Übergang an der Wasserturmseite sind offen. Tore zu nicht nachgebauten Bereichen sind geschlossen. Die gepflasterten Straßenstücke enden an Hofdurchgängen, die für den Rundgang ergänzt wurden.
 
 ## GitHub Pages
 
@@ -16,7 +16,7 @@ Die JavaScript-Quellen liegen in `src/`. `app.js` verbindet Szene, Licht und Obe
 
 Maßstab und Route sind am vorhandenen Modell ausgerichtet: Y zeigt nach oben, Z positiv zum Platz. Das ca. 65 m breite Schloss liegt um den Ursprung, der Denkmalsockel um z = +31 m und der Brunnen um z = −47 m. Geh vom Platz um die Seite des Schlosses (z. B. bei x ≈ +37 m), dann nach innen zum Brunnen oder weiter zur Orangerie im positiven X. Portal und Gebäude bleiben geschlossen. Grundrisse, Tore und Platzgrenzen sind Spielmaße, kein Aufmaß.
 
-Die [Übergabe für Etappe 2](docs/etappe-2.md) enthält die Lage der Weltgrenzen, Quellen und eine kurze Route für den eigenen Abnahmerundgang.
+Die [Übergabe für Etappe 3](docs/etappe-3.md) enthält Torreferenzen, Materialmaßstäbe und Hinweise zur weiteren Arbeit. Die [Übergabe für Etappe 2](docs/etappe-2.md) dokumentiert den früheren Blockout.
 
 Texturen unter `assets/` lassen sich direkt ersetzen. Nach Änderungen an JavaScript oder der HTML-Vorlage mit Node.js und `npm ci`, dann `npm run build` den Pages-Stand neu erzeugen. Für eine neue Einzeldatei `npm run offline` ausführen. Das Ergebnis steht unter `dist/Schlossgarten.html`.
 

@@ -1,6 +1,6 @@
 import {PLAYER, SPAWN} from './world-layout.js';
 
-const WALK_KEYS = new Set(['KeyW','KeyA','KeyS','KeyD','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
+const WALK_KEYS = new Set(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
 const STEP = 1 / 60, MAX_PITCH = Math.PI * 85 / 180;
 const clamp = (v, max) => Math.min(max, Math.max(-max, v));
 
@@ -38,7 +38,8 @@ export function createPlayer(T, camera, world, floorHeight) {
         const east = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + stick.x;
         const forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) - stick.y;
         if (east || forward) {
-          const step = PLAYER.speed * STEP / Math.max(1, Math.hypot(east, forward));
+          const pace = keys.has('ShiftLeft') || keys.has('ShiftRight') || stick.run ? PLAYER.run : PLAYER.speed;
+          const step = pace * STEP / Math.max(1, Math.hypot(east, forward));
           const sin = Math.sin(yaw), cos = Math.cos(yaw);
           next.x = x; next.z = z;
           world.move(next, step * (east * cos - forward * sin), step * (-east * sin - forward * cos));
@@ -60,13 +61,14 @@ export function createPlayer(T, camera, world, floorHeight) {
 }
 
 export function bindPlayerInput({canvas, pad, player, active, pause, refresh, mode}) {
-  const keys = new Set(), stick = {x: 0, y: 0};
+  const keys = new Set(), stick = {x: 0, y: 0, run:false};
   const drag = {id: null, x: 0, y: 0};
   let moveId = null, moveTarget = null, originX = 0, originY = 0, awaitingLock = false;
   const nub = pad.firstElementChild;
   const locked = () => document.pointerLockElement === canvas;
   const clearStick = () => {
     stick.x = stick.y = 0;
+    stick.run = false;
     nub.style.transform = '';
   };
   function clear() {
@@ -153,6 +155,8 @@ export function bindPlayerInput({canvas, pad, player, active, pause, refresh, mo
     const x = (event.clientX - originX) / radius;
     const y = (event.clientY - originY) / radius;
     const distance = Math.hypot(x, y);
+    // Full extension sprints; hysteresis keeps the threshold steady on touch.
+    stick.run = distance > (stick.run ? 1.03 : 1.22);
     const scale = distance > .11 ? (Math.min(1, distance) - .11) / (.89 * distance) : 0;
     stick.x = x * scale; stick.y = y * scale;
     nub.style.transform = 'translate(' + stick.x * radius + 'px,' + stick.y * radius + 'px)';
