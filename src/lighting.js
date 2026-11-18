@@ -3,7 +3,7 @@ import {addFixtures} from './street-light.js';
 export const LIGHTING = {
   day:{sky:0x74a8d9,horizon:0xc0d3dd,fog:0xc0d3d1,cloud:0xe4ecee,fogDensity:.0021,
     direction:[.45,.60,.77],disc:0xffefca,angular:.0050,aura:.22,stars:0,clouds:.66,
-    key:0xffedcf,power:2.67,fill:0xe4edff,bounce:0xaaa28e,hemi:1.38,
+    key:0xfff0db,power:2.67,fill:0xe4edff,bounce:0xaaa28e,hemi:1.38,
     exposure:1.06,env:'day',reflection:.45,lamps:0,window:0,shadow:[84,83,.039]},
   dusk:{sky:0x627fad,horizon:0xe8a874,fog:0xbc9f8c,cloud:0xf6cfab,fogDensity:.0024,
     direction:[-.85,.19,.54],disc:0xffc278,angular:.006,aura:.39,stars:0,clouds:.39,

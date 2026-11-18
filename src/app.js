@@ -8,6 +8,8 @@ import {makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
 import {sculptureMaterials} from './surface-detail.js';
+import {addPalaceDetail} from './palace-detail.js';
+import {makeFountain} from './fountain.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {HDRLoader} from 'three/addons/loaders/HDRLoader.js';
 
@@ -34,24 +36,19 @@ async function start(){
  // The original broad lawn and plaza are replaced rather than overlaid.
  if(key==='GRAVEL')importedGravel.push(o);
  if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;return;}
- o.receiveShadow=true;o.castShadow=!['GROUND','GRASS','GRAVEL','GLASS'].includes(key);});s.add(model);
- // The individual slates have open joints. A continuous dark deck sits underneath.
- const deck=new T.BufferGeometry();
- deck.setAttribute('position',new T.Float32BufferAttribute([
-   -33.65,16.43,9.68, 33.65,16.43,9.68, 33.65,16.43,-9.68, -33.65,16.43,-9.68,
-   -23.38,20.68,0, 23.38,20.68,0],3));
- deck.setIndex([0,1,5,0,5,4,1,2,5,2,3,4,2,4,5,3,0,4]);deck.computeVertexNormals();
- s.add(new T.Mesh(deck,new T.MeshStandardMaterial({color:0x38414a,roughness:.91,side:T.DoubleSide})));
+ o.receiveShadow=true;o.castShadow=key!=='GLASS';});s.add(model);
+ addPalaceDetail(T,model,finish);
  if(sculptures){
    sculptureMaterials(sculptures,finish);
    sculptures.traverse(o=>{if(o.isMesh){o.castShadow=!/Fountain_water|Water_jets|Aerated_spray/i.test(o.name);o.receiveShadow=true}});
    s.add(sculptures)
  }
+ const fountain=makeFountain(T,s,sculptures);
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
  const perimeter=addPerimeter(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
- const garden=addGarden(T,s,world,importedGravel);
+ const garden=addGarden(T,s,world,importedGravel,finish);
  walkSurfaces.push(...garden.floors);
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
@@ -76,17 +73,20 @@ async function start(){
  let frame=0, dirty=true;
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
- function draw(){const p=player.body.position;lighting.update(p);garden.update(p);r.render(s,c);}
+ function draw(){const p=player.body.position;lighting.update(p);garden.update(p);fountain.syncView?.(c);r.render(s,c);}
  function render(time){
    frame=0;
-   if(active()&&input.tick(time)) dirty=true;
+   if(active()){
+     if(input.tick(time))dirty=true;
+     if(fountain.tick(time,c))dirty=true;
+   }
    if(dirty){draw();dirty=false}
    if(active()) schedule();
  }
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   input.clear();
+   input.clear();fountain.stop?.();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
@@ -111,6 +111,7 @@ async function start(){
  const choices=[...$('lighting').querySelectorAll('[data-light]')];
  function selectLight(id,remember=false){
    if(!lighting.applyLighting(id))return false;
+   fountain.setPreset(id);
    for(const b of choices)b.setAttribute('aria-pressed',String(b.dataset.light===id));
    if(remember){try{localStorage.setItem('schlosser.light',id)}catch{}}
    return true;

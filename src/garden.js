@@ -1,12 +1,13 @@
 import {BENCH_ROW, PARK_FLOOR, PERIMETER, GARDEN_GATES, distanceToPerimeter, insidePerimeter} from './world-layout.js';
-import {gardenMaterials,repeatSet,sharedSet} from './surface-detail.js';
+import {addOrangery} from './orangery.js';
+import {gardenMaterials} from './surface-detail.js';
 import {BED_ARCS,atBed,addBeds,addBenches} from './garden-assets.js';
 import {plantGarden} from './vegetation.js';
 import {pathNetwork,gardenTerrain} from './garden-ground.js';
 import {planGeometry} from './perimeter.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
-export function addGarden(T, scene, world, oldGravel) {
+export function addGarden(T, scene, world, oldGravel, finish) {
   const group = new T.Group(); group.name = 'Schlossgarten'; scene.add(group);
   const floors = [];
   let seed = 7333;
@@ -84,101 +85,9 @@ export function addGarden(T, scene, world, oldGravel) {
   },terrain.height);
   const beds=addBeds(T,group,terrain.height);
   addBenches(T,group,world,terrain.height);
-  orangery(T,group,world);
+  addOrangery(T,group,world,finish);
   return {
     floors, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
     update:position=>{plants(position);beds(position)}
   };
-}
-
-// FAU's description records a three-bay hall, two curving seven-bay wings,
-// a mansard and five-bay end faces. Dimensions here are visually approximated.
-function orangery(T,group,world){
-  const el=document.createElement('canvas');el.width=256;el.height=384;
-  const c=el.getContext('2d');
-  c.fillStyle='#d6ad72';c.fillRect(0,0,256,384);
-  // Fine ochre plaster grain and cut-stone window surrounds.
-  let seed=317;const random=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
-  for(let i=0;i<9500;i++){c.fillStyle=random()<.5?'rgba(94,58,27,.075)':'rgba(255,240,208,.15)';c.fillRect(random()*256,random()*384,random()*2+.3,1.2);}
-  function arch(x0,x1,y0,bottom,fill,ctx=c){
-    ctx.beginPath();ctx.moveTo(x0,bottom);ctx.lineTo(x0,y0);ctx.arc((x0+x1)/2,y0,(x1-x0)/2,Math.PI,2*Math.PI);ctx.lineTo(x1,bottom);ctx.closePath();ctx.fillStyle=fill;ctx.fill();
-  }
-  arch(33,223,149,343,'#9b7b54');arch(35,220,145,339,'#efce99');
-  arch(46,209,147,333,'#35484a');c.strokeStyle='#c4baa3';c.lineWidth=4;
-  for(const dx of [-54,-27,0,27,54]){c.beginPath();c.moveTo(128+dx,146);c.lineTo(128+dx,331);c.stroke();}
-  for(const y of [147,184,222,261,298]){c.beginPath();c.moveTo(46,y);c.lineTo(209,y);c.stroke();}
-  for(let i=1;i<8;i++){let a=Math.PI+i*Math.PI/8;c.beginPath();c.moveTo(128,147);c.lineTo(128+80*Math.cos(a),147+80*Math.sin(a));c.stroke();}
-  c.fillStyle='#f6dcb0';c.fillRect(26,337,204,5);c.fillRect(0,12,256,5);c.fillRect(0,20,256,4);
-  c.fillStyle='#9f845f';c.fillRect(0,366,256,18);c.fillStyle='#f3d4a4';c.fillRect(0,363,256,4);
-  const m=(v)=>new T.MeshStandardMaterial({color:v,roughness:.93,side:T.DoubleSide});
-  const mats=[m(0xc9ac81),m(0xffffff),m(0xd4b3a6),m(0xe2c79d),m(0x797157)];
-  Object.assign(mats[0],sharedSet(T,'plaster',512));mats[0].normalScale.setScalar(.35);
-  Object.assign(mats[2],repeatSet(T,'tile',512));mats[2].normalScale.setScalar(.54);
-  const win=new T.CanvasTexture(el);win.colorSpace=T.SRGBColorSpace;win.anisotropy=4;mats[1].map=win;
-  const mask=document.createElement('canvas');mask.width=el.width;mask.height=el.height;
-  const mc=mask.getContext('2d');mc.fillStyle='#ededed';mc.fillRect(0,0,mask.width,mask.height);
-  arch(48,207,147,332,'#646464',mc);
-  mc.strokeStyle='#d8d8d8';mc.lineWidth=4;
-  for(const x of [74,101,128,155,182]){mc.beginPath();mc.moveTo(x,147);mc.lineTo(x,332);mc.stroke()}
-  for(const y of [147,184,222,261,298]){mc.beginPath();mc.moveTo(47,y);mc.lineTo(208,y);mc.stroke()}
-  mats[1].roughnessMap=new T.CanvasTexture(mask);mats[1].roughness=1;mats[1].envMapIntensity=.76;
-  const buffers=mats.map(()=>({xyz:[],uv:[]}));
-  function face(idx,a,b,d,e){
-    const f=buffers[idx];for(const p of [a,b,d,a,d,e])f.xyz.push(...p);
-    const size=idx===2?1.61:1.65;
-    const u=idx===1?1:Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2])/size;
-    const v=idx===1?1:Math.hypot(e[0]-a[0],e[1]-a[1],e[2]-a[2])/size;
-    f.uv.push(0,0,u,0,u,v,0,0,u,v,0,v);
-  }
-  function span(a,b,h,roof,dep=7.8,central=false){
-    // a,b progress along z. Left normal faces south toward the fountain.
-    const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
-    const nx=dz/len,nz=-dx/len;
-    const P=(p,y,off,along=0)=>[p[0]+3.6+off*nx+along*dx/len,y,p[1]+off*nz+along*dz/len];
-    world.polygon([P(a,0,-.12),P(b,0,-.12),P(b,0,dep),P(a,0,dep)].map(([x,,z])=>[x,z]));
-    // Front/window tangent, rear wall, hip transition, central roof ridge.
-    face(1,P(a,0,0),P(b,0,0),P(b,h,0),P(a,h,0));
-    face(0,P(b,0,dep),P(a,0,dep),P(a,h,dep),P(b,h,dep));
-    for(const p of [a,b]){
-      face(0,P(p,0,0),P(p,0,dep),P(p,h,dep),P(p,h,0));
-      face(2,P(p,h,0),P(p,h,dep),P(p,h+roof,dep*.60),P(p,h+roof,dep*.40));
-    }
-    const brim=central?.39:.23;
-    for(const side of [0,dep]){
-      const over=side===0?-brim:brim;
-      face(3,P(a,h-.2,side+over),P(b,h-.2,side+over),P(b,h+.17,side+over),P(a,h+.17,side+over));
-      const knee=side===0?dep*.21:dep*.79, ridge=side===0?dep*.4:dep*.6;
-      face(2,P(a,h+.17,side+over),P(b,h+.17,side+over),P(b,h+roof*.77,knee),P(a,h+roof*.77,knee));
-      face(2,P(a,h+roof*.77,knee),P(b,h+roof*.77,knee),P(b,h+roof,ridge),P(a,h+roof,ridge));
-    }
-    face(2,P(a,h+roof,dep*.4),P(b,h+roof,dep*.4),P(b,h+roof,dep*.6),P(a,h+roof,dep*.6));
-    for(const y of [.35,h-.43]){
-      face(3,P(a,y,-.09),P(b,y,-.09),P(b,y+.10,-.09),P(a,y+.10,-.09));
-    }
-    const pilasterW=central?.32:.16;
-    for(const p of [a,b])face(3,P(p,.28,-.12,-pilasterW),P(p,.28,-.12,pilasterW),P(p,h-.19,-.12,pilasterW),P(p,h-.19,-.12,-pilasterW));
-  }
-  const mid=-47;
-  for(let j=0;j<3;j++)span([55.5,mid-6+j*4],[55.5,mid-2+j*4],8.4,3.7,10,true);
-  for(const side of [-1,1]){
-    const q=t=>[56.4-17*(1-Math.cos(1.20*t)),mid+side*(6+24*Math.sin(t*1.2))];
-    for(let j=0;j<7;j++){
-      const ends=[q(j/7),q((j+1)/7)].sort((a,b)=>a[1]-b[1]);span(ends[0],ends[1],6.35,2.15);
-    }
-    const end=q(1);
-    for(let j=0;j<5;j++){
-      const z=end[1]+side*j*1.55, zz=z+side*1.55;
-      span([end[0]-.26,Math.min(z,zz)],[end[0]-.26,Math.max(z,zz)],7.15,2.7,8.6);
-    }
-  }
-  // Two carved fragments of the broken pediment over the central portal.
-  for(const side of [-1,1]){
-    const a=mid+side*2.6,b=mid+side*.46;
-    face(3,[58.7,7.50,a],[58.7,8.25,b],[58.7,8.54,b],[58.7,7.79,a]);
-  }
-  for(let i=0;i<buffers.length;i++){
-    const {xyz,uv}=buffers[i];if(!xyz.length)continue;
-    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(xyz,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geo.computeVertexNormals();
-    const obj=new T.Mesh(geo,mats[i]);obj.name='Orangerie';obj.castShadow=true;obj.receiveShadow=true;group.add(obj);
-  }
 }

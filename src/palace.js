@@ -22,11 +22,12 @@ export function surfaceLibrary(THREE, maps) {
   const turf = grain(3, 20), gravel = grain(73, 38);
   // Material tints are sRGB. Texture sizes below are metric world-space repeats.
   const finishes = {
-    SANDSTONE: ['sandstone_facade', 3.2, '#e5c898', .85, .26],
+    SANDSTONE: ['sandstone_facade', 3.2, '#e4cfad', .85, .26],
     SANDSTONE_CUT: ['sandstone_trim', 1.8, '#f2e1c3', .79, .23],
     SANDSTONE_DARK: ['sandstone_facade', 2.5, '#bc9d71', .88, .28],
     STATUE: ['fountain_stone', 1.5, '#d4c7ab', .82, .22],
     ROOF_DARK: ['roof_slate', 4.2, '#8c959c', .70, .34],
+    ROOF_UNDERLAY: [null, 1, '#343d45', .93],
     WOOD: ['oak_door', 1.25, '#b68564', .49, .21],
     WOOD_RELIEF: ['oak_door', .85, '#cb9b74', .44, .23],
     GROUND: ['plaza_pavers', 6.0, '#cecabd', .85, .32],
@@ -65,7 +66,21 @@ export function surfaceLibrary(THREE, maps) {
     if (key === 'METAL' || key === 'COPPER_PATINA' || key === 'ZINC') mat.metalness = .48;
     // Reflections follow the selected scene environment. A fixed bright
     // horizon here would put daylight back into the windows at night.
-    if (key === 'GLASS') mat.envMapIntensity=1.08;
+    if (key === 'GLASS') {
+      mat.envMapIntensity=.91;
+      mat.onBeforeCompile=shader=>{
+        shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 glassWorld;')
+          .replace('#include <begin_vertex>','#include <begin_vertex>\nglassWorld=(modelMatrix*vec4(position,1.0)).xyz;');
+        shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 glassWorld;')
+          .replace('#include <color_fragment>',`#include <color_fragment>
+            vec3 pane=floor(vec3(glassWorld.x*.43+.41,glassWorld.y*.26+.16,glassWorld.z*.41+.37));
+            float difference=fract(sin(dot(pane,vec3(73.1,81.6,29.3)))*43758.5453);
+            diffuseColor.rgb*=mix(.75,1.12,difference);
+          `).replace('#include <roughnessmap_fragment>',
+            '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+(difference-.5)*.10,.2,.41);');
+      };
+      mat.customProgramCacheKey=()=> 'erl-palace-dark-glazing-v2';
+    }
     if (key === 'JET') {
       mat.transparent = true; mat.opacity = .58; mat.depthWrite = false;
     }
