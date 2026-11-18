@@ -46,6 +46,7 @@ export function surfaceLibrary(THREE, maps) {
 
   function finish(key) {
     if (materials.has(key)) return materials.get(key);
+    if(!Object.hasOwn(finishes,key))return null;
     const [set, , tint, roughness, relief] = finishes[key];
     const mat = new THREE.MeshStandardMaterial({color: tint, roughness, vertexColors: true});
     mat.name = key;

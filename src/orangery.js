@@ -17,17 +17,16 @@ const sections=[
 
 export function addOrangery(T,parent,world,finish){
   const g=new T.Group();g.name='Orangerie · räumliche Fassaden';parent.add(g);
-  const plaster=new T.MeshStandardMaterial({...sharedSet(T,'plaster',512),color:0xd4b181,roughness:1});
+  const plaster=new T.MeshStandardMaterial({...sharedSet(T,'plaster',512),color:0xe5bb79,roughness:1});
   plaster.normalScale.setScalar(.31);
   const tiles=new T.MeshStandardMaterial({...repeatSet(T,'tile',512),color:0xe0bbb0,roughness:1,side:T.DoubleSide});
   tiles.normalScale.setScalar(.58);
   const stone=finish('SANDSTONE_CUT').clone();stone.vertexColors=false;stone.color.setHex(0xe4ceb1);
   const plinth=finish('SANDSTONE_DARK').clone();plinth.vertexColors=false;
   const dark=new T.MeshStandardMaterial({color:0x191917,roughness:.93});
-  const sash=new T.MeshStandardMaterial({color:0xb8ae92,roughness:.61});
+  const sash=new T.MeshStandardMaterial({color:0xc1b79d,roughness:.61});
   const glass=new T.MeshPhysicalMaterial({color:0x2d4144,roughness:.25,ior:1.47,envMapIntensity:.86,side:T.DoubleSide});
-  const kit=architectureKit(T,g,{plaster,tiles,stone,plinth,dark,sash,glass:{material:glass,cast:false},
-    doors:finish('WOOD').clone()});
+  const kit=architectureKit(T,g,{plaster,tiles,stone,plinth,dark,sash,glass:{material:glass,cast:false}});
   const {box,quad,triangle}=kit;
   function frame(a,b){
     const L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uz=(b[1]-a[1])/L;
@@ -81,8 +80,10 @@ export function addOrangery(T,parent,world,finish){
       bar(p,'sash',mid,spring,mid+Math.cos(a)*half,spring+Math.sin(a)*r,.038,-.27);
     }
     if(door){
-      for(const [l,r] of [[lo+.035,mid-.029],[mid+.029,hi-.035]])
+      for(const [l,r] of [[lo+.035,mid-.029],[mid+.029,hi-.035]]){
         box('sash',p,l,r,sill+.04,sill+.56,-.26,-.233);
+        box('stone',p,l-.04,r+.035,.009,sill,.02,.232);
+      }
     }
     for(const u of [.05,L-.05]){
       box('stone',p,u-.058,u+.058,.35,h-.35,-.018,.061);
@@ -143,6 +144,7 @@ export function addOrangery(T,parent,world,finish){
   for(const u of [4.49,4.90,7.10,7.51]){
     const column=new T.CylinderGeometry(.127,.158,5.17,14);
     const at=p(u,3.23,.48);
+    world.circle(at[0],at[2],.245);
     kit.geometry('stone',column,new T.Matrix4().makeTranslation(...at));column.dispose();
     for(const [y,r,h] of [[.46,.25,.52],[.68,.206,.112],[5.91,.204,.20],[6.04,.23,.105]]){
       box('stone',p,u-r,u+r,y-h/2,y+h/2,.48-r,.48+r);
@@ -157,6 +159,24 @@ export function addOrangery(T,parent,world,finish){
   box('stone',p,4.08,7.92,7.88,8.095,.02,.27);
   for(let i=0;i<11;i++)box('stone',p,4.30+i*.33,4.40+i*.33,8.03,8.48,.033,.149);
   box('stone',p,4.10,7.90,8.43,8.54,.021,.22);
+  // Photographs establish a sculptural crown; these are LOD silhouette
+  // approximations, not a reconstruction of the figures or coat of arms.
+  function roofMass(u,y,d,sx,sy,sz,tilt=0) {
+    const mesh=new T.IcosahedronGeometry(1,1);
+    const q=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),tilt);
+    kit.geometry('stone',mesh,new T.Matrix4().compose(new T.Vector3(...p(u,y,d)),q,new T.Vector3(sx,sy,sz)));
+    mesh.dispose();
+  }
+  for(const [u,turn] of [[4.37,-1],[7.63,1]]){
+    box('stone',p,u-.23,u+.23,8.52,8.69,.05,.45);
+    roofMass(u,8.84,.23,.25,.18,.20);
+    roofMass(u+turn*.045,9.16,.25,.15,.34,.14,-turn*.14);
+    roofMass(u+turn*.072,9.49,.27,.104,.127,.091);
+    roofMass(u+turn*.184,9.14,.27,.122,.16,.084,turn*.3);
+  }
+  roofMass(6,8.84,.28,.41,.38,.135);
+  for(const side of [-1,1])roofMass(6+side*.34,9.03,.30,.18,.19,.119,side*.44);
+  roofMass(6,9.27,.31,.23,.105,.13);
   kit.flush('Orangerie');
   return g;
 }

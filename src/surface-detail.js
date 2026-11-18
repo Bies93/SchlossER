@@ -131,35 +131,46 @@ export function ageMasonry(material,exposure) {
 // Sculptures have no UVs in the shipped GLB. Keep their geometry untouched
 // and reuse the existing stone map with a world-scale projection.
 export function sculptureMaterials(sculptures,finish){
-  const source=finish('FOUNTAIN_STONE').map,prepared=new Map();
+  const {map:source,normalMap:relief}=finish('FOUNTAIN_STONE'),prepared=new Map();
   sculptures.traverse(o=>{
     if(!o.isMesh)return;
     const src=o.material,name=src.name??'';
-    if(!/bronze|carved_stone|damp_stone|weathered_sandstone|damp_recesses|Rock_layer/i.test(name))return;
-    const bronze=/bronze/i.test(name),wet=/damp/i.test(name);
+    if(!/bronze|granite|carved_stone|damp_stone|weathered_sandstone|damp_recesses|Rock_layer/i.test(name))return;
+    const bronze=/bronze/i.test(name),wet=/damp/i.test(name),granite=/granite/i.test(name);
     let m=prepared.get(src);
     if(!m){
-      m=src.clone();m.roughness=bronze?.58:wet?.39:.82;m.metalness=bronze?.68:0;
+      m=src.clone();m.roughness=bronze?.58:granite?.69:wet?.42:.82;m.metalness=bronze?.68:0;
+      if(bronze)m.color.setRGB(.152,.108,.073);
       m.onBeforeCompile=shader=>{
         worldPatch(shader);
         shader.uniforms.erlStoneSurface={value:source};
-        shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D erlStoneSurface;')
+        shader.uniforms.erlStoneRelief={value:relief};
+        shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D erlStoneSurface,erlStoneRelief;')
           .replace('#include <color_fragment>',`#include <color_fragment>
             float pat=erlNoise(erlWorld.xz*3.7+vec2(erlWorld.y)*1.3);
-            ${bronze?`float oxide=smoothstep(.35,.76,pat*.78+erlNoise(erlWorld.xz*13.)*.22);
-              diffuseColor.rgb=mix(diffuseColor.rgb*vec3(1.22,1.03,.72),diffuseColor.rgb*vec3(.58,1.19,.96),oxide);`:
+            ${bronze?`float oxide=smoothstep(.46,.81,pat*.73+erlNoise(erlWorld.xz*13.)*.27);
+              diffuseColor.rgb=mix(diffuseColor.rgb*vec3(1.10,1.01,.87),diffuseColor.rgb*vec3(.55,1.22,1.16),oxide);`:
               `vec3 w=pow(abs(normalize(cross(dFdx(erlWorld),dFdy(erlWorld)))),vec3(4.0));
               w/=max(w.x+w.y+w.z,.001);
-              vec3 p=erlWorld/${wet?'1.58':'2.20'};
+              vec3 p=erlWorld/${granite?'.72':wet?'1.58':'2.20'};
+              float waterContact=${granite?'0.0':'(1.0-smoothstep(.075,.26+pat*.12,abs(erlWorld.y-.379)))*smoothstep(37.,39.,-erlWorld.z)'};
               vec3 swatch=texture2D(erlStoneSurface,p.zy).rgb*w.x+texture2D(erlStoneSurface,p.xz).rgb*w.y+texture2D(erlStoneSurface,p.xy).rgb*w.z;
-              diffuseColor.rgb *= mix(vec3(.98),swatch*1.5,${wet?'.32':'.40'});
-              diffuseColor.rgb *= mix(vec3(.91),vec3(1.079),pat);`}
+              diffuseColor.rgb *= mix(vec3(.98),swatch*1.5,${granite?'.17':wet?'.28':'.34'});
+              diffuseColor.rgb *= mix(vec3(.93),vec3(1.065),pat)*mix(vec3(1.),vec3(.77,.78,.70),waterContact*.68);`}
           `).replace('#include <roughnessmap_fragment>',
-            '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+(pat-.5)*'+(bronze?'.36':'.17')+',.27,.96);');
+            '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+(pat-.5)*'+(bronze?'.36':'.17')+(bronze?'':'-waterContact*.28')+',.27,.96);');
         if(bronze)shader.fragmentShader=shader.fragmentShader.replace('#include <metalnessmap_fragment>',
           '#include <metalnessmap_fragment>\nmetalnessFactor=mix(.80,.27,oxide);');
+        else shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+          vec2 tx=texture2D(erlStoneRelief,p.zy).rg*2.-1.;
+          vec2 ty=texture2D(erlStoneRelief,p.xz).rg*2.-1.;
+          vec2 tz=texture2D(erlStoneRelief,p.xy).rg*2.-1.;
+          vec3 grain=vec3(0.,tx.y,tx.x)*w.x+vec3(ty.x,0.,ty.y)*w.y+vec3(tz.x,tz.y,0.)*w.z;
+          grain=(viewMatrix*vec4(grain,0.)).xyz;
+          normal=normalize(normal+(grain-normal*dot(normal,grain))*${granite?'.13':'.22'}*(1.-waterContact*.35));
+        `);
       };
-      m.customProgramCacheKey=()=> 'erl-carving-'+bronze+'-'+wet;
+      m.customProgramCacheKey=()=> 'erl-carving-v2-'+bronze+'-'+wet+'-'+granite;
       prepared.set(src,m);
     }
     o.material=m;

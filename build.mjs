@@ -2,6 +2,7 @@ import {build} from 'esbuild';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 const root=path.dirname(fileURLToPath(import.meta.url));
 const filepath=(name)=>path.join(root,name);
 const template=await readFile(filepath('src/template.html'),'utf8');
@@ -11,11 +12,18 @@ const names=['sandstone_facade','sandstone_trim','fountain_stone','oak_door','pl
 const refs={model:'assets/schloss.glb',sculptures:'assets/skulpturen.glb',light:'assets/tageslicht.hdr',maps:{}};
 for(const n of names)refs.maps[n]=Object.fromEntries(['albedo','normal'].map(type=>[type,'assets/'+n+'_'+type+'.webp']));
 const make=(data,script)=>template.replace('</head>',()=>'<meta name="description" content="Ein interaktiver Rundgang durch das Erlanger Schloss und seinen Garten."><!--\n'+license+'\n-->\n</head>').replace('__ASSETS__',()=>JSON.stringify(data)).replace('<script>__BUNDLE__</script>',()=>script);
+const digest=content=>createHash('sha256').update(content).digest('hex').slice(0,12);
+const transform=async(obj,visit)=>Object.fromEntries(await Promise.all(Object.entries(obj).map(async([key,value])=>[
+ key,typeof value==='object'?await transform(value,visit):visit(value,await readFile(filepath(value)))
+])));
+const webRefs=await transform(refs,(name,bytes)=>name+'?v='+digest(bytes));
 await writeFile(filepath('viewer.js'),bundle);
-await writeFile(filepath('index.html'),make(refs,'<script src="./viewer.js"></script>'));
+await writeFile(filepath('index.html'),make(webRefs,'<script src="./viewer.js?v='+digest(bundle)+'"></script>'));
 if(process.argv.includes('--offline')){
- const embed=async obj=>{for(const [k,v] of Object.entries(obj)){if(typeof v==='object')await embed(v);else{
- const mime=v.endsWith('.webp')?'image/webp':'application/octet-stream';obj[k]='data:'+mime+';base64,'+(await readFile(filepath(v))).toString('base64');}}};
- await embed(refs);await mkdir(filepath('dist'),{recursive:true});
- await writeFile(filepath('dist/Schlossgarten.html'),make(refs,'<script>'+bundle.replace(/<\/script/gi,'<\\/script')+'</script>'));
+ const embedded=await transform(refs,(name,bytes)=>{
+   const mime=name.endsWith('.webp')?'image/webp':'application/octet-stream';
+   return 'data:'+mime+';base64,'+bytes.toString('base64');
+ });
+ await mkdir(filepath('dist'),{recursive:true});
+ await writeFile(filepath('dist/Schlossgarten.html'),make(embedded,'<script>'+bundle.replace(/<\/script/gi,'<\\/script')+'</script>'));
 }

@@ -43,10 +43,10 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     apron.name='Weganschluss • Tordurchgang';apron.receiveShadow=true;group.add(apron);floors.push(apron);
   }
   const sites=[];
-  function tree(x,z,h,species,hero){
-    if(z>-7 || (x>18&&x<73&&z>-92))return;
+  function tree(x,z,h,species,hero,mapped=false){
+    if(z>-7 || (!mapped&&x>18&&x<73&&z>-92))return;
     if(!insidePerimeter(x,z)||distanceToPerimeter(x,z)<3.5||network.edge(x,z)<1.02)return;
-    if(Math.abs(x)<23&&z>-78)return;
+    if(!mapped&&Math.abs(x)<23&&z>-78)return;
     if(sites.some(p=>Math.hypot(x-p.x,z-p.z)<4.4))return;
     sites.push({x,z,h,species,hero});
   }
@@ -55,6 +55,11 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   tree(-27.6,-68.3,17.5,'oak','sweep');
   tree(27.5,-96.5,16.7,'lime','spire');
   tree(-28.0,-118.0,15.8,'oak','fork');
+  // Selected OSM tree anchors on the near parterre, fit to the compressed
+  // plan. Heights/species are illustrative; keep the axis itself clear.
+  for(const [x,z,h] of [[-16,-20.4,8.2],[10.4,-22.2,8.5],[-32.1,-30,11.4],
+    [27.9,-57.8,10.0],[-31.4,-55.1,9.6],[-46.3,-54.8,12.8],[-61.2,-46.1,11.7],[-13.6,-73,10.1]])
+    tree(x,z,h,'lime',null,true);
   for(const side of [-1,1]){
     for(let i=0;i<15;i++)tree(side*(43.4+range(-2.9,3.4)), -28-i*14.7+range(-1.7,1.7),range(11.5,16.6),i%4?'lime':'oak');
     for(let i=0;i<13;i++)tree(side*(62.1+range(-6.2,6.7)), -48-i*15.7+range(-5.8,5.8),range(13.2,20.1),i%3?'oak':'lime');

@@ -63,6 +63,11 @@ export function collisionWorld(bounds, radius, contains) {
         return true;
       });
     },
+    blocked(x,z) {
+      if(x<bounds.minX||x>bounds.maxX||z<bounds.minZ||z>bounds.maxZ||(contains&&!contains(x,z)))return true;
+      const point={x,z};
+      return (grid.get(key(cell(x),cell(z)))??[]).some(resolve=>resolve(point));
+    },
     move(p, dx, dz) {
       // Steps of at most 5 cm, followed by contact projection for wall sliding.
       const steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .05));

@@ -2,11 +2,13 @@
 
 Begehbarer Three.js-Rundgang für Browser mit WebGL 2. Mit **Rundgang starten** geht es auf dem Schlossplatz los. Mit **WASD** gehen, **Umschalt** zum Rennen halten und mit der **Maus** umsehen. Ohne Mausfang funktioniert Ziehen im Bild, alternativ drehen die **Pfeiltasten** den Blick. Auf Touchscreens links zum Gehen und rechts zum Umsehen ziehen; über den Stickrand hinaus ziehen zum Rennen. Im Start- oder Pausenmenü stehen **Sommertag**, **Sommerabend** und **Mondnacht** zur Wahl. **Esc** oder **Pause** öffnet das Menü.
 
+Am Desktop wählen **1–3** zwischen drei fiktiven Lichtimpulsgeräten. **Linksklick** sendet einen Impuls, **Rechtsklick halten** richtet die Ansicht aus. **0** blendet das Gerät aus. Nur die optionalen Leuchtmarken am Rand des Schlossplatzes reagieren.
+
 Der begehbare Außenrundgang ist durch Gartenmauer, Gitter und Tore sowie durch die Bebauung am Schlossplatz eingefasst. Beide Gartentore am Schlossplatz und der modellierte Übergang an der Wasserturmseite sind offen. Tore zu nicht nachgebauten Bereichen sind geschlossen. Die gepflasterten Straßenstücke enden an Hofdurchgängen, die für den Rundgang ergänzt wurden.
 
 ## GitHub Pages
 
-Den Inhalt **dieses Ordners** einschließlich `index.html`, `viewer.js` und `assets/` in die oberste Ebene des gewünschten Repositories übernehmen. In den Pages-Einstellungen „Deploy from a branch“ und den Ordner `/ (root)` auswählen. Der fertige Stand verwendet relative URLs und funktioniert auch unter einem Projektnamen als Unterpfad.
+Vor dem Veröffentlichen `npm ci` und `npm run build` ausführen. Die erzeugten Dateien `index.html` und `viewer.js` samt passendem `assets/`-Stand gemeinsam ins Repository übernehmen. In den Pages-Einstellungen „Deploy from a branch“ und den Ordner `/ (root)` auswählen. Der Build verwendet relative URLs und funktioniert unter dem Projektnamen als Unterpfad.
 
 ## Lokal öffnen und bearbeiten
 
@@ -22,6 +24,8 @@ Die [Übergabe zu Roadmap v1.1, Kapitel 3–4](docs/v1.1-licht-stadtraum.md) bes
 
 Die [Übergabe zu M1](docs/v1.1-garten-material.md) dokumentiert den gemeinsamen Boden, die neu aufgebauten Brunnenbeete und Parkbänke sowie Detailstufen und Texturmaßstäbe.
 
+Die [RoadMap 1.2](RoadMap_1.2.md) priorisiert die nächsten Ausbauschritte für Architektur, Platz, Garten und einen möglichen begehbaren Innenraum.
+
 Texturen unter `assets/` lassen sich direkt ersetzen. Nach Änderungen an JavaScript oder der HTML-Vorlage mit Node.js und `npm ci`, dann `npm run build` den Pages-Stand neu erzeugen. Für eine neue Einzeldatei `npm run offline` ausführen. Das Ergebnis steht unter `dist/Schlossgarten.html`.
 
 ## Modell und Quellen
@@ -30,6 +34,7 @@ Schloss, Hugenottenbrunnen und Friedrich-Denkmal beruhen auf den lokalen Erlange
 
 - Architekturkontrolle anhand der LoD2-Daten der Bayerischen Vermessungsverwaltung (www.geodaten.bayern.de, CC BY 4.0). Die Referenzkachel diente dem Maßabgleich.
 - Luftbildreferenzen von Reinhold Möller (Ermell), [Gartenseite](https://commons.wikimedia.org/wiki/File:Erlangen_Schlossgarten_Luftbild-20230422-RM-165329.jpg) und [Schlossplatz](https://commons.wikimedia.org/wiki/File:Erlangen_Schloss_Luftbild-20230422-RM-165002.jpg), CC BY-SA 4.0.
+- Ergänzende Orientierung für Baumgruppen im vorderen Parterre: [OpenStreetMap](https://www.openstreetmap.org/way/543551459), © OpenStreetMap-Mitwirkende, [ODbL](https://www.openstreetmap.org/copyright). Die Positionen sind an den komprimierten Rundgang angepasst, kein amtlicher Baumbestand.
 - Anatomiebasis der Figuren von MakeHuman Community (CC0). Oberflächentexturen und Vorschaurender stammen aus dem lokalen Schlossprojekt.
 - Umgebungslicht [Kloppenheim 06](https://polyhaven.com/a/kloppenheim_06) von Greg Zaal, Poly Haven (CC0).
 - Three.js und Meshoptimizer werden unter der MIT-Lizenz verwendet. Lizenztexte liegen in `licenses/`.

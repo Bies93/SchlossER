@@ -8,8 +8,9 @@ import {makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
 import {sculptureMaterials} from './surface-detail.js';
-import {addPalaceDetail} from './palace-detail.js';
+import {addMonumentFooting,addPalaceDetail} from './palace-detail.js';
 import {makeFountain} from './fountain.js';
+import {makeViewmodel} from './viewmodel.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {HDRLoader} from 'three/addons/loaders/HDRLoader.js';
 
@@ -27,12 +28,16 @@ async function start(){
  const ground=new T.Mesh(new T.PlaneGeometry(1700,1700),new T.MeshStandardMaterial({color:0x9d9d80,roughness:1}));
  ground.rotation.x=-Math.PI/2;ground.position.y=-.30;ground.receiveShadow=true;s.add(ground);
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),tl=new T.TextureLoader();
- const decode=url=>loader.loadAsync(url).then(g=>g.scene);
- const mapsP=Promise.all(Object.entries(payload.maps).map(async([name,layers])=>[name,Object.fromEntries(await Promise.all(Object.entries(layers).map(async([k,src])=>[k,await tl.loadAsync(src)])))]));
- const [model,mapPairs,sculptures,environment]=await Promise.all([decode(payload.model),mapsP,decode(payload.sculptures),new HDRLoader().loadAsync(payload.light)]);
+ const need=async (name,read)=>{
+   try{return await read()}catch(cause){const e=new Error('Projektdatei konnte nicht gelesen werden: '+name,{cause});e.asset=name;throw e;}
+ };
+ const decode=(name,url)=>need(name,()=>loader.loadAsync(url).then(g=>g.scene));
+ const mapsP=Promise.all(Object.entries(payload.maps).map(async([name,layers])=>[name,Object.fromEntries(await Promise.all(Object.entries(layers).map(async([k,src])=>[k,await need(name+'_'+k+'.webp',()=>tl.loadAsync(src))])))]));
+ const [model,mapPairs,sculptures,environment]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
+   decode('skulpturen.glb',payload.sculptures),need('tageslicht.hdr',()=>new HDRLoader().loadAsync(payload.light))]);
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
  const walkSurfaces=[], importedGravel=[];
- model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name;o.material=finish(key);
+ model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name??'';o.material=finish(key)??o.material;
  // The original broad lawn and plaza are replaced rather than overlaid.
  if(key==='GRAVEL')importedGravel.push(o);
  if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;return;}
@@ -41,7 +46,8 @@ async function start(){
  if(sculptures){
    sculptureMaterials(sculptures,finish);
    sculptures.traverse(o=>{if(o.isMesh){o.castShadow=!/Fountain_water|Water_jets|Aerated_spray/i.test(o.name);o.receiveShadow=true}});
-   s.add(sculptures)
+   s.add(sculptures);
+   addMonumentFooting(T,s,finish);
  }
  const fountain=makeFountain(T,s,sculptures);
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
@@ -73,12 +79,14 @@ async function start(){
  let frame=0, dirty=true;
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
- function draw(){const p=player.body.position;lighting.update(p);garden.update(p);fountain.syncView?.(c);r.render(s,c);}
+ const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh);
+ function draw(){const p=player.body.position;lighting.update(p);garden.update(p);fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
  function render(time){
    frame=0;
    if(active()){
      if(input.tick(time))dirty=true;
      if(fountain.tick(time,c))dirty=true;
+     if(viewmodel.update(time))dirty=true;
    }
    if(dirty){draw();dirty=false}
    if(active()) schedule();
@@ -86,7 +94,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   input.clear();fountain.stop?.();
+   input.clear();fountain.stop?.();viewmodel.stop();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
@@ -112,6 +120,7 @@ async function start(){
  function selectLight(id,remember=false){
    if(!lighting.applyLighting(id))return false;
    fountain.setPreset(id);
+   viewmodel.preset(id);
    for(const b of choices)b.setAttribute('aria-pressed',String(b.dataset.light===id));
    if(remember){try{localStorage.setItem('schlosser.light',id)}catch{}}
    return true;
@@ -135,7 +144,8 @@ async function start(){
 }
 start().catch(err=>{
  console.error(err);$('canvas').hidden=true;
- if (!window.WebGL2RenderingContext || /WebGL context/.test(err.message)) {
+ if(err.asset)$('error-text').textContent='Die Projektdatei '+err.asset+' konnte nicht geladen werden. Bitte den lokalen Build oder die veröffentlichte Version vollständig neu laden.';
+ else if (!window.WebGL2RenderingContext || /WebGL context/.test(err.message)) {
    $('error-text').textContent='Für den Rundgang braucht dein Browser WebGL 2. Aktiviere die Hardwarebeschleunigung oder versuche es mit einem anderen Browser.';
  }
  document.body.dataset.state='error';
