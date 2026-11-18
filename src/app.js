@@ -83,6 +83,15 @@ async function start(){
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
+ const gameModes={
+   walk:{start:'Rundgang starten',description:'Schloss und Garten frei erkunden, ohne Waffen und Gegner.'},
+   ghouls:{start:'Ghoul-Modus starten',description:'Mit Impulsgeräten. Fünf Ghoule warten im Schlossgarten.'}
+ };
+ let chosenMode='walk',gameMode='walk',firstRound=false;
+ const combat=()=>gameMode==='ghouls';
+ const mouse=matchMedia('(any-pointer: fine)'),coarse=matchMedia('(pointer: coarse)');
+ const combatAvailable=()=>mouse.matches||!coarse.matches;
+ const desktopRound=()=>document.body.dataset.input!=='touch';
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
@@ -96,16 +105,39 @@ async function start(){
  }
  const round=ghoulRound(T,s,world,floorHeight,announceGhoul);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
-   ()=>hall.allowGear(player.body.position),round);
- const desktopRound=()=>document.body.dataset.input!=='touch';
+   ()=>combat()&&desktopRound()&&hall.allowGear(player.body.position),round);
+ viewmodel.setCombat(false);
+ const modeButtons=[...$('game-mode').querySelectorAll('[data-mode]')];
+ function chooseMode(id){
+   if(!Object.hasOwn(gameModes,id)||id==='ghouls'&&!combatAvailable())id='walk';
+   chosenMode=id;
+   for(const b of modeButtons){
+     b.disabled=b.dataset.mode==='ghouls'&&!combatAvailable();
+     b.setAttribute('aria-pressed',String(b.dataset.mode===id));
+   }
+   $('start-mode').textContent=gameModes[id].start;
+   $('mode-description').textContent=gameModes[id].description+
+     (!combatAvailable()?' Der Ghoul-Modus benötigt Maus und Tastatur.':'');
+ }
+ for(const b of modeButtons)b.onclick=()=>chooseMode(b.dataset.mode);
+ mouse.addEventListener('change',()=>chooseMode(chosenMode));
+ coarse.addEventListener('change',()=>chooseMode(chosenMode));
+ chooseMode('walk');
+ function applyMode(){
+   if(chosenMode===gameMode)return;
+   gameMode=chosenMode;firstRound=combat();
+   round.reset();viewmodel.setCombat(combat());
+   clearTimeout(noticeTimer);ghoulNotice.hidden=true;
+   document.body.dataset.mode=gameMode;
+ }
  function roundPrompt(){
-   const label=active()&&desktopRound()?round.prompt(player.body.position):'';
+   const label=active()&&combat()&&desktopRound()&&!firstRound?round.prompt(player.body.position):'';
    if(label===roundLabel)return;
    roundLabel=label;ghoulAction.hidden=!label;
    if(label)ghoulText.textContent=label;
  }
  function startRound(){
-   if(!active()||!desktopRound())return;
+   if(!active()||!combat()||!desktopRound())return;
    if(round.begin(player.body.position)){roundPrompt();refresh()}
  }
  ghoulAction.addEventListener('click',()=>{startRound();canvas.focus({preventScroll:true})});
@@ -140,7 +172,13 @@ async function start(){
    frame=0;
    if(active()){
      if(input.tick(time))dirty=true;
-     if(round.tick(time,player.body.position))dirty=true;
+     if(combat()&&desktopRound()){
+       if(firstRound&&round.prompt(player.body.position)){
+         firstRound=false;
+         if(round.begin(player.body.position))dirty=true;
+       }
+       if(round.tick(time,player.body.position))dirty=true;
+     }
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
      const state=hall.update(dt,player.body.position);
      if(state.changed)dirty=true;
@@ -164,9 +202,11 @@ async function start(){
    refresh,mode:value=>{document.body.dataset.input=value}
  });
  action.onclick=event=>{
+   if(!combatAvailable()&&chosenMode==='ghouls')chooseMode('walk');
+   applyMode();
    document.body.dataset.state='playing';
    input.start({
-     touch:event.pointerType==='touch'||matchMedia('(pointer:coarse)').matches,
+     touch:!combat()&&(event.pointerType==='touch'||coarse.matches),
      lock:event.detail>0
    });
    schedule();

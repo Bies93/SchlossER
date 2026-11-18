@@ -48,6 +48,8 @@ canvas{touch-action:none;outline:none}
 .light-switch legend{padding:0 5px;color:var(--muted);font-size:11px;letter-spacing:.08em}
 .light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
 .light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
+.light-switch button:disabled{opacity:.48;cursor:not-allowed}
+.panel #mode-description{font-size:12px;margin:5px 1px 0;min-height:1.45em}
 .primary{background:var(--accent);color:#171c17;border-color:transparent;font-weight:650}
 .primary:hover{background:#f3deb6}
 .shortcuts{font-size:12px}
@@ -62,7 +64,7 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #ghoul-notice{top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 26px);padding:8px 13px;text-align:center;pointer-events:none}
 #ghoul-notice[data-kind=hurt],#ghoul-notice[data-kind=failed]{border-color:#a26c54;background:#392721ed}
 #ghoul-notice[data-kind=won]{border-color:#a1a673}
-body:not([data-state=playing]) #ghoul-notice{display:none}
+body:not([data-state=playing]) #ghoul-notice,body:not([data-mode=ghouls]) :is(#ghoul-notice,#ghoul-action){display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
 #stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
 dialog{max-width:min(460px,calc(100% - 24px));max-height:calc(100% - 24px);border:1px solid var(--line);border-radius:8px;padding:22px;background:var(--panel);color:var(--ink);box-shadow:0 16px 44px #0008}
@@ -100,7 +102,7 @@ THE SOFTWARE.
 
 -->
 </head>
-<body data-state="loading">
+<body data-state="loading" data-mode="walk">
 <header>
   <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span class="brand-subtitle">Schloss &amp; Garten</span><span class="brand-signature">I <span class="brand-heart">❤️</span> BIES</span></div>
   <div class="tools">
@@ -114,17 +116,23 @@ THE SOFTWARE.
   <section class="panel" id="overlay" aria-label="Rundgang">
     <p class="eyebrow">Erlangen zu Fuß</p>
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
-    <h2 class="paused-copy">Rundgang pausiert</h2>
+    <h2 class="paused-copy">Pausiert</h2>
     <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
     <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen<br><kbd>E</kbd> Tür bedienen · Maus oder Pfeile zum Umsehen · <kbd>Esc</kbd> Pause</p>
     <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Den Stick weiter nach außen ziehen zum Rennen.</p>
+    <fieldset class="light-switch" id="game-mode" aria-describedby="mode-description">
+      <legend>Spielmodus</legend>
+      <button type="button" data-mode="walk" aria-pressed="true">Rundgang</button>
+      <button type="button" data-mode="ghouls" aria-pressed="false">Ghoul-Modus</button>
+    </fieldset>
+    <p id="mode-description">Schloss und Garten frei erkunden, ohne Waffen und Gegner.</p>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
       <button type="button" data-light="dusk" aria-pressed="true">Sonnenuntergang</button>
       <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
     </fieldset>
     <div class="actions">
-      <button type="button" class="primary" id="enter"><span class="ready-copy">Rundgang starten</span><span class="paused-copy">Weitergehen</span></button>
+      <button type="button" class="primary" id="enter"><span class="ready-copy" id="start-mode">Rundgang starten</span><span class="paused-copy">Weitergehen</span></button>
       <button type="button" class="tool icon" id="full" aria-label="Vollbild umschalten" title="Vollbild umschalten" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg></button>
     </div>
   </section>
@@ -144,11 +152,11 @@ THE SOFTWARE.
   <p><strong>Maus &amp; Tastatur:</strong> Gehe mit WASD. Halte Umschalt zum Rennen. Bewege die Maus zum Umsehen. Ohne Mausfang: Ziehe im Bild oder nutze die Pfeiltasten. Mit Escape pausierst du.</p>
   <p><strong>Touch:</strong> Ziehe links zum Gehen und rechts zum Umsehen. Ziehe den Stick über den Rand zum Rennen; lass links los zum Anhalten. „Pause“ öffnet das Menü.</p>
   <p><strong>Schlosstüren:</strong> Geh zum mittleren Portal am Platz oder im Garten und drücke <kbd>E</kbd> oder tippe auf den eingeblendeten Knopf. Beide Türen führen in dieselbe Halle. Der Innenraum ist frei gestaltet, kein Nachbau des heutigen Grundrisses.</p>
-  <p><strong>Ghoul-Runde:</strong> Drücke am Desktop im Garten <kbd>R</kbd>. Es erscheinen fünf Ghoule. Nach einem Sieg oder einer Niederlage startet <kbd>R</kbd> eine neue Runde. Ohne Start bleibt der Rundgang friedlich.</p>
-  <p><strong>Impulsgeräte:</strong> 1 = Pistole, 2 = Gewehr, 3 = Streuflinte. Zum Wechseln geht auch das Mausrad; 0 blendet das Gerät aus. Halte rechts zum Anvisieren und klicke links für einen Lichtimpuls.</p>
+  <p><strong>Spielmodus:</strong> Im Rundgang gibt es keine Waffen und keine Gegner. Der Ghoul-Modus ist für Maus und Tastatur: Fünf Ghoule erscheinen, sobald du den Garten erreichst. Nach Sieg oder Niederlage startet <kbd>R</kbd> im Garten eine neue Runde. Ein Moduswechsel im Pausenmenü beendet eine laufende Runde.</p>
+  <p><strong>Impulsgeräte im Ghoul-Modus:</strong> 1 = Pistole, 2 = Gewehr, 3 = Streuflinte. Zum Wechseln geht auch das Mausrad; 0 blendet das Gerät aus. Halte rechts zum Anvisieren und klicke links für einen Lichtimpuls.</p>
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=9d4ae21e1c79"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=14d052c7c434"></script>
 </body>
 </html>

@@ -181,6 +181,13 @@ export function ghoulRound(T,scene,world,floorHeight,notify){
     return true;
   }
   function stop(){last=null}
+  function reset(){
+    state='idle';stop();
+    for(const g of pool){
+      g.rig.actor.visible=g.shadow.visible=g.sparks.visible=false;
+      g.cached=null;
+    }
+  }
   function tick(time,p){
     const dt=last===null?0:Math.min(.082,(time-last)/1000);last=time;clock+=dt;
     if(!pool.length)return false;
@@ -271,5 +278,5 @@ export function ghoulRound(T,scene,world,floorHeight,notify){
     }
     return dirty;
   }
-  return {begin,tick,stop,prompt,nearest,damage};
+  return {begin,tick,stop,reset,prompt,nearest,damage};
 }

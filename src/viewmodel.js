@@ -40,20 +40,21 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       hip:V(0,0,0),pivot:V(0,0,0),ankle:V(0,0,0)};
   });
   const modules=rig.devices;held.add(...modules);
+  const rangeObjects=new T.Group();rangeObjects.name='Ghoul-Modus · Übungsmarken und Impulse';scene.add(rangeObjects);
   // Three authored hard-surface markers in one side area of the square.
   const anchors=[[57.1,47.7],[62.5,49.2],[65.7,53.7]].map(([x,z])=>{
     const y=floorHeight(x,z),center=V(x,y+.88,z);
-    const stand=shape(scene,new T.CylinderGeometry(.045,.11,1,9),frame,x,y+.42,z,1,.84,1);
+    const stand=shape(rangeObjects,new T.CylinderGeometry(.045,.11,1,9),frame,x,y+.42,z,1,.84,1);
     stand.name='Optionale Impulsmarke';
     const surface=new T.MeshStandardMaterial({color:0x586f6c,roughness:.40,metalness:.22,
       emissive:0x54b5bb,emissiveIntensity:.10});
-    const face=shape(scene,new T.IcosahedronGeometry(.125,1),surface,x,center.y,z,1,1,1);
+    const face=shape(rangeObjects,new T.IcosahedronGeometry(.125,1),surface,x,center.y,z,1,1,1);
     return {center,face,timer:0,sphere:new T.Sphere(center,.19)};
   });
   const trailMat=new T.MeshBasicMaterial({color:style[0].color,transparent:true,opacity:.79,depthWrite:false});
   const bead=new T.SphereGeometry(.019,8,6),beam=new T.CylinderGeometry(.004,.008,1,5);
   const traces=Array.from({length:5},()=>{
-    const orb=shape(scene,bead,trailMat,0,0,0,1,1,1),ribbon=shape(scene,beam,trailMat,0,0,0,1,1,1);
+    const orb=shape(rangeObjects,bead,trailMat,0,0,0,1,1,1),ribbon=shape(rangeObjects,beam,trailMat,0,0,0,1,1,1);
     orb.visible=ribbon.visible=false;orb.renderOrder=ribbon.renderOrder=4;
     return {orb,ribbon,start:V(0,0,0),end:V(0,0,0),until:0};
   });
@@ -269,6 +270,12 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     camera.position.y=camera.rotation.z=0;
     clearPulses();recent=0;for(const a of anchors){a.timer=0;a.face.material.emissiveIntensity=.10}refresh();
   }
+  function setCombat(on){
+    rangeObjects.visible=on;
+    pending=on?0:-1;
+    kick=0;pressed=-1000;
+    stop();
+  }
   update(performance.now());
-  return {update,draw,preset,stop};
+  return {update,draw,preset,stop,setCombat};
 }
