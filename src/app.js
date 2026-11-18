@@ -4,7 +4,7 @@ import {collisionWorld} from './collision.js';
 import {createPlayer, bindPlayerInput} from './player.js';
 import {addFixedColliders, BOUNDS, PLAYER, insidePerimeter} from './world-layout.js';
 import {addPerimeter} from './perimeter.js';
-import {makeLighting} from './lighting.js';
+import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
 import {sculptureMaterials} from './surface-detail.js';
@@ -15,7 +15,6 @@ import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
-import {HDRLoader} from 'three/addons/loaders/HDRLoader.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -36,8 +35,8 @@ async function start(){
  };
  const decode=(name,url)=>need(name,()=>loader.loadAsync(url).then(g=>g.scene));
  const mapsP=Promise.all(Object.entries(payload.maps).map(async([name,layers])=>[name,Object.fromEntries(await Promise.all(Object.entries(layers).map(async([k,src])=>[k,await need(name+'_'+k+'.webp',()=>tl.loadAsync(src))])))]));
- const [model,mapPairs,sculptures,environment]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
-   decode('skulpturen.glb',payload.sculptures),need('tageslicht.hdr',()=>new HDRLoader().loadAsync(payload.light))]);
+ const [model,mapPairs,sculptures]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
+   decode('skulpturen.glb',payload.sculptures)]);
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
  const walkSurfaces=[], importedGravel=[];
  model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name??'';o.material=finish(key)??o.material;
@@ -74,7 +73,7 @@ async function start(){
    hits.length=0;
    return y;
  };
- const lighting=makeLighting(T,r,s,environment,world,floorHeight);
+ const lighting=makeLighting(T,r,s,world,floorHeight);
  lighting.registerWindows(perimeter.windows);
  const player=createPlayer(T,c,world,floorHeight);
  s.add(player.body);
@@ -160,9 +159,10 @@ async function start(){
    if(remember){try{localStorage.setItem('schlosser.light',id)}catch{}}
    return true;
  }
- let last='day';
- try{last=localStorage.getItem('schlosser.light')||'day'}catch{}
- if(!selectLight(last))selectLight('day');
+ let last=DEFAULT_LIGHT;
+ try{last=localStorage.getItem('schlosser.light')||DEFAULT_LIGHT}catch{}
+ // Visitors with the retired setting fall back to sunset.
+ if(!selectLight(last))selectLight(DEFAULT_LIGHT,true);
  for(const b of choices)b.onclick=()=>{if(selectLight(b.dataset.light,true))refresh()};
  function resize(){
    const w=stage.clientWidth,h=stage.clientHeight;

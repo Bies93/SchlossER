@@ -15,7 +15,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;min
 .brand,.tools,.actions{display:flex;align-items:center;gap:10px}
 .brand svg{width:29px;flex:none;color:var(--accent)}
 .brand b{font:500 21px/1 Georgia,serif}
-.brand span{padding-left:10px;border-left:1px solid var(--line);color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.brand-subtitle{padding-left:10px;border-left:1px solid var(--line);color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.brand-signature{display:inline-flex;align-items:center;gap:.23em;padding-left:11px;border-left:1px solid var(--line);color:#f3d6a8;font:600 italic clamp(16px,3.6vw,22px)/1.16 "Segoe Script","Snell Roundhand","Apple Chancery","URW Chancery L",cursive;letter-spacing:.02em;white-space:nowrap}
+.brand-heart{font:normal .77em/1 "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif}
 .tools{gap:5px}
 button,a{touch-action:manipulation}
 button{cursor:pointer;font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:6px;min-height:40px;padding:0 13px}
@@ -42,7 +44,7 @@ canvas{touch-action:none;outline:none}
 .panel h1,.panel h2,dialog h2{margin:0;font:normal clamp(26px,4vw,40px)/1.05 Georgia,serif;letter-spacing:-.035em}
 .panel p:not(.eyebrow),dialog p{margin:10px 0;color:var(--muted)}
 .actions{flex-wrap:wrap;margin-top:15px}
-.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
+.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
 .light-switch legend{padding:0 5px;color:var(--muted);font-size:11px;letter-spacing:.08em}
 .light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
 .light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
@@ -62,13 +64,14 @@ dialog h2{font-size:29px}
 dialog form{margin-top:16px}
 @media(pointer:coarse){.desktop-copy{display:none}.touch-copy{display:block}}
 body[data-input=touch] #portal-action kbd{display:none}
-@media(max-width:560px){.brand span{display:none}.tools{gap:4px}.tool{padding-inline:8px}.tool.icon{padding:0}}
+@media(max-width:460px){.brand{gap:6px}.brand svg{width:23px}.brand b{font-size:17px}.brand-subtitle{padding-left:6px;font-size:8px;letter-spacing:.07em}.brand-signature{padding-left:6px;letter-spacing:0}.tools{gap:4px}.tool{padding-inline:8px}.tool.icon{padding:0}}
+@media(max-width:345px){.brand-subtitle{display:none}}
 @media(max-height:420px){.panel{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px}.panel h1,.panel h2{font-size:24px}.panel p:not(.eyebrow){margin:5px 0}.actions{margin-top:8px}}
 </style>
 </head>
 <body data-state="loading">
 <header>
-  <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span>Schloss &amp; Garten</span></div>
+  <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span class="brand-subtitle">Schloss &amp; Garten</span><span class="brand-signature">I <span class="brand-heart">❤️</span> BIES</span></div>
   <div class="tools">
     <button class="tool" id="pause" type="button" title="Pause (Escape)">Pause</button>
     <button class="tool" id="info" type="button" aria-haspopup="dialog">Hilfe</button>
@@ -86,8 +89,7 @@ body[data-input=touch] #portal-action kbd{display:none}
     <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Den Stick weiter nach außen ziehen zum Rennen.</p>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
-      <button type="button" data-light="day" aria-pressed="true">Sommertag</button>
-      <button type="button" data-light="dusk" aria-pressed="false">Sommerabend</button>
+      <button type="button" data-light="dusk" aria-pressed="true">Sonnenuntergang</button>
       <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
     </fieldset>
     <div class="actions">

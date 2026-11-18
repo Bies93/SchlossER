@@ -149,7 +149,7 @@ export function makeHall(T,root,M,world,leaves){
     for(const side of [-1,1])world.circle(side*(d.side>0?2.27:2.16),d.z+d.side*(d.side>0?.83:.90),.287);
   }
   const look=new T.Vector3();
-  let preset='day',lit=false,wasMoving=false;
+  let preset='dusk',lit=false,wasMoving=false;
   function allowGear(p){return !(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
   function targetFor(player,camera){
     camera.getWorldDirection(look);
@@ -178,7 +178,7 @@ export function makeHall(T,root,M,world,leaves){
     const shadow=wasMoving&&!moving||changed&&!moving;wasMoving=moving;
     const isNear=Math.abs(p.x)<15&&Math.abs(p.z)<25;
     if(lit!==isNear){lit=isNear;changed=true}
-    const outdoor=preset==='night'?.45:preset==='dusk'?7.8:17.2;
+    const outdoor=preset==='night'?.45:7.8;
     if(lit){
       for(const [i,d] of doors.entries())bounces[i].intensity=outdoor*mix(.05,1,d.progress);
       for(const lamp of lamps)lamp.intensity=preset==='night'?16.5:11.4;

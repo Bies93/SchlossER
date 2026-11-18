@@ -199,9 +199,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     renderer.render(stage,eye);renderer.autoClear=reset;
   }
   function preset(id){
-    h.intensity=id==='night'?.84:id==='dusk'?1.35:2.1;
-    key.intensity=id==='night'?.46:id==='dusk'?1.38:1.65;
-    key.color.setHex(id==='night'?0x9baec8:id==='dusk'?0xffc698:0xf7dcac);
+    h.intensity=id==='night'?.84:1.35;
+    key.intensity=id==='night'?.46:1.38;
+    key.color.setHex(id==='night'?0x9baec8:0xffc698);
   }
   function stop(){
     aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);

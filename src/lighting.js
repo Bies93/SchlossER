@@ -1,10 +1,7 @@
 import {addFixtures} from './street-light.js';
 
+export const DEFAULT_LIGHT='dusk';
 export const LIGHTING = {
-  day:{sky:0x74a8d9,horizon:0xc0d3dd,fog:0xc0d3d1,cloud:0xe4ecee,fogDensity:.0021,
-    direction:[.45,.60,.77],disc:0xffefca,angular:.0050,aura:.22,stars:0,clouds:.66,
-    key:0xfff0db,power:2.67,fill:0xe4edff,bounce:0xaaa28e,hemi:1.38,
-    exposure:1.06,env:'day',reflection:.45,lamps:0,window:0,shadow:[84,83,.039]},
   dusk:{sky:0x627fad,horizon:0xe8a874,fog:0xbc9f8c,cloud:0xf6cfab,fogDensity:.0024,
     direction:[-.85,.19,.54],disc:0xffc278,angular:.006,aura:.39,stars:0,clouds:.39,
     key:0xffc795,power:2.80,fill:0xbccdf2,bounce:0x8a7365,hemi:.94,
@@ -43,8 +40,7 @@ const SKY = `
  }
 `;
 
-// Small linear HDR environment for dusk/night, matching the same sky palette.
-// Three caches the equirectangular PMREM on first use; the day asset is reused.
+// Small procedural HDR maps for reflections, matching the sky palette.
 function ambientMap(T, preset){
   const width=128,height=64,pixels=new Uint16Array(width*height*4),half=T.DataUtils.toHalfFloat;
   const sky=new T.Color(preset.sky),horizon=new T.Color(preset.horizon),
@@ -64,11 +60,10 @@ function ambientMap(T, preset){
   return texture;
 }
 
-export function makeLighting(T, renderer, scene, dayHDR, world, floorHeight){
+export function makeLighting(T, renderer, scene, world, floorHeight){
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
-  dayHDR.mapping=T.EquirectangularReflectionMapping;
-  const reflections={day:dayHDR};
+  const reflections={};
   const uniforms={
     topTint:{value:new T.Color()},horizonTint:{value:new T.Color()},cloudTint:{value:new T.Color()},
     discTint:{value:new T.Color()},celestial:{value:new T.Vector3()},
@@ -87,7 +82,7 @@ export function makeLighting(T, renderer, scene, dayHDR, world, floorHeight){
   const axis=new T.Vector3(), right=new T.Vector3(), up=new T.Vector3(0,1,0), planeUp=new T.Vector3();
   const center=new T.Vector3(), focus=new T.Vector3();
   const windows=[];
-  let state=LIGHTING.day, id='day', needsAnchor=true;
+  let state=LIGHTING[DEFAULT_LIGHT], id=DEFAULT_LIGHT, needsAnchor=true;
   function applyLighting(name){
     if(!Object.hasOwn(LIGHTING,name))return false;
     state=LIGHTING[name];id=name;needsAnchor=true;

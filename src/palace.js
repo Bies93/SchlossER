@@ -87,7 +87,7 @@ export function surfaceLibrary(THREE, maps) {
             *(1.-(eaves*.18+foot*.079)*(.58+afterRain*.42));
         `);
       };
-      mat.customProgramCacheKey=()=> 'erl-schloss-sandstein-neutrales-tageslicht-v2';
+      mat.customProgramCacheKey=()=> 'erl-schloss-sandstein-neutrale-albedo-v2';
     }
     // Reflections follow the selected scene environment. A fixed bright
     // horizon here would put daylight back into the windows at night.

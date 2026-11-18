@@ -152,7 +152,7 @@ export function makeFountain(T,scene,original){
     syncView,
     setPreset(id){
       lamps.value=LIGHTING[id]?.lamps??0;night.value=id==='night'?1:0;
-      tint.value.setHex(id==='night'?0x748da0:id==='dusk'?0xd0bcab:0xd8e9ea);
+      tint.value.setHex(id==='night'?0x748da0:0xd0bcab);
       drops.material.color.copy(tint.value);
     },
     stop(){last=null},
