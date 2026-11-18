@@ -5,9 +5,15 @@ export function randomSource(seed) {
 }
 const clamp=(v,min=0,max=255)=>Math.min(max,Math.max(min,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
+const sharedSets=new Map();
+export function sharedSet(T,kind,size){
+  const id=kind+':'+size;
+  if(!sharedSets.has(id))sharedSets.set(id,repeatSet(T,kind,size));
+  return sharedSets.get(id);
+}
 
 export function repeatSet(T,kind,size=512) {
-  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166}[kind]);
+  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,tile:311}[kind]);
   const field=n=>Float32Array.from({length:n*n},rng);
   const grids=[8,24,64].map(n=>[n,field(n)]);
   const noise=(i,x,y)=>{
@@ -20,22 +26,36 @@ export function repeatSet(T,kind,size=512) {
     rough=new Uint8Array(color.length), height=new Float32Array(size*size);
   function write(x,y,red,green,blue,relief,rgh){
     const n=((y+size)%size)*size+(x+size)%size,i=n*4;
-    color.set([clamp(red),clamp(green),clamp(blue),255],i);
-    rough.set([rgh,rgh,rgh,255],i);height[n]=relief;
+    color[i]=clamp(red);color[i+1]=clamp(green);color[i+2]=clamp(blue);color[i+3]=255;
+    rough[i]=rough[i+1]=rough[i+2]=clamp(rgh);rough[i+3]=255;height[n]=relief;
   }
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=noise(0,x,y)-.5,b=noise(1,x,y)-.5,c=noise(2,x,y)-.5,f=rng()-.5;
     if(kind==='lawn'){
-      const v=a*11+b*14+c*20+f*9, dry=clamp(.26+a*.58+b*.25,0,1);
-      write(x,y,70+v+dry*23,94+v+dry*6,39+v+dry*12,a*.15+b*.11+c*.08+f*.025,234+14*c);
+      const v=a*9+b*8+c*10+f*3, dry=clamp(.26+a*.44+b*.23,0,1);
+      write(x,y,73+v+dry*22,96+v+dry*5,42+v+dry*10,a*.15+b*.15+c*.15+f*.032,231+24*c);
     } else if(kind==='grit'){
-      const v=a*21+b*13+c*18+f*8;
-      write(x,y,174+v,154+v,119+v,a*.13+b*.19+c*.12+f*.033,229+8*b);
+      const v=a*12+b*8+c*9+f*4;
+      write(x,y,174+v,156+v,126+v,a*.13+b*.20+c*.22+f*.045,226+16*b);
     } else if(kind==='bark'){
       const furrow=Math.abs(Math.sin((x/size*18+b*.33+c*.12)*Math.PI));
       const seam=Math.pow(1-furrow,7),v=66+a*22+b*22+c*18+f*12-seam*19;
       const moss=clamp(.14+a*.8+b*.29,0,.55);
       write(x,y,v+9-moss*16,v+2+moss*4,v-9,.18+furrow*.07+c*.045-seam*.16,230+13*c);
+    } else if(kind==='plaster'){
+      const v=a*11+b*8+c*5+f*2;
+      write(x,y,225+v,223+v,218+v,a*.01+b*.035+c*.086+f*.037,221+b*21+c*12);
+    } else if(kind==='wood'){
+      const wave=(Math.sin((y/size*48+a*.13+b*.065)*Math.PI)+1)*.5;
+      const grain=Math.pow(wave,3),v=a*13+b*8+c*4-grain*24;
+      write(x,y,163+v,131+v,93+v,grain*.081+c*.045+f*.015,161+grain*40+b*13);
+    } else if(kind==='tile'){
+      const row=Math.floor(y/size*8),u=x/size*6+(row%2)*.5;
+      const v=y/size*8-row, p=u-Math.floor(u);
+      const seam=clamp(Math.min(v*12,(1-v)*14,p*18,(1-p)*18),0,1);
+      const tint=Math.sin(Math.floor(u)%6*172+row*47)*6+a*8+b*7+c*4;
+      write(x,y,141+tint-(1-seam)*13,90+tint-(1-seam)*9,69+tint-(1-seam)*7,
+        seam*(.11+.13*Math.sin(p*Math.PI))+c*.045,202+seam*19+15*b);
     } else {
       // Staggered, lightly irregular granite setts. A 1.2 m tile is 10 by
       // eight stones: nominal block 12 cm x 15 cm, 8 mm pale sand joints.
@@ -54,16 +74,16 @@ export function repeatSet(T,kind,size=512) {
       const x=(rng()*size)|0,y=(rng()*size)|0;
       const l=blade?2+Math.floor(rng()*7):1+Math.floor(rng()*4);
       const angle=rng()*2*Math.PI,dx=Math.cos(angle),dy=Math.sin(angle);
-      const v=(rng()-.47)*(blade?35:74), golden=rng()<.13;
+      const v=(rng()-.47)*(blade?19:33), golden=rng()<.13;
       for(let j=0;j<l;j++){
         const xx=x+Math.round(dx*j),yy=y+Math.round(dy*j);
         const n=((yy+size)%size)*size+(xx+size)%size,i4=n*4;
-        write(xx,yy,color[i4]+v+(golden?14:0),color[i4+1]+v*.80,color[i4+2]+v*.56,
-          height[n]+.025+Math.abs(v)*.001,rough[i4]-2);
+        write(xx,yy,color[i4]+v+(golden?9:0),color[i4+1]+v*.80,color[i4+2]+v*.56,
+          height[n]+.033+Math.abs(v)*.0023,rough[i4]-4-j*.8);
       }
     }
   }
-  const strength={lawn:.96,grit:1.1,bark:1.8,setts:2.7}[kind];
+  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,tile:1.4}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;
@@ -108,6 +128,44 @@ export function ageMasonry(material,exposure) {
   material.customProgramCacheKey=()=> 'masonry-weather-'+exposure;
 }
 
+// Sculptures have no UVs in the shipped GLB. Keep their geometry untouched
+// and reuse the existing stone map with a world-scale projection.
+export function sculptureMaterials(sculptures,finish){
+  const source=finish('FOUNTAIN_STONE').map,prepared=new Map();
+  sculptures.traverse(o=>{
+    if(!o.isMesh)return;
+    const src=o.material,name=src.name??'';
+    if(!/bronze|carved_stone|damp_stone|weathered_sandstone|damp_recesses|Rock_layer/i.test(name))return;
+    const bronze=/bronze/i.test(name),wet=/damp/i.test(name);
+    let m=prepared.get(src);
+    if(!m){
+      m=src.clone();m.roughness=bronze?.58:wet?.39:.82;m.metalness=bronze?.68:0;
+      m.onBeforeCompile=shader=>{
+        worldPatch(shader);
+        shader.uniforms.erlStoneSurface={value:source};
+        shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D erlStoneSurface;')
+          .replace('#include <color_fragment>',`#include <color_fragment>
+            float pat=erlNoise(erlWorld.xz*3.7+vec2(erlWorld.y)*1.3);
+            ${bronze?`float oxide=smoothstep(.35,.76,pat*.78+erlNoise(erlWorld.xz*13.)*.22);
+              diffuseColor.rgb=mix(diffuseColor.rgb*vec3(1.22,1.03,.72),diffuseColor.rgb*vec3(.58,1.19,.96),oxide);`:
+              `vec3 w=pow(abs(normalize(cross(dFdx(erlWorld),dFdy(erlWorld)))),vec3(4.0));
+              w/=max(w.x+w.y+w.z,.001);
+              vec3 p=erlWorld/${wet?'1.58':'2.20'};
+              vec3 swatch=texture2D(erlStoneSurface,p.zy).rgb*w.x+texture2D(erlStoneSurface,p.xz).rgb*w.y+texture2D(erlStoneSurface,p.xy).rgb*w.z;
+              diffuseColor.rgb *= mix(vec3(.98),swatch*1.5,${wet?'.32':'.40'});
+              diffuseColor.rgb *= mix(vec3(.91),vec3(1.079),pat);`}
+          `).replace('#include <roughnessmap_fragment>',
+            '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+(pat-.5)*'+(bronze?'.36':'.17')+',.27,.96);');
+        if(bronze)shader.fragmentShader=shader.fragmentShader.replace('#include <metalnessmap_fragment>',
+          '#include <metalnessmap_fragment>\nmetalnessFactor=mix(.80,.27,oxide);');
+      };
+      m.customProgramCacheKey=()=> 'erl-carving-'+bronze+'-'+wet;
+      prepared.set(src,m);
+    }
+    o.material=m;
+  });
+}
+
 export function gardenMaterials(T,mask,ext) {
   const turf=repeatSet(T,'lawn',768), stone=repeatSet(T,'grit',512);
   const ground=new T.MeshStandardMaterial({...turf,roughness:1,metalness:0});
@@ -135,23 +193,26 @@ export function gardenMaterials(T,mask,ext) {
       uniform vec4 erlMaskRect;
     `).replace('#include <map_fragment>',`#include <map_fragment>
       vec2 along = (erlWorld.xz-erlMaskRect.xy)/erlMaskRect.zw;
-      float route = texture2D(erlPaths,along).r;
+      vec4 fields=texture2D(erlPaths,along);
+      float route=fields.r, compact=fields.g, damp=fields.b, bed=fields.a;
       vec2 fine = erlWorld.xz*vec2(1.0,-1.0)/.93;
       float scatter = erlNoise(erlWorld.xz*5.4);
-      float verge = smoothstep(.14,.75,route + (scatter-.5)*.17);
-      float soil = smoothstep(.04,.28,route)*(1.0-smoothstep(.32,.61,route));
-      float macro = erlNoise(erlWorld.xz*.085)*.67+erlNoise(erlWorld.xz*.31)*.33;
+      float verge = smoothstep(.28,.75,route + (scatter-.5)*mix(.31,.09,compact));
+      float soil = smoothstep(.11,.46,route)*(1.0-smoothstep(.44,.74,route));
+      float macro = smoothstep(.20,.81,erlNoise(erlWorld.xz*.18)*.73+erlNoise(erlWorld.xz*.39)*.27);
       // Low-frequency colour sits in world coordinates, never in the tile.
-      diffuseColor.rgb *= mix(vec3(.76,.81,.74),vec3(1.18,1.13,1.06),macro);
-      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.19,.14,.085), soil*.59);
-      diffuseColor.rgb = mix(diffuseColor.rgb,texture2D(erlGritAlbedo,fine).rgb, verge);
+      diffuseColor.rgb *= mix(vec3(.94,.97,.93),vec3(1.12,1.04,.96),macro);
+      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.158,.118,.068), soil*(.40+.35*compact));
+      diffuseColor.rgb = mix(diffuseColor.rgb,texture2D(erlGritAlbedo,fine).rgb*mix(1.0,.87,compact),verge);
+      diffuseColor.rgb *= mix(vec3(1.0),vec3(.67,.75,.60),damp*.67);
+      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.085,.057,.033)*(.91+scatter*.24),bed*.89);
     `).replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
-      roughnessFactor = mix(roughnessFactor,texture2D(erlGritRough,fine).g,verge);
+      roughnessFactor = clamp(mix(roughnessFactor,texture2D(erlGritRough,fine).g,verge)-damp*.11-compact*.035,.61,1.0);
     `).replace('#include <normal_fragment_maps>',T.ShaderChunk.normal_fragment_maps.replace(
       'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
-      'vec3 mapN = mix(texture2D(normalMap,vNormalMapUv).xyz,texture2D(erlGritNormal,fine).xyz,verge)*2.0-1.0;'
+      'vec3 mapN = mix(texture2D(normalMap,vNormalMapUv).xyz,texture2D(erlGritNormal,fine).xyz,verge)*2.0-1.0; mapN.xy *= (1.0 - compact*.28 - bed*.20);'
     ));
   };
-  ground.customProgramCacheKey=()=> 'erl-turf-mask-v1';
+  ground.customProgramCacheKey=()=> 'erl-turf-mask-v2';
   return {ground,gravel};
 }

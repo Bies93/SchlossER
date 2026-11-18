@@ -47,7 +47,7 @@ export function addFixtures(T,scene,world,floorHeight){
   const floorGlow=new T.ShaderMaterial({
     transparent:true,depthWrite:false,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,
     uniforms:{power:{value:0},tone:{value:new T.Color(0xf6ab65)}},
-    vertexShader:`varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.);}`,
+    vertexShader:`varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
     fragmentShader:`varying vec2 v;uniform float power;uniform vec3 tone;
       void main(){
         float d=length((v-.5)*2.0);
@@ -57,14 +57,22 @@ export function addFixtures(T,scene,world,floorHeight){
         #include <colorspace_fragment>
       }`
   });
-  const circle=new T.PlaneGeometry(1,1);circle.rotateX(-Math.PI/2);
-  const pools=new T.InstancedMesh(circle,floorGlow,lamp.length);
-  lamp.forEach((p,i)=>{
-    dummy.position.set(p.x,p.base+.008,p.z+(p.wall?1.2:0));
-    dummy.scale.set(p.wall?8.3:9.7,1,p.wall?8.7:9.7);dummy.rotation.set(0,0,0);dummy.updateMatrix();
-    pools.setMatrixAt(i,dummy.matrix);
-  });
-  pools.computeBoundingSphere();pools.renderOrder=1;group.add(pools);
+  // Pre-fit each light decal to the same walking height used for the park.
+  // The emitted pools still share one small indexed mesh and draw call.
+  const grid=8, pos=[],uv=[],tri=[];
+  for(const p of lamp){
+    const start=pos.length/3,W=p.wall?8.3:9.7,H=p.wall?8.7:9.7;
+    for(let j=0;j<=grid;j++)for(let i=0;i<=grid;i++){
+      const u=i/grid,v=j/grid,x=p.x+(u-.5)*W,z=p.z+(v-.5)*H+(p.wall?1.2:0);
+      pos.push(x,(z<=-17?Math.max(p.base-.039,floorHeight(x,z)):p.base)+.011,z);uv.push(u,v);
+      if(i<grid&&j<grid){const k=start+j*(grid+1)+i,b=k+grid+1;tri.push(k,b,k+1,k+1,b,b+1);}
+    }
+  }
+  const glowMesh=new T.BufferGeometry();
+  glowMesh.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+  glowMesh.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+  glowMesh.setIndex(tri);
+  const pools=new T.Mesh(glowMesh,floorGlow);pools.renderOrder=1;group.add(pools);
   const spots=Array.from({length:4},()=>{
     const spot=new T.SpotLight(0xffad68,0,17,Math.PI*.44,.74,2);
     scene.add(spot,spot.target);return spot;

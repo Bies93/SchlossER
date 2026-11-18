@@ -1,38 +1,24 @@
 import {BENCH_ROW, PARK_FLOOR, PERIMETER, GARDEN_GATES, distanceToPerimeter, insidePerimeter} from './world-layout.js';
-import {gardenMaterials} from './surface-detail.js';
+import {gardenMaterials,repeatSet,sharedSet} from './surface-detail.js';
+import {BED_ARCS,atBed,addBeds,addBenches} from './garden-assets.js';
 import {plantGarden} from './vegetation.js';
-import {pathNetwork} from './garden-ground.js';
+import {pathNetwork,gardenTerrain} from './garden-ground.js';
 import {planGeometry} from './perimeter.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
-export function addGarden(T, scene, world) {
+export function addGarden(T, scene, world, oldGravel) {
   const group = new T.Group(); group.name = 'Schlossgarten'; scene.add(group);
   const floors = [];
   let seed = 7333;
   const rand = () => ((seed = (Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   const range = (a,b) => a+(b-a)*rand(), tau = Math.PI*2;
-  const color = v => new T.Color(v);
-  const mat = c => new T.MeshStandardMaterial({color:c,roughness:.95});
-  const blooms=[], herb=[], lumber=[], iron=[];
-  const dummy = new T.Object3D();
-  function stamp(arr,x,y,z,sx,sy,sz,rx,ry,rz,tint) {
-    dummy.position.set(x,y,z);dummy.rotation.set(rx,ry,rz,'YXZ');
-    dummy.scale.set(sx,sy,sz);dummy.updateMatrix();
-    arr.push([dummy.matrix.clone(), tint]);
-  }
-  function instance(list,geo,material,name,casts=false) {
-    const batch=new T.InstancedMesh(geo,material,list.length);batch.name=name;
-    list.forEach(([mx,tint],i)=>{batch.setMatrixAt(i,mx);if(tint)batch.setColorAt(i,tint);});
-    batch.receiveShadow=true;batch.castShadow=casts;group.add(batch);
-    batch.computeBoundingSphere();return batch;
-  }
   const network=pathNetwork(T),ribbon=network.add;
-  ribbon([[0,-13.8],[0,-33.0]],4.9);
+  ribbon([[0,-13.8],[0,-33.0]],4.9,'compact');
   ribbon([[0,-61],[0,-156],[0,-237]],4);
-  ribbon([[39,-7.4],[38.8,-17],[37,-25]],3.5);
-  ribbon([[-39.35,-7.5],[-38.2,-17],[-37,-25]],3.65);
-  ribbon([[46.3,-15.8],[46.15,-19.8],[44.8,-25],[40.7,-28]],2.5);
-  for(const gate of Object.values(GARDEN_GATES))ribbon(gate.path,2.4);
+  ribbon([[39,-7.4],[38.8,-17],[37,-25]],3.5,'compact');
+  ribbon([[-39.35,-7.5],[-38.2,-17],[-37,-25]],3.65,'compact');
+  ribbon([[46.3,-15.8],[46.15,-19.8],[44.8,-25],[40.7,-28]],2.5,'compact');
+  for(const gate of Object.values(GARDEN_GATES))ribbon(gate.path,2.4,'compact');
   for(const side of [-1,1]){
     const spts = a=>a.map(([x,z])=>[side*x,z]);
     ribbon(spts([[13,-55],[25,-62],[38,-73]]),2.5);
@@ -44,25 +30,30 @@ export function addGarden(T, scene, world) {
     ribbon(spts([[0,-239],[23,-243],[49,-236],[62,-215],[65,-170],[59,-121],[59,-82],[52,-61],[38,-47]]),3.0);
   }
   const ellipse=[];for(let j=0;j<=64;j++){const a=tau*j/64;ellipse.push([18.8*Math.cos(a),-47+13.45*Math.sin(a)]);}
-  ribbon(ellipse,2.1);
-  const {ground,gravel}=gardenMaterials(T,network.texture(),network.rect);
-  const lawn=new T.Mesh(planGeometry(T,PARK_FLOOR,.008,1.78),ground);
-  lawn.name='Parkboden • Rasen, Weg, Saum';lawn.receiveShadow=true;group.add(lawn);floors.push(lawn);
+  ribbon(ellipse,2.1,'trim');
+  const {ground,gravel}=gardenMaterials(T,network.texture({
+    legacy:oldGravel,walls:PERIMETER.filter(e=>e.type==='wall'),beds:BED_ARCS
+  }),network.rect);
+  const terrain=gardenTerrain(T,PARK_FLOOR,ground);
+  group.add(...terrain.meshes);floors.push(...terrain.meshes);
   // Paved-to-gravel transition at both Schlossplatz gates and the side entry.
   for(const [x,front,wide] of [[39,1,1.75],[-39.35,1,1.87],[46.25,-4,1.18]]){
     const apron=new T.Mesh(planGeometry(T,[[x-wide,front],[x+wide,front],[x+wide,-17.025],[x-wide,-17.025]],-.017,1),gravel);
     apron.name='Weganschluss • Tordurchgang';apron.receiveShadow=true;group.add(apron);floors.push(apron);
   }
   const sites=[];
-  function tree(x,z,h,species){
+  function tree(x,z,h,species,hero){
     if(z>-7 || (x>18&&x<73&&z>-92))return;
     if(!insidePerimeter(x,z)||distanceToPerimeter(x,z)<3.5||network.edge(x,z)<1.02)return;
     if(Math.abs(x)<23&&z>-78)return;
     if(sites.some(p=>Math.hypot(x-p.x,z-p.z)<4.4))return;
-    sites.push({x,z,h,species});
+    sites.push({x,z,h,species,hero});
   }
   // Keep the formal parterre and central sightline open; open lawn between
   // irregular groups is as important as the planting itself.
+  tree(-27.6,-68.3,17.5,'oak','sweep');
+  tree(27.5,-96.5,16.7,'lime','spire');
+  tree(-28.0,-118.0,15.8,'oak','fork');
   for(const side of [-1,1]){
     for(let i=0;i<15;i++)tree(side*(43.4+range(-2.9,3.4)), -28-i*14.7+range(-1.7,1.7),range(11.5,16.6),i%4?'lime':'oak');
     for(let i=0;i<13;i++)tree(side*(62.1+range(-6.2,6.7)), -48-i*15.7+range(-5.8,5.8),range(13.2,20.1),i%3?'oak':'lime');
@@ -79,42 +70,25 @@ export function addGarden(T, scene, world) {
       if(!insidePerimeter(x,z))sites.push({x,z,h:range(7.4,13.7),species:i%3?'oak':'lime',backdrop:true});
     }
   }
-  const update=plantGarden(T,group,world,sites,(x,z)=>{
+  const plants=plantGarden(T,group,world,sites,(x,z)=>{
     if(z>-17.35||!insidePerimeter(x,z)||x>43&&x<69&&z>-91)return 0;
-    if(Math.abs(x)<23&&z>-72)return 0; // existing parterre and basin remain clear
+    if(Math.abs(x)<23&&z>-72||atBed(x,z,.25))return 0;
     if(BENCH_ROW.depths.some(d=>Math.abs(z-d)<1.18)&&Math.abs(Math.abs(x)-BENCH_ROW.x)<1)return 0;
-    const d=network.edge(x,z);
-    if(d<.23)return 0;
-    const patch=.5+.5*Math.sin(x*.68+Math.cos(z*.45)*1.8)*Math.cos(z*.55);
-    return d<1.38?.45+patch*.31:.045+patch*.17;
-  });
-  const palette=['#b64f77','#d89ca2','#ede1bd','#a297ce','#885586'].map(color);
-  function flowers(x,z,hue){
-    const s=range(.10,.22);
-    stamp(herb,x,.17,z,s*1.4,s*.68,s*1.37,0,rand()*tau,0,color('#567144'));
-    stamp(blooms,x,.17+s*.46,z,s*.78,s*.44,s*.73,0,rand()*tau,0,palette[hue]);
-  }
-  for(let i=0;i<2800;i++){
-    const a=rand()*tau,r=rand();
-    flowers(Math.cos(a)*(15.52+r*1.91),-47+Math.sin(a)*(10.37+r*1.77),Math.floor((a/tau*22+r*.37))%5);
-  }
-  instance(herb,new T.IcosahedronGeometry(1,0),mat(0xffffff),'Blattschöpfe');
-  instance(blooms,new T.IcosahedronGeometry(1,0),mat(0xffffff),'Wechselflor');
-  // Benches face the lawn and give the plaza a human scale.
-  for(const side of [-1,1])for(const z of BENCH_ROW.depths){
-    const x=side*BENCH_ROW.x;
-    world.box(Math.min(x-side*.05,x+side*.42),z-.91,Math.max(x-side*.05,x+side*.42),z+.91);
-    for(let k=0;k<4;k++)stamp(lumber,x+side*k*.105,.47,z,.088,.057,1.82,0,0,0,null);
-    for(let k=0;k<3;k++)stamp(lumber,x+side*(.35+k*.014),.69+k*.12,z,.056,.087,1.82,0,0,0,null);
-    for(const offset of [-.68,.68]){
-      stamp(iron,x,.245,z+offset,.055,.47,.069,0,0,0,null);
-      stamp(iron,x+side*.34,.48,z+offset,.055,.90,.069,0,0,0,null);
-    }
-  }
-  instance(lumber,new T.BoxGeometry(1,1,1),mat(0x897046),'Sitzbänke');
-  instance(iron,new T.BoxGeometry(1,1,1),mat(0x40453f),'Bankgestelle');
+    const {edge,style}=network.sample(x,z);
+    if(edge<(style==='trim'?.12:.25))return 0;
+    const patch=.5+.5*Math.sin(x*.53+Math.cos(z*.37)*1.5)*Math.cos(z*.39);
+    const wall=z<-247||Math.abs(x)>68?distanceToPerimeter(x,z):8;
+    const sheltered=sites.some(p=>!p.backdrop&&Math.abs(x-p.x)<4.8&&Math.abs(z-p.z)<4.8);
+    return (edge<1.17?(style==='compact'?.09:style==='trim'?.35:.26)+patch*.25:.038+patch*.105)
+       *(wall<1.4?.65:1)*(sheltered?1.22:1);
+  },terrain.height);
+  const beds=addBeds(T,group,terrain.height);
+  addBenches(T,group,world,terrain.height);
   orangery(T,group,world);
-  return {floors,update,gravel};
+  return {
+    floors, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
+    update:position=>{plants(position);beds(position)}
+  };
 }
 
 // FAU's description records a three-bay hall, two curving seven-bay wings,
@@ -126,24 +100,35 @@ function orangery(T,group,world){
   // Fine ochre plaster grain and cut-stone window surrounds.
   let seed=317;const random=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
   for(let i=0;i<9500;i++){c.fillStyle=random()<.5?'rgba(94,58,27,.075)':'rgba(255,240,208,.15)';c.fillRect(random()*256,random()*384,random()*2+.3,1.2);}
-  function arch(x0,x1,y0,bottom,fill){
-    c.beginPath();c.moveTo(x0,bottom);c.lineTo(x0,y0);c.arc((x0+x1)/2,y0,(x1-x0)/2,Math.PI,2*Math.PI);c.lineTo(x1,bottom);c.closePath();c.fillStyle=fill;c.fill();
+  function arch(x0,x1,y0,bottom,fill,ctx=c){
+    ctx.beginPath();ctx.moveTo(x0,bottom);ctx.lineTo(x0,y0);ctx.arc((x0+x1)/2,y0,(x1-x0)/2,Math.PI,2*Math.PI);ctx.lineTo(x1,bottom);ctx.closePath();ctx.fillStyle=fill;ctx.fill();
   }
   arch(33,223,149,343,'#9b7b54');arch(35,220,145,339,'#efce99');
-  const gradient=c.createLinearGradient(0,65,0,337);gradient.addColorStop(0,'#829797');gradient.addColorStop(.33,'#4d6260');gradient.addColorStop(.55,'#6b765c');gradient.addColorStop(1,'#303e39');
-  arch(46,209,147,333,gradient);c.strokeStyle='#c4baa3';c.lineWidth=4;
+  arch(46,209,147,333,'#35484a');c.strokeStyle='#c4baa3';c.lineWidth=4;
   for(const dx of [-54,-27,0,27,54]){c.beginPath();c.moveTo(128+dx,146);c.lineTo(128+dx,331);c.stroke();}
   for(const y of [147,184,222,261,298]){c.beginPath();c.moveTo(46,y);c.lineTo(209,y);c.stroke();}
   for(let i=1;i<8;i++){let a=Math.PI+i*Math.PI/8;c.beginPath();c.moveTo(128,147);c.lineTo(128+80*Math.cos(a),147+80*Math.sin(a));c.stroke();}
   c.fillStyle='#f6dcb0';c.fillRect(26,337,204,5);c.fillRect(0,12,256,5);c.fillRect(0,20,256,4);
   c.fillStyle='#9f845f';c.fillRect(0,366,256,18);c.fillStyle='#f3d4a4';c.fillRect(0,363,256,4);
   const m=(v)=>new T.MeshStandardMaterial({color:v,roughness:.93,side:T.DoubleSide});
-  const mats=[m(0xe7c28b),m(0xffffff),m(0x91523b),m(0xecd2ab),m(0x797157)];
+  const mats=[m(0xc9ac81),m(0xffffff),m(0xd4b3a6),m(0xe2c79d),m(0x797157)];
+  Object.assign(mats[0],sharedSet(T,'plaster',512));mats[0].normalScale.setScalar(.35);
+  Object.assign(mats[2],repeatSet(T,'tile',512));mats[2].normalScale.setScalar(.54);
   const win=new T.CanvasTexture(el);win.colorSpace=T.SRGBColorSpace;win.anisotropy=4;mats[1].map=win;
+  const mask=document.createElement('canvas');mask.width=el.width;mask.height=el.height;
+  const mc=mask.getContext('2d');mc.fillStyle='#ededed';mc.fillRect(0,0,mask.width,mask.height);
+  arch(48,207,147,332,'#646464',mc);
+  mc.strokeStyle='#d8d8d8';mc.lineWidth=4;
+  for(const x of [74,101,128,155,182]){mc.beginPath();mc.moveTo(x,147);mc.lineTo(x,332);mc.stroke()}
+  for(const y of [147,184,222,261,298]){mc.beginPath();mc.moveTo(47,y);mc.lineTo(208,y);mc.stroke()}
+  mats[1].roughnessMap=new T.CanvasTexture(mask);mats[1].roughness=1;mats[1].envMapIntensity=.76;
   const buffers=mats.map(()=>({xyz:[],uv:[]}));
   function face(idx,a,b,d,e){
     const f=buffers[idx];for(const p of [a,b,d,a,d,e])f.xyz.push(...p);
-    f.uv.push(0,0,1,0,1,1,0,0,1,1,0,1);
+    const size=idx===2?1.61:1.65;
+    const u=idx===1?1:Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2])/size;
+    const v=idx===1?1:Math.hypot(e[0]-a[0],e[1]-a[1],e[2]-a[2])/size;
+    f.uv.push(0,0,u,0,u,v,0,0,u,v,0,v);
   }
   function span(a,b,h,roof,dep=7.8,central=false){
     // a,b progress along z. Left normal faces south toward the fountain.

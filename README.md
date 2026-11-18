@@ -20,6 +20,8 @@ Die [Übergabe für Etappe 3](docs/etappe-3.md) enthält Torreferenzen, Material
 
 Die [Übergabe zu Roadmap v1.1, Kapitel 3–4](docs/v1.1-licht-stadtraum.md) beschreibt die Lichtgestaltung, Häuserzeilen und deren Ortsreferenzen. Die Lampenpositionen und die Typen der Stadtfassaden sind für den Rundgang gestaltet, kein Inventar des realen Platzes.
 
+Die [Übergabe zu M1](docs/v1.1-garten-material.md) dokumentiert den gemeinsamen Boden, die neu aufgebauten Brunnenbeete und Parkbänke sowie Detailstufen und Texturmaßstäbe.
+
 Texturen unter `assets/` lassen sich direkt ersetzen. Nach Änderungen an JavaScript oder der HTML-Vorlage mit Node.js und `npm ci`, dann `npm run build` den Pages-Stand neu erzeugen. Für eine neue Einzeldatei `npm run offline` ausführen. Das Ergebnis steht unter `dist/Schlossgarten.html`.
 
 ## Modell und Quellen

@@ -7,6 +7,7 @@ import {addPerimeter} from './perimeter.js';
 import {makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
+import {sculptureMaterials} from './surface-detail.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {HDRLoader} from 'three/addons/loaders/HDRLoader.js';
 
@@ -31,8 +32,8 @@ async function start(){
  const walkSurfaces=[], importedGravel=[];
  model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name;o.material=finish(key);
  // The original broad lawn and plaza are replaced rather than overlaid.
- if(key==='GROUND'||key==='GRASS'){o.visible=false;return;}
- if(key==='GRAVEL'){walkSurfaces.push(o);importedGravel.push(o);}
+ if(key==='GRAVEL')importedGravel.push(o);
+ if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;return;}
  o.receiveShadow=true;o.castShadow=!['GROUND','GRASS','GRAVEL','GLASS'].includes(key);});s.add(model);
  // The individual slates have open joints. A continuous dark deck sits underneath.
  const deck=new T.BufferGeometry();
@@ -41,17 +42,22 @@ async function start(){
    -23.38,20.68,0, 23.38,20.68,0],3));
  deck.setIndex([0,1,5,0,5,4,1,2,5,2,3,4,2,4,5,3,0,4]);deck.computeVertexNormals();
  s.add(new T.Mesh(deck,new T.MeshStandardMaterial({color:0x38414a,roughness:.91,side:T.DoubleSide})));
- if(sculptures){sculptures.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});s.add(sculptures)}
+ if(sculptures){
+   sculptureMaterials(sculptures,finish);
+   sculptures.traverse(o=>{if(o.isMesh){o.castShadow=!/Fountain_water|Water_jets|Aerated_spray/i.test(o.name);o.receiveShadow=true}});
+   s.add(sculptures)
+ }
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
  const perimeter=addPerimeter(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
- const garden=addGarden(T,s,world);
+ const garden=addGarden(T,s,world,importedGravel);
  walkSurfaces.push(...garden.floors);
- for(const heap of importedGravel)heap.material=garden.gravel;
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z)=>{
+   const terrain=garden.heightAt(x,z);
+   if(terrain!==null)return terrain;
    ray.ray.origin.set(x,2,z);
    ray.intersectObjects(walkSurfaces,false,hits);
    const y=hits[0]?.point.y ?? ground.position.y;

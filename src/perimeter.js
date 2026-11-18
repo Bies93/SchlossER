@@ -1,5 +1,5 @@
 import {CITY_FLOOR, CITY_FRONTAGES, PERIMETER, GATES} from './world-layout.js';
-import {ageMasonry, repeatSet} from './surface-detail.js';
+import {ageMasonry, repeatSet, sharedSet} from './surface-detail.js';
 
 // Earcut accepts either orientation of the X/Z footprint. Explicitly face up
 // for lighting and the player's downward ray, regardless of node order.
@@ -48,12 +48,14 @@ export function addPerimeter(T,scene,world,finish) {
     verge:new T.MeshStandardMaterial({color:0x767c57,vertexColors:true,roughness:1})
   };
   const setts=repeatSet(T,'setts',512);
+  Object.assign(materials.stucco,sharedSet(T,'plaster',512));
+  materials.stucco.normalScale.setScalar(.27);
   Object.assign(materials.street,setts);
   materials.street.color.set(0xd8d3ca);materials.street.roughness=1;materials.street.normalScale.setScalar(.69);
   Object.assign(materials.gutter,setts);
   materials.gutter.color.set(0xac9f8a);materials.gutter.roughness=1;materials.gutter.normalScale.setScalar(.30);
   for(const [key,exposure] of [['stone',.54],['base',.72],['cap',.15],['joint',.43],['lintel',.28],['stucco',.23],['tileRoof',.08],['houseStone',.26]])ageMasonry(materials[key],exposure);
-  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3,walk:4,curbstone:1.7,houseStone:2.5};
+  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3,walk:4,curbstone:1.7,houseStone:2.5,stucco:1.65};
   const bins=new Map(), white=new T.Color(0xffffff);
   function quad(m,a,b,c,d,tint=white,offsetU=0,offsetV=0) {
     if(!bins.has(m))bins.set(m,{xyz:[],uv:[],colors:[]});
