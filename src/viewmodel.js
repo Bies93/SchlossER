@@ -50,14 +50,23 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const face=shape(scene,new T.IcosahedronGeometry(.125,1),surface,x,center.y,z,1,1,1);
     return {center,face,timer:0,sphere:new T.Sphere(center,.19)};
   });
-  const trailMat=new T.MeshBasicMaterial({color:style[0].color,transparent:true,opacity:.78,depthWrite:false});
-  const orb=shape(scene,new T.SphereGeometry(.026,8,6),trailMat,0,0,0,1,1,1);
-  const ribbon=shape(scene,new T.CylinderGeometry(.006,.012,1,5),trailMat,0,0,0,1,1,1);
-  orb.visible=ribbon.visible=false;orb.renderOrder=4;ribbon.renderOrder=4;
-  let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,step=0,t0=null,pressed=0,flight=null,recent=0;
+  const trailMat=new T.MeshBasicMaterial({color:style[0].color,transparent:true,opacity:.79,depthWrite:false});
+  const bead=new T.SphereGeometry(.019,8,6),beam=new T.CylinderGeometry(.004,.008,1,5);
+  const traces=Array.from({length:5},()=>{
+    const orb=shape(scene,bead,trailMat,0,0,0,1,1,1),ribbon=shape(scene,beam,trailMat,0,0,0,1,1,1);
+    orb.visible=ribbon.visible=false;orb.renderOrder=ribbon.renderOrder=4;
+    return {orb,ribbon,start:V(0,0,0),end:V(0,0,0),until:0};
+  });
+  const flashMat=new T.MeshBasicMaterial({color:style[0].color,transparent:true,opacity:0,depthWrite:false,
+    blending:T.AdditiveBlending,toneMapped:false});
+  const flash=shape(held,new T.IcosahedronGeometry(1,1),flashMat,0,0,0,1,1,1);
+  flash.visible=false;
+  let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,step=0,t0=null,pressed=-1000,recent=0;
+  let arrivals=[];
   const previous=player.body.position.clone(),deltaPos=V(0,0,0),from=V(0,0,0),dir=V(0,0,0),hit=V(0,0,0);
-  const headQ=new T.Quaternion(),ray=new T.Ray(),end=V(0,0,0),old=V(0,0,0);
-  const ang=new T.Euler(),sightAnchor=V(0,0,0);
+  const headQ=new T.Quaternion(),projector=new T.Raycaster(),ray=projector.ray,old=V(0,0,0);
+  const ang=new T.Euler(),sightAnchor=V(0,0,0),projected=V(0,0,0),emit=V(0,0,0),
+    aimScreen=new T.Vector2(),screen=new T.Vector2();
   const smooth=t=>t*t*(3-2*t),relax=(v,d,k,dt)=>v+(d-v)*(1-Math.exp(-k*dt));
   let moving=0,running=0,strafe=0,inertia=0,previousYaw=player.body.rotation.y,wheel=0,wheelAt=0,wheelStepAt=-1000;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -72,40 +81,74 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     kick=0;refresh();
   }
   pending=matchMedia('(pointer:coarse)').matches?-1:0;display(pending);
+  function syncProjection(){
+    const fov=(camera.aspect<.8?60:54)-ads*4;
+    if(eye.fov!==fov||eye.aspect!==camera.aspect){
+      eye.fov=fov;eye.aspect=camera.aspect;eye.updateProjectionMatrix();
+    }
+  }
+  function clearPulses(){
+    arrivals.length=0;
+    for(const t of traces){t.until=0;t.orb.visible=t.ribbon.visible=false}
+    flash.visible=false;
+  }
   function pulse(){
     if(selected<0||swap||!equipmentAllowed())return;
-    const age=performance.now();if(age-pressed<130)return;
-    pressed=age;kick=.035+(selected*.009);
-    camera.getWorldPosition(from);camera.getWorldDirection(dir);camera.getWorldQuaternion(headQ);
-    ray.set(from,dir);
-    let target=null,distance=13.5+selected*1.5;
-    for(const item of anchors){
-      if(!ray.intersectSphere(item.sphere,hit))continue;
-      const d=from.distanceTo(hit);if(d<distance){distance=d;target=item}
+    const age=performance.now(),n=style[selected];
+    if(age-pressed<(n.pattern>1?240:145))return;
+    pressed=age;
+    syncProjection();
+    camera.getWorldPosition(from);camera.getWorldQuaternion(headQ);
+    aimScreen.set(0,0);
+    if(aiming||ads>.67){
+      projected.fromArray(n.sight).applyQuaternion(held.quaternion).add(held.position).applyMatrix4(eye.projectionMatrix);
+      aimScreen.set(projected.x,projected.y);
     }
-    // The light trail disappears at the simplified level boundary. It does
-    // not apply forces, decals or hit effects to any world object.
-    for(let d=.26;d<distance;d+=.18){
-      ray.at(d,hit);
-      if(world.blocked(hit.x,hit.z)||(dir.y<-.12&&hit.y<floorHeight(hit.x,hit.z)+.035)){
-        distance=Math.max(.42,d-.08);target=null;break;
+    // The viewmodel and world use different lenses. Match the displayed
+    // emitter's pixel by transferring its camera-space depth between them.
+    emit.fromArray(n.emit).applyQuaternion(held.quaternion).add(held.position);
+    emit.x*=eye.projectionMatrix.elements[0]/camera.projectionMatrix.elements[0];
+    emit.y*=eye.projectionMatrix.elements[5]/camera.projectionMatrix.elements[5];
+    emit.applyQuaternion(headQ);
+    trailMat.color.setHex(n.color);flashMat.color.setHex(n.color);
+    flash.position.fromArray(n.emit);flash.visible=true;
+    for(const [i,t] of traces.entries()){
+      t.until=0;t.orb.visible=t.ribbon.visible=false;
+      if(i>=n.pattern)continue;
+      const a=i*2.4+age*.008,fan=i===0?0:.021+i*.004;
+      screen.set(aimScreen.x+Math.cos(a)*fan,aimScreen.y+Math.sin(a)*fan*camera.aspect);
+      projector.setFromCamera(screen,camera);dir.copy(ray.direction);
+      let target=null,distance=n.pattern===1?18.8:15.6;
+      for(const item of anchors){
+        if(!ray.intersectSphere(item.sphere,hit))continue;
+        const d=from.distanceTo(hit);if(d<distance){distance=d;target=item}
       }
+      // Virtual traces stop at the level boundary; there are no physics,
+      // damage or decals on the site. Only authored light markers respond.
+      for(let d=.24;d<distance;d+=.17){
+        ray.at(d,hit);
+        if(world.blocked(hit.x,hit.z)||(dir.y<-.12&&hit.y<floorHeight(hit.x,hit.z)+.035)){
+          distance=Math.max(.32,d-.06);target=null;break;
+        }
+      }
+      t.end.copy(from).addScaledVector(dir,distance);
+      t.start.copy(from).addScaledVector(emit,Math.min(1,distance*.72/Math.max(.1,emit.length())));
+      t.at=age;t.until=distance<.46?0:age+108+distance*(n.pattern===1?8.4:7.3)+i*4;
+      if(target)arrivals.push({target,at:t.until,color:n.color});
     }
-    end.copy(from).addScaledVector(dir,distance);
-    const start=sightAnchor.set(0,.015,-style[selected].length).applyQuaternion(held.quaternion).add(held.position)
-      .clone().applyQuaternion(headQ).add(from);
-    flight={start,end:end.clone(),target,at:age,duration:155+distance*10,style:selected};
-    trailMat.color.setHex(style[selected].color);
+    kick=.032+selected*.010;
     refresh();
   }
   const relevant=e=>isActive()&&(document.pointerLockElement===canvas||e.target===canvas);
-  window.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='touch'||!relevant(e)||!equipmentAllowed())return;
+  // Pointer Events fire pointerdown/up only as the first/last mouse
+  // button changes state. Mouse Events report both edges of each button.
+  window.addEventListener('mousedown',e=>{
+    if(e.sourceCapabilities?.firesTouchEvents||document.body.dataset.input==='touch'||!relevant(e)||!equipmentAllowed())return;
     if(e.button===2&&selected>=0){e.preventDefault();aiming=true;refresh()}
     else if(e.button===0){pulse()}
   });
-  window.addEventListener('pointerup',e=>{if(e.button===2){aiming=false;refresh()}});
-  window.addEventListener('pointercancel',()=>{aiming=false});
+  window.addEventListener('mouseup',e=>{if(e.button===2){aiming=false;refresh()}});
+  window.addEventListener('pointercancel',()=>{aiming=false;refresh()});
   canvas.addEventListener('contextmenu',e=>{if(isActive())e.preventDefault()});
   window.addEventListener('keydown',e=>{
     if(!isActive()||e.ctrlKey||e.altKey||e.metaKey||!equipmentAllowed())return;
@@ -123,7 +166,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     wheel=0;wheelStepAt=now;select(next);
   },{passive:false});
   function update(now){
-    const dt=t0===null?1/60:Math.min(.045,(now-t0)/1000);t0=now;
+    const elapsed=t0===null?1/60:(now-t0)/1000,dt=Math.min(.045,elapsed);t0=now;
     deltaPos.subVectors(player.body.position,previous);previous.copy(player.body.position);
     const delta=Math.hypot(deltaPos.x,deltaPos.z),speed=delta/Math.max(dt,.001),yaw=player.body.rotation.y;
     const relative=(deltaPos.x*Math.cos(yaw)-deltaPos.z*Math.sin(yaw))/Math.max(.001,dt);
@@ -141,17 +184,19 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       else holster=age<swap.down?smooth(age/swap.down):1-smooth((age-swap.down)/swap.up);
     }
     const permitted=equipmentAllowed();
-    if(!permitted){aiming=false;flight=null;orb.visible=ribbon.visible=false}
-    const oldAds=ads;ads=relax(ads,aiming&&!swap&&selected>=0?1:0,17,dt);
+    if(!permitted){aiming=false;clearPulses()}
+    const oldAds=ads;ads=relax(ads,aiming&&!swap&&selected>=0?1:0,17,Math.min(.18,elapsed));
     const oldKick=kick;kick*=Math.exp(-dt*17);
     const n=style[Math.max(0,selected)],sway=Math.sin(step)*moving*(1-ads*.93),
       bob=Math.cos(step*2)*moving*(1-ads*.89),comfort=reduced?.18:1,rest=1-ads;
     const lookDown=smooth(T.MathUtils.clamp((-camera.parent.rotation.x-.78)/.52,0,1))*rest;
     camera.position.y=bob*.013*comfort*(1+running*.38);camera.rotation.z=strafe*.007*comfort;
-    held.position.set((.223+running*.052)*rest+sway*.015*comfort-inertia*.006*rest,
-      -.223*rest-n.sight*ads+bob*.010*comfort-running*.039*rest-holster*.41-lookDown*.20,-.624+ads*.058+kick+holster*.020);
-    held.rotation.set(-.029*rest+sway*.022*comfort+kick*1.98-holster*.76-lookDown*.25,
-      .069*rest+inertia*.008*rest+sway*.012*comfort,-strafe*.042*rest+holster*.23+running*.073*rest);
+    held.rotation.set(-.045*rest+sway*.023*comfort+kick*1.98-holster*.76-lookDown*.25,
+      n.yaw*rest+inertia*.008*rest+sway*.016*comfort,-strafe*.04*rest+holster*.23+running*.075*rest-.031*rest);
+    sightAnchor.fromArray(n.sight).applyQuaternion(held.quaternion);
+    held.position.set((n.hold[0]+running*.052)*rest+sway*.015*comfort*rest-(inertia*.006*rest)-sightAnchor.x*ads,
+      n.hold[1]*rest-sightAnchor.y*ads+bob*.012*comfort*rest-running*.039*rest-holster*.41-lookDown*.20,
+      n.hold[2]+ads*.054+kick+holster*.020);
     for(const a of arms){
       const driver=a.side===1,p=a.side;
       a.wrist.fromArray(driver?n.grip:n.support).applyQuaternion(held.quaternion).add(held.position);
@@ -162,7 +207,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       a.stitch.position.copy(a.wrap.position);a.stitch.position.y+=.035;
       a.stitch.quaternion.copy(a.wrap.quaternion);
       a.hand.position.copy(a.wrist);
-      ang.set(driver?.47:.24,driver?-.12:.49,driver?.37:-.61);
+      ang.set(driver?.47:selected>0?.44:.24,driver?-.12:selected>0?.69:.49,driver?.37:selected>0?-1.02:-.61);
       a.hand.quaternion.copy(held.quaternion).multiply(a.gripQ.setFromEuler(ang));
     }
     for(const leg of legs){
@@ -175,26 +220,31 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       leg.boot.position.copy(leg.ankle).y-=.112;
       leg.boot.rotation.set(-Math.max(0,Math.sin(q))*moving*.195+stride*.081,leg.side*-.083+strafe*.11,0);
     }
-    let effect=!!flight||recent>now;
-    if(flight){
-      const k=Math.min(1,(now-flight.at)/flight.duration);
-      orb.visible=ribbon.visible=k<1;
-      if(k<1){
-        orb.position.lerpVectors(flight.start,flight.end,k);
-        old.lerpVectors(flight.start,flight.end,Math.max(0,k-.13));
-        link(ribbon,old,orb.position,1,1);ribbon.scale.y*=2;
-      }else{
-        if(flight.target){flight.target.timer=now+420;flight.target.face.material.emissive.setHex(style[flight.style].color);recent=now+420}
-        flight=null;
-      }
+    let effect=recent>now, burst=1-(now-pressed)/74;
+    if(flash.visible){
+      effect=true;flash.visible=burst>0;flashMat.opacity=Math.max(0,burst)*.64;
+      flash.scale.set(n.flash*.89,n.flash,n.flash*(.64+Math.max(0,burst)));
     }
+    for(const t of traces){
+      if(!t.until)continue;
+      effect=true;
+      const k=Math.min(1,Math.max(0,(now-t.at)/(t.until-t.at)));
+      t.orb.visible=t.ribbon.visible=k<1;
+      if(k>=1){t.until=0;continue}
+      t.orb.position.lerpVectors(t.start,t.end,k);
+      old.lerpVectors(t.start,t.end,Math.max(0,k-.14));
+      link(t.ribbon,old,t.orb.position,1,1);t.ribbon.scale.y*=2;
+    }
+    if(arrivals.length)arrivals=arrivals.filter(e=>{
+      if(e.at>now)return true;
+      e.target.timer=now+440;e.target.face.material.emissive.setHex(e.color);recent=now+440;return false;
+    });
     for(const a of anchors)a.face.material.emissiveIntensity=.10+Math.max(0,(a.timer-now)/420)*2.5;
     return delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||oldKick>.0001||effect||transition;
   }
   function draw(renderer){
     if(!isActive()||selected<0||!equipmentAllowed())return;
-    eye.aspect=camera.aspect;const fov=(camera.aspect<.8?60:54)-ads*4;
-    if(eye.fov!==fov||eye.aspect!==eye.userData.aspect){eye.fov=fov;eye.userData.aspect=eye.aspect;eye.updateProjectionMatrix()}
+    syncProjection();
     const reset=renderer.autoClear;renderer.autoClear=false;renderer.clearDepth();
     renderer.render(stage,eye);renderer.autoClear=reset;
   }
@@ -206,7 +256,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   function stop(){
     aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
     camera.position.y=camera.rotation.z=0;
-    flight=null;orb.visible=ribbon.visible=false;recent=0;for(const a of anchors){a.timer=0;a.face.material.emissiveIntensity=.10}refresh();
+    clearPulses();recent=0;for(const a of anchors){a.timer=0;a.face.material.emissiveIntensity=.10}refresh();
   }
   update(performance.now());
   return {update,draw,preset,stop};

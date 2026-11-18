@@ -4,6 +4,7 @@ import {collisionWorld} from './collision.js';
 import {createPlayer, bindPlayerInput} from './player.js';
 import {addFixedColliders, BOUNDS, PLAYER, insidePerimeter} from './world-layout.js';
 import {addPerimeter} from './perimeter.js';
+import {addBackdrop} from './backdrop.js';
 import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
@@ -27,8 +28,6 @@ async function start(){
  r.setPixelRatio(Math.min(devicePixelRatio,1.6));
  $('canvas').append(r.domElement);
  const s=new T.Scene(), c=new T.PerspectiveCamera(65,1,.08,1250);
- const ground=new T.Mesh(new T.PlaneGeometry(1700,1700),new T.MeshStandardMaterial({color:0x9d9d80,roughness:1}));
- ground.rotation.x=-Math.PI/2;ground.position.y=-.30;ground.receiveShadow=true;s.add(ground);
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),tl=new T.TextureLoader();
  const need=async (name,read)=>{
    try{return await read()}catch(cause){const e=new Error('Projektdatei konnte nicht gelesen werden: '+name,{cause});e.asset=name;throw e;}
@@ -60,6 +59,7 @@ async function start(){
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
  walkSurfaces.push(...garden.floors);
+ const backdrop=addBackdrop(T,s),{ground}=backdrop;
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z)=>{
@@ -152,6 +152,7 @@ async function start(){
  const choices=[...$('lighting').querySelectorAll('[data-light]')];
  function selectLight(id,remember=false){
    if(!lighting.applyLighting(id))return false;
+   backdrop.setPreset(id);
    fountain.setPreset(id);
    hall.setPreset(id);hall.update(0,player.body.position);
    viewmodel.preset(id);

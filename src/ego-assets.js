@@ -3,9 +3,15 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Three original, purely decorative hard-surface silhouettes.
 export const EQUIPMENT=[
-  {label:'Kestrel',color:0x6fe2e6,case:0x465958,sight:.075,length:.256,grip:[.032,-.131,.018],support:[-.052,-.076,-.105]},
-  {label:'Amber',color:0xffb266,case:0xd6b48a,sight:.085,length:.300,grip:[.035,-.137,.014],support:[-.070,-.078,-.127]},
-  {label:'Vesper',color:0xc4b3ff,case:0x555778,sight:.094,length:.347,grip:[.036,-.128,.016],support:[-.059,-.079,-.148]}
+  {label:'Kestrel · Impulspistole',color:0x6fe2e6,case:0x4c5c62,
+    sight:[0,.074,-.191],emit:[0,.009,-.244],grip:[.034,-.121,.016],support:[-.047,-.082,-.081],
+    hold:[.229,-.220,-.61],yaw:.14,flash:.024,pattern:1},
+  {label:'Vesper · Impulsgewehr',color:0x8baeff,case:0x7d9290,
+    sight:[0,.124,-.132],emit:[0,.024,-.697],grip:[.036,-.124,.023],support:[-.047,-.092,-.349],
+    hold:[.239,-.216,-.53],yaw:.228,flash:.033,pattern:1},
+  {label:'Amber · Streuflinte',color:0xffb266,case:0x754d39,
+    sight:[0,.091,-.619],emit:[0,.033,-.682],grip:[.036,-.137,.028],support:[-.063,-.094,-.332],
+    hold:[.253,-.244,-.55],yaw:.241,flash:.042,pattern:5}
 ];
 
 export function egoAssets(T){
@@ -19,7 +25,7 @@ export function egoAssets(T){
     knee=m(0x3a4449,.88),boot=m(0x373a36,.78),sole=m(0x252828,.90);
   const shell=new RoundedBoxGeometry(1,1,1,2,.12),bevel=new RoundedBoxGeometry(1,1,1,1,.08),
     sphere=new T.SphereGeometry(.5,10,7),cyl=new T.CylinderGeometry(.5,.5,1,14),
-    oct=new T.CylinderGeometry(.5,.5,1,8),cap=new T.CapsuleGeometry(.5,1,5,10);
+    cap=new T.CapsuleGeometry(.5,1,5,10);
   const q=new T.Quaternion(),E=(x,y,z)=>new T.Euler(x,y,z);
   function assembly(name){
     const bins=new Map(),root=new T.Group();root.name=name;
@@ -43,68 +49,83 @@ export function egoAssets(T){
     return {shape,link,build};
   }
   const devices=EQUIPMENT.map((s,i)=>{
-    const A=assembly('Impulsgerät · '+s.label),o=A.shape;
-    const coat=m(s.case,.54,.20);
+    const A=assembly(s.label),o=A.shape;
+    const coat=m(s.case,.54,i===2?.02:.28), warm=m(0x92614b,.66,.025);
     const light=new T.MeshBasicMaterial({color:s.color}),
       glass=new T.MeshPhysicalMaterial({color:s.color,roughness:.18,metalness:.18,emissive:s.color,emissiveIntensity:.11});
     const box=(M,p,S,r)=>o(shell,M,p,S,r);
     const disk=(M,p,S)=>o(cyl,M,p,S,[Math.PI/2,0,0]);
-    const L=s.length;
-    box(rubber,[0,-.105,.018],[.064,.146,.091],[-.26,0,0]);
-    box(edge,[0,-.174,.050],[.075,.025,.096],[-.26,0,0]);
+    const L=-s.emit[2],hand=i===2?.147:.133;
+    box(rubber,[0,-.103,.018],[.064,hand,.086],[-.22,0,0]);
+    box(edge,[0,-.160,.051],[.073,.022,.090],[-.22,0,0]);
     for(const side of [-1,1]){
       box(dark,[side*.031,-.100,.026],[.012,.103,.064],[-.26,0,0]);
       for(let j=0;j<5;j++)box(leaf,[side*.036,-.062-j*.015,.019+j*.004],[.006,.007,.039],[-.22,0,-.10*side]);
     }
     if(i===0){
-      box(coat,[0,.002,-.049],[.091,.099,.190],[-.071,0,0]);
-      box(edge,[0,.034,-.081],[.084,.040,.205]);
-      box(dark,[0,-.032,-.131],[.080,.046,.196],[-.023,0,0]);
+      box(coat,[0,.006,-.072],[.094,.091,.246],[-.046,0,0]);
+      box(edge,[0,.037,-.102],[.086,.037,.227]);
+      box(dark,[0,-.029,-.131],[.080,.045,.168],[-.07,0,0]);
       disk(dark,[0,.008,-L+.022],[.074,.028,.067]);
       disk(glass,[0,.008,-L+.004],[.059,.013,.051]);
       disk(light,[0,.008,-L-.005],[.035,.005,.025]);
       for(const side of [-1,1]){
-        box(brass,[side*.046,-.007,-.099],[.011,.017,.102],[.14,0,0]);
+        box(brass,[side*.046,-.007,-.122],[.011,.017,.100],[.14,0,0]);
         box(dark,[side*.051,.033,-.062],[.008,.025,.061]);
-        for(let j=0;j<4;j++)box(steel,[side*.054,.035,-.044-j*.012],[.006,.014,.003]);
+        for(let j=0;j<5;j++)box(steel,[side*.053,.035,-.041-j*.010],[.006,.014,.003]);
       }
+      box(dark,[0,.059,.030],[.059,.014,.034]);
+      for(const side of [-1,1])box(edge,[side*.022,.071,.030],[.013,.023,.028]);
+      box(edge,[0,.061,s.sight[2]],[.022,.016,.032]);
+      box(light,s.sight,[.010,.010,.017]);
     }else if(i===1){
-      box(coat,[0,.020,-.083],[.105,.102,.236]);
-      box(dark,[0,-.030,-.145],[.093,.055,.253]);
+      // The rifle silhouette is built around a long cage, a compact
+      // optical ring and an open stock, with an opaque fictional emitter.
+      box(dark,[0,.002,-.113],[.079,.115,.266]);
+      box(coat,[0,.022,-.213],[.094,.087,.274]);
+      box(edge,[0,.071,-.173],[.062,.026,.248]);
+      box(dark,[0,.006,-.388],[.056,.091,.298]);
+      box(steel,[0,.024,-.556],[.052,.048,.276]);
+      box(coat,[0,-.031,-.363],[.087,.046,.219]);
+      box(dark,[0,-.099,-.139],[.061,.129,.136],[-.30,0,0]);
+      box(coat,[0,-.107,-.158],[.067,.054,.113],[-.30,0,0]);
+      box(edge,[0,.012,.117],[.055,.064,.209]);
+      A.link(shell,coat,[0,.038,.071],[0,.030,.252],.062,.050);
+      A.link(shell,edge,[0,-.014,.106],[0,-.091,.254],.047,.044);
+      box(rubber,[0,-.038,.270],[.075,.141,.041],[-.08,0,0]);
       for(const side of [-1,1]){
-        box(brass,[side*.051,.000,-.142],[.043,.077,.183],[-.03,-side*.025,0]);
-        box(steel,[side*.064,.030,-.138],[.025,.039,.165]);
-        box(dark,[side*.070,.004,-.141],[.015,.026,.131]);
-        box(light,[side*.077,.006,-.146],[.006,.007,.066]);
-        o(oct,brass,[side*.039,.004,-L+.008],[.066,.049,.065],[1.5708,0,0]);
-        disk(glass,[side*.039,.004,-L-.021],[.045,.011,.044]);
+        box(edge,[side*.041,.015,-.399],[.025,.028,.258]);
+        for(let j=0;j<7;j++)box(coat,[side*.046,-.001,-.285-j*.036],[.017,.036,.015]);
+        box(glass,[side*.046,.031,-.184],[.008,.019,.058]);
+        box(light,[side*.051,.033,-.188],[.006,.006,.032]);
       }
-      box(edge,[0,.063,-.039],[.072,.021,.086]);
+      disk(dark,[0,.024,-L+.037],[.087,.090,.075]);
+      disk(glass,[0,.024,-L+.006],[.063,.016,.049]);
+      box(coat,[0,.089,-.135],[.056,.037,.070]);
+      const optics=new T.TorusGeometry(.031,.008,7,16);
+      o(optics,dark,[0,s.sight[1],s.sight[2]],[1,1,.92]);optics.dispose();
+      o(sphere,light,s.sight,[.008,.008,.010]);
     }else{
-      box(coat,[0,.024,-.084],[.100,.111,.213],[.09,0,0]);
-      box(edge,[0,-.022,-.168],[.082,.054,.286]);
-      box(dark,[0,.028,-.235],[.092,.078,.174]);
+      // Wider double emitter, ribbed walnut fore-end and solid swept stock.
+      box(dark,[0,.010,-.110],[.116,.108,.225]);
+      box(edge,[0,.036,-.137],[.113,.074,.236]);
+      box(coat,[0,-.036,.156],[.101,.124,.280],[.24,0,0]);
+      box(warm,[0,-.074,.246],[.112,.148,.110],[.28,0,0]);
+      box(rubber,[0,-.080,.309],[.119,.157,.028],[.20,0,0]);
+      box(coat,[0,-.036,-.353],[.145,.094,.240],[-.015,0,0]);
+      for(let j=0;j<8;j++)box(warm,[0,-.040,-.261-j*.026],[.147,.097,.013]);
       for(const side of [-1,1]){
-        box(coat,[side*.053,.012,-.201],[.023,.057,.221],[-.063,side*.031,0]);
-        box(edge,[side*.049,.035,-.266],[.022,.062,.136],[0,-side*.024,0]);
-        box(glass,[side*.061,.031,-.235],[.008,.019,.065]);
-        for(let j=0;j<3;j++)box(light,[side*.045,.070,-.083-j*.025],[.011,.005,.009],[-.09,0,0]);
+        disk(dark,[side*.038,.032,-.423],[.063,.472,.066]);
+        disk(edge,[side*.039,.032,-L+.04],[.071,.060,.071]);
+        disk(glass,[side*.039,.032,-L+.006],[.052,.014,.052]);
+        disk(light,[side*.039,.032,-L-.004],[.034,.005,.034]);
+        box(brass,[side*.059,.028,-.112],[.009,.055,.067]);
+        box(dark,[side*.065,.028,-.113],[.006,.027,.040]);
       }
-      o(oct,dark,[0,.028,-L+.006],[.071,.044,.071],[1.5708,0,0]);
-      disk(glass,[0,.028,-L-.019],[.058,.013,.057]);
+      box(edge,[0,.065,-.521],[.027,.016,.277]);
+      box(brass,[0,.076,s.sight[2]],[.027,.020,.028]);
+      o(sphere,light,s.sight,[.011,.011,.012]);
     }
-    // Distinct readable near silhouettes and colored fronts, never real
-    // internals. The viewport can align the decorative locator in aim mode.
-    const rearWidth=i===2?.048:.054;
-    box(dark,[0,s.sight-.014,.066],[rearWidth,.020,.036]);
-    for(const side of [-1,1]){
-      box(edge,[side*rearWidth*.41,s.sight-.002,.067],[.012,.026,.036]);
-      disk(steel,[side*.027,.024,.071],[.010,.004,.010]);
-    }
-    const anchor=i===0?-.020:i===1?.018:.039,rise=s.sight-anchor-.004;
-    box(edge,[0,anchor+rise*.5,-L*.84],[.023,rise,.034]);
-    box(light,[0,s.sight,-L*.84],[.011,.014,.022]);
-    box(glass,[0,.024,.068],[.022,.014,.006]);
     return A.build();
   });
 

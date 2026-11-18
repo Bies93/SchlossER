@@ -122,15 +122,18 @@ export function bindPlayerInput({canvas, pad, player, active, pause, refresh, mo
     refresh();
   });
   canvas.addEventListener('pointerdown', event => {
-    if (!active() || locked() || drag.id !== null || event.button !== 0) return;
+    if (!active() || locked() || drag.id !== null) return;
     const touch = event.pointerType === 'touch';
+    if(event.button!==0&&(touch||event.button!==2))return;
     mode(touch ? 'touch' : 'drag');
     // On touch, the left half moves; the right half looks.
     if (touch && event.clientX < canvas.getBoundingClientRect().left + canvas.clientWidth / 2) {
       if (moveId === null) startStick(event);
       return;
     }
-    event.preventDefault();
+    // Suppressing a mouse pointerdown also suppresses its compatibility
+    // mousedown, which the viewmodel needs for independent mouse buttons.
+    if(touch)event.preventDefault();
     Object.assign(drag, {id: event.pointerId, x: event.clientX, y: event.clientY});
     canvas.setPointerCapture(event.pointerId);
   });

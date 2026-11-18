@@ -39,7 +39,7 @@ export function addPerimeter(T,scene,world,finish) {
     shopGlass:new T.MeshStandardMaterial({color:0x606066,vertexColors:true,roughness:.35,envMapIntensity:.69}),
     litGlass:new T.MeshStandardMaterial({color:0x5b5c55,vertexColors:true,roughness:.42,emissive:0xc89154,emissiveIntensity:0}),
     interior:new T.MeshStandardMaterial({color:0x292b27,vertexColors:true,roughness:.90}),
-    tileRoof:new T.MeshStandardMaterial({color:0x735448,vertexColors:true,roughness:.88}),
+    tileRoof:new T.MeshStandardMaterial({color:0xbfb1a7,vertexColors:true,roughness:.88}),
     houseStone:tinted('SANDSTONE_CUT',0xdac6aa),
     glass:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.29,metalness:.13}),
     paving:tinted('GROUND'), street:tinted('GROUND',0xaca697), gutter:tinted('GROUND',0x8a8578),
@@ -50,6 +50,8 @@ export function addPerimeter(T,scene,world,finish) {
   const setts=repeatSet(T,'setts',512);
   Object.assign(materials.stucco,sharedSet(T,'plaster',512));
   materials.stucco.normalScale.setScalar(.27);
+  Object.assign(materials.tileRoof,sharedSet(T,'tile',256));
+  materials.tileRoof.normalScale.setScalar(.36);
   Object.assign(materials.street,setts);
   materials.street.color.set(0xd8d3ca);materials.street.roughness=1;materials.street.normalScale.setScalar(.69);
   Object.assign(materials.gutter,setts);
@@ -126,17 +128,27 @@ export function addPerimeter(T,scene,world,finish) {
     box(f,'base',l,r,1.94,1.974,-.255,.255,new T.Color(0xb1aa92));
     cap(f,l,r,1.98,.16,.64);
     block(f,l,r,-.295,.295);
+    if(seed%4===1&&r-l>1.5){
+      const p=f.point,bright=new T.Color(0x8b925f),dim=new T.Color(0x697349),at=l+(r-l)*(.42+(seed%7)*.043);
+      for(let j=0;j<38;j++){
+        const q=Math.sin(seed*4.2+j*7.143)*.5+.5,k=Math.sin(j*2.399+seed*.37);
+        const x=at+k*(.16+q*.63),y=.081+q*.484*(1-Math.abs(k)*.68),s=.024+q*.039,d=(y<.35?.303:.266)+(j%4)*.004;
+        if(x-s<l||x+s>r)continue;
+        quad('verge',p(x-s,y,d),p(x,y-s*.84,d+.011),p(x+s,y+.006,d),
+          p(x+k*s*.19,y+s*.96,d+.014),j%3?dim:bright);
+      }
+    }
   }
   function rail(f,l,r,gate=false,street=false){
     if(r-l<.15)return;
     const low=street?.21:gate?.19:.41, top=street?2.7:gate?2.33:1.88;
     box(f,'iron',l,r,low,low+.075,-.037,.037);
     box(f,'iron',l,r,top-.12,top-.062,-.037,.037);
-    if(street)box(f,'doors',l,r,.28,1.50,-.044,.044);
+    if(street)box(f,'doors',l,r,.25,.55,-.044,.044);
     const count=Math.ceil((r-l)/.145);
     for(let j=0;j<count;j++){
       const u=l+(j+.5)*(r-l)/count;
-      box(f,'iron',u-.014,u+.014,street?1.51:low,top-.02,-.015,.015);
+      box(f,'iron',u-.014,u+.014,street?.54:low,top-.02,-.015,.015);
       if(gate&&!street){
         const p=f.point,a=p(u-.022,top-.045,-.019),b=p(u+.022,top-.045,-.019);
         const c=p(u+.022,top-.045,.019),d=p(u-.022,top-.045,.019),q=p(u,top+.057,0);
@@ -309,6 +321,10 @@ export function addPerimeter(T,scene,world,finish) {
             for(const x of [u-.075,v])box(f,'lintel',x,x+.075,sill,head,-.17,.045);
             box(f,'lintel',u-.105,v+.105,head,head+.10,-.168,.066);
           }
+          if(type!=='stone'&&!corner&&(salt+j*3+k*5)%11<3){
+            const color=new T.Color(['#746654','#637365','#806b5b'][salt%3]);
+            for(const x of [u-.25,v])box(f,'doors',x,x+.24,sill+.027,head-.018,-.036,.039,color);
+          }
         }
       }
       if(w>3.8){
@@ -363,33 +379,10 @@ export function addPerimeter(T,scene,world,finish) {
     else parkPanel(e,f);
 
     const p=f.point;
-    // Keep sight lines behind open ironwork complete. The outboard paths and
-    // yard structures are perspective context, with no entrance or collider.
+    // Keep the ground continuous right behind ironwork. Longer sight lines
+    // and their non-playable buildings are composed in backdrop.js.
     if(!city)quad('verge',p(-.15,-.245,-.20),p(f.len+.15,-.245,-.20),
       p(f.len+.15,-.245,-14),p(-.15,-.245,-14));
-    if(e.type==='iron'&&e.id%3!==0){
-      const l=.84,rr=f.len-.71,d=-3.5-(e.id%3)*.9;
-      if(rr>l+1)box(f,'stucco',l,rr,-.29,1.25+(e.id%2)*.62,d-.35,d,
-         new T.Color(0xa89c85));
-    }
-    if(e.type==='parkGate'||e.type==='streetGate'){
-      quad('street',p(.26,-.207,-.30),p(f.len-.26,-.207,-.30),
-        p(f.len-.26,-.207,-10),p(.26,-.207,-10));
-      const v=e.type==='streetGate'?3.44:2.06;
-      for(const [a,b] of [[.03,.28],[f.len-.28,f.len-.04]])box(f,'stone',a,b,-.29,v,-10.71,-.32);
-      if(e.gate==='botanical'){
-        box(f,'stucco',-.8,f.len+1.4,-.28,1.32,-10.5,-10.2,new T.Color(0x989d79));
-        continue;
-      }
-      box(f,'stucco',-1,f.len+2,-.28,3.9,-15,-10.7,new T.Color(0xa7a394));
-      box(f,'base',-1,f.len+2,-.23,.52,-15.14,-10.66);
-      const a=p(-1.22,3.92,-10.43),b=p(f.len+2.22,3.92,-10.43);
-      const c=p(f.len+2.22,3.92,-15.27),d=p(-1.22,3.92,-15.27);
-      const ridgeL=p(-1.22,4.9,-12.85),ridgeR=p(f.len+2.22,4.9,-12.85);
-      quad('roof',a,b,ridgeR,ridgeL);quad('roof',c,d,ridgeL,ridgeR);
-      quad('stucco',d,a,ridgeL,ridgeL,new T.Color(0xa7a394));
-      quad('stucco',b,c,ridgeR,ridgeR,new T.Color(0xa7a394));
-    }
   }
   for(const gate of Object.values(GATES))openGate(gate);
   // The interior boundary ties into the palace and the Orangerie rather than

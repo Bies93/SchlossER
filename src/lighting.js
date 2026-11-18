@@ -1,12 +1,13 @@
 import {addFixtures} from './street-light.js';
+import {randomSource} from './surface-detail.js';
 
 export const DEFAULT_LIGHT='dusk';
 export const LIGHTING = {
-  dusk:{sky:0x627fad,horizon:0xe8a874,fog:0xbc9f8c,cloud:0xf6cfab,fogDensity:.0024,
+  dusk:{sky:0x52739e,horizon:0xe6a67f,fog:0xb29d94,cloud:0xf2ceb3,fogDensity:.0027,
     direction:[-.85,.19,.54],disc:0xffc278,angular:.006,aura:.39,stars:0,clouds:.39,
     key:0xffc795,power:2.80,fill:0xbccdf2,bounce:0x8a7365,hemi:.94,
     exposure:1.02,env:'dusk',reflection:.62,lamps:.42,window:.28,shadow:[89,64,.036]},
-  night:{sky:0x192b4c,horizon:0x485471,fog:0x374760,cloud:0x425370,fogDensity:.0023,
+  night:{sky:0x162640,horizon:0x485375,fog:0x3f4962,cloud:0x465574,fogDensity:.0026,
     direction:[-.46,.54,-.71],disc:0xecf1ff,angular:.0072,aura:.054,stars:1,clouds:.23,
     key:0xc4d7ff,power:.51,fill:0xadbdeb,bounce:0x5e5d68,hemi:.62,
     exposure:.94,env:'night',reflection:.30,lamps:1,window:.85,shadow:[73,71,.040]}
@@ -15,30 +16,81 @@ export const LIGHTING = {
 const SKY = `
  varying vec3 ray;
  uniform vec3 topTint,horizonTint,cloudTint,discTint,celestial;
- uniform float discSize,aura,starLevel,cloudCover;
+ uniform float discSize,aura,starLevel,cloudCover,skyTime;
+ uniform sampler2D cloudField;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
- float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
-   return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.)),f.x),f.y);}
+ float fbm(vec2 p){return texture2D(cloudField,p*.086).r;}
  void main(){
-   vec3 v=normalize(ray);float h=max(v.y,0.);
-   vec3 col=mix(horizonTint,topTint,pow(smoothstep(0.,.93,h),.62));
-   float toward=max(dot(v,celestial),0.);
-   col+=discTint*pow(toward,10.)*aura*(.22+.78*smoothstep(-.03,.13,h));
-   vec2 p=v.xz/max(.10,v.y+.18)*2.8;
-   float n=noise(p)*.52+noise(p*2.3)*.29+noise(p*4.7)*.13+noise(p*9.8)*.06;
-   float clouds=smoothstep(.49,.78,n)*smoothstep(.014,.16,h)*cloudCover;
-   vec2 star=vec2(atan(v.z,v.x)*116.,v.y*166.);
-   vec2 id=floor(star),d=fract(star)-vec2(.27+.43*hash(id+3.),.22+.52*hash(id+7.));
-   float glint=(1.-smoothstep(.020,.114,length(d)))*step(.990,hash(id));
-   col+=vec3(glint)*starLevel*.48*smoothstep(.13,.51,h)*(1.-clouds);
-   col=mix(col, cloudTint*(.78+.22*toward),clouds);
-   float body=smoothstep(cos(discSize*1.17),cos(discSize*.84),toward);
-   col+=discTint*body*(starLevel>.5?1.7:6.0)*(1.-clouds*.75);
+   vec3 v=normalize(ray);
+   float h=max(v.y,0.),toward=max(dot(v,celestial),0.),night=starLevel;
+   vec2 compass=normalize(v.xz+vec2(.00001)),sunward=normalize(celestial.xz);
+   float eastwest=.5+.5*dot(compass,sunward);
+   vec3 away=mix(horizonTint,topTint,mix(.63,.39,night));
+   vec3 horizon=mix(away,horizonTint,pow(eastwest,.86));
+   vec3 col=mix(horizon,topTint,pow(h,.51));
+   float bank=exp(-h*6.4);
+   col+=discTint*aura*(pow(toward,mix(13.,27.,night))*.75+pow(eastwest,5.)*bank*.22);
+   col=mix(col,mix(horizon,topTint,night*.15),smoothstep(.015,.37,-v.y)*.91);
+
+   // Lower banks are broad and lit on their sunward side. The high ice
+   // wisps have a different scale, direction and much less opacity.
+   vec2 drift=vec2(.018,-.009)*skyTime;
+   vec2 p=(vec2(v.x+v.z*.31,v.z-v.x*.22)/max(.22,v.y+.31))*vec2(2.8,2.1)+drift;
+   float f=fbm(p+vec2(fbm(p*.76),fbm(p*.83+3.1))*.52),level=.59-cloudCover*.37;
+   float coverage=smoothstep(level,level+.29,f)*smoothstep(.018,.16,h);
+   float rim=clamp((f-fbm(p+sunward*.156))*3.+.50,0.,1.);
+   vec3 under=mix(col*.48,topTint*.41,.29);
+   vec3 warm=cloudTint*mix(.62,.27,night)*(1.+toward*.30);
+   vec3 bankColor=mix(under,warm,mix(.36,.82,rim));
+   vec2 hi=vec2(p.x*.95+p.y*.32,p.y*3.5)-drift*.54+31.;
+   float veil=smoothstep(.545,.79,fbm(hi))*smoothstep(.10,.38,h)*(1.-coverage*.82);
+   vec3 highColor=mix(topTint,cloudTint,mix(.36,.14,night));
+
+   if(night>.5){
+     float longitude=atan(v.z,v.x)/6.2831853+.5;
+     vec2 star=vec2(longitude*394.,h*186.),id=floor(star);
+     vec2 delta=fract(star)-(.20+.60*vec2(hash(id+11.0),hash(id-8.1)));
+     float chance=hash(id+10.6),lum=hash(id+74.1);
+     float r=mix(.045,.185,lum*lum),aa=clamp(max(fwidth(star.x),fwidth(star.y))*.27,.009,.14);
+     float sparkle=(1.-smoothstep(r-aa,r+aa,length(delta)))*step(.985,chance)*lum;
+     col+=mix(vec3(.62,.76,1.),vec3(1.,.87,.69),hash(id-13.))*sparkle*.61
+       *smoothstep(.06,.34,h)*(1.-coverage*.92)*(1.-veil*.72);
+   }
+   col=mix(col,highColor,veil*mix(.38,.20,night));
+   col=mix(col,bankColor,coverage*mix(.58,.60,night));
+   vec3 du=normalize(cross(vec3(0.,1.,0.),celestial)),dv=cross(celestial,du);
+   vec2 disk=vec2(dot(v,du),dot(v,dv))/discSize;
+   float radius=length(disk),body=(1.-smoothstep(.88,1.06,radius))*step(.0,dot(v,celestial));
+   if(body>0.){
+     float softMoon=night>.5?.56+.29*fbm(disk*3.2+5.9)+.14*sqrt(clamp(1.-radius*radius,0.,1.)):1.;
+     col+=discTint*body*mix(5.4,1.55*softMoon,night)*(1.-coverage*.89);
+   }
    gl_FragColor=vec4(col,1.);
    #include <tonemapping_fragment>
    #include <colorspace_fragment>
  }
 `;
+
+function cloudNoise(T){
+  // Tile the noise once. The full-screen shader can then layer and light
+  // it with texture reads, rather than repeating the lattice per pixel.
+  const size=256,rng=randomSource(78238),out=new Uint8Array(size*size);
+  const layers=[8,17,36,72].map((n,i)=>[n,[.52,.28,.14,.06][i],Float32Array.from({length:n*n},rng)]);
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    let value=0;
+    for(const [n,gain,grid] of layers){
+      const a=(x+.5)*n/size,b=(y+.5)*n/size,i=Math.floor(a),j=Math.floor(b),u=a-i,v=b-j;
+      const U=u*u*(3-2*u),V=v*v*(3-2*v),row=j*n,next=((j+1)%n)*n,right=(i+1)%n;
+      const p=grid[row+i]+U*(grid[row+right]-grid[row+i]);
+      const q=grid[next+i]+U*(grid[next+right]-grid[next+i]);
+      value+=(p+V*(q-p))*gain;
+    }
+    out[y*size+x]=Math.round(value*255);
+  }
+  const t=new T.DataTexture(out,size,size,T.RedFormat);
+  t.wrapS=t.wrapT=T.RepeatWrapping;t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;
+  t.generateMipmaps=true;t.needsUpdate=true;return t;
+}
 
 // Small procedural HDR maps for reflections, matching the sky palette.
 function ambientMap(T, preset){
@@ -67,7 +119,8 @@ export function makeLighting(T, renderer, scene, world, floorHeight){
   const uniforms={
     topTint:{value:new T.Color()},horizonTint:{value:new T.Color()},cloudTint:{value:new T.Color()},
     discTint:{value:new T.Color()},celestial:{value:new T.Vector3()},
-    discSize:{value:0},aura:{value:0},starLevel:{value:0},cloudCover:{value:0}
+    discSize:{value:0},aura:{value:0},starLevel:{value:0},cloudCover:{value:0},skyTime:{value:0},
+    cloudField:{value:cloudNoise(T)}
   };
   const sky=new T.Mesh(new T.SphereGeometry(860,36,24),new T.ShaderMaterial({
     side:T.BackSide,depthWrite:false,fog:false,uniforms,
@@ -109,6 +162,7 @@ export function makeLighting(T, renderer, scene, world, floorHeight){
   }
   function update(player){
     sky.position.set(player.x,player.y,player.z);
+    uniforms.skyTime.value=performance.now()*.001;
     if(needsAnchor||Math.abs(center.x-player.x)>34||Math.abs(center.z-player.z)>34){
       center.set(Math.round(player.x/48)*48,0,Math.round(player.z/48)*48);focus.copy(center);
       // Snap in the light's projection, not in world coordinates alone.
