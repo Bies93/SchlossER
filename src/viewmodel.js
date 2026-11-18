@@ -4,8 +4,9 @@ import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
 // markers. The architecture and other world meshes are never affected.
 export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,creatures=null,onPulse=()=>{}){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
-  const h=new T.HemisphereLight(0xf5ede1,0x788994,2.1),key=new T.DirectionalLight(0xf7dcac,1.65);
-  key.position.set(-1,.9,.6);stage.add(h,key);
+  const h=new T.HemisphereLight(0xe6eaf0,0x839098,1.24),key=new T.DirectionalLight(0xf7dcac,1.38),
+    rim=new T.DirectionalLight(0xb5c8dc,.62);
+  key.position.set(-1,1.4,.45);rim.position.set(1.2,.65,-1);stage.add(h,key,rim);
   const hands=new T.Group(),held=new T.Group();hands.add(held);stage.add(hands);
   const mat=(color,roughness=.66,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
   const rig=egoAssets(T),{cap,shell}=rig.geometry,{edge,frame,sleeve,cuff,pant,knee}=rig.materials;
@@ -263,9 +264,14 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     renderer.render(stage,eye);renderer.autoClear=reset;
   }
   function preset(id){
-    h.intensity=id==='night'?.84:1.35;
-    key.intensity=id==='night'?.46:1.38;
-    key.color.setHex(id==='night'?0x9baec8:0xffc698);
+    const night=id==='night';
+    h.intensity=night?.66:1.24;
+    key.intensity=night?.64:1.85;
+    rim.intensity=night?.45:.74;
+    key.color.setHex(night?0xaebed4:0xffddc1);
+    // Share the already-generated evening/night probe; no separate capture.
+    stage.environment=scene.environment;
+    stage.environmentIntensity=night?.52:.85;
   }
   function stop(){
     aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);

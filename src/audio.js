@@ -10,6 +10,7 @@ const bass=[36,32,34,31,36,41,34,36,31,32,34,31,34,41,31,36];
 const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
+const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
 export function makeAudio(listener) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,step=0,next=0,timer=0,bedTime=0;
   let levels={music:.48,sfx:.72};
@@ -147,7 +148,7 @@ export function makeAudio(listener) {
   function foot(kind,power=1,impact=false,side=1){
     if(!live())return;
     const [low,high,edge,decay]=sound[kind]??sound.stone,t=ctx.currentTime+.005;
-    const v=(.42+Math.min(power,1.3)*.52)*(impact?1.51:1),pan=side*.13,wet=kind==='hall'?.46:.14;
+    const v=FOOT_LEVEL*(.42+Math.min(power,1.3)*.52)*(impact?1.34:1),pan=side*.13,wet=kind==='hall'?.31:.10;
     tone(sfx,t,low*(.87+random()*.21),.07,.099*v,{end:low*.58,attack:.007,pan,wet});
     grit(sfx,t+.004,decay,.127*v,high*.32,edge,{pan,wet,rate:.84+random()*.34});
     if(kind==='gravel')grit(sfx,t+.039,.097,.064*v,1170,3700,{pan,wet:.12,rate:1.15});
