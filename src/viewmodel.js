@@ -2,7 +2,7 @@ import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
 
 // Gameplay pulses affect only fictional creatures and authored light
 // markers. The architecture and other world meshes are never affected.
-export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,creatures=null){
+export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,creatures=null,onPulse=()=>{}){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xf5ede1,0x788994,2.1),key=new T.DirectionalLight(0xf7dcac,1.65);
   key.position.set(-1,.9,.6);stage.add(h,key);
@@ -98,6 +98,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const age=performance.now(),n=style[selected];
     if(age-pressed<(n.pattern>1?240:145))return;
     pressed=age;
+    onPulse(selected);
     syncProjection();
     camera.getWorldPosition(from);camera.getWorldQuaternion(headQ);
     aimScreen.set(0,0);
@@ -180,14 +181,15 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   function update(now){
     const elapsed=t0===null?1/60:(now-t0)/1000,dt=Math.min(.045,elapsed);t0=now;
     deltaPos.subVectors(player.body.position,previous);previous.copy(player.body.position);
-    const delta=Math.hypot(deltaPos.x,deltaPos.z),speed=delta/Math.max(dt,.001),yaw=player.body.rotation.y;
+    const delta=Math.hypot(deltaPos.x,deltaPos.z),speed=player.motion?.speed??delta/Math.max(dt,.001),yaw=player.body.rotation.y;
+    const grounded=player.motion?.grounded??true,landing=player.motion?.land??0;
     const relative=(deltaPos.x*Math.cos(yaw)-deltaPos.z*Math.sin(yaw))/Math.max(.001,dt);
     const dyaw=Math.atan2(Math.sin(yaw-previousYaw),Math.cos(yaw-previousYaw));previousYaw=yaw;
-    moving=relax(moving,Math.min(1,speed/2.75),12,dt);
+    moving=relax(moving,grounded?Math.min(1,speed/2.75):0,12,dt);
     running=relax(running,T.MathUtils.clamp((speed-3.28)/2.5,0,1),9,dt);
     strafe=relax(strafe,T.MathUtils.clamp(relative/3.3,-1,1),11,dt);
     inertia=relax(inertia,T.MathUtils.clamp(dyaw/Math.max(.001,dt),-4,4),21,dt);
-    step+=delta*(5.05-running*.82);
+    if(grounded)step+=delta*(5.05-running*.82);
     let holster=0,transition=!!swap;
     if(swap){
       const age=now-swap.at;
@@ -202,12 +204,12 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const n=style[Math.max(0,selected)],sway=Math.sin(step)*moving*(1-ads*.93),
       bob=Math.cos(step*2)*moving*(1-ads*.89),comfort=reduced?.18:1,rest=1-ads;
     const lookDown=smooth(T.MathUtils.clamp((-camera.parent.rotation.x-.78)/.52,0,1))*rest;
-    camera.position.y=bob*.013*comfort*(1+running*.38);camera.rotation.z=strafe*.007*comfort;
+    camera.position.y=(bob*.013*(1+running*.38)-landing*.035)*comfort;camera.rotation.z=strafe*.007*comfort;
     held.rotation.set(-.045*rest+sway*.023*comfort+kick*1.98-holster*.76-lookDown*.25,
       n.yaw*rest+inertia*.008*rest+sway*.016*comfort,-strafe*.04*rest+holster*.23+running*.075*rest-.031*rest);
     sightAnchor.fromArray(n.sight).applyQuaternion(held.quaternion);
     held.position.set((n.hold[0]+running*.052)*rest+sway*.015*comfort*rest-(inertia*.006*rest)-sightAnchor.x*ads,
-      n.hold[1]*rest-sightAnchor.y*ads+bob*.012*comfort*rest-running*.039*rest-holster*.41-lookDown*.20,
+      n.hold[1]*rest-sightAnchor.y*ads+(bob*.012*comfort-landing*.020*comfort-(grounded?0:.032))*rest-running*.039*rest-holster*.41-lookDown*.20,
       n.hold[2]+ads*.054+kick+holster*.020);
     for(const a of arms){
       const driver=a.side===1,p=a.side;

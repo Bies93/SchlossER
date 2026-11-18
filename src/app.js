@@ -16,6 +16,7 @@ import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
+import {makeAudio} from './audio.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
@@ -76,7 +77,15 @@ async function start(){
  };
  const lighting=makeLighting(T,r,s,world,floorHeight);
  lighting.registerWindows(perimeter.windows);
- const player=createPlayer(T,c,world,floorHeight);
+ const audio=makeAudio(()=>{
+   c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
+   return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
+ });
+ const player=createPlayer(T,c,world,floorHeight,event=>{
+   const {kind,x,z,foot,power}=event;
+   const surface=hallFloor(x,z)!==null?'hall':garden.surfaceAt(x,z)??'stone';
+   audio.foot(surface,power,kind==='land',foot);
+ });
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
@@ -103,9 +112,9 @@ async function start(){
    noticeTimer=setTimeout(()=>{ghoulNotice.hidden=true},kind==='hurt'?1050:kind==='progress'?1600:4100);
    refresh();
  }
- const round=ghoulRound(T,s,world,floorHeight,announceGhoul);
+ const round=ghoulRound(T,s,world,floorHeight,announceGhoul,audio.creature);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
-   ()=>combat()&&desktopRound()&&hall.allowGear(player.body.position),round);
+   ()=>combat()&&desktopRound()&&hall.allowGear(player.body.position),round,audio.shot);
  viewmodel.setCombat(false);
  const modeButtons=[...$('game-mode').querySelectorAll('[data-mode]')];
  function chooseMode(id){
@@ -126,7 +135,7 @@ async function start(){
  function applyMode(){
    if(chosenMode===gameMode)return;
    gameMode=chosenMode;firstRound=combat();
-   round.reset();viewmodel.setCombat(combat());
+   round.reset();viewmodel.setCombat(combat());audio.mode(combat());
    clearTimeout(noticeTimer);ghoulNotice.hidden=true;
    document.body.dataset.mode=gameMode;
  }
@@ -172,6 +181,7 @@ async function start(){
    frame=0;
    if(active()){
      if(input.tick(time))dirty=true;
+     audio.ambience(player.body.position);
      if(combat()&&desktopRound()){
        if(firstRound&&round.prompt(player.body.position)){
          firstRound=false;
@@ -194,16 +204,17 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   input.clear();fountain.stop?.();viewmodel.stop();round.stop();lastDoorTime=null;doorPrompt();roundPrompt();
+   input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();roundPrompt();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
-   canvas,pad:$('stick'),player,active,pause:()=>pause(!document.hidden && document.hasFocus()),
+   canvas,pad:$('stick'),jumpButton:$('jump'),player,active,pause:()=>pause(!document.hidden && document.hasFocus()),
    refresh,mode:value=>{document.body.dataset.input=value}
  });
  action.onclick=event=>{
    if(!combatAvailable()&&chosenMode==='ghouls')chooseMode('walk');
    applyMode();
+   audio.play();
    document.body.dataset.state='playing';
    input.start({
      touch:!combat()&&(event.pointerType==='touch'||coarse.matches),
@@ -212,6 +223,23 @@ async function start(){
    schedule();
  };
  $('pause').onclick=()=>pause(true);
+ const audioButton=$('audio-toggle');
+ function audioStatus(){
+   const on=audio.settings().enabled;
+   audioButton.setAttribute('aria-pressed',String(on));
+   audioButton.textContent=on?'Ton an':'Ton aus';
+ }
+ audioButton.onclick=()=>{audio.toggle();audioStatus()};
+ window.addEventListener('keydown',e=>{
+   if(!active()||e.code!=='KeyM'||e.repeat||e.altKey||e.ctrlKey||e.metaKey)return;
+   audio.toggle();audioStatus();
+ });
+ for(const input of $('audio-settings').querySelectorAll('input[type=range]')){
+   const key=input.dataset.audio;
+   input.value=String(audio.settings()[key]*100);
+   input.addEventListener('input',()=>audio.volume(key,Number(input.value)/100));
+ }
+ audioStatus();
  $('info').onclick=()=>{pause();about.showModal()};
  $('full').hidden=!document.fullscreenEnabled;
  $('full').onclick=async()=>{

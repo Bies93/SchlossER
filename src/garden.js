@@ -96,6 +96,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   addOrangery(T,group,world,finish);
   return {
     floors, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
+    surfaceAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?(network.edge(x,z)<.17?'gravel':'lawn'):null,
     update:(position,time)=>{plants(position,time);beds(position)}
   };
 }

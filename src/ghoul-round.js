@@ -73,7 +73,7 @@ function gardenRoutes(world){
   return {clear,route,usable};
 }
 
-export function ghoulRound(T,scene,world,floorHeight,notify){
+export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
   const nav=gardenRoutes(world),root=new T.Group();root.name='Schlossgarten · Ghoul-Runde';scene.add(root);
   const rng=randomSource(238019),V=(a,b,c)=>new T.Vector3(a,b,c),point=V(0,0,0);
   const dust=new T.SphereGeometry(1,6,4);
@@ -123,6 +123,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify){
       const [x,z]=starts[i];
       g.origin=[x,z];g.health=100;g.alert=false;g.mode='emerge';g.motion=g.v=g.flinch=g.fall=0;
       g.planAt=clock+i*.18;g.birth=clock+i*.24;g.vanished=false;
+      g.nextVoice=clock+1.9+i*.54;
       g.tAttack=-1;g.lastAttack=clock-6;g.attackDone=false;g.cached=null;g.impact=null;g.path.length=0;
       const o=g.rig.actor;o.position.set(x,floorHeight(x,z),z);o.rotation.y=Math.atan2(p.x-x,p.z-z);
       o.scale.setScalar(g.gait);o.visible=false;g.shadow.visible=false;g.sparks.visible=false;
@@ -152,6 +153,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify){
   function damage(g,n,color,impactPoint){
     if(state!=='running'||g.health<=0||g.mode==='emerge'||!Number.isFinite(n)||n<=0)return false;
     g.health=Math.max(0,g.health-n);g.alert=true;g.flinch=.26;g.planAt=clock;
+    voice(g.health===0?'down':'hit',g.rig.actor.position);
     g.sparks.material.color.setHex(color);g.impact=clock;g.serial=++pulseSerial;
     if(impactPoint)g.sparkOrigin.copy(impactPoint);
     else {g.sparkOrigin.copy(g.rig.actor.position);g.sparkOrigin.y+=1.18}
@@ -216,13 +218,17 @@ export function ghoulRound(T,scene,world,floorHeight,notify){
       const distance=nearPlayer(g),previousX=at.x,previousZ=at.z;
       if(distance>113&&!g.alert)continue; // no idle animation far from the current walk
       if(tracking&&distance<32)g.alert=true;
+      if(distance<23&&clock>=g.nextVoice){
+        voice('idle',at);g.nextVoice=clock+5.3+rng()*5.1;
+      }
       const chase=tracking&&g.alert&&distance<56,
         goalX=chase?p.x:g.origin[0]+Math.sin(clock*.39+g.seed)*1.57,
         goalZ=chase?p.z:g.origin[1]+Math.sin(clock*.23+g.seed+1.2)*1.82;
       let attack=0,go=chase?1.48+g.seed*.062:.57;
-      const clearBite=chase&&distance<1.74&&nav.clear(at.x,at.z,p.x,p.z);
+      const clearBite=chase&&distance<1.74&&Math.abs(p.y-at.y)<.62&&nav.clear(at.x,at.z,p.x,p.z);
       if(g.tAttack<0&&clearBite&&clock-g.lastAttack>1.23&&g.flinch<=0){
         g.tAttack=clock;g.attackDone=false;
+        voice('attack',at);
       }
       if(g.tAttack>=0){
         const age=clock-g.tAttack;

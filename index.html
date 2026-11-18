@@ -35,6 +35,8 @@ body[data-state=paused] #leave,body[data-state=paused] .paused-copy{display:bloc
 body[data-state=paused] .ready-copy{display:none}
 body[data-state=playing][data-input=drag] #drag-hint{display:block}
 body[data-state=playing][data-input=touch] #stick{display:grid;place-items:center}
+#jump{display:none;position:absolute;right:max(18px,env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));min-height:52px;border-radius:50%;background:#19201de8;touch-action:none;z-index:3}
+body[data-state=playing][data-input=touch] #jump{display:block}
 main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 canvas{touch-action:none;outline:none}
@@ -49,6 +51,10 @@ canvas{touch-action:none;outline:none}
 .light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
 .light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
 .light-switch button:disabled{opacity:.48;cursor:not-allowed}
+#audio-settings{margin-top:8px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;color:var(--muted);font-size:12px}
+#audio-settings summary{cursor:pointer}
+#audio-settings label{display:grid;grid-template-columns:65px 1fr;align-items:center;gap:6px;margin:6px 0}
+#audio-settings input{width:100%;accent-color:var(--accent)}
 .panel #mode-description{font-size:12px;margin:5px 1px 0;min-height:1.45em}
 .primary{background:var(--accent);color:#171c17;border-color:transparent;font-weight:650}
 .primary:hover{background:#f3deb6}
@@ -74,7 +80,7 @@ dialog form{margin-top:16px}
 @media(pointer:coarse){.desktop-copy{display:none}.touch-copy{display:block}}
 body[data-input=touch] #portal-action kbd{display:none}
 @media(max-width:460px){.brand{gap:6px}.brand svg{width:23px}.brand b{font-size:17px}.brand-subtitle{padding-left:6px;font-size:8px;letter-spacing:.07em}.brand-signature{padding-left:6px;letter-spacing:0}.tools{gap:4px}.tool{padding-inline:8px}.tool.icon{padding:0}}
-@media(max-width:345px){.brand-subtitle{display:none}}
+@media(max-width:390px){.brand-subtitle{display:none}}
 @media(max-height:420px){.panel{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px}.panel h1,.panel h2{font-size:24px}.panel p:not(.eyebrow){margin:5px 0}.actions{margin-top:8px}}
 </style>
 <meta name="description" content="Ein interaktiver Rundgang durch das Erlanger Schloss und seinen Garten."><!--
@@ -106,6 +112,7 @@ THE SOFTWARE.
 <header>
   <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span class="brand-subtitle">Schloss &amp; Garten</span><span class="brand-signature">I <span class="brand-heart">❤️</span> BIES</span></div>
   <div class="tools">
+    <button class="tool" id="audio-toggle" type="button" aria-pressed="true" title="Ton umschalten (M)">Ton an</button>
     <button class="tool" id="pause" type="button" title="Pause (Escape)">Pause</button>
     <button class="tool" id="info" type="button" aria-haspopup="dialog">Hilfe</button>
   </div>
@@ -118,8 +125,8 @@ THE SOFTWARE.
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
     <h2 class="paused-copy">Pausiert</h2>
     <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
-    <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen<br><kbd>E</kbd> Tür bedienen · Maus oder Pfeile zum Umsehen · <kbd>Esc</kbd> Pause</p>
-    <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Den Stick weiter nach außen ziehen zum Rennen.</p>
+    <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Leertaste</kbd> springen<br><kbd>E</kbd> Tür · Maus oder Pfeile zum Umsehen · <kbd>Esc</kbd> Pause</p>
+    <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Stick nach außen zum Rennen; „Sprung“ zum Springen.</p>
     <fieldset class="light-switch" id="game-mode" aria-describedby="mode-description">
       <legend>Spielmodus</legend>
       <button type="button" data-mode="walk" aria-pressed="true">Rundgang</button>
@@ -131,6 +138,11 @@ THE SOFTWARE.
       <button type="button" data-light="dusk" aria-pressed="true">Sonnenuntergang</button>
       <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
     </fieldset>
+    <details id="audio-settings">
+      <summary>Lautstärke</summary>
+      <label>Musik <input type="range" min="0" max="100" value="48" data-audio="music"></label>
+      <label>Effekte <input type="range" min="0" max="100" value="72" data-audio="sfx"></label>
+    </details>
     <div class="actions">
       <button type="button" class="primary" id="enter"><span class="ready-copy" id="start-mode">Rundgang starten</span><span class="paused-copy">Weitergehen</span></button>
       <button type="button" class="tool icon" id="full" aria-label="Vollbild umschalten" title="Vollbild umschalten" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg></button>
@@ -146,17 +158,19 @@ THE SOFTWARE.
   <button id="ghoul-action" type="button" hidden><kbd aria-hidden="true">R</kbd><span id="ghoul-text">Ghoul-Runde starten</span></button>
   <div id="ghoul-notice" role="status" hidden></div>
   <div id="stick" aria-hidden="true"><span></span></div>
+  <button type="button" id="jump">Sprung</button>
 </main>
 <dialog id="about" aria-labelledby="help-title">
   <h2 id="help-title">So erkundest du das Schloss</h2>
-  <p><strong>Maus &amp; Tastatur:</strong> Gehe mit WASD. Halte Umschalt zum Rennen. Bewege die Maus zum Umsehen. Ohne Mausfang: Ziehe im Bild oder nutze die Pfeiltasten. Mit Escape pausierst du.</p>
-  <p><strong>Touch:</strong> Ziehe links zum Gehen und rechts zum Umsehen. Ziehe den Stick über den Rand zum Rennen; lass links los zum Anhalten. „Pause“ öffnet das Menü.</p>
+  <p><strong>Maus &amp; Tastatur:</strong> WASD zum Gehen, Umschalt zum Rennen, Leertaste zum Springen. Bewege die Maus zum Umsehen. Ohne Mausfang: Ziehe im Bild oder nutze die Pfeiltasten. Escape pausiert.</p>
+  <p><strong>Touch:</strong> Ziehe links zum Gehen und rechts zum Umsehen. Ziehe den Stick über den Rand zum Rennen und tippe auf „Sprung“ zum Springen.</p>
+  <p><strong>Ton:</strong> Die Musik startet mit dem Rundgang. <kbd>M</kbd> oder der Schalter im Header schalten den Ton an und aus. Musik und Effekte lassen sich im Menü getrennt regeln.</p>
   <p><strong>Schlosstüren:</strong> Geh zum mittleren Portal am Platz oder im Garten und drücke <kbd>E</kbd> oder tippe auf den eingeblendeten Knopf. Beide Türen führen in dieselbe Halle. Der Innenraum ist frei gestaltet, kein Nachbau des heutigen Grundrisses.</p>
   <p><strong>Spielmodus:</strong> Im Rundgang gibt es keine Waffen und keine Gegner. Der Ghoul-Modus ist für Maus und Tastatur: Fünf Ghoule erscheinen, sobald du den Garten erreichst. Nach Sieg oder Niederlage startet <kbd>R</kbd> im Garten eine neue Runde. Ein Moduswechsel im Pausenmenü beendet eine laufende Runde.</p>
   <p><strong>Impulsgeräte im Ghoul-Modus:</strong> 1 = Pistole, 2 = Gewehr, 3 = Streuflinte. Zum Wechseln geht auch das Mausrad; 0 blendet das Gerät aus. Halte rechts zum Anvisieren und klicke links für einen Lichtimpuls.</p>
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=14d052c7c434"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=5eaec44b7e88"></script>
 </body>
 </html>
