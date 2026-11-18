@@ -36,7 +36,7 @@ export function surfaceLibrary(THREE, maps) {
     MORTAR: [null, 1, '#967f63', .93], METAL: [null, 1, '#514d45', .39],
     RECESS: [null, 1, '#302d27', .96], COPPER_PATINA: [null, 1, '#709580', .53],
     ZINC: [null, 1, '#898b85', .48], LINEN: [null, 1, '#b5ac97', .88],
-    GLASS: [null, 1, '#506976', .20], WATER: [null, 1, '#658c86', .24],
+    GLASS: [null, 1, '#35454a', .28], WATER: [null, 1, '#658c86', .24],
     JET: [null, 1, '#e4f4ec', .24],
     FLOWER_RED: [null, 1, '#ae4353', .87], FLOWER_WHITE: [null, 1, '#f6eaca', .85],
     FLOWER_YELLOW: [null, 1, '#e5c769', .89], FLOWER_PINK: [null, 1, '#d48494', .87],
@@ -63,29 +63,9 @@ export function surfaceLibrary(THREE, maps) {
     if (key === 'GRASS') mat.map = turf;
     if (key === 'GRAVEL') mat.map = gravel;
     if (key === 'METAL' || key === 'COPPER_PATINA' || key === 'ZINC') mat.metalness = .48;
-    if (key === 'GLASS' || key === 'WATER') {
-      // Echo the park horizon in closed panes and the pool. Small waves in
-      // old glass warp the skyline, particularly in the long runs of windows.
-      mat.onBeforeCompile = shader => {
-        shader.vertexShader = shader.vertexShader.replace('#include <common>',
-          '#include <common>\nvarying vec3 erlPos;')
-          .replace('#include <begin_vertex>', '#include <begin_vertex>\nerlPos = (modelMatrix * vec4(position,1.)).xyz;');
-        shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
-          '#include <common>\nvarying vec3 erlPos;')
-          .replace('#include <opaque_fragment>', `
-            vec3 erlView = normalize(erlPos - cameraPosition);
-            vec3 erlN = normalize(inverseTransformDirection(normal, viewMatrix));
-            vec3 erlR = reflect(erlView, erlN);
-            float wave = sin(erlPos.x*2.45 + erlPos.y) * .016 + sin(erlPos.z*4.3)*.011;
-            float horizon = .025 + .025*sin(erlR.x*17.) + .013*sin(erlR.z*35.);
-            float sky = smoothstep(horizon-.025,horizon+.025,erlR.y+wave);
-            vec3 light = mix(vec3(.087,.105,.077),vec3(.48,.62,.69),sky);
-            float fres = pow(1.-abs(dot(erlView,erlN)),3.);
-            outgoingLight = mix(outgoingLight, light, ${key === 'WATER' ? '.40+.48*fres' : '.42+.50*fres'});
-            #include <opaque_fragment>`);
-      };
-      mat.customProgramCacheKey = () => key;
-    }
+    // Reflections follow the selected scene environment. A fixed bright
+    // horizon here would put daylight back into the windows at night.
+    if (key === 'GLASS') mat.envMapIntensity=1.08;
     if (key === 'JET') {
       mat.transparent = true; mat.opacity = .58; mat.depthWrite = false;
     }

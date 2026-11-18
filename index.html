@@ -42,6 +42,10 @@ canvas{touch-action:none;outline:none}
 .panel h1,.panel h2,dialog h2{margin:0;font:normal clamp(26px,4vw,40px)/1.05 Georgia,serif;letter-spacing:-.035em}
 .panel p:not(.eyebrow),dialog p{margin:10px 0;color:var(--muted)}
 .actions{flex-wrap:wrap;margin-top:15px}
+.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
+.light-switch legend{padding:0 5px;color:var(--muted);font-size:11px;letter-spacing:.08em}
+.light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
+.light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
 .primary{background:var(--accent);color:#171c17;border-color:transparent;font-weight:650}
 .primary:hover{background:#f3deb6}
 .shortcuts{font-size:12px}
@@ -100,9 +104,14 @@ THE SOFTWARE.
     <p class="ready-copy">Vom Schlossplatz durch den Garten, in deinem Tempo.</p>
     <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen<br>Maus oder Pfeile zum Umsehen · <kbd>Esc</kbd> Pause</p>
     <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Den Stick weiter nach außen ziehen zum Rennen.</p>
+    <fieldset class="light-switch" id="lighting">
+      <legend>Lichtstimmung</legend>
+      <button type="button" data-light="day" aria-pressed="true">Sommertag</button>
+      <button type="button" data-light="dusk" aria-pressed="false">Sommerabend</button>
+      <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
+    </fieldset>
     <div class="actions">
       <button type="button" class="primary" id="enter"><span class="ready-copy">Rundgang starten</span><span class="paused-copy">Weitergehen</span></button>
-      <button type="button" id="light" title="Lichtstimmung wechseln">Tageslicht</button>
       <button type="button" class="tool icon" id="full" aria-label="Vollbild umschalten" title="Vollbild umschalten" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg></button>
     </div>
   </section>

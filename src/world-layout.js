@@ -13,6 +13,15 @@ const CITY = [
   [-68,63,'house'], [-61,53,'house'], [-51,45,'house'], [-51,13,'house'],
   [-58,-1,'annex'], [-73,-17]
 ];
+// Hero frontages, in order along the city half of the existing contour.
+// These are types and material families, not IDs of real historic buildings.
+export const CITY_FRONTAGES = {
+  2:['stone','plaster'],3:['stone','shop','plaster'],4:['corner'],
+  6:['corner'],7:['plaster','stone'],8:['corner','shop'],9:['stone','plaster','shop'],
+  10:['shop','stone'],11:['plaster','shop','corner'],12:['stone','plaster'],
+  13:['corner','stone'],15:['corner'],16:['plaster','shop'],
+  17:['corner','stone','plaster'],18:['shop','plaster','stone']
+};
 const PARK = [
   [-73,-17,'wall'], [-74,-47,'wall'], [-74,-73,'parkGate','universityWest'], [-74,-78,'iron'],
   [-76,-115,'wall'], [-75,-144,'parkGate','universityEast'], [-75,-149,'iron'],
@@ -37,6 +46,16 @@ export const GARDEN_GATES = {
   hospitalNorth:{source:2148994463,name:'Krankenhausstraße · Nord',path:[[0,-237],[1.0,-250],[2.15,-256.7]]},
   botanical:{source:1326052108,name:'Botanischer Garten',path:[[62,-161],[68,-164],[75.7,-168.5]]},
 };
+// Lamping is a composed evening scene, not an inventory of the real site.
+// Pole colliders and the geometry/light centres all derive from these points.
+export const LAMP_SITES = [
+  {type:'wall',x:-3.35,z:13.26,y:3.24}, {type:'wall',x:3.35,z:13.26,y:3.24},
+  {x:16,z:47.8}, {x:-20.5,z:51.1}, {x:58,z:48.2}, {x:-58.4,z:55.8},
+  {x:41.2,z:-4.8}, {x:-42.5,z:-10.8}, {x:41.7,z:-29.2},
+  {x:16.6,z:-62.8}, {x:-17.2,z:-60.4}, {x:-3.1,z:-87.0},
+  {x:3.0,z:-132.9}, {x:41.2,z:-131.0}, {x:-42.8,z:-158.8},
+  {x:-3.3,z:-188.6}, {x:3.2,z:-231.5}
+];
 const coords = nodes => nodes.map(([x,z])=>[x,z]);
 export const CITY_FLOOR = coords(CITY);
 export const PARK_FLOOR = coords(PARK);

@@ -1,4 +1,4 @@
-import {CITY_FLOOR, PERIMETER, GATES} from './world-layout.js';
+import {CITY_FLOOR, CITY_FRONTAGES, PERIMETER, GATES} from './world-layout.js';
 import {ageMasonry, repeatSet} from './surface-detail.js';
 
 // Earcut accepts either orientation of the X/Z footprint. Explicitly face up
@@ -36,9 +36,15 @@ export function addPerimeter(T,scene,world,finish) {
     iron:tinted('METAL',0x383f38), doors:tinted('WOOD',0x6e5844),
     roof:tinted('ROOF_DARK',0x766962), lintel:tinted('SANDSTONE_CUT',0xd8c7aa),
     stucco:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.94}),
+    shopGlass:new T.MeshStandardMaterial({color:0x606066,vertexColors:true,roughness:.35,envMapIntensity:.69}),
+    litGlass:new T.MeshStandardMaterial({color:0x5b5c55,vertexColors:true,roughness:.42,emissive:0xc89154,emissiveIntensity:0}),
+    interior:new T.MeshStandardMaterial({color:0x292b27,vertexColors:true,roughness:.90}),
+    tileRoof:new T.MeshStandardMaterial({color:0x735448,vertexColors:true,roughness:.88}),
+    houseStone:tinted('SANDSTONE_CUT',0xdac6aa),
     glass:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.29,metalness:.13}),
     paving:tinted('GROUND'), street:tinted('GROUND',0xaca697), gutter:tinted('GROUND',0x8a8578),
-    cushion:tinted('GROUND',0xd2cec4),
+    cushion:tinted('GROUND',0xd2cec4), walk:tinted('GROUND',0xc4bfb2),
+    curbstone:tinted('SANDSTONE_CUT',0xc4bca9),
     verge:new T.MeshStandardMaterial({color:0x767c57,vertexColors:true,roughness:1})
   };
   const setts=repeatSet(T,'setts',512);
@@ -46,8 +52,8 @@ export function addPerimeter(T,scene,world,finish) {
   materials.street.color.set(0xd8d3ca);materials.street.roughness=1;materials.street.normalScale.setScalar(.69);
   Object.assign(materials.gutter,setts);
   materials.gutter.color.set(0xac9f8a);materials.gutter.roughness=1;materials.gutter.normalScale.setScalar(.30);
-  for(const [key,exposure] of [['stone',.54],['base',.72],['cap',.15],['joint',.43],['lintel',.28]])ageMasonry(materials[key],exposure);
-  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3};
+  for(const [key,exposure] of [['stone',.54],['base',.72],['cap',.15],['joint',.43],['lintel',.28],['stucco',.23],['tileRoof',.08],['houseStone',.26]])ageMasonry(materials[key],exposure);
+  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3,walk:4,curbstone:1.7,houseStone:2.5};
   const bins=new Map(), white=new T.Color(0xffffff);
   function quad(m,a,b,c,d,tint=white,offsetU=0,offsetV=0) {
     if(!bins.has(m))bins.set(m,{xyz:[],uv:[],colors:[]});
@@ -99,17 +105,23 @@ export function addPerimeter(T,scene,world,finish) {
   function wall(f,l,r,seed) {
     box(f,'base',l,r,groundY,.35,-.295,.295);
     box(f,'joint',l,r,.35,1.98,-.226,.226);
-    for(let course=0;course<5;course++){
-      const y=.35+course*.326;
+    let y=.35;
+    const heights=seed%3===0?[.29,.35,.30,.35,.34]:[.34,.30,.34,.31,.34];
+    for(let course=0;course<heights.length;course++){
+      const h=heights[course];
       let x=l,i=0;
       while(x<r-.013){
         const width=.82+.36*(.5+.5*Math.sin(seed*9.7+i*2.3+course*3.25));
         const to=Math.min(r,x+(i===0&&course%2?width*.52:width));
         const tint=new T.Color().setScalar(.83+.15*(.5+.5*Math.sin(i*4.7+course*2.37+seed)));
-        box(f,'stone',x+.008,to-.005,y+.006,y+.321,-.254,.254,tint);
+        if((i+seed+course*7)%23===0)tint.setRGB(.88,.76,.63);
+        const joint=.006+.003*(.5+.5*Math.sin(i*4.2+seed));
+        if(to-x>joint*2+.002)box(f,'stone',x+joint,to-joint,y+.006,y+h-.008,-.254,.254,tint);
         x=to;i++;
       }
+      y+=h;
     }
+    box(f,'base',l,r,1.94,1.974,-.255,.255,new T.Color(0xb1aa92));
     cap(f,l,r,1.98,.16,.64);
     block(f,l,r,-.295,.295);
   }
@@ -132,7 +144,21 @@ export function addPerimeter(T,scene,world,finish) {
     for(const u of gate?[l+.085,(l+r)/2-.033,(l+r)/2+.033,r-.085]:[l+.05,r-.05]) {
       box(f,'iron',u-.032,u+.032,gate?.115:low,top+.025,-.040,.040);
     }
-    if(gate)box(f,'iron',(l+r)/2-.13,(l+r)/2+.13,1.02,1.15,-.067,.067);
+    if(gate){
+      const mid=(l+r)/2;
+      box(f,'iron',mid-.13,mid+.13,1.02,1.15,-.067,.067);
+      box(f,'iron',mid-.17,mid+.22,1.086,1.128,.066,.095);
+      for(const x of [l+.05,r-.05])for(const y of [.52,1.75]){
+        box(f,'iron',x-.07,x+.07,y,y+.12,-.077,.077);
+        box(f,'iron',x-.18,x+.18,y+.025,y+.080,-.042,.082);
+      }
+      const p=f.point;
+      for(const [x,u] of [[l+.10,mid-.13],[r-.10,mid+.13]])
+        for(const side of [-1,1]){
+          const d=side*.051, a=p(x,.38,d),b=p(u,1.03,d),c=p(u,1.096,d),e=p(x,.444,d);
+          if((side>0)===(u>x))quad('iron',a,b,c,e);else quad('iron',b,a,e,c);
+        }
+    }
     block(f,l-.03,r+.03,-.052,.052);
   }
   function gatePillar(f,x,height=2.35){
@@ -170,64 +196,168 @@ export function addPerimeter(T,scene,world,finish) {
       }
     }
   }
-  const houseTints=['#cfc1a8','#dac8b2','#c6c3b0','#d4b49f','#c3cbb9','#d5c7a3'];
-  const windowTints=['#414b4b','#515956','#393f46','#51564b'];
-  function house(edge,f) {
-    const L=f.len, annex=edge.type==='annex', count=Math.max(1,Math.round(L/(annex?11:9)));
-    // The wall skin and walk blocker share depth; window reveals are shallow
-    // but genuine recesses in the facade, not panes stuck onto one flat box.
-    block(f,0,L,-7,.025);
+  const houseTints=['#d5c8b3','#ddcbb6','#c9c9b9','#d2ad9a','#bac4b8','#d0c49f'];
+  const frames=['#343934','#555446','#4a5551','#563e39'];
+  const walkSurfaces=[];
+  function archRing(f,mid,half,spring,rise,d0,d1){
+    const p=f.point, thick=.19, count=13;
+    const pt=(a,outer,d)=>p(mid+Math.cos(a)*(half+(outer?thick:0)),
+      spring+Math.sin(a)*(rise+(outer?thick:0)),d);
     for(let i=0;i<count;i++){
-      const l=L*i/count,r=L*(i+1)/count,w=r-l;
-      const id=edge.id*7+i,色=new T.Color(houseTints[id%houseTints.length]);
-      const floors=annex?2:2+(id%4===0?1:0), top=3.34+(floors-1)*2.72+.48, depth=6.6+(id%3)*.7;
-      box(f,'stucco',l,r,groundY,top,-depth,-.23,色);
-      box(f,'base',l,r,groundY,.43,-.23,.065);
-      box(f,'lintel',l,r,top-.21,top+.014,-.27,.145);
-      for(let j=0;j<floors;j++){
-        const base=j===0?.43:3.34+(j-1)*2.72;
-        const ceil=j===floors-1?top:3.34+j*2.72;
-        const bays=Math.max(1,Math.round(w/(j===0?3.1:2.35))), step=w/bays;
-        const sill=j===0?.88:base+.51, head=j===0?2.70:base+1.96;
-        box(f,'stucco',l,r,base,sill,-.235,.02,色);
-        box(f,'stucco',l,r,head,ceil,-.235,.02,色);
-        for(let k=0;k<bays;k++){
-          const mid=l+(k+.5)*step, half=Math.min(step*.32,j===0?.95:.53);
-          const u=mid-half,v=mid+half;
-          box(f,'stucco',l+k*step,u,sill,head,-.235,.02,色);
-          box(f,'stucco',v,l+(k+1)*step,sill,head,-.235,.02,色);
-          const pane=new T.Color(windowTints[(id+k+j)%windowTints.length]);
-          box(f,'glass',u,v,sill,head,-.225,-.207,pane);
-          const mm=j?'iron':'doors';
-          box(f,mm,u,u+.061,sill,head,-.198,-.12);
-          box(f,mm,v-.061,v,sill,head,-.198,-.12);
-          box(f,mm,mid-.019,mid+.019,sill,head,-.198,-.14);
-          box(f,mm,u,v,(head+sill)*.5,(head+sill)*.5+.035,-.198,-.14);
-          box(f,'lintel',u-.08,v+.08,sill-.077,sill,-.23,.100);
-          box(f,'lintel',u-.045,v+.045,head,head+.083,-.23,.058);
+      const a=Math.PI*i/count,b=Math.PI*(i+1)/count;
+      quad('lintel',pt(a,false,d1),pt(a,true,d1),pt(b,true,d1),pt(b,false,d1));
+      quad('stone',pt(b,false,d0),pt(a,false,d0),pt(a,false,d1),pt(b,false,d1));
+      const top=(t,d)=>p(mid+Math.cos(t)*(half+thick),spring+rise+thick+.032,d);
+      quad('houseStone',pt(b,true,d1),pt(a,true,d1),top(a,d1),top(b,d1));
+      quad('houseStone',pt(a,true,d0),pt(b,true,d0),top(b,d0),top(a,d0));
+    }
+  }
+  function plaque(f,u,y,label){
+    const width=.99,height=.26,d=.139,p=f.point;
+    box(f,'iron',u-width/2,u+width/2,y-height/2,y+height/2,.012,d);
+    const el=document.createElement('canvas');el.width=384;el.height=100;
+    const ctx=el.getContext('2d');
+    ctx.fillStyle='#283c48';ctx.fillRect(0,0,384,100);
+    ctx.strokeStyle='#dbcfae';ctx.lineWidth=3;ctx.strokeRect(6,6,372,88);
+    ctx.font='600 45px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f3e6c9';ctx.fillText(label,192,50,350);
+    const map=new T.CanvasTexture(el);map.colorSpace=T.SRGBColorSpace;map.anisotropy=4;
+    const plane=new T.BufferGeometry();
+    plane.setAttribute('position',new T.Float32BufferAttribute([
+      ...p(u-width/2,y-height/2,d+.001),...p(u+width/2,y-height/2,d+.001),
+      ...p(u+width/2,y+height/2,d+.001),...p(u-width/2,y+height/2,d+.001)
+    ],3));
+    plane.setIndex([0,1,2,0,2,3]);plane.computeVertexNormals();
+    plane.setAttribute('uv',new T.Float32BufferAttribute([0,0,1,0,1,1,0,1],2));
+    const mesh=new T.Mesh(plane,new T.MeshStandardMaterial({map,roughness:.66}));
+    mesh.name='Orientierung · '+label;mesh.receiveShadow=true;root.add(mesh);
+  }
+  function opening(f,m,l,r,sill,head,d,color){
+    box(f,'interior',l,r,sill,head,d-.007,d-.002);
+    box(f,m,l+.022,r-.022,sill+.026,head-.024,d,d+.009,color);
+    for(const u of [l+.025,r-.064])box(f,'iron',u,u+.039,sill,head,d+.012,d+.042);
+    const mid=(l+r)*.5, cross=sill+(head-sill)*.62;
+    box(f,'iron',mid-.024,mid+.024,sill,head,d+.013,d+.050);
+    box(f,'iron',l,r,cross,cross+.038,d+.012,d+.052);
+  }
+  function door(f,l,r,top,m){
+    const mid=(l+r)/2;
+    box(f,'interior',l,r,.065,top,-.389,-.380);
+    box(f,m,l+.05,r-.05,.078,top-.17,-.377,-.310);
+    for(const x of [l+.17,mid,r-.17])
+      box(f,'doors',x-.032,x+.032,.12,top-.16,-.304,-.269);
+    for(const y of [.29,1.01,top-.43])
+      box(f,'doors',l+.079,r-.079,y,y+.071,-.306,-.272);
+    box(f,'iron',mid+.049,mid+.109,.94,1.023,-.269,-.237);
+    box(f,'base',l-.10,r+.10,-.039,.065,-.37,.124);
+    for(const x of [l-.11,r])box(f,'lintel',x,x+.11,.065,top,-.395,.044);
+    box(f,'lintel',l-.145,r+.145,top-.018,top+.105,-.398,.071);
+  }
+  function house(edge,f) {
+    const L=f.len,annex=edge.type==='annex',id=edge.id,
+      types=CITY_FRONTAGES[id]??Array.from({length:Math.max(1,Math.round(L/10))},(_,i)=>i%2?'plaster':'stone');
+    const weight=types.map((t,i)=>.75+((id*17+i*19)%13)*.055+(t==='corner'?.19:0)),sum=weight.reduce((a,b)=>a+b);
+    let start=0;
+    for(let i=0;i<types.length;i++){
+      const l=start,r= i===types.length-1?L:start+(weight[i]/sum)*L,w=r-l;start=r;
+      const type=types[i],salt=id*7+i,k=type==='stone',shop=type==='shop',corner=type==='corner', color=new T.Color(houseTints[salt%houseTints.length]);
+      const floors=annex?2:corner||salt%4===1?3:2, g=shop?3.60:3.12+(salt%3)*.15, upper=2.49+(salt%5)*.11,
+        top=g+(floors-1)*upper+.25, depth=6.8+(salt%3)*1.05, face=k?'houseStone':'stucco',front=.022,inner=-.42;
+      block(f,l,r,-depth,.075);
+      box(f,'stucco',l,r,groundY,top,-depth,inner+.01,color);
+      const base=.39, count=Math.max(1,Math.round(w/(shop?2.9:3.05)));
+      for(let j=0;j<count;j++){
+        const a=l+w*j/count,b=l+w*(j+1)/count,mid=(a+b)*.5,entry=j===(salt%count);
+        const half=(b-a)*(entry?.246:shop?.368:.267),lo=mid-half,hi=mid+half;
+        const sill=entry?.058:shop?.48:.85, head=entry?2.47:shop?2.72:2.25;
+        const lowMat=k?'stone':'base';
+        const solid=(p,q)=>{
+          box(f,lowMat,p,q,groundY,base+.025,inner,.067,color);
+          box(f,face,p,q,base+.025,g,inner,front,color);
+        };
+        solid(a,lo);solid(hi,b);
+        if(sill>base+.035){box(f,lowMat,lo,hi,groundY,base,inner,.067,color);
+          box(f,face,lo,hi,base,sill,inner,front,color);}
+        box(f,face,lo,hi,head,g,inner,front,color);
+        if(entry)door(f,lo,hi,head,'doors');
+        else {
+          opening(f,shop&&salt%3===1?'litGlass':shop?'shopGlass':'glass',lo,hi,sill,head,-.276,new T.Color(frames[salt%4]));
+          box(f,'lintel',lo-.112,hi+.112,sill-.073,sill,inner,.091);
+        }
+        if(shop){
+          box(f,'doors',a+.13,b-.13,2.90,3.14,-.03,.093);
+          box(f,'lintel',a+.12,b-.12,3.135,3.18,-.04,.118);
         }
       }
-      if(w>3.7)box(f,'lintel',l,l+.125,.44,top-.20,-.025,.043);
-      const p=f.point, y=top+.03, peak=y+1.62+(id%4)*.32;
-      const a=p(l-.10,y,.18), b=p(r+.10,y,.18), c=p(r+.10,y,-depth-.10), d=p(l-.10,y,-depth-.10);
-      const ridgeL=p(l+Math.min(1.08,w*.22),peak,-depth*.51);
-      const ridgeR=p(r-Math.min(1.08,w*.22),peak,-depth*.51);
-      quad('roof',a,b,ridgeR,ridgeL);quad('roof',c,d,ridgeL,ridgeR);
-      quad('roof',d,a,ridgeL,ridgeL);quad('roof',b,c,ridgeR,ridgeR);
-      if(w>6)box(f,'base',l+w*.70,l+w*.70+.56,peak-.83,peak+.49,-depth*.49-1.25,-depth*.49-.65);
+      if(k||corner)box(f,'lintel',l,r,g-.062,g+.064,-.29,.116);
+      for(let j=1;j<floors;j++){
+        const base=g+(j-1)*upper,ceil=j===floors-1?top:base+upper,
+          bays=Math.max(1,Math.round(w/(corner?2.7:2.34))),step=w/bays,
+          sill=base+.48,head=base+(k?1.97:1.85);
+        box(f,face,l,r,base,sill,inner,front,color);
+        box(f,face,l,r,head,ceil,inner,front,color);
+        for(let k=0;k<bays;k++){
+          const mid=l+(k+.5)*step,half=Math.min(step*.33,corner?.62:.51),u=mid-half,v=mid+half;
+          box(f,face,l+k*step,u,sill,head,inner,front,color);
+          box(f,face,v,l+(k+1)*step,sill,head,inner,front,color);
+          opening(f,(salt+j*11+k*7)%27===0?'litGlass':'glass',u,v,sill,head,-.285,new T.Color(frames[(salt+j+k)%4]));
+          box(f,'lintel',u-.09,v+.09,sill-.063,sill,-.24,.11);
+          box(f,'lintel',u-.055,v+.055,sill-.09,sill-.063,-.12,.075);
+          if(corner||type==='stone'){
+            for(const x of [u-.075,v])box(f,'lintel',x,x+.075,sill,head,-.17,.045);
+            box(f,'lintel',u-.105,v+.105,head,head+.10,-.168,.066);
+          }
+        }
+      }
+      if(w>3.8){
+        const a=corner?r-.24:l+.17;
+        box(f,'iron',a,a+.073,.27,top-.15,.054,.124);
+        for(const y of [.34,g,top-.42])box(f,'iron',a-.023,a+.095,y,y+.025,.016,.137);
+      }
+      box(f,'lintel',l,r,top-.172,top-.056,-.26,.159);
+      box(f,'lintel',l,r,top-.057,top+.027,-.23,.199);
+      box(f,'iron',l,r,top+.025,top+.086,.164,.23);
+      const p=f.point,y=top+.063,peak=y+(corner?2.89:1.45+(salt%4)*.37),roof=k?'roof':'tileRoof';
+      const a=p(l-.08,y,.22),b=p(r+.08,y,.22),c=p(r+.08,y,-depth-.14),d=p(l-.08,y,-depth-.14),
+        hip=corner?w*.20:(type==='plaster'?.17:Math.min(.88,w*.21)),
+        e=p(l+hip,peak,-depth*.52),g2=p(r-hip,peak,-depth*.52);
+      if(corner){
+        const knee=y+(peak-y)*.62,a2=p(l+.17,knee,-depth*.22),b2=p(r-.17,knee,-depth*.22);
+        quad(roof,a,b,b2,a2);quad(roof,a2,b2,g2,e);
+        quad(roof,d,a,a2,e);quad(roof,b,c,g2,b2);
+      }else {quad(roof,a,b,g2,e);quad(roof,d,a,e,e);quad(roof,b,c,g2,g2);}
+      quad(roof,c,d,e,g2);
+      if(w>6)box(f,'base',l+w*.62,l+w*.62+.47,peak-.64,peak+.48,-depth*.53-1.14,-depth*.53-.59);
     }
+    // Lightly raised house apron: same footprint serves the visual floor and
+    // player's downward query, with a low stone edge rather than a blocker.
+    const p=f.point;
+    quad('walk',p(.08,-.014,.01),p(L-.08,-.014,.01),p(L-.08,-.015,1.15),p(.08,-.015,1.15));
+    quad('curbstone',p(.08,-.015,1.15),p(L-.08,-.015,1.15),p(L-.08,-.046,1.32),p(.08,-.046,1.32));
   }
 
   const houses=new Set(['house','annex','streetGate']);
   for(const e of PERIMETER){
     const f=frame(e.a,e.b), city=houses.has(e.type);
     if(e.gate||e.prev==='parkGate')gatePillar(f,0);
-    else corner(e,city && houses.has(e.prev));
+    else if(!city)corner(e,false);
     if(e.type==='streetGate'){
-      rail(f,.27,f.len-.27,true,true);
-      box(f,'lintel',0,f.len,2.69,3.26,-.28,.27);
-      cap(f,0,f.len,3.26,.14,.72);
-    } else if(city)house(e,f);
+      const width=.69, L=f.len, p=f.point;
+      for(const [a,b] of [[0,width],[L-width,L]]){
+        box(f,'stone',a,b,groundY,3.31,-.27,1.06);
+        box(f,'base',a,b,groundY,.32,-.28,1.12);
+        block(f,a,b,-.27,1.06);
+      }
+      rail(f,width-.025,L-width+.025,true,true);
+      archRing(f,L/2,L/2-width,2.18,.86,-.19,1.07);
+      box(f,'lintel',0,L,3.25,3.42,-.30,1.12);
+      cap(f,.04,L-.04,3.42,.13,1.50);
+      quad('walk',p(width,.00,.02),p(L-width,.00,.02),p(L-width,-.017,1.57),p(width,-.017,1.57));
+    } else if(city){
+      house(e,f);
+      if(e.id===3||e.id===17)plaque(f,1.15,2.94,'Schlossplatz');
+      else if(e.id===8||e.id===16)plaque(f,1.15,2.94,'Hauptstraße');
+    }
     else parkPanel(e,f);
 
     const p=f.point;
@@ -235,10 +365,20 @@ export function addPerimeter(T,scene,world,finish) {
     // yard structures are perspective context, with no entrance or collider.
     if(!city)quad('verge',p(-.15,-.245,-.20),p(f.len+.15,-.245,-.20),
       p(f.len+.15,-.245,-14),p(-.15,-.245,-14));
+    if(e.type==='iron'&&e.id%3!==0){
+      const l=.84,rr=f.len-.71,d=-3.5-(e.id%3)*.9;
+      if(rr>l+1)box(f,'stucco',l,rr,-.29,1.25+(e.id%2)*.62,d-.35,d,
+         new T.Color(0xa89c85));
+    }
     if(e.type==='parkGate'||e.type==='streetGate'){
       quad('street',p(.26,-.207,-.30),p(f.len-.26,-.207,-.30),
         p(f.len-.26,-.207,-10),p(.26,-.207,-10));
-      if(e.gate==='botanical')continue;
+      const v=e.type==='streetGate'?3.44:2.06;
+      for(const [a,b] of [[.03,.28],[f.len-.28,f.len-.04]])box(f,'stone',a,b,-.29,v,-10.71,-.32);
+      if(e.gate==='botanical'){
+        box(f,'stucco',-.8,f.len+1.4,-.28,1.32,-10.5,-10.2,new T.Color(0x989d79));
+        continue;
+      }
       box(f,'stucco',-1,f.len+2,-.28,3.9,-15,-10.7,new T.Color(0xa7a394));
       box(f,'base',-1,f.len+2,-.23,.52,-15.14,-10.66);
       const a=p(-1.22,3.92,-10.43),b=p(f.len+2.22,3.92,-10.43);
@@ -273,11 +413,11 @@ export function addPerimeter(T,scene,world,finish) {
   // One continuous paved street line and a paired drainage channel. Each join
   // uses one shared edge to avoid slivers at the two bends.
   const street=[[69,54.5],[63,51.6],[53,50.0],[31,50.0],[0,51.0],[-34,51.5],[-49,53.4],[-59,57.8],[-64,62.0],[-68,66.5]];
-  function band(m,offset0,offset1,height){
+  function band(m,offset0,offset1,height,other=height){
     const section=street.map(([x,z],i)=>{
       const a=street[Math.max(0,i-1)],b=street[Math.min(i+1,street.length-1)];
       const dx=b[0]-a[0],dz=b[1]-a[1],h=Math.hypot(dx,dz);
-      return [offset0,offset1].map(d=>[x-dz*d/h,height,z+dx*d/h]);
+      return [offset0,offset1].map((d,j)=>[x-dz*d/h,j===0?height:other,z+dx*d/h]);
     });
     let at=0;
     for(let i=1;i<section.length;i++){
@@ -285,11 +425,19 @@ export function addPerimeter(T,scene,world,finish) {
       at+=Math.hypot(section[i][0][0]-section[i-1][0][0],section[i][0][2]-section[i-1][0][2]);
     }
   }
-  band('street',-2.55,2.55,-.026);
+  band('street',-2.55,0,-.033,-.024);
+  band('street',0,2.55,-.024,-.033);
   for(const side of [-1,1]){
-    const edge=(m,a,b,y)=>band(m,Math.min(a*side,b*side),Math.max(a*side,b*side),y);
-    edge('gutter',2.55,2.77,-.024);
-    edge('cushion',2.77,3.06,-.017);
+    const edge=(m,a,b,y,z=y)=>side===1?band(m,a,b,y,z):band(m,-b,-a,z,y);
+    edge('gutter',2.55,2.77,-.033);
+    edge('curbstone',2.77,3.01,-.033,.012);
+    edge('cushion',3.01,3.16,.012,-.045);
+  }
+  for(const [x,z,yaw,side] of [[32,50.0,0,-1],[-33,51.5,.06,1],[57,50.8,.15,-1],[-55,56,.40,1]]){
+    const f=frame([x-.25*Math.cos(yaw),z+side*2.65-.25*Math.sin(yaw)],
+      [x+.25*Math.cos(yaw),z+side*2.65+.25*Math.sin(yaw)]);
+    box(f,'interior',0,.50,-.036,-.029,-.078,.078);
+    for(let n=0;n<9;n++)box(f,'iron',n*.052+.012,n*.052+.032,-.029,-.024,-.078,.078);
   }
   for(const [m,bin] of bins){
     const geo=new T.BufferGeometry();
@@ -297,10 +445,12 @@ export function addPerimeter(T,scene,world,finish) {
     geo.setAttribute('uv',new T.Float32BufferAttribute(bin.uv,2));
     geo.setAttribute('color',new T.Float32BufferAttribute(bin.colors,3));
     geo.computeVertexNormals();
-    const surf=['street','gutter','cushion','verge'].includes(m);
+    const walkable=['street','gutter','cushion','curbstone','walk'].includes(m);
+    const surf=walkable||m==='verge';
     if(surf)materials[m].side=T.DoubleSide;
     const mesh=new T.Mesh(geo,materials[m]);mesh.name='Einfriedung / '+m;
     mesh.castShadow=!surf;mesh.receiveShadow=true;root.add(mesh);
+    if(walkable)walkSurfaces.push(mesh);
   }
-  return [plaza];
+  return {floors:[plaza,...walkSurfaces],windows:materials.litGlass};
 }
