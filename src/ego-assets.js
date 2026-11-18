@@ -5,13 +5,13 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 export const EQUIPMENT=[
   {label:'Kestrel · Impulspistole',color:0x6fe2e6,case:0x4c5c62,
     sight:[0,.074,-.191],emit:[0,.009,-.244],grip:[.034,-.121,.016],support:[-.047,-.082,-.081],
-    hold:[.229,-.220,-.61],yaw:.14,flash:.024,pattern:1},
+    hold:[.229,-.220,-.61],yaw:.14,flash:.024,pattern:1,impact:36},
   {label:'Vesper · Impulsgewehr',color:0x8baeff,case:0x7d9290,
     sight:[0,.124,-.132],emit:[0,.024,-.697],grip:[.036,-.124,.023],support:[-.047,-.092,-.349],
-    hold:[.239,-.216,-.53],yaw:.228,flash:.033,pattern:1},
+    hold:[.239,-.216,-.53],yaw:.228,flash:.033,pattern:1,impact:54},
   {label:'Amber · Streuflinte',color:0xffb266,case:0x754d39,
     sight:[0,.091,-.619],emit:[0,.033,-.682],grip:[.036,-.137,.028],support:[-.063,-.094,-.332],
-    hold:[.253,-.244,-.55],yaw:.241,flash:.042,pattern:5}
+    hold:[.253,-.244,-.55],yaw:.241,flash:.042,pattern:5,impact:25}
 ];
 
 export function egoAssets(T){

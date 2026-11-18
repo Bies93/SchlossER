@@ -1,8 +1,8 @@
 import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
 
-// A stylized museum-game rig, not a model of a real weapon. Its short visual
-// pulses affect only the authored abstract markers, never the world meshes.
-export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true){
+// Gameplay pulses affect only fictional creatures and authored light
+// markers. The architecture and other world meshes are never affected.
+export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,creatures=null){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xf5ede1,0x788994,2.1),key=new T.DirectionalLight(0xf7dcac,1.65);
   key.position.set(-1,.9,.6);stage.add(h,key);
@@ -112,30 +112,41 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     emit.applyQuaternion(headQ);
     trailMat.color.setHex(n.color);flashMat.color.setHex(n.color);
     flash.position.fromArray(n.emit);flash.visible=true;
+    const strike=new Map();
     for(const [i,t] of traces.entries()){
       t.until=0;t.orb.visible=t.ribbon.visible=false;
       if(i>=n.pattern)continue;
       const a=i*2.4+age*.008,fan=i===0?0:.021+i*.004;
       screen.set(aimScreen.x+Math.cos(a)*fan,aimScreen.y+Math.sin(a)*fan*camera.aspect);
       projector.setFromCamera(screen,camera);dir.copy(ray.direction);
-      let target=null,distance=n.pattern===1?18.8:15.6;
+      let target=null,creature=null,distance=n.pattern===1?18.8:15.6;
       for(const item of anchors){
         if(!ray.intersectSphere(item.sphere,hit))continue;
         const d=from.distanceTo(hit);if(d<distance){distance=d;target=item}
       }
-      // Virtual traces stop at the level boundary; there are no physics,
-      // damage or decals on the site. Only authored light markers respond.
+      const candidate=creatures?.nearest(ray,distance);
+      if(candidate){distance=candidate.distance;creature=candidate.actor;target=null}
+      // Limit the trace before committing a hit, regardless of whether the
+      // nearest candidate is a creature or one of the old light markers.
       for(let d=.24;d<distance;d+=.17){
         ray.at(d,hit);
         if(world.blocked(hit.x,hit.z)||(dir.y<-.12&&hit.y<floorHeight(hit.x,hit.z)+.035)){
-          distance=Math.max(.32,d-.06);target=null;break;
+          distance=Math.max(.32,d-.06);creature=target=null;break;
         }
       }
       t.end.copy(from).addScaledVector(dir,distance);
       t.start.copy(from).addScaledVector(emit,Math.min(1,distance*.72/Math.max(.1,emit.length())));
       t.at=age;t.until=distance<.46?0:age+108+distance*(n.pattern===1?8.4:7.3)+i*4;
       if(target)arrivals.push({target,at:t.until,color:n.color});
+      if(creature){
+        const gathered=strike.get(creature);
+        if(gathered)gathered.amount+=n.impact;
+        else strike.set(creature,{amount:n.impact,point:candidate.point});
+      }
     }
+    // Process one combined hit per creature per click. Tracer animation
+    // can never deal damage on subsequent frames.
+    for(const [creature,{amount,point}] of strike)creatures.damage(creature,amount,n.color,point);
     kick=.032+selected*.010;
     refresh();
   }

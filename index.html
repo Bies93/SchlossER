@@ -56,6 +56,13 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #portal-action{position:absolute;z-index:2;left:50%;bottom:calc(clamp(74px,12%,130px) + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;min-height:40px;max-width:calc(100% - 24px);width:max-content;padding:7px 12px;background:#151e1cef;border-color:#7c7a64;color:var(--ink);box-shadow:0 8px 28px #0006}
 #portal-action kbd{color:var(--accent);border-color:#a39577}
 #portal-action:disabled{cursor:default}#portal-action:disabled kbd{display:none}
+#ghoul-action,#ghoul-notice{position:absolute;z-index:2;font-size:12px;background:#161c18ef;border:1px solid #77765d;border-radius:6px;color:var(--ink);box-shadow:0 6px 22px #0005}
+#ghoul-action{bottom:calc(12px + env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));min-height:37px;padding:5px 10px}
+#ghoul-action kbd{margin-right:6px;color:#e1d59f}
+#ghoul-notice{top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 26px);padding:8px 13px;text-align:center;pointer-events:none}
+#ghoul-notice[data-kind=hurt],#ghoul-notice[data-kind=failed]{border-color:#a26c54;background:#392721ed}
+#ghoul-notice[data-kind=won]{border-color:#a1a673}
+body:not([data-state=playing]) #ghoul-notice{display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
 #stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
 dialog{max-width:min(460px,calc(100% - 24px));max-height:calc(100% - 24px);border:1px solid var(--line);border-radius:8px;padding:22px;background:var(--panel);color:var(--ink);box-shadow:0 16px 44px #0008}
@@ -128,6 +135,8 @@ THE SOFTWARE.
   </section>
   <div id="drag-hint">Zum Umsehen ziehen oder Pfeiltasten nutzen</div>
   <button id="portal-action" type="button" hidden><kbd aria-hidden="true">E</kbd><span id="portal-text">Tür öffnen</span></button>
+  <button id="ghoul-action" type="button" hidden><kbd aria-hidden="true">R</kbd><span id="ghoul-text">Ghoul-Runde starten</span></button>
+  <div id="ghoul-notice" role="status" hidden></div>
   <div id="stick" aria-hidden="true"><span></span></div>
 </main>
 <dialog id="about" aria-labelledby="help-title">
@@ -135,10 +144,11 @@ THE SOFTWARE.
   <p><strong>Maus &amp; Tastatur:</strong> Gehe mit WASD. Halte Umschalt zum Rennen. Bewege die Maus zum Umsehen. Ohne Mausfang: Ziehe im Bild oder nutze die Pfeiltasten. Mit Escape pausierst du.</p>
   <p><strong>Touch:</strong> Ziehe links zum Gehen und rechts zum Umsehen. Ziehe den Stick über den Rand zum Rennen; lass links los zum Anhalten. „Pause“ öffnet das Menü.</p>
   <p><strong>Schlosstüren:</strong> Geh zum mittleren Portal am Platz oder im Garten und drücke <kbd>E</kbd> oder tippe auf den eingeblendeten Knopf. Beide Türen führen in dieselbe Halle. Der Innenraum ist frei gestaltet, kein Nachbau des heutigen Grundrisses.</p>
-  <p><strong>Impulsgeräte:</strong> 1 = Pistole, 2 = Gewehr, 3 = Streuflinte. Zum Wechseln geht auch das Mausrad; 0 blendet das Gerät aus. Halte rechts zum Anvisieren und klicke links für einen Lichtimpuls. Nur die kleinen Marken am Gassenrand reagieren.</p>
+  <p><strong>Ghoul-Runde:</strong> Drücke am Desktop im Garten <kbd>R</kbd>. Es erscheinen fünf Ghoule. Nach einem Sieg oder einer Niederlage startet <kbd>R</kbd> eine neue Runde. Ohne Start bleibt der Rundgang friedlich.</p>
+  <p><strong>Impulsgeräte:</strong> 1 = Pistole, 2 = Gewehr, 3 = Streuflinte. Zum Wechseln geht auch das Mausrad; 0 blendet das Gerät aus. Halte rechts zum Anvisieren und klicke links für einen Lichtimpuls.</p>
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=96a261852421"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=9d4ae21e1c79"></script>
 </body>
 </html>

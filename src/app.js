@@ -15,6 +15,7 @@ import {addPortalFacade,palaceMaterials} from './palace-facade.js';
 import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
+import {ghoulRound} from './ghoul-round.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
@@ -85,7 +86,33 @@ async function start(){
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
- const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,()=>hall.allowGear(player.body.position));
+ const ghoulNotice=$('ghoul-notice'),ghoulAction=$('ghoul-action'),ghoulText=$('ghoul-text');
+ let noticeTimer=0,roundLabel='';
+ function announceGhoul(text,kind){
+   clearTimeout(noticeTimer);
+   ghoulNotice.textContent=text;ghoulNotice.dataset.kind=kind;ghoulNotice.hidden=false;
+   noticeTimer=setTimeout(()=>{ghoulNotice.hidden=true},kind==='hurt'?1050:kind==='progress'?1600:4100);
+   refresh();
+ }
+ const round=ghoulRound(T,s,world,floorHeight,announceGhoul);
+ const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
+   ()=>hall.allowGear(player.body.position),round);
+ const desktopRound=()=>document.body.dataset.input!=='touch';
+ function roundPrompt(){
+   const label=active()&&desktopRound()?round.prompt(player.body.position):'';
+   if(label===roundLabel)return;
+   roundLabel=label;ghoulAction.hidden=!label;
+   if(label)ghoulText.textContent=label;
+ }
+ function startRound(){
+   if(!active()||!desktopRound())return;
+   if(round.begin(player.body.position)){roundPrompt();refresh()}
+ }
+ ghoulAction.addEventListener('click',()=>{startRound();canvas.focus({preventScroll:true})});
+ window.addEventListener('keydown',e=>{
+   if(!active()||e.code!=='KeyR'||e.repeat||e.altKey||e.ctrlKey||e.metaKey||!roundLabel)return;
+   e.preventDefault();startRound();
+ });
  const portalAction=$('portal-action'),portalText=$('portal-text');
  function doorPrompt(){
    const target=active()?hall.targetFor(player,c):null;
@@ -113,11 +140,13 @@ async function start(){
    frame=0;
    if(active()){
      if(input.tick(time))dirty=true;
+     if(round.tick(time,player.body.position))dirty=true;
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
      const state=hall.update(dt,player.body.position);
      if(state.changed)dirty=true;
      if(state.shadow)r.shadowMap.needsUpdate=true;
      doorPrompt();
+     roundPrompt();
      if(fountain.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
    }
@@ -127,7 +156,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   input.clear();fountain.stop?.();viewmodel.stop();lastDoorTime=null;doorPrompt();
+   input.clear();fountain.stop?.();viewmodel.stop();round.stop();lastDoorTime=null;doorPrompt();roundPrompt();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
