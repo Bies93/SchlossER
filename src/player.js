@@ -14,7 +14,7 @@ export function createPlayer(T, camera, world, floorHeight) {
   const safe = {x, y, z};
   const next = {x, z};
   let yaw = SPAWN.yaw, pitch = SPAWN.pitch;
-  let lastTime = null, accumulator = 0;
+  let lastTime = null, accumulator = 0, vx=0, vz=0;
   body.position.set(x, y, z);
   function aim(dx, dy) {
     yaw = (yaw - dx) % (2 * Math.PI);
@@ -25,7 +25,7 @@ export function createPlayer(T, camera, world, floorHeight) {
   aim(0, 0);
   return {
     body, aim,
-    stop() { lastTime = null; accumulator = 0; },
+    stop() { lastTime = null; accumulator = 0; vx=vz=0; },
     tick(time, keys, stick) {
       if (lastTime !== null) accumulator += Math.min(.1, (time - lastTime) / 1000);
       lastTime = time;
@@ -37,20 +37,25 @@ export function createPlayer(T, camera, world, floorHeight) {
         if (turn || tilt) { aim(turn * STEP * 1.48, tilt * STEP * 1.18); moved = true; }
         const east = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + stick.x;
         const forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) - stick.y;
-        if (east || forward) {
-          const pace = keys.has('ShiftLeft') || keys.has('ShiftRight') || stick.run ? PLAYER.run : PLAYER.speed;
-          const step = pace * STEP / Math.max(1, Math.hypot(east, forward));
-          const sin = Math.sin(yaw), cos = Math.cos(yaw);
+        const intent=Math.hypot(east, forward), pace=keys.has('ShiftLeft') || keys.has('ShiftRight') || stick.run ? PLAYER.run : PLAYER.speed;
+        const sin=Math.sin(yaw),cos=Math.cos(yaw),scale=pace/Math.max(1,intent);
+        const tx=(east*cos-forward*sin)*scale,tz=(-east*sin-forward*cos)*scale;
+        // Fast controlled acceleration; slightly stronger braking keeps
+        // the rig responsive at a door, bench or tight street corner.
+        const blend=1-Math.exp(-(intent?(tx*vx+tz*vz<-.1?20:15):24)*STEP);
+        vx+=(tx-vx)*blend;vz+=(tz-vz)*blend;
+        if (Math.hypot(vx,vz)>.022) {
           next.x = x; next.z = z;
-          world.move(next, step * (east * cos - forward * sin), step * (-east * sin - forward * cos));
-          if (Math.abs(next.x - x) + Math.abs(next.z - z) < 1e-6) continue;
+          world.move(next, vx*STEP, vz*STEP);
+          if (Math.abs(next.x - x) + Math.abs(next.z - z) < 1e-6) {vx=vz=0;continue}
           const height = floorHeight(next.x, next.z);
           if (Number.isFinite(height) && Math.abs(height - y) <= PLAYER.maxStep) {
             x = next.x; z = next.z; y = height;
             Object.assign(safe, {x, y, z});
           } else if (!Number.isFinite(height)) {
             ({x, y, z} = safe);
-          }
+            vx=vz=0;
+          }else{vx=vz=0}
           moved = true;
         }
       }

@@ -1,7 +1,8 @@
 import {BENCH_ROW, PARK_FLOOR, PERIMETER, GARDEN_GATES, distanceToPerimeter, insidePerimeter} from './world-layout.js';
 import {addOrangery} from './orangery.js';
 import {gardenMaterials} from './surface-detail.js';
-import {BED_ARCS,atBed,addBeds,addBenches} from './garden-assets.js';
+import {addBenches} from './garden-assets.js';
+import {BED_ARCS,atBed,addBeds} from './parterre.js';
 import {plantGarden} from './vegetation.js';
 import {pathNetwork,gardenTerrain} from './garden-ground.js';
 import {planGeometry} from './perimeter.js';
@@ -55,6 +56,8 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   tree(-27.6,-68.3,17.5,'oak','sweep');
   tree(27.5,-96.5,16.7,'lime','spire');
   tree(-28.0,-118.0,15.8,'oak','fork');
+  tree(-31.4,-55.1,12.6,'oak','bank',true);
+  tree(-16,-20.4,10.9,'lime','court',true);
   // Selected OSM tree anchors on the near parterre, fit to the compressed
   // plan. Heights/species are illustrative; keep the axis itself clear.
   for(const [x,z,h] of [[-16,-20.4,8.2],[10.4,-22.2,8.5],[-32.1,-30,11.4],
@@ -93,6 +96,6 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   addOrangery(T,group,world,finish);
   return {
     floors, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
-    update:position=>{plants(position);beds(position)}
+    update:(position,time)=>{plants(position,time);beds(position)}
   };
 }

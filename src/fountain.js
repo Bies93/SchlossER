@@ -1,5 +1,6 @@
 import {LIGHTING} from './lighting.js';
 import {LAMP_SITES} from './world-layout.js';
+import {addFountainCarving} from './fountain-carving.js';
 
 const CY=-47,Y=.379,STADIUM=4.75,R=9.129;
 const streams=[
@@ -21,6 +22,7 @@ export function makeFountain(T,scene,original){
   });
   if(!basinFound)return {tick:()=>false,setPreset(){}};
   scene.add(group);
+  addFountainCarving(T,group,original,CY,Y);
   const t={value:0}, lamps={value:0}, night={value:0}, tint={value:new T.Color(0xd8e7e4)};
   const lightSites=LAMP_SITES.filter(p=>Math.abs(p.x)<19&&p.z<-50&&p.z>-68).slice(0,2);
   const lm=lightSites.map(p=>new T.Vector3(p.x,3.21,p.z));
@@ -30,7 +32,7 @@ export function makeFountain(T,scene,original){
   edge.absarc(STADIUM,0,R,-Math.PI/2,Math.PI/2,false);edge.lineTo(-STADIUM,R);
   edge.absarc(-STADIUM,0,R,Math.PI/2,Math.PI*1.5,false);edge.closePath();
   const geo=new T.ShapeGeometry(edge,45);geo.rotateX(-Math.PI/2);
-  const surface=new T.MeshPhysicalMaterial({color:0x314e46,roughness:.195,metalness:0,ior:1.333,envMapIntensity:1.25});
+  const surface=new T.MeshPhysicalMaterial({color:0x334b3c,roughness:.198,metalness:0,ior:1.333,envMapIntensity:1.15});
   surface.onBeforeCompile=s=>{
     s.uniforms.erlWaterTime=t;s.uniforms.erlLamp=lamps;s.uniforms.erlNight=night;
     s.uniforms.erlLumA={value:lm[0]};s.uniforms.erlLumB={value:lm[1]};
@@ -54,15 +56,19 @@ export function makeFountain(T,scene,original){
         vec2 p=erlWaterWorld.xz;
         vec2 q=vec2(max(0.0,abs(p.x)-4.75),p.y+47.0);
         float rim=smoothstep(7.74,9.16,length(q));
-        float line=smoothstep(8.95,9.125,length(q));
-        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.144,.150,.095),rim*.36);
-        diffuseColor.rgb*=vec3(1.0-line*.24)*(1.0-.36*erlNight);
+        float line=smoothstep(9.045,9.129,length(q));
+        float bed=.53+.32*sin(p.x*1.38+p.y*1.76)+.15*sin(p.x*4.1-p.y*3.4);
+        float stoneBank=smoothstep(2.2,4.8,length(vec2(p.x,(p.y+47.)*1.2)));
+        diffuseColor.rgb*=mix(vec3(.72,.83,.72),vec3(1.025,1.06,.96),stoneBank);
+        diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.124,.135,.074),rim*(.33+bed*.28));
+        diffuseColor.rgb*=vec3(1.0-line*.34)*(1.0-.38*erlNight);
       `)
       .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
         vec2 pW=erlWaterWorld.xz;
         vec2 aW=vec2(2.9,6.6),bW=vec2(-8.2,3.3);
-        vec2 wave=.042*cos(dot(pW,aW)+erlWaterTime*1.04)*normalize(aW)
-          +.059*cos(dot(pW,bW)-erlWaterTime*.74)*normalize(bW);
+        vec2 wave=.037*cos(dot(pW,aW)+erlWaterTime*1.04)*normalize(aW)
+          +.038*cos(dot(pW,bW)-erlWaterTime*.74)*normalize(bW)
+          +.014*cos(dot(pW,vec2(17.1,-8.43))+erlWaterTime*2.54)*vec2(.84,-.35);
         wave+=rings(pW,vec2(-9.46,-46.68),.7)+rings(pW,vec2(9.42,-46.53),2.3);
         wave+=rings(pW,vec2(-9.88,-45.89),4.1)*.54+rings(pW,vec2(9.88,-48.07),1.0)*.54;
         vec3 waterNormal=normalize(vec3(-wave.x,1.0,-wave.y));
@@ -86,29 +92,31 @@ export function makeFountain(T,scene,original){
       vec4 p=modelViewMatrix*vec4(position,1.);V=-p.xyz;N=normalMatrix*normal;gl_Position=projectionMatrix*p;}`,
     fragmentShader:`uniform float time;uniform vec3 tint;varying vec2 v;varying vec3 N,V;
       void main(){float f=1.-abs(dot(normalize(N),normalize(V)));
-      float beads=.43+.57*pow(.5+.5*sin(v.x*135.-time*15.0),3.);
-      float wake=smoothstep(.0,.045,v.x)*(1.-smoothstep(.96,1.,v.x));
-      gl_FragColor=vec4(tint*(.72+.55*f),wake*beads*(.22+f*.28));
+      float beads=.57+.43*pow(.5+.5*sin(v.x*188.-time*24.0+v.y*11.),3.);
+      float wake=smoothstep(.0,.017,v.x)*(1.-smoothstep(.92,1.,v.x));
+      gl_FragColor=vec4(tint*(.77+.65*f),wake*beads*(.27+f*.32));
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
     }`});
   const jets=[];
   for(let j=0;j<streams.length;j++){
     const curve=new T.CatmullRomCurve3(Array.from({length:22},(_,i)=>position(j,i/21)));
-    const m=new T.Mesh(new T.TubeGeometry(curve,j<2?34:20,j<2?.025:.015,5,false),jetMat);
+    const m=new T.Mesh(new T.TubeGeometry(curve,j<2?41:20,j===0?.034:j===1?.038:.016,6,false),jetMat);
     m.name='Wasserstrahl '+(j+1);m.renderOrder=2;group.add(m);jets.push(m);
   }
   const drops=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),
-    new T.MeshBasicMaterial({color:0xd9ebeb,transparent:true,opacity:.47,depthWrite:false}),104);
+    new T.MeshBasicMaterial({color:0xd9ebeb,transparent:true,opacity:.55,depthWrite:false}),148);
+  drops.instanceMatrix.setUsage(T.DynamicDrawUsage);
   drops.frustumCulled=false;drops.renderOrder=3;group.add(drops);
   const foamMat=new T.ShaderMaterial({
     transparent:true,depthWrite:false,uniforms:{time:t,tint},
     vertexShader:`varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.);}`,
     fragmentShader:`varying vec2 v;uniform float time;uniform vec3 tint;void main(){
       vec2 p=(v-.5)*2.0;float d=length(p),a=atan(p.x,p.y);
-      float noise=.50+.5*sin(a*19.0+d*32.0+time*3.6)*sin(p.y*24.0-p.x*34.0);
-      float cone=(1.0-smoothstep(.13,.98,d))*noise;
-      gl_FragColor=vec4(tint,cone*.28);
+      float noise=.5+.5*sin(a*13.0+d*39.0+time*4.8)*sin(p.y*37.0-p.x*42.0);
+      float ripple=pow(.5+.5*cos(d*24.-time*5.8),7.)*(.36+noise*.64);
+      float cone=(1.0-smoothstep(.12,.99,d))*max(noise*.26,ripple);
+      gl_FragColor=vec4(tint,cone*.49);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
     }`
@@ -128,7 +136,7 @@ export function makeFountain(T,scene,original){
       const p=position(j,u),phase=i*2.39896+u*3.6,k=Math.sin(u*Math.PI)*(j<2?.206:.105);
       p.x+=Math.sin(phase)*k;p.z+=Math.cos(phase*1.57)*k;p.y+=(Math.sin(phase*3.7)*.11)*Math.sin(u*Math.PI);
       dummy.position.copy(p);
-      const r=.009+.013*((i*31%97)/97);dummy.scale.set(r,r*(1.4+u*.75),r);dummy.updateMatrix();drops.setMatrixAt(i,dummy.matrix);
+      const r=.006+.017*((i*31%97)/97);dummy.scale.set(r,r*(1.11+u*1.24),r);dummy.updateMatrix();drops.setMatrixAt(i,dummy.matrix);
     }
     drops.instanceMatrix.needsUpdate=true;
   }

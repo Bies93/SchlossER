@@ -80,7 +80,7 @@ async function start(){
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh);
- function draw(){const p=player.body.position;lighting.update(p);garden.update(p);fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
+ function draw(){const p=player.body.position;lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
  function render(time){
    frame=0;
    if(active()){

@@ -137,6 +137,7 @@ export function sculptureMaterials(sculptures,finish){
     const src=o.material,name=src.name??'';
     if(!/bronze|granite|carved_stone|damp_stone|weathered_sandstone|damp_recesses|Rock_layer/i.test(name))return;
     const bronze=/bronze/i.test(name),wet=/damp/i.test(name),granite=/granite/i.test(name);
+    const rim=/carved_stone/i.test(name),rock=/Rock_layer/i.test(name);
     let m=prepared.get(src);
     if(!m){
       m=src.clone();m.roughness=bronze?.58:granite?.69:wet?.42:.82;m.metalness=bronze?.68:0;
@@ -156,7 +157,19 @@ export function sculptureMaterials(sculptures,finish){
               float waterContact=${granite?'0.0':'(1.0-smoothstep(.075,.26+pat*.12,abs(erlWorld.y-.379)))*smoothstep(37.,39.,-erlWorld.z)'};
               vec3 swatch=texture2D(erlStoneSurface,p.zy).rgb*w.x+texture2D(erlStoneSurface,p.xz).rgb*w.y+texture2D(erlStoneSurface,p.xy).rgb*w.z;
               diffuseColor.rgb *= mix(vec3(.98),swatch*1.5,${granite?'.17':wet?'.28':'.34'});
-              diffuseColor.rgb *= mix(vec3(.93),vec3(1.065),pat)*mix(vec3(1.),vec3(.77,.78,.70),waterContact*.68);`}
+              diffuseColor.rgb *= mix(vec3(.93),vec3(1.065),pat)*mix(vec3(1.),vec3(.77,.78,.70),waterContact*.68);
+              ${rim?`vec2 dq=vec2(max(0.,abs(erlWorld.x)-4.75),erlWorld.z+47.);
+                float radius=length(dq);
+                float along=abs(erlWorld.x)<4.75 ? (erlWorld.z<-47.?erlWorld.x+4.75:47.0-erlWorld.x) :
+                  (erlWorld.x>0.?23.75:61.55)+atan(dq.y,max(.0001,dq.x))*9.45;
+                float phase=along/1.72+.025*(pat-.5);
+                float joint=1.-smoothstep(.007,.025,abs(fract(phase+.5)-.5));
+                float lip=smoothstep(9.16,9.32,radius)*(1.-smoothstep(.658,.708,erlWorld.y))*smoothstep(.28,.36,erlWorld.y);
+                diffuseColor.rgb*=mix(vec3(.95+.11*erlHash(vec2(floor(phase+.5),2.5))),vec3(.39,.38,.32),joint*.78*lip);
+                diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.78,.85,.65),waterContact*lip*.51);`:''}
+              ${rock?`float strip=erlNoise(vec2(erlWorld.x*.88+erlWorld.z*.51,erlWorld.y*13.5+erlWorld.x*.89));
+                float dark=smoothstep(.69,.86,strip)*.27+(1.-smoothstep(1.1,4.1,erlWorld.y))*.15;
+                diffuseColor.rgb*=mix(vec3(1.095,1.06,.99),vec3(.63,.65,.49),dark+waterContact*.19);`:''}`}
           `).replace('#include <roughnessmap_fragment>',
             '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+(pat-.5)*'+(bronze?'.36':'.17')+(bronze?'':'-waterContact*.28')+',.27,.96);');
         if(bronze)shader.fragmentShader=shader.fragmentShader.replace('#include <metalnessmap_fragment>',
@@ -170,7 +183,7 @@ export function sculptureMaterials(sculptures,finish){
           normal=normalize(normal+(grain-normal*dot(normal,grain))*${granite?'.13':'.22'}*(1.-waterContact*.35));
         `);
       };
-      m.customProgramCacheKey=()=> 'erl-carving-v2-'+bronze+'-'+wet+'-'+granite;
+      m.customProgramCacheKey=()=> 'erl-carving-v3-'+bronze+'-'+wet+'-'+granite+'-'+rim+'-'+rock;
       prepared.set(src,m);
     }
     o.material=m;
