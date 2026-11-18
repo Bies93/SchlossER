@@ -1,17 +1,19 @@
 import {CITY_FLOOR, CITY_FRONTAGES, PERIMETER, GATES} from './world-layout.js';
 import {ageMasonry, repeatSet, sharedSet} from './surface-detail.js';
+import {WC_OUTLINE} from './park-stair.js';
 
 // Earcut accepts either orientation of the X/Z footprint. Explicitly face up
 // for lighting and the player's downward ray, regardless of node order.
-export function planGeometry(T, outline, height, tile) {
-  const shape=outline.map(([x,z])=>new T.Vector2(x,z));
-  const index=T.ShapeUtils.triangulateShape(shape,[]).flatMap(([a,b,c])=>{
-    const p=shape[a],q=shape[b],s=shape[c];
+export function planGeometry(T, outline, height, tile, holes=[]) {
+  const toPath=ring=>ring.map(([x,z])=>new T.Vector2(x,z));
+  const shape=toPath(outline),cutouts=holes.map(toPath),vertices=shape.concat(...cutouts),points=outline.concat(...holes);
+  const index=T.ShapeUtils.triangulateShape(shape,cutouts).flatMap(([a,b,c])=>{
+    const p=vertices[a],q=vertices[b],s=vertices[c];
     return (q.x-p.x)*(s.y-p.y)-(q.y-p.y)*(s.x-p.x)<0?[a,b,c]:[a,c,b];
   });
   const g=new T.BufferGeometry();
-  g.setAttribute('position',new T.Float32BufferAttribute(outline.flatMap(([x,z])=>[x,height,z]),3));
-  g.setAttribute('uv',new T.Float32BufferAttribute(outline.flatMap(([x,z])=>[x/tile,-z/tile]),2));
+  g.setAttribute('position',new T.Float32BufferAttribute(points.flatMap(([x,z])=>[x,height,z]),3));
+  g.setAttribute('uv',new T.Float32BufferAttribute(points.flatMap(([x,z])=>[x/tile,-z/tile]),2));
   g.setIndex(index);g.computeVertexNormals();
   return g;
 }
@@ -356,6 +358,8 @@ export function addPerimeter(T,scene,world,finish) {
 
   const houses=new Set(['house','annex','streetGate']);
   for(const e of PERIMETER){
+    // The Kollegienhaus itself bounds this section; no ironwork across its facade.
+    if(e.type==='buildingEdge')continue;
     const f=frame(e.a,e.b), city=houses.has(e.type);
     if(e.gate||e.prev==='parkGate')gatePillar(f,0);
     else if(!city)corner(e,false);
@@ -388,21 +392,22 @@ export function addPerimeter(T,scene,world,finish) {
   // The interior boundary ties into the palace and the Orangerie rather than
   // drawing another fictitious perimeter across either exterior square.
   for(const [a,b,wallPanel] of [
-    [[33.35,-7.4],GATES.palaceNorth.a,false],
-    [GATES.palaceNorth.b,[42.95,-7.4],false],
-    [[42.95,-7.4],[42.95,-15.8],false],
-    [[42.95,-15.8],GATES.wasserturm.a,false],
-    [GATES.wasserturm.b,[49.8,-15.8],false],
-    [[57.1,-15.8],[73,-17],false],
-    [[-73,-17],GATES.palaceSouth.a,true],
-    [GATES.palaceSouth.b,[-33.35,-7.5],false]
+    [[-33.35,-7.4],GATES.palaceNorth.b,false],
+    [GATES.palaceNorth.a,[-42.95,-7.4],false],
+    [[-42.95,-7.4],[-42.95,-15.8],false],
+    [[-42.95,-15.8],GATES.wasserturm.b,false],
+    [GATES.wasserturm.a,[-49.8,-15.8],false],
+    [[-57.1,-15.8],[-73,-17],false],
+    [[33.35,-7.5],GATES.palaceSouth.a,false],
+    [GATES.palaceSouth.b,[57.5,-7.5],true],
+    [[57.5,-7.5],[73,-17],true]
   ]){
     const f=frame(a,b);
     parkPanel({type:wallPanel?'wall':'iron',id:54},f);
     if(f.len>6&&Math.abs(a[0])<57)pier(f,0,.62,2.03);
   }
 
-  const plaza=new T.Mesh(planGeometry(T,CITY_FLOOR,-.046,6),materials.paving.clone());
+  const plaza=new T.Mesh(planGeometry(T,CITY_FLOOR,-.046,6,[WC_OUTLINE]),materials.paving.clone());
   plaza.material.vertexColors=false;plaza.receiveShadow=true;plaza.name='Schlossplatz • durchgehendes Pflaster';
   root.add(plaza);
   // One continuous paved street line and a paired drainage channel. Each join

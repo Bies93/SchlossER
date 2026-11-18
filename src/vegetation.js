@@ -208,7 +208,25 @@ function airyLeaf(T,material,sway){
   };
   material.customProgramCacheKey=()=>key+'-leaf-backlight';
 }
-export function plantGarden(T,group,world,treeSites,coverage,height){
+function undergrowth(T){
+  const dst=buffers(),r=randomSource(31855);
+  for(let i=0;i<24;i++){
+    const a=i*2.39996+(r()-.5)*.57,rx=Math.cos(a),rz=Math.sin(a);
+    const rad=.24+r()*.57,cy=.24+(1-rad*.57)*r()*.74;
+    const span=.27+r()*.36,tilt=.25+r()*.52;
+    const x=rx*rad,z=rz*rad,idx=dst.p.length/3,j=i%5===0?0:1;
+    for(const [u,v] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
+      dst.p.push(x+rz*u*span+rx*v*span*tilt,cy+v*span*.67,z-rx*u*span+rz*v*span*tilt);
+      dst.u.push(j*.5+.012+(u*.5+.5)*.476,.512+(v*.5+.5)*.476);
+      const k=.77+v*.09;dst.c.push(k*.95,k,k*.87);
+      dst.n.push(rx*.36,.86,rz*.36);
+    }
+    dst.idx.push(idx,idx+1,idx+2,idx,idx+2,idx+3);
+  }
+  return geometry(T,dst);
+}
+
+export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[]){
   const heroes=['sweep','spire','fork','bank','court'];
   const shapes=[...Array.from({length:6},(_,i)=>treeVariant(T,i)),
     ...heroes.map((hero,i)=>treeVariant(T,6+i,hero))],rng=randomSource(42274);
@@ -243,6 +261,17 @@ export function plantGarden(T,group,world,treeSites,coverage,height){
         batch(T,group,near,twigs,wood,'Bäume · Seitenzweige')
       ]});
     }
+  }
+  if(shrubSites.length){
+    const groups=new Map(),g=undergrowth(T);
+    for(const [x,z,s] of shrubSites){
+      const tone=.81+rng()*.19;
+      put(groups,x,z,{x,y:height(x,z),z,sx:s,sy:s*(.74+rng()*.32),sz:s,yaw:rng()*TAU,
+        tint:new T.Color().setRGB(tone*.95,tone,tone*.91)});
+    }
+    for(const bin of groups.values())parts.push({x:bin.x,z:bin.z,dist:93,meshes:[
+      batch(T,group,bin.records,g,leaf,'Parkrand · lockeres Unterholz')
+    ]});
   }
   const colors=['#717d46','#788743','#879752','#8f985d','#718843'].map(v=>new T.Color(v));
   for(let z=-255;z<=-17;z+=.64)for(let x=-75;x<=75;x+=.64){

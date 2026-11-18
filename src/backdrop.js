@@ -1,5 +1,7 @@
 import {PERIMETER,insidePerimeter} from './world-layout.js';
 import {randomSource,sharedSet} from './surface-detail.js';
+import {WC_CUT} from './park-stair.js';
+import {parkFacadeClearance} from './park-architecture.js';
 
 const tau=Math.PI*2;
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -63,8 +65,10 @@ export function addBackdrop(T,scene){
   const laneAreas=[];
   const lanes=PERIMETER.filter(e=>e.type==='streetGate'||e.type==='parkGate');
   for(const e of lanes){
-    const f=edgeFrame(e),city=e.type==='streetGate',axis=f.L*.5,turn=(e.id%2?1:-1)*(city?1:-1);
-    const sections=[[axis,.38],[axis,7.5],[axis+turn*1.2,17],[axis+turn*4.7,33],[axis+turn*9.6,53],[axis+turn*18,76]];
+    const f=edgeFrame(e),city=e.type==='streetGate',rear=e.gate?.startsWith('hospital'),
+      axis=f.L*.5,turn=(e.id%2?1:-1)*(city?1:-1);
+    const sections=rear?[[axis,.38],[axis,9.4]]:
+      [[axis,.38],[axis,7.5],[axis+turn*1.2,17],[axis+turn*4.7,33],[axis+turn*9.6,53],[axis+turn*18,76]];
     const road=new T.Color(city?0x747067:0x8f8979),walk=new T.Color(city?0xaaa093:0xa49f89);
     const widths=city?[2.65,2.7,3.1,3.5,3.5,2.7]:[1.92,1.99,2.42,3.2,3.4,2.6];
     const [cx,,cz]=f.point(axis,0,28),bin=bins(cx,cz);
@@ -82,17 +86,31 @@ export function addBackdrop(T,scene){
     }
     // Small amber lantern heads suggest that the street continues; farther
     // ones are emissive geometry only, never extra real-time lights.
-    for(const [i,d] of [6.0,21.0,43.0].entries()){
+    for(const [i,d] of (rear?[6.0]:[6.0,21.0,43.0]).entries()){
       const x=axis+turn*(i===0?0:i===1?1.8:7.2)-4.25,z=d,h=city?3.8:3.45,p=f.point;
       box(bin,'trim',p,x-.026,x+.026,-.23,h-.28,z-.028,z+.028,shade);
       box(bin,'lit',p,x-.105,x+.105,h-.32,h-.12,z-.105,z+.105,glint);
       box(bin,'trim',p,x-.142,x+.142,h-.125,h-.089,z-.137,z+.137,shade);
     }
   }
+  // The east gates look onto the same street, not two roads vanishing into
+  // a blank horizon. Only this short exterior view is modeled.
+  const hospitalStreet=[[-82,-263],[-56,-263.3],[-19,-264.7],[18,-266.6],[52,-268.4],[75,-266.2]];
+  for(let i=1;i<hospitalStreet.length;i++){
+    const a=hospitalStreet[i-1],b=hospitalStreet[i],bin=bins((a[0]+b[0])*.5,(a[1]+b[1])*.5);
+    const p=([x,z],d,h)=>[x,height(x,z+d)+h,z+d];
+    const strip=(a0,a1,c,h)=>quad(bin,'paving',p(a,a1,h),p(b,a1,h),p(b,a0,h),p(a,a0,h),c,3.3);
+    strip(-3.15,3.15,new T.Color(0x77736b),.054);
+    strip(3.15,4.80,new T.Color(0xa7a08d),.105);
+    strip(-4.80,-3.15,new T.Color(0xa7a08d),.105);
+    for(const t of [-3.17,3.14])strip(t,t+.10,curb,.111);
+    laneAreas.push({x:(a[0]+b[0])*.5,z:(a[1]+b[1])*.5,limit:Math.hypot((b[0]-a[0])*.5,4.8)});
+  }
   function laneFree(x,z,w=0){return !laneAreas.some(l=>Math.hypot(x-l.x,z-l.z)<l.limit+w)}
   const sites=[];
   function placeHouse(x,z,angle,w,d,h,kind,detail){
-    if(insidePerimeter(x,z)||sites.some(s=>Math.hypot(x-s.x,z-s.z)<Math.min(w,s.w)*.52&&detail))return;
+    if(insidePerimeter(x,z)||parkFacadeClearance(x+d*.48*Math.sin(angle),z-d*.48*Math.cos(angle),Math.min(6,w*.48))
+      ||sites.some(s=>Math.hypot(x-s.x,z-s.z)<Math.min(w,s.w)*.52&&detail))return;
     sites.push({x,z,w});
     const base=height(x,z),xdir=Math.cos(angle),zdir=Math.sin(angle);
     const p=(u,y,v)=>[x+u*xdir-v*zdir,base+y,z+u*zdir+v*xdir],bin=bins(x,z),l=-w*.5,r=w*.5,back=-d;
@@ -234,7 +252,7 @@ export function addBackdrop(T,scene){
   const stands=new Map();
   for(let i=0;i<380;i++){
     const a=range(0,tau),r=range(100,415),x=Math.cos(a)*r,z=-92+Math.sin(a)*r;
-    if(Math.abs(x)<91&&z>-281&&z<97||!laneFree(x,z,3)||sites.some(s=>Math.hypot(x-s.x,z-s.z)<s.w*.52+2))continue;
+    if(Math.abs(x)<91&&z>-281&&z<97||parkFacadeClearance(x,z,3)||!laneFree(x,z,3)||sites.some(s=>Math.hypot(x-s.x,z-s.z)<s.w*.52+2))continue;
     if(z>76&&Math.abs(x)<123&&rng()<.66)continue;
     const key=regionId(x,z);if(!stands.has(key))stands.set(key,[]);
     stands.get(key).push({x,z,h:range(8,18),w:range(2.2,4.5),tint:pick(trees)});
@@ -242,16 +260,26 @@ export function addBackdrop(T,scene){
   for(const [id,record] of stands){
     const g=new T.Group();g.name='Fernkulisse · Gehölz '+id;world.add(g);cluster(record,g);
   }
-  const land=new T.PlaneGeometry(1710,1710,92,92);land.rotateX(-Math.PI/2);
-  const pos=land.attributes.position,tints=[];
+  // Split the original grid at the WC cutout, so its below-grade geometry
+  // is genuinely visible. No clipping shader or extra render surface.
+  const grid=Array.from({length:93},(_,i)=>1710*(i/92-.5));
+  const {left,right,back,front}=WC_CUT;
+  const coordinates=(a,b)=>[...grid.filter(v=>v<=a||v>=b),a,b].sort((x,y)=>x-y);
+  const xs=coordinates(left,right),zs=coordinates(back,front);
+  const land=new T.BufferGeometry(),points=[],index=[],tints=[];
   const mud=new T.Color(0x929178),field=new T.Color(0x656e56),woodland=new T.Color(0x49594b);
-  for(let i=0;i<pos.count;i++){
-    const x=pos.getX(i),z=pos.getZ(i),y=height(x,z);
-    pos.setY(i,y-earth);
+  for(const z of zs)for(const x of xs){
+    points.push(x,height(x,z)-earth,z);
     const d=Math.hypot(x,z+65),n=.50+.27*Math.sin(x*.024+z*.011)+.16*Math.sin(z*.037-x*.014);
     const tint=mud.clone().lerp(field,fade(83,224,d)*(.42+.46*n)).lerp(woodland,fade(260,625,d)*(.50+.33*n));
     tints.push(tint.r,tint.g,tint.b);
   }
+  for(let j=1;j<zs.length;j++)for(let i=1;i<xs.length;i++){
+    if(xs[i-1]===left&&zs[j-1]===back)continue;
+    const a=(j-1)*xs.length+i-1,b=a+xs.length;
+    index.push(a,b,b+1,a,b+1,a+1);
+  }
+  land.setIndex(index);land.setAttribute('position',new T.Float32BufferAttribute(points,3));
   land.setAttribute('color',new T.Float32BufferAttribute(tints,3));land.computeVertexNormals();
   const ground=new T.Mesh(land,new T.MeshLambertMaterial({vertexColors:true}));
   ground.name='Fernkulisse · Gelände';ground.position.y=earth;ground.receiveShadow=true;world.add(ground);

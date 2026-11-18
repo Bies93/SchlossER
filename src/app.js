@@ -17,6 +17,7 @@ import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
+import {addParkStair,wcHeightAt} from './park-stair.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
@@ -58,6 +59,7 @@ async function start(){
  addFixedColliders(world);
  const hall=makeHall(T,model,stonework,world,leaves);
  const perimeter=addPerimeter(T,s,world,finish);
+ addParkStair(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
  walkSurfaces.push(...garden.floors);
@@ -65,6 +67,8 @@ async function start(){
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z)=>{
+   const stair=wcHeightAt(x,z);
+   if(stair!==null)return stair;
    const entry=hallFloor(x,z);
    if(entry!==null)return entry;
    const terrain=garden.heightAt(x,z);

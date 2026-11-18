@@ -113,11 +113,13 @@ const worldPatch=shader=>{
     }`);
 };
 
-export function ageMasonry(material,exposure) {
+export function ageMasonry(material,exposure,neutral=0) {
   material.onBeforeCompile=shader=>{
     worldPatch(shader);
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
       float irregular = erlNoise(vec2(erlWorld.x+erlWorld.z,erlWorld.y)*2.6);
+      float stoneValue=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
+      diffuseColor.rgb=mix(diffuseColor.rgb,stoneValue*vec3(.99,1.005,1.025),${neutral.toFixed(3)});
       float capillary = (1.0-smoothstep(.06, .28+irregular*.53, erlWorld.y))* ${exposure.toFixed(3)};
       float lichen = smoothstep(.64,.9,erlNoise(erlWorld.xz*.85+erlWorld.y*.4)*.73+irregular*.27);
       diffuseColor.rgb *= mix(vec3(.94+irregular*.10),vec3(.58,.61,.45),capillary);
@@ -125,7 +127,7 @@ export function ageMasonry(material,exposure) {
     `).replace('#include <roughnessmap_fragment>',
       '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor+irregular*.16-.11, .64, .99);');
   };
-  material.customProgramCacheKey=()=> 'masonry-weather-'+exposure;
+  material.customProgramCacheKey=()=> 'masonry-weather-'+exposure+'-'+neutral;
 }
 
 // Sculptures have no UVs in the shipped GLB. Keep their geometry untouched

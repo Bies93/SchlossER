@@ -1,8 +1,15 @@
 import {HALL} from './palace-openings.js';
 
-// Existing model coordinates: metres, Y up, positive Z toward Schlossplatz.
+// Y up; +Z toward Schlossplatz (west), +X toward Universitätsstraße (south).
 export const SPAWN = {x: 8, z: 43, yaw: .19, pitch: .12};
-export const BENCH_ROW = {x: 36, depths: [-36,-57,-93,-122,-160,-193]};
+// Centres and yaw; the visual bench, its contact footprint and plant mask agree.
+export const BENCH_SITES = [
+  [-36,-34,-1.57],[36,-34,1.57],[-39.7,-59,-1.42],[38.3,-59,1.40],
+  [-48.4,-99,-1.58],[46.3,-96,1.52],[67.6,-111,1.52],
+  [-51.5,-135,-1.59],[40.1,-132,-1.60],[-31,-161.3,.19],
+  [44.1,-170,1.58],[-53.1,-188,-1.55],[-29,-207.2,.34],
+  [38.6,-214,-1.62],[-29,-237.5,-3.04],[24,-238,-3.11]
+];
 export const PLAYER = {eye: 1.67, radius: .30, speed: 2.85, run: 6.35, maxStep: .32};
 
 // Counterclockwise in X/Z. The type at each node describes the outgoing edge.
@@ -25,35 +32,37 @@ export const CITY_FRONTAGES = {
   17:['corner','stone','plaster'],18:['shop','plaster','stone']
 };
 const PARK = [
-  [-73,-17,'wall'], [-74,-47,'wall'], [-74,-73,'parkGate','universityWest'], [-74,-78,'iron'],
-  [-76,-115,'wall'], [-75,-144,'parkGate','universityEast'], [-75,-149,'iron'],
-  [-73,-185,'wall'], [-73,-222,'wall'], [-67,-247,'wall'],
-  [-54,-256,'iron'], [-49,-256.4,'parkGate','hospitalSouth'], [-43,-257,'iron'],
-  [-1,-257,'parkGate','hospitalNorth'], [5.3,-257,'iron'],
-  [22,-256,'iron'], [51,-255,'iron'], [66,-249,'wall'], [74,-226,'wall'],
-  [75,-193,'iron'], [76,-171,'parkGate','botanical'], [76,-166,'iron'],
-  [76,-114,'iron'], [74,-85,'wall'], [75,-50,'iron'], [75,-24,'iron'], [73,-17]
+  [-73,-17,'iron'], [-75,-24,'iron'], [-75,-50,'iron'], [-74,-85,'wall'],
+  [-76,-114,'iron'], [-76,-166,'parkGate','botanical'], [-76,-171,'iron'],
+  [-75,-193,'iron'], [-74,-226,'wall'], [-66,-247,'iron'], [-51,-251,'iron'],
+  [-19,-253,'parkGate','hospitalNorth'], [-12.7,-253.4,'iron'],
+  [18,-255.5,'iron'], [43,-257,'parkGate','hospitalSouth'], [49,-256.4,'iron'],
+  [52.5,-256,'wall'], [52.5,-225,'wall'], [73,-222,'wall'], [73,-185,'iron'],
+  [75,-149,'parkGate','universityEast'], [75,-144,'wall'],
+  [75,-138.8,'buildingEdge'], [75,-87.0,'iron'],
+  [74,-78,'parkGate','universityWest'], [74,-73,'wall'], [74,-47,'wall'], [73,-17]
 ];
 // Reference gates in matched local coordinates, not UTM. The model compresses
 // the deep east park; the short range at the Schloss is kept at facade scale.
 export const GATES = {
-  palaceNorth: {a:[36.5,-7.4],b:[41.4,-7.4],source:5489797596,name:'Schlossplatz · Nord'},
-  palaceSouth: {a:[-42,-7.5],b:[-36.7,-7.5],source:5489797603,name:'Schlossplatz · Süd'},
-  wasserturm: {a:[44.2,-15.8],b:[48.4,-15.8],source:5469958200,name:'Wasserturmseite · Orangerie'},
+  palaceNorth: {a:[-41.4,-7.4],b:[-36.5,-7.4],source:5489797596,name:'Schlossplatz · Nord'},
+  palaceSouth: {a:[36.7,-7.5],b:[42,-7.5],source:5489797603,name:'Schlossplatz · Süd'},
+  // Side entry from the Wasserturmstraße, not a second gate on the south route.
+  wasserturm: {a:[-48.4,-15.8],b:[-44.2,-15.8],source:5469958200,name:'Wasserturmseite · Orangerie'},
 };
 export const GARDEN_GATES = {
-  universityWest:{source:1326052106,name:'Universitätsstraße · West',path:[[-60,-82],[-67,-78],[-73.8,-75.5]]},
-  universityEast:{source:1326052095,name:'Universitätsstraße · Ost',path:[[-59,-138],[-66,-145],[-74.8,-146.5]]},
-  hospitalSouth:{source:1326052100,name:'Krankenhausstraße · Süd',path:[[-40,-240],[-46,-249],[-46,-256]]},
-  hospitalNorth:{source:2148994463,name:'Krankenhausstraße · Nord',path:[[0,-237],[1.0,-250],[2.15,-256.7]]},
-  botanical:{source:1326052108,name:'Botanischer Garten',path:[[62,-161],[68,-164],[75.7,-168.5]]},
+  universityWest:{source:1326052106,name:'Universitätsstraße · West',path:[[60,-82],[67,-78],[73.8,-75.5]]},
+  universityEast:{source:1326052095,name:'Universitätsstraße · Ost',path:[[57,-145],[67,-146.5],[74.8,-146.5]]},
+  hospitalSouth:{source:1326052100,name:'Krankenhausstraße · Süd',path:[[39,-230],[44,-244],[46,-256.5]]},
+  hospitalNorth:{source:2148994463,name:'Krankenhausstraße · Nord',path:[[-11,-228],[-14,-243],[-15.85,-253.1]]},
+  botanical:{source:1326052108,name:'Botanischer Garten',path:[[-62,-161],[-68,-164],[-75.7,-168.5]]},
 };
 // Lamping is a composed evening scene, not an inventory of the real site.
 // Pole colliders and the geometry/light centres all derive from these points.
 export const LAMP_SITES = [
   {type:'wall',x:-3.35,z:13.26,y:3.24}, {type:'wall',x:3.35,z:13.26,y:3.24},
   {x:16,z:47.8}, {x:-20.5,z:51.1}, {x:58,z:48.2}, {x:-58.4,z:55.8},
-  {x:41.2,z:-4.8}, {x:-42.5,z:-10.8}, {x:41.7,z:-29.2},
+  {x:42.8,z:-5.1}, {x:-42.5,z:-10.8}, {x:-41.7,z:-29.2},
   {x:16.6,z:-62.8}, {x:-17.2,z:-60.4}, {x:-3.1,z:-87.0},
   {x:3.0,z:-132.9}, {x:41.2,z:-131.0}, {x:-42.8,z:-158.8},
   {x:-3.3,z:-188.6}, {x:3.2,z:-231.5}

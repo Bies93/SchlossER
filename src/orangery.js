@@ -3,15 +3,16 @@ import {repeatSet,sharedSet} from './surface-detail.js';
 
 // Layout in model metres. Keep the established Wasserturm-side footprint.
 const CENTER=-47, OFFSET=3.6;
-const wing=(side,t)=>[OFFSET+56.4-17*(1-Math.cos(1.2*t)),CENTER+side*(6+24*Math.sin(t*1.2))];
-const hall=Array.from({length:4},(_,i)=>[55.5+OFFSET,CENTER-6+i*4]);
-const sides=[-1,1].map(side=>Array.from({length:8},(_,i)=>wing(side,i/7)).sort((a,b)=>a[1]-b[1]));
+const wing=(side,t)=>[-OFFSET-56.4+17*(1-Math.cos(1.2*t)),CENTER+side*(6+24*Math.sin(t*1.2))];
+const hall=Array.from({length:4},(_,i)=>[-55.5-OFFSET,CENTER+6-i*4]);
+const along=(a,b)=>b[1]-a[1]; // From west to east: frontage normals point south.
+const sides=[-1,1].map(side=>Array.from({length:8},(_,i)=>wing(side,i/7)).sort(along));
 const sections=[
   {points:hall,h:8.40,depth:10,rise:3.7,main:true},
   ...sides.map(points=>({points,h:6.35,depth:7.8,rise:2.15})),
   ...[-1,1].map(side=>{
     const [x,z]=wing(side,1);
-    return {points:[[x-.26,z],[x-.26,z+side*7.75]].sort((a,b)=>a[1]-b[1]),h:7.15,depth:8.6,rise:2.7,pavilion:true};
+    return {points:[[x+.26,z],[x+.26,z+side*7.75]].sort(along),h:7.15,depth:8.6,rise:2.7,pavilion:true};
   })
 ];
 
@@ -130,7 +131,7 @@ export function addOrangery(T,parent,world,finish){
         const start=end===0,bottom=p(end,0,0),back=p(end,0,-depth),
           endA=start?back:bottom,endB=start?bottom:back,
           capFrame=frame([endA[0],endA[2]],[endB[0],endB[2]]);
-        if(section.pavilion&&((start&&a[1]<CENTER-29)||(!start&&b[1]>CENTER+29))){
+        if(section.pavilion&&((start&&a[1]>CENTER+29)||(!start&&b[1]<CENTER-29))){
           for(let j=0;j<5;j++){
             const pair=[j/5,(j+1)/5].map(t=>[endA[0]+(endB[0]-endA[0])*t,endA[2]+(endB[2]-endA[2])*t]);
             bay(frame(...pair),h,{pale:true});

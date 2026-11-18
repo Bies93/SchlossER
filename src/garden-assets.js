@@ -1,6 +1,6 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {repeatSet} from './surface-detail.js';
-import {BENCH_ROW} from './world-layout.js';
+import {BENCH_SITES} from './world-layout.js';
 
 export function addBenches(T,root,world,height){
   const wood=new T.MeshStandardMaterial({...repeatSet(T,'wood',512),roughness:1});
@@ -32,16 +32,16 @@ export function addBenches(T,root,world,height){
       const bolt=new T.CylinderGeometry(.012,.013,.013,6);bolt.translate(x,.06,z-.034);frame.push(bolt.toNonIndexed());bolt.dispose();
     }
   }
-  const count=BENCH_ROW.depths.length*2, w=new T.InstancedMesh(mergeGeometries(boards),wood,count),
+  const count=BENCH_SITES.length, w=new T.InstancedMesh(mergeGeometries(boards),wood,count),
     f=new T.InstancedMesh(mergeGeometries(frame),iron,count);
   for(const g of [...boards,...frame])g.dispose();
   let i=0;const obj=new T.Object3D();
-  for(const side of [-1,1])for(const z of BENCH_ROW.depths){
-    const x=side*BENCH_ROW.x;
-    obj.position.set(x,height(x,z),z);obj.rotation.y=side*Math.PI/2;obj.updateMatrix();
+  for(const [x,z,yaw] of BENCH_SITES){
+    obj.position.set(x,height(x,z),z);obj.rotation.y=yaw;obj.updateMatrix();
     w.setMatrixAt(i,obj.matrix);f.setMatrixAt(i++,obj.matrix);
-    const a=x-side*.29,b=x+side*.37;
-    world.box(Math.min(a,b),z-L/2,Math.max(a,b),z+L/2);
+    const c=Math.cos(yaw),s=Math.sin(yaw);
+    world.polygon([[-L/2,-.29],[L/2,-.29],[L/2,.37],[-L/2,.37]]
+      .map(([u,v])=>[x+c*u+s*v,z-s*u+c*v]));
   }
   w.name='Parkbänke · Holzlatten';f.name='Parkbänke · Gussgestell';
   for(const m of [w,f]){m.receiveShadow=true;m.castShadow=true;m.computeBoundingSphere();root.add(m);}
