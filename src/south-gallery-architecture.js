@@ -132,27 +132,6 @@ export function southGalleryArch(k,p,span,top,{half=1.53,thickness=.28}={}){
   }
 }
 
-export function galleryCeiling(k,box){
-  const y=WINGS.ceiling,u=[[4.58,8.18],[8.42,12.24],[12.91,16.45],[16.68,20.58],[20.83,24.77],[25.01,28.53]];
-  for(const [l,r] of u){
-    const D=5.78;
-    box('galleryBand',l,r,y-.047,y-.016,-D,D);
-    box('galleryRoof',l+.114,r-.114,y-.055,y-.046,-D+.13,D-.13);
-    for(const z of [-D+.028,D-.082]){
-      box('galleryCut',l+.058,r-.059,y-.086,y-.043,z,z+.053);
-      const a=z+(z<0?.080:-.080);
-      box('galleryInlay',l+.13,r-.13,y-.064,y-.055,a,a+.018);
-    }
-    for(const x of [l+.057,r-.107])box('galleryCut',x,x+.051,y-.085,y-.042,-D+.085,D-.081);
-    const c=(l+r)*.5,base=(a,r)=>[c+Math.cos(a)*r,y-.089,Math.sin(a)*r];
-    for(let j=0;j<12;j++){
-      const a=2*j*pi/12,b=2*(j+1)*pi/12;
-      k.quad('galleryCutShade',base(b,.225),base(a,.225),base(a,.316),base(b,.316));
-    }
-    box('galleryBand',c-.108,c+.108,y-.099,y-.048,-.111,.111);
-  }
-}
-
 export function galleryPrints(T,root,box){
   const map=painted(T,1024,512,(c)=>{
     for(const [i,title] of ['HIMMEL UND MASS','NATURALIENBUCH'].entries()){

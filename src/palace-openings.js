@@ -3,7 +3,7 @@ export const PORTALS={
   west:{id:'west',label:'Schlossplatz',side:1,z:12.27,half:1.35,spring:2.92,rise:0},
   east:{id:'east',label:'Schlossgarten',side:-1,z:-12.04,half:1.33,spring:2.53,rise:1.27}
 };
-export const HALL={half:3.92,zMin:-11.12,zMax:11.30,floor:.071};
+export const HALL={half:3.92,zMin:-11.12,zMax:11.30,floor:.071,wallDepth:.252};
 export const WINGS={outer:29.1,z:7.70,portal:1.32,spring:2.44,rise:.59,ceiling:4.31,partition:12.45};
 // +X is south, -Z is east (left when facing the gallery poster).
 export const SOUTH_HATCH={x0:24.72,x1:28.91,z0:-7.27,z1:-5.70,end:30.88};

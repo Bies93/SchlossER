@@ -1,7 +1,8 @@
 import {architectureKit} from './architecture-kit.js';
 import {PORTALS,HALL,WINGS,inPalaceWing} from './palace-openings.js';
 import {portalFrame} from './palace-facade.js';
-import {interiorArch,addPalaceWings} from './palace-wings.js';
+import {addPalaceWings} from './palace-wings.js';
+import {masonryPortal} from './palace-interior-portal.js';
 import {addPalaceLab} from './palace-lab.js';
 import {labCameraMode} from './lab-wing.js';
 import {hallDressing} from './hall-dressing.js';
@@ -74,11 +75,10 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   for(const side of [-1,1]){
     const wall=(z,a,d)=>[side*(half-d),a,side*z];
     const min=side>0?zMin:-zMax,max=side>0?zMax:-zMin;
-    const span=WINGS.portal+.48;
-    k.box('hallLime',wall,min,-span,y,wallTop,-.252,0);
-    k.box('hallLime',wall,span,max,y,wallTop,-.252,0);
-    interiorArch(k,wall,span,wallTop,{thickness:.252,wall:'hallLime',trim:'hallTrim'});
-    for(const [a,b] of [[min,-WINGS.portal-.13],[WINGS.portal+.13,max]]){
+    const rim=.185,edge=WINGS.portal+rim+.034;
+    masonryPortal(k,wall,{left:min,right:max,top:wallTop,depth:HALL.wallDepth,rim,
+      wall:'hallLime',stone:'hallTrim',edge:'hallStone',joint:'marginStone'});
+    for(const [a,b] of [[min,-edge],[edge,max]]){
       k.box('hallStone',wall,a,b,y,.985,.006,.044);
       for(let u=a+.36,i=0;u<b-.28;u+=.93,i++){
         const l=u+(i%2)*.058;
@@ -93,7 +93,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
       [3.345,3.407,.162,'hallStone'],[3.407,3.447,.195,'hallTrim']])
       for(const [a,b] of [[min,-.89],[.89,max]])k.box(finish,wall,a,b,low,high,.008,depth);
     for(const [a,b] of [[zMin,-WINGS.portal],[WINGS.portal,zMax]]){
-      const xs=[side*(half-.079),side*(half+.214)].sort((x,z)=>x-z);
+      const xs=[side*(half-.079),side*(half+HALL.wallDepth+.059)].sort((x,z)=>x-z);
       world.box(xs[0],a,xs[1],b);
     }
     for(const z of [-8.24,-3.44,3.44,8.24]){

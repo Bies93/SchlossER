@@ -6,39 +6,11 @@ import {aroundLabOpening,labLower} from './lab-layout.js';
 import {furnishSouthGallery} from './south-gallery.js';
 import {furnishNorthLibrary} from './north-library.js';
 import {galleryHatch,splitHatchFloor} from './south-hatch.js';
-import {gallerySurfaces,southGalleryArch,galleryCeiling,galleryRunners,galleryPrints} from './south-gallery-architecture.js';
+import {gallerySurfaces,southGalleryArch,galleryRunners,galleryPrints} from './south-gallery-architecture.js';
+import {masonryPortal} from './palace-interior-portal.js';
+import {cofferedWing,wingCeilingMaterials,wingLampStations,wingLampMount} from './palace-wing-ceiling.js';
 
-const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
-
-export function interiorArch(k,p,span,top,{half=portal,thickness=.25,brick=.17,wall='limewash',trim='cut'}={}){
-  const back=-thickness-.021;
-  for(const [a,b] of [[-span,-half],[half,span]])k.box(wall,p,a,b,Y,top,-thickness,0);
-  for(const a of [-half-brick,half])k.box(trim,p,a,a+brick,Y,spring,back,.071);
-  const curve=(a,r,h,d)=>p(-Math.cos(a)*r,spring+Math.sin(a)*h,d);
-  const faces=24;
-  for(let i=0;i<faces;i++){
-    const a=i*Math.PI/faces,b=(i+1)*Math.PI/faces;
-    const A=-Math.cos(a)*half,B=-Math.cos(b)*half;
-    // Solid masonry above the clear arch. Both skins span all the way to
-    // the ceiling overlap; the curved underside joins them inside the opening.
-    k.quad(wall,curve(a,half,rise,0),curve(b,half,rise,0),p(B,top,0),p(A,top,0),1.65,A);
-    k.quad(wall,curve(b,half,rise,-thickness),curve(a,half,rise,-thickness),p(A,top,-thickness),p(B,top,-thickness),1.65,-B);
-    k.quad(trim,curve(a,half,rise,back),curve(b,half,rise,back),curve(b,half,rise,.074),curve(a,half,rise,.074));
-    k.quad(trim,curve(a,half,rise,.074),curve(b,half,rise,.074),
-      curve(b,half+brick,rise+brick,.074),curve(a,half+brick,rise+brick,.074),1.35,A);
-    k.quad(trim,curve(a,half+brick,rise+brick,.074),curve(b,half+brick,rise+brick,.074),
-      curve(b,half+brick,rise+brick,0),curve(a,half+brick,rise+brick,0));
-    k.quad(trim,curve(b,half,rise,back),curve(a,half,rise,back),
-      curve(a,half+brick,rise+brick,back),curve(b,half+brick,rise+brick,back));
-    k.quad(trim,curve(b,half+brick,rise+brick,back),curve(a,half+brick,rise+brick,back),
-      curve(a,half+brick,rise+brick,-thickness),curve(b,half+brick,rise+brick,-thickness));
-  }
-  for(const side of [-1,1]){
-    const a=side*half;
-    k.box(trim,p,a-.175,a+.175,spring-.081,spring+.009,back-.014,.124);
-    k.box(trim,p,a-.19,a+.19,Y,Y+.20,back-.011,.11);
-  }
-}
+const Y=HALL.floor,{z:Z,outer,ceiling,partition}=WINGS;
 
 export function addPalaceWings(T,root,world,common,poster,seal){
   const group=new T.Group();group.name='Schloss · Galerie und Lesesaal';root.add(group);
@@ -59,6 +31,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
   }));
   const materials={
     limewash:common.limewash,cut:common.cut,limestone:common.limestone,
+    northLime:std(0xd9d1bd,.98,{...plaster,normalScale:new T.Vector2(.25,.25)}),
     roof:std(0xe8dfd1,.98,{...plaster,normalScale:new T.Vector2(.19,.19)}),red:std(0x946855,.91),blue:std(0x708181,.92),
     darkWood:copy(common.oak,0x765746),wood:copy(common.oak,0xb29070),panel:copy(common.oak,0x9e7d63),
     rackOak:std(0xc4a27d,.77,{...oak,normalScale:new T.Vector2(.34,.34)}),
@@ -72,7 +45,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     panes:std(0xa8bbce,.38,{map:paneMap,metalness:.27,envMapIntensity:.31,emissive:0xafbfd5,emissiveMap:paneMap,emissiveIntensity:.65}),
     windowSeal:std(0x302d28,.92),
     bookA:std(0x6e4940),bookB:std(0x515f4c),bookC:std(0x4a5b68),bookD:std(0x8b7356),
-    ...gallerySurfaces(T)
+    ...gallerySurfaces(T),...wingCeilingMaterials(T,plaster)
   };
   const lightSites=[];
   let posterFace,hatch;
@@ -119,7 +92,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
       const M=new T.Matrix4().makeScale(...s);M.setPosition(v.set(...p(u,y,d)));k.geometry(m,g,M);
     };
     const start=HALL.half,high=ceiling,accent=library?'blue':'galleryCloth';
-    const wallBase=library?'limewash':'galleryLime',wallStone=library?'limestone':'galleryBand',wallTrim=library?'cut':'galleryCut';
+    const wallBase=library?'northLime':'galleryLime',wallStone=library?'limestone':'galleryBand',wallTrim=library?'cut':'galleryCut';
     const floor=(m,l,r,b,t,d,f)=>{
       const cut=library?null:splitHatchFloor(l,r,d,f),spans=library?aroundLabOpening(l,r,d,f):cut.room;
       for(const [a,c,e,h] of spans)box(m,a,c,b,t,e,h);
@@ -148,23 +121,26 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     box(wallStone,outer-.065,outer,Y+.02,.19,-Z,Z);
     // Small physical overlap with the hall's arch backstop, no open seam.
     box(library?'roof':'galleryRoof',start-.024,outer+.02,high,high+.10,-Z,Z);
-    // Projecting ceiling frames break the long room into bays.
-    for(const u of [4.53,8.27,12.39,16.57,20.71,24.89,28.66]){
-      if(!library&&u===12.39)continue;
-      box(wallTrim,u-.14,u+.14,high-.167,high-.085,-Z+.095,Z-.095);
-      box(wallStone,u-.095,u+.095,high-.097,high+.005,-Z+.10,Z-.10);
-    }
-    if(!library)galleryCeiling(k,box);
+    cofferedWing(k,p,library);
     const threshold=(d,y,a)=>p(partition-a,y,d);
-    if(library)interiorArch(k,threshold,Z,high,{half:1.53,brick:.20,thickness:.28});
-    else southGalleryArch(k,threshold,Z,high,{half:1.53,thickness:.28});
+    if(library){
+      masonryPortal(k,threshold,{left:-Z,right:Z,top:high,half:1.53,rim:.20,depth:.28,
+        wall:wallBase,stone:wallTrim,edge:wallStone,joint:'ceilingShadow'});
+      for(const [l,r] of [[-Z,-1.768],[1.768,Z]])for(const [d,f] of [[.002,.047],[-.327,-.282]]){
+        k.box('darkWood',threshold,l,r,Y+.021,.153,d,f);
+        k.box('ceilingIvory',threshold,l,r,.154,.181,d-.008,f+.008);
+      }
+    }else southGalleryArch(k,threshold,Z,high,{half:1.53,thickness:.28});
     for(const [a,b] of [[-Z,-1.53],[1.53,Z]])block(partition-.08,partition+.28,a,b);
     box(wallTrim,partition-.21,partition+.37,Y-.002,Y+.023,-1.48,1.48);
     if(!library)for(const u of [partition-.185,partition+.322])
       box('galleryInlay',u,u+.019,Y+.0232,Y+.025,-1.452,1.452);
     for(const side of [-1,1]){
       const edge=(u,y,d)=>p(side*u,y,side*(Z-d));
-      const a=side===1?start:-outer,b=side===1?outer:-start;
+      // Butt the longitudinal walls against the BACK of the hall shell;
+      // their end faces may not also live on the painted hall-side plane.
+      const wallStart=start+HALL.wallDepth;
+      const a=side===1?wallStart:-outer,b=side===1?outer:-wallStart;
       // The signed wall coordinates mirror the basis; reverse the tangent,
       // so the inner reveal, mouldings and opaque glass face the room.
       const stableEdge=(u,y,d)=>edge(-u,y,d);
@@ -214,7 +190,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
       const panelSites=[6.61,11.0,14.92,18.27,21.65,25.15,28.21]
         .filter(u=>!windows.some(w=>Math.abs(w-side*u)<1.02));
       for(const U of axes){
-        if((!library&&U===12.34)||panelSites.some(x=>Math.abs(x-U)<.56))continue;
+        if(U===12.34||panelSites.some(x=>Math.abs(x-U)<.56))continue;
         const u=U*side;
         wall(wallStone,u-.146,u+.146,.19,3.966,-.018,.074);
         wall(wallTrim,u-.192,u+.192,.194,.289,-.016,.106);
@@ -252,7 +228,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
       lightSites.push({point:p(u,base-.303,d),power:wall?5.8:library?17.5:23.6,
         color:wall?0xffcc9a:library?0xffe0bf:0xffe6ce,bias:wall?19:0});
     }
-    for(const u of [7.72,16.77,24.55])luminaire(u,0,4.27);
+    for(const u of wingLampStations)luminaire(u,0,wingLampMount);
     for(const d of [-5.4,5.4])luminaire(outer-.244,d,3.01,true);
     function information(u,y,d,w,h,image,extra={}){
       const mat=new T.MeshStandardMaterial({map:image,roughness:.89,...extra});
