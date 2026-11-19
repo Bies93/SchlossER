@@ -1,6 +1,7 @@
 import {LAB,LAB_CELLS,labCellAt,labLower} from './lab-layout.js';
 import {wardEvidence} from './lab-ward-evidence.js';
-import {randomSource} from './surface-detail.js';
+import {fileRacks,publicDeskDressing,traceAtWindow} from './lab-rites-office.js';
+import {buildLodgeAltar} from './lab-rites-sanctum.js';
 
 const {floor:Y,ceiling:C}=LAB,pi=Math.PI,flat=-pi/2;
 export const RITE_ROOMS={
@@ -13,9 +14,9 @@ export const RITE_ROOMS={
 };
 export const RITE_LIGHTS={
   ritesAccess:[[-17.49,54.89,0xd0dac9,16,5.2],[-17.20,56.55,0xc49e70,12,5.4]],
-  registry:[[-13.25,55.89,0xe5ead5,23,7.8],[-9.21,57.32,0xe8e1be,23,8.1],[-6.58,59.74,0xafd2c3,22,7.8],[-12.44,61.18,0xccddc8,15,6.6]],
-  nameFiles:[[-8.55,63.78,0xc8dbcc,20,6.0],[-11.88,65.09,0xbfb99d,15,6.1],[-7.73,67.23,0xd4eacb,24,6.3]],
-  chapel:[[-8.63,43.84,0xcba681,18,7.3],[-6.70,48.11,0x87c6bc,13,5.4,.60],[-3.01,48.01,0xd59363,23,7.1],[-8.20,51.84,0xbc8866,17,6.7]],
+  registry:[[-13.25,55.89,0xeecca0,21,7.4],[-9.21,57.32,0xdee3ce,24,8.1],[-6.58,59.74,0xa7c7bc,22,7.1],[-12.44,61.18,0xe2dabc,17,6.6]],
+  nameFiles:[[-8.55,63.78,0xc8dbcc,20,6.0],[-11.88,65.09,0xc1bea2,16,6.1],[-7.73,67.23,0xefd7ab,23,6.3]],
+  chapel:[[-8.63,43.84,0xcba681,18,7.3],[-6.70,48.11,0x87c6bc,13,5.4,.60],[-3.14,48.09,0xe8ad70,21,6.5,2.59],[-6.13,51.51,0xbb906e,16,6.7]],
   ritesPass:[[-8.33,33.54,0xc9b494,15,6.1],[-8.53,37.34,0xafc7b8,15,6.7],[-9.12,40.58,0xc0986d,16,5.9]],
   tasting:[[-6.99,24.59,0xd6dec4,20,7.4],[-4.79,27.65,0xf0c98e,26,7.0],[-3.20,30.11,0xe4bf8a,18,6.6],[-8.23,30.38,0xdbc28f,15,6.1]]
 };
@@ -30,7 +31,7 @@ export const inChapelHearing=(p,range)=>labLower(p.y)&&labCellAt(p.x,p.z)==='cha
 
 export function fitRiteWing(T,kit,id,art){
   const {k,box,hit,pipe,obj,cylinder,luminaire,grille,wheel,dress,props,root}=kit;
-  const {housing,rod,stain,plane,fastener,grill,dial}=dress,rnd=randomSource(1740+id.length*219);
+  const {housing,rod,stain,plane,fastener,grill,dial}=dress;
   const [x0,x1,z0,z1]=LAB_CELLS[id],built=[];
   const put=(m,x,y,z,w,h,d,a=0)=>housing(m,x,Y+y,z,w,h,d,a);
   const line=(m,x,y,z,X,H,Z,r)=>pipe(m,[x,Y+y,z],[X,Y+H,Z],r);
@@ -162,6 +163,7 @@ export function fitRiteWing(T,kit,id,art){
       document(i===0?'form':i===1?'reject':'seal',x+.543,.988,z-.165,.356,.265,.084*(i-1));
       chair(x,z+.883,1,i%2?'infPad':'leather',i);
       hit(x-.96,x+.96,z-.067,z+.064);
+      traceAtWindow(kit,art,x,z,i,{put,line,cyl});
     }
     timeClock(-10.81,2.947,58.432);
     mounted('queue',-8.49,2.90,58.382,1.48,.625,pi);
@@ -170,37 +172,24 @@ export function fitRiteWing(T,kit,id,art){
     props.folio(-12.05,Y+1.003,61.05,.321,.35,pi+.15,4,{loose:true,thickness:.017});
     mounted('faceA',-14.53,1.651,61.932,1.10,1.01,pi);
     stain(-15.82,1.830,59.37,.77,1.83,pi/2,1);
+    publicDeskDressing(kit,{mounted,document,put,line,table,cyl,strip});
   }
 
   if(id==='nameFiles'){
-    const booklets=['darkWood','green','leather','copperDark','bookC'];
-    for(const [i,x] of [-14.50,-12.50,-10.49,-4.18].entries()){
-      const z=65.19,d=3.43;
-      for(const sign of [-1,1])for(const t of [-1,1]){
-        put('gunmetal',x+sign*.338,1.19,z+t*(d*.5-.035),.069,2.34,.068);
-        put('rust',x+sign*.338,.082,z+t*(d*.5-.035),.112,.066,.11);
-      }
-      put('iron',x-.339,1.173,z,.050,2.184,d-.125);
-      for(const [n,y] of [.19,.68,1.184,1.675,2.30].entries()){
-        put('green',x,y,z,.733,.050,d);
-        if(n===4)continue;
-        for(let j=0;j<14;j++){
-          if((i*23+n*7+j)%19===4)continue;
-          const wide=.092+rnd()*.049,h=.239+rnd()*.098,a=z-d/2+.17+j*.224,e=x+.05+rnd()*.045;
-          put(booklets[(i+j+n)%5],e,y+.028+h*.5,a,.475,h,wide,.10*(j%4===0));
-          put('paper',e+.239,y+.162,a,.009,.075,wide*.55);
-          put('gasket',e+.245,y+.170,a,.005,.008,wide*.39);
-          put('gasket',e+.246,y+.151,a,.005,.008,wide*.35);
-        }
-      }
-      hit(x-.375,x+.375,z-d*.5,z+d*.5);
-    }
+    fileRacks(kit,art);
     table(-13.05,67.60,2.68,.86,.916);
     document('faceB',-13.49,.952,67.48,.569,.437,pi*.91);
     document('seal',-12.34,.951,67.61,.361,.274,pi*.77);
     mounted('faceA',-8.95,1.781,68.224,1.83,1.46,pi);
     mounted('faceB',-6.79,1.781,68.224,1.83,1.46,pi);
     mounted('files',-14.65,2.012,62.319,1.67,.73);
+    mounted('audit',-3.06,1.78,68.313,1.42,.76,pi);
+    cyl('iron',-12.96,.969,67.887,.093,.039);
+    line('gunmetal',-12.96,.980,67.887,-12.96,1.367,67.887,.016);
+    line('gunmetal',-12.96,1.367,67.887,-12.779,1.466,67.762,.018);
+    line('gunmetal',-12.779,1.466,67.762,-12.703,1.448,67.682,.012);
+    put('green',-12.703,1.426,67.682,.268,.080,.138,.23);
+    put('barGlow',-12.703,1.381,67.682,.222,.015,.098,.23);
     grille(-8.07,66.98,.58,1.39);
     stain(-5.75,1.558,68.374,1.2,2.48,pi,0);
   }
@@ -261,15 +250,7 @@ export function fitRiteWing(T,kit,id,art){
       put('darkWood',X-.292,.924,Z,.092,.056,1.64);
       hit(X-.345,X+.245,Z-.826,Z+.826);
     }
-    const altarX=-3.30,altarZ=48.12;
-    table(altarX,altarZ,.82,2.04,.94,'darkWood');
-    put('copperDark',altarX-.316,.589,altarZ,.075,.607,1.70);
-    document('seal',altarX-.015,.981,altarZ,.523,.381,pi/2);
-    for(const Z of [47.45,48.78]){
-      cyl('brass',altarX,.993,Z,.094,.043);
-      cyl('porcelain',altarX,1.104,Z,.054,.195);
-      cyl('barGlow',altarX,1.211,Z,.017,.032);
-    }
+    buildLodgeAltar(T,kit,art,{put,line,cyl,document,mounted});
     const rx=-2.409,rz=48.10;
     for(const s of [-1,1]){
       const Z=rz+s*1.53;
@@ -290,8 +271,10 @@ export function fitRiteWing(T,kit,id,art){
       line('brass',rx-.053,y-.05,Z0,rx-.053,Q-.05,Z1,.029);
       if(i%3===1)put('brass',rx+.080,y,Z0,.190,.068,.092);
     }
-    mounted('rite',-2.378,2.710,48.11,1.87,.57,-pi/2);
-    mounted('oath',-9.65,1.829,42.181,1.39,.73);
+    mounted('rite',-11.12,2.39,53.677,1.94,.53,pi);
+    // Full width plus frame lies on the solid left wall, clear of
+    // opening [-9.66, -7.41] and its steel reveal.
+    mounted('oath',-10.92,1.83,z0+.067,1.38,.74);
     const {x:a,z:c}=CHAPEL_SOURCE;
     table(a,c,.70,.68,.813,'green');
     put('iron',a,.999,c,.558,.299,.489);

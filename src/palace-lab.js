@@ -96,7 +96,11 @@ export function addPalaceLab(T,root,world,M,moosfunk){
     riteWall:plain(0x65574f,.93,sharedSet(T,'bedrock',256)),frost:plain(0xb9c4bd,.54,{...sharedSet(T,'plaster',256),metalness:.05,emissive:0x697e72,emissiveIntensity:.18}),
     wetRite:plain(0x4f7271,.22,{metalness:.26,emissive:0x5b9793,emissiveIntensity:.22}),
     riteGlow:{material:glow(0x80c4b5,.77),cast:false},barGlow:{material:glow(0xefbd75,.63),cast:false},
-    paleBeer:plain(0xcd932f,.34,{metalness:.08}),deepBeer:plain(0x8a4c23,.35),foam:plain(0xd1bc88,.77)
+    paleBeer:plain(0xcd932f,.34,{metalness:.08}),deepBeer:plain(0x8a4c23,.35),foam:plain(0xd1bc88,.77),
+    fileLinen:plain(0x79796a,.91,fabric),fileKraft:plain(0xa78e65,.94,sharedSet(T,'plaster',256)),
+    leafEdge:plain(0xb5a685,.96,sharedSet(T,'fineOak',256)),
+    logeCloth:plain(0x67393a,.96,fabric),brocade:plain(0x94734b,.88,fabric),
+    wax:plain(0x9d835d,.76,{...fabric,emissive:0x736147,emissiveIntensity:.11})
   };
   const a=architectureKit(T,shell,materials),s=architectureKit(T,shaft,materials),r=architectureKit(T,cabinet,materials);
   const sb=(m,x0,x1,y0,y1,z0,z1)=>a.box(m,coords,x0,x1,y0,y1,z0,z1);
