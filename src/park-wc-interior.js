@@ -9,6 +9,8 @@ import {furnishPractice} from './moosfunk-practice.js';
 import {furnishGreenhouse} from './moosfunk-greenhouse.js';
 import {hqArt,hqMaterials} from './moosfunk-hq-art.js';
 import {furnishHQ} from './moosfunk-hq.js';
+import {furnishWorkshop} from './moosfunk-workshop.js';
+import {shopMaterials,shopArt,shopWear} from './moosfunk-shop-finishes.js';
 import {deepArt} from './moosfunk-deep-art.js';
 import {deepMaterials,DEEP_LIGHTS,buildDeepStair,furnishDeep} from './moosfunk-deep.js';
 
@@ -20,10 +22,10 @@ const lampSites=[
   [10.56,6.79,0xfab477,7,4.5],[13.39,6.1,0xdd9b6a,7.6,4.3],
   [13.66,3.05,0xffd097,15,6.2],[16.58,.39,0xfb965c,23,7.8],
   [18.32,-2.58,0xe8b976,19,6.9],[18.48,2.91,0x92beb4,14,5.3],
-  [22.18,-3.28,0xffc899,17,6.3],[26.15,-2.98,0xc0c7bf,19,6.9],[30.45,-2.98,0xeab781,19,7.4],[32.90,-2.90,0xefb985,15,6.4],
+  [22.28,-3.23,0xf1c498,21,6.3,'practice',2.00],[26.23,-3.20,0xc0dbe4,23,7.7,'practice',2.02],[31.86,-3.14,0xafc8e0,27,7.8,'practice',2.03],
   [22.05,3.69,0xebca9f,17,6.6],[24.42,3.45,0xd5e8ba,18,6.9],[27.20,4.12,0xcae6c3,18,7.0],[29.81,3.52,0xf7d3a5,18,6.6],
   [16.09,-6.49,0xe9a376,16,5.7],[18.69,-7.55,0xcdc9d0,15,5.7],
-  [15.89,7.36,0x98bdb9,17,6.4],[17.79,10.37,0xd2e0d2,22,6.4],[18.95,8.34,0xffc27e,9,5.7],
+  [15.64,6.52,0xb5c9c0,14,6.4],[17.77,10.43,0xd6e1d9,27,6.8,'workshop',2.00],[15.45,9.28,0xf0bb7d,14,5.7,'workshop',1.998],
   [21.80,8.27,0xe4b480,15,5.6],[23.78,10.32,0xffcd8d,19,6.3],[25.86,12.08,0xb99181,13,5.2],
   [30.03,8.46,0xd5dfb8,14,6.1],[31.91,10.29,0xffd29a,21,6.4],[34.35,11.98,0xefdfba,19,6.8],
   ...DEEP_LIGHTS
@@ -53,7 +55,7 @@ export function addWcInterior(T,scene,world,quest){
     wood:plain(0xb29065,.78,wood),darkWood:plain(0x8a664e,.88,wood),ochre:plain(0xb68245,.86,painted),
     red:plain(0x88554a,.91,painted),linen:plain(0xb2a27c,.97,cloth),fabric:plain(0x5c6a54,.92,cloth),rug:plain(0x805745,1,cloth),
     paper:plain(0xbcaa86),amber:plain(0x895a35,.42,{metalness:.18}),signal:{material:plain(0x9ec569,.73,{emissive:0x779742,emissiveIntensity:.61}),cast:false},
-    ...annexMaterials(T,{painted,plaster,cloth}),...hqMaterials(T,{painted,cloth}),...deepMaterials(T,{painted,stone,cloth,wood})
+    ...annexMaterials(T,{painted,plaster,cloth}),...hqMaterials(T,{painted,cloth}),...shopMaterials(T),...deepMaterials(T,{painted,stone,cloth,wood})
   };
   const cyl=new T.CylinderGeometry(1,1,1,12),identity=new T.Matrix4(),m=new T.Matrix4(),tmp=new T.Vector3(),len=new T.Vector3(),up=new T.Vector3(0,1,0),scale=new T.Vector3(),rot=new T.Quaternion();
   // Keep continuous normals across a rock panel; the triangulation should
@@ -74,6 +76,7 @@ export function addWcInterior(T,scene,world,quest){
   const partsArt=collectiveArt(T);
   const annexArt=moosfunkAnnexArt(T);
   const hq=hqArt(T);
+  const shop=shopArt(T),wear=shopWear(T);
   const atlas=deepArt(T);
   const hemi=new T.HemisphereLight(0xb2c4bd,0x5d503b,.66);group.add(hemi);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);group.add(l);return l;});
@@ -98,15 +101,18 @@ export function addWcInterior(T,scene,world,quest){
       print(tile,u,y,v,w,h,angle=0,options){partsArt.mount(room,tile,...p(u,level+y,v),w,h,angle,options);},
       artTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){annexArt.mount(room,tile,p(u,level+y,v),w,h,angle,pitch,roll);},
       hqTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){return hq.mount(room,tile,p(u,level+y,v),w,h,angle,pitch,roll);},
+      shopTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){shop.mount(room,tile,p(u,level+y,v),w,h,angle,pitch,roll);},
+      wear(u,v,w,h,kind,angle){wear(room,p(u,level+.007,v),w,h,kind,angle);},
       deepTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){return atlas.mount(room,tile,p(u,level+y,v),w,h,angle,pitch,roll);}
     };
     if(id==='deepStair'){buildDeepStair(T,method);k.flush('Moosfunk · Abstieg');continue;}
     const [u0,u1,v0,v1]=bounds,rock=isRock(id),extra=isAnnex(id),va=id==='landing'?v0+.0028:v0;
     block('grout',u0,u1,-.094,-.024,va,v1);
-    const pitch=deep?.79:rock?.67:.34,gap=rock?.006:.0065,rand=randomSource(1566+id.charCodeAt(0));
+    const shopFloor=id==='workshop'||id==='practice';
+    const pitch=deep?.79:shopFloor?.79:rock?.67:.34,gap=rock?.006:.0065,rand=randomSource(1566+id.charCodeAt(0));
     for(let u=u0,i=0;u<u1-.020;u+=pitch,i++){
       for(let v=va,j=0;v<v1-.02;v+=pitch,j++){
-        const mat=deep?(rand()<.26?'deepSlateDark':'deepSlate'):rock?(rand()<.32?'rockShade':'rock'):['floorA','floorA','floorB','floorC'][(i*31+j*7+i*j)%4];
+        const mat=deep?(rand()<.26?'deepSlateDark':'deepSlate'):shopFloor?(id==='practice'||rand()<.16?'mfSlate':'mfFloor'):rock?(rand()<.32?'rockShade':'rock'):['floorA','floorA','floorB','floorC'][(i*31+j*7+i*j)%4];
         block(mat,u+gap,Math.min(u1,u+pitch)-gap,-.025,0,v+gap,Math.min(v1,v+pitch)-gap);
       }
     }
@@ -187,7 +193,7 @@ export function addWcInterior(T,scene,world,quest){
       if(start<max)wall(start,max);
     }
     for(const site of lampSites){
-      const [u,v]=site;if(deep||lightRoom(site)!==id)continue;
+      const [u,v]=site;if(deep||lightRoom(site)!==id||shopFloor&&site[6]!==undefined)continue;
       const top=wcRoofAt(id,u,v)-b-.018;
       block('iron',u-.25,u+.25,top-.099,top,v-.104,v+.104);
       block('edge',u-.224,u+.224,top-.116,top-.097,v-.081,v+.081);
@@ -205,7 +211,8 @@ export function addWcInterior(T,scene,world,quest){
     if(['women','men','womenA','womenB','menA','menB'].includes(id))furnishWashroom(T,method,id);
     if(id==='practice')furnishPractice(T,method);
     else if(id==='greenhouse')furnishGreenhouse(T,method);
-    else if(isNewHQ(id))furnishHQ(T,method,id,quest);
+    else if(id==='workshop')furnishWorkshop(T,method,quest);
+    else if(isNewHQ(id))furnishHQ(T,method,id);
     else if(deep)orb=furnishDeep(T,method,id)??orb;
     else if(rock)furnishCollective(T,method,id);
     if(id==='collective'){

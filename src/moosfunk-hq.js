@@ -1,9 +1,9 @@
 import {randomSource} from './surface-detail.js';
-import {b,p,wcRoofAt} from './park-wc-layout.js';
-import {radioSpot,intercomSpot} from './moosfunk-quest.js';
+import {b,wcRoofAt} from './park-wc-layout.js';
+import {radioSpot} from './moosfunk-quest.js';
 
 const pi=Math.PI;
-export function furnishHQ(T,kit,id,quest){
+export function furnishHQ(T,kit,id){
   const {block,hit,pipe,stamp,hqTile}=kit;
   const rnd=randomSource(33163),ball=new T.SphereGeometry(1,12,8),dial=new T.CylinderGeometry(1,1,1,13),
     hoop=new T.TorusGeometry(1,.085,7,22),flat=hoop.clone().rotateX(-pi/2);
@@ -292,74 +292,6 @@ export function furnishHQ(T,kit,id,quest){
     shroud(31.57,10.31,'lamp');shroud(33.68,11.76,'workLamp');
   }
 
-  if(id==='workshop'){
-    table(17.58,11.10,3.58,.92,.912,'gunmetal','pine');
-    for(const u of [16.26,16.84,17.40,17.96,18.52,19.08]){
-      box('darkWood',u,1.077,11.67,.545,.861,.13);
-      for(let c=0;c<7;c++)for(let r=0;r<9;r++){
-        const a=u-.23+c*.077,y=1.151+r*.085;
-        pipe('iron',[a,y,11.603],[a,y,11.591],.0069);
-      }
-    }
-    for(const [u,y,w] of [[16.32,1.41,.18],[16.58,1.50,.22],[18.33,1.38,.21],[18.81,1.46,.25],[19.12,1.55,.14]]){
-      pipe('toolRed',[u,y-.17,11.55],[u,y+w*.27,11.55],.026);
-      pipe('steel',[u,y+.046,11.55],[u,y+.154,11.55],.014);
-      pipe('iron',[u,y+.161,11.57],[u,1.742,11.595],.006);
-    }
-    const {u,v}=intercomSpot;
-    box('gunmetal',u,1.162,v+.154,.539,.489,.287);
-    box('edge',u,1.186,v+.007,.488,.437,.024);
-    box('rubber',u-.074,1.366,v-.011,.217,.184,.021);
-    for(let j=0;j<7;j++)pipe('steel',[u-.154,1.391+j*.018,v-.027],[u+.012,1.391+j*.018,v-.027],.0032);
-    box('iron',u+.136,1.298,v-.015,.091,.143,.025);
-    for(const y of [1.315,1.596])for(const s of [-1,1])bolt('steel',u+s*.213,y,v-.028,.009);
-    pipe('rubber',[u-.208,1.216,v+.113],[u-.261,.942,v+.166],.014);
-    pipe('rubber',[u-.261,.942,v+.166],[u-.592,.933,v+.458],.012);
-    const leds=new T.Group();leds.name='Moosfunk · Umschaltbare Gegensprechanlage';kit.room.add(leds);
-    const matrixP=(name,r,c,offset)=>{
-      const m=new T.Mesh(new T.SphereGeometry(.026,12,8),new T.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:1.18}));
-      m.name=name;m.position.fromArray(p(u+.136,b+r,v+offset));leds.add(m);return m;
-    };
-    const off=matrixP('M–7 fehlt',1.506,0xca6340,-.028),on=matrixP('Rückkanal aktiv',1.506,0x8ab074,-.028);
-    const insert=new T.Mesh(new T.BoxGeometry(.050,.090,.060),new T.MeshStandardMaterial({color:0xd5c19d,roughness:.68}));
-    insert.position.fromArray(p(u+.136,b+1.376,v-.028));leds.add(insert);
-    box('darkWood',19.71,1.284,11.643,.650,.410,.24);
-    const wired=hqTile('wired',19.71,1.490,11.515,.596,.369,-pi/2);
-    quest?.bind(phase=>{off.visible=phase!=='wired';on.visible=insert.visible=wired.visible=phase==='wired';});
-    if(!quest){on.visible=insert.visible=wired.visible=false;}
-    wallSign('repair',16.05,1.499,11.50,1.156,.565,-pi/2);
-    sheet('repair',16.18,.916,10.985,.503,.311,-.13);
-    box('blueTin',18.51,.913,10.99,.421,.201,.218);
-    box('rubber',18.51,1.111,10.99,.356,.023,.179);
-    for(let i=0;i<4;i++)stamp('steel',dial,18.39+i*.078,1.136,10.964,[.022,.044,.022]);
-    pipe('toolRed',[17.13,.938,10.83],[17.37,.938,10.77],.017);
-    pipe('steel',[17.37,.938,10.77],[17.50,.938,10.733],.007);
-    const f=15.10,g=9.95;
-    box('darkWood',f,.025,g,1.17,.065,.81);
-    for(const u of [f-.392,f+.348]){
-      stamp('iron',hoop,u,.46,g,[.381,.381,.381],pi/2);
-      for(let q=0;q<12;q++){
-        const a=q*pi/6;pipe('steel',[u,.46,g],[u+Math.cos(a)*.349,.46+Math.sin(a)*.349,g],.0055);
-      }
-      bolt('brass',u,.46,g,.041);
-    }
-    pipe('green',[f-.392,.46,g],[f-.022,.54,g],.027);
-    pipe('green',[f-.022,.54,g],[f+.172,.91,g],.028);
-    pipe('green',[f+.172,.91,g],[f+.348,.46,g],.027);
-    pipe('green',[f-.022,.54,g],[f-.235,.895,g],.028);
-    pipe('green',[f-.235,.895,g],[f+.172,.91,g],.028);
-    box('rubber',f-.277,.877,g,.223,.067,.116);
-    pipe('steel',[f+.17,.891,g],[f+.19,1.083,g],.017);
-    pipe('rubber',[f+.19,1.083,g-.193],[f+.19,1.083,g+.193],.017);
-    box('blueTin',f+.386,.172,g-.141,.235,.239,.213);
-    bolt('switchAmber',f+.386,.353,g-.258,.021);
-    hit(f-.785,f+.743,g-.35,g+.34);
-    crate(18.83,6.13,0,.87,.76,.46);
-    crate(18.83,6.13,.515,.826,.717,.34);
-    wallSign('keep',19.883,1.54,5.98,1.25,.56,pi);
-    lowSeat(16.80,9.82,.46,.45,.45,'tote');
-    shroud(17.83,10.29,'workLamp');
-  }
 
   if(id==='plenum'){
     table(23.64,10.57,2.46,1.13,.832,'iron','pine');

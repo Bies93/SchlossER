@@ -1,143 +1,149 @@
-import {randomSource} from './surface-detail.js';
-import {b,wcRoofAt} from './park-wc-layout.js';
+import {shopKit} from './moosfunk-shop-kit.js';
 
-export function furnishPractice(T,{block,hit,pipe,stamp,artTile}){
-  const rnd=randomSource(76403),pi=Math.PI;
-  const knob=new T.SphereGeometry(1,10,7);
-  const loop=new T.TorusGeometry(1,.18,6,14);
-  const lanes=[-4.58,-3.29,-1.99];
-  const box=(mat,u,y,v,w,h,d)=>block(mat,u-w/2,u+w/2,y,y+h,v-d/2,v+d/2);
-  const mark=(u,U,v,V,mat='ivoryPaint')=>block(mat,u,U,.002,.004,v,V);
-  function caseAt(u,y,v,a,dim=.9,shinier=false){
-    const dU=Math.cos(a)*.045*dim,dV=Math.sin(a)*.045*dim,r=.011*dim;
-    const part=(t,Y=y)=>[u+(t-.5)*dU,Y,v+(t-.5)*dV];
-    pipe(shinier?'brass':'shell',part(0),part(.99),r);
-    pipe('shell',part(-.016),part(.071),r*1.11);
-    pipe('shellMouth',part(.971),part(1.026),r*.72);
-  }
-  function storage(u,y,v,w,d,h,open=false){
-    box('darkWood',u,y,v,w,.048,d);
-    box('wood',u-w*.47,y+.039,v,.061,h-.033,d);
-    box('wood',u+w*.47,y+.039,v,.061,h-.033,d);
-    for(const dv of [-d*.47,d*.47]){
-      box('wood',u,y+.045,v+dv,w,.067,.050);
-      box('green',u,y+.116,v+dv,w,h-.113,.048);
-      for(const du of [-w*.39,w*.39])box('iron',u+du,y+.045,v+dv,w*.075,h-.008,.062);
+export function furnishPractice(T,kit){
+  const {box,rod,cord,line,sign,frame,utilityLamp,rounded,stamp,bolt,foot,roof,rand,pin,sphere,dispose}=shopKit(T,kit,'practice');
+  const {block,artTile,wear}=kit,pi=Math.PI,ring=new T.TorusGeometry(1,.085,7,21);
+  const lanes=[-4.56,-3.30,-2.03];
+  const stripe=(m,a,A,v,V)=>block(m,a,A,.0015,.004,v,V);
+  // Recycled rehearsal equipment: dovetail corners, feet, latches and
+  // empty, visible compartments instead of a stack of identical cubes.
+  function trunk(u,v,w,d,y,h,open=false,mat='green'){
+    box('darkWood',u,y,v,w,.052,d);
+    for(const s of [-1,1]){
+      box(mat,u+s*(w/2-.024),y+.051,v,.048,h-.049,d);
+      box(mat,u,y+.05,v+s*(d/2-.023),w-.064,h-.049,.042);
+      for(const q of [-1,1]){
+        const U=u+s*(w/2-.059),V=v+q*(d/2-.012);
+        box('gunmetal',U,y+.038,V,.095,h-.022,.036);
+        for(const Y of [y+.073,y+h-.032])bolt('brass',U,Y,V+q*.023,.008);
+      }
+      const V=v+d*.43,U=u+s*w*.282;
+      box('iron',U,y+h-.106,V+.056,.094,.122,.027);
+      rod('mfCast',U-.028,y+h-.054,V+.07,U+.028,y+h-.054,V+.07,.012);
     }
     if(open){
-      box('green',u+w*.473,y+h,v,.071,h*.92,d);
-      for(const dv of [-d*.38,d*.38])box('steel',u+w*.468,y+h-.022,v+dv,.052,.083,.11);
-    }else box('wood',u,y+h-.016,v,w+.022,.056,d+.015);
-    for(const dv of [-d*.25,d*.25]){
-      box('gunmetal',u-w*.507,y+h*.69,v+dv,.032,.087,.083);
-      pipe('brass',[u-w*.533,y+h*.76,v+dv-.023],[u-w*.533,y+h*.76,v+dv+.022],.009);
+      box(mat,u,y+h+.032,v-d*.47,w,.265,.052);
+      for(const s of [-1,1])rod('edge',u+s*w*.40,y+h-.043,v-d*.40,u+s*w*.40,y+h+.105,v-d*.46,.010);
+      box('wood',u,y+.068,v,.026,h-.087,d-.078);
+    }else box('darkWood',u,y+h,v,w+.025,.055,d+.029);
+    box('paper',u-.032,y+h*.54,v+d*.50+.002,w*.28,.046,.008);
+    if(!y)foot(u,v,w+.03,d+.03);
+  }
+  trunk(21.71,-4.91,1.03,.65,0,.43,true,'mfBlue');
+  trunk(22.85,-4.91,.93,.66,0,.39,false,'green');
+  trunk(22.89,-4.96,.447,.68,.55,.259,false,'toolRed');
+  sign('props',22.02,1.84,-5.275,1.84,.55);
+  sign('rangeRules',20.242,1.46,-1.52,1.33,.565,0);
+  // Lined walls with patterned old panels, seams, brackets and painted channels.
+  for(let i=0;i<11;i++){
+    const u=21.02+i*1.078;
+    box('darkWood',u,.187,-5.327,1.023,1.28,.111);
+    box('mfBaffle',u,.232,-5.252,.953,1.188,.036);
+    box('gunmetal',u,.159,-5.217,1.02,.063,.038);
+    if(i%3===2)artTile('impact',u,.871,-5.228,.92,.80,-pi/2);
+    for(const s of [-1,1])bolt('edge',u+s*.475,1.381,-5.224,.009);
+  }
+  rod('mfCast',20.49,1.67,-5.288,33.39,1.67,-5.288,.041);
+  for(let i=0;i<10;i++){
+    const u=20.74+i*1.345;rod('gunmetal',u-.027,1.67,-5.288,u+.027,1.67,-5.288,.052);
+    rod('iron',u,1.67,-5.29,u,1.67,-5.412,.016);
+  }
+  for(let i=0;i<10;i++){
+    const u=21.29+i*1.21;
+    box('wood',u,.138,-.749,1.14,.717,.099);
+    for(let j=0;j<8;j++)box(j%3?'mfBench':'darkWood',u-.498+j*.142,.169,-.688,.115,.64,.024);
+    box('edge',u,.841,-.683,1.16,.032,.033);
+  }
+  // The original three positions and open side aisle keep gameplay unchanged.
+  for(const [i,v] of [-5.095,-3.927,-2.67].entries()){
+    box('iron',23.99,.025,v,1.26,.041,.089);
+    for(const u of [23.44,24.55]){
+      box('gunmetal',u,.038,v,.074,1.453,.076);
+      box('mfCast',u,.062,v,.104,.082,.104);
     }
-    if(y===0)hit(u-w/2,u+w/2,v-d/2,v+d/2);
-  }
-  function practiceProp(u,y,v,long){
-    // Invented scrap-tech silhouettes, sealed housings and painted caps,
-    // with detail concentrated on the view-facing sides of the prop.
-    const reach=long?.345:.201;
-    box('rubber',u-.12,y,v,.22,.028,.144);
-    box('gunmetal',u,y+.023,v,long?.35:.265,.096,.112);
-    box('blueTin',u+.007,y+.084,v,long?.318:.249,.048,.118);
-    box('oxide',u+.037,y+.044,v,long?.237:.173,.032,.129);
-    pipe('iron',[u+.12,y+.071,v],[u+reach,y+.071,v],long?.033:.047);
-    pipe('ivoryPaint',[u+reach-.028,y+.071,v],[u+reach+.017,y+.071,v],long?.038:.052);
-    for(const dv of [-.064,.064])for(let i=0;i<(long?5:3);i++){
-      const q=u-.053+i*.030;
-      box('rubber',q,y+.049,v+dv,.010,.022,.007);
+    box('darkWood',23.99,.654,v,1.10,.80,.075);
+    for(const s of [-1,1]){
+      box('mfBaffle',23.99,.709,v+s*.048,1.012,.682,.023);
+      for(const u of [23.49,24.49])bolt('steel',u,1.362,v+s*.069,.009);
     }
-    for(const du of [u-.126,u+.09])for(const dv of [-.050,.050])
-      stamp('brass',knob,du,y+.133,v+dv,[.008,.003,.008]);
-    box('safetyRed',u+.073,y+.128,v,.078,.007,.043);
-    box('steel',u-.104,y+.129,v,.027,.018,.018);
-    box('signal',u+.103,y+.13,v,.018,.010,.018);
+    rod('edge',23.40,1.471,v,24.59,1.471,v,.027);
+    if(i)foot(23.99,v,1.27,.134);
   }
-  function muff(u,y,v){
-    for(const a of [-1,1]){
-      box('rubber',u,y,v+a*.086,.119,.065,.084);
-      box('ochre',u,y+.034,v+a*.086,.093,.042,.069);
+  function headphones(u,y,v){
+    for(const s of [-1,1]){
+      rounded('rubber',u,y+.044,v+s*.079,.120,.081,.062);
+      rounded('ochre',u,y+.057,v+s*.106,.102,.067,.028);
+      rod('steel',u-.01,y+.059,v+s*.103,u-.02,y+.112,v+s*.102,.007);
     }
-    const c=[];
-    for(let j=0;j<=8;j++){
-      const q=-Math.PI/2+j*Math.PI/8;c.push([u-.003,y+.038+Math.cos(q)*.100,v+Math.sin(q)*.087]);
-      if(j)pipe('gunmetal',c[j-1],c[j],.013);
-    }
-  }
-  // Storage at the entry and battered lining along one side of the range.
-  storage(21.84,0,-4.933,1.10,.68,.45);
-  storage(22.10,.507,-4.934,.67,.54,.31);
-  storage(23.02,0,-4.99,.71,.60,.36);
-  for(const u of [21.43,22.27,23.12,23.97]){
-    block('darkWood',u-.403,u+.403,.142,1.75,-5.407,-5.292);
-    block('edge',u-.397,u+.397,.169,.207,-5.312,-5.28);
-    for(const q of [-.306,.306])pipe('brass',[u+q,1.658,-5.292],[u+q,1.658,-5.283],.012);
-  }
-  block('darkWood',20.204,20.258,1.08,1.746,-2.16,-.812);
-  artTile('rangeBoard',20.264,1.416,-1.49,1.28,.60,0);
-  for(const [u,w] of [[25.76,1.33],[28.12,1.54],[30.26,1.13]]){
-    block('wood',u-w/2,u+w/2,.611,1.529,-5.365,-5.272);
-    artTile('impact',u,1.073,-5.268,w*.89,.782,-pi/2);
-  }
-  // Three visual bays; the right-hand aisle is left clear.
-  for(const v of [-5.005,-3.927,-2.64]){
-    block('iron',23.31,24.63,.022,.045,v-.034,v+.034);
-    for(const u of [23.37,24.50])box('iron',u,.031,v,.067,1.13,.066);
-    block('wood',23.47,24.48,.711,1.173,v-.033,v+.033);
-    block('edge',23.45,24.49,1.16,1.196,v-.044,v+.044);
-    for(const u of [23.52,24.42])pipe('brass',[u,1.097,v-.036],[u,1.097,v+.036],.012);
-    hit(23.31,24.63,v-.067,v+.067);
+    const arc=Array.from({length:13},(_,j)=>{const a=j*pi/12;
+      return [u-.028,y+.060+.106*Math.sin(a),v+.103*Math.cos(a)];});
+    cord('gunmetal',arc,.010,15);cord('linen',arc.slice(3,10),.011,10);
   }
   for(const [i,v] of lanes.entries()){
-    for(const u of [23.94,24.479])for(const dv of [-.36,.36])box('iron',u,.019,v+dv,.062,.943,.059);
-    box('wood',24.198,.918,v,.683,.070,.94);
-    box('edge',23.841,.934,v,.032,.035,.938);
-    box('rubber',24.165,.988,v,.528,.006,.84);
-    hit(23.824,24.55,v-.473,v+.473);
-    artTile('rangeSign',24.188,.998,v+.277,.258,.119,-pi/2,-pi/2,i*.13);
-    if(i!==1)practiceProp(24.118,1.0,v-.073,i===2);
-    else muff(24.12,1.001,v-.12);
-    if(i===0)muff(24.39,1.001,v+.271);
-    if(i===1)storage(24.3,1.001,v+.27,.325,.242,.10,true);
-    for(let j=0;j<6;j++)caseAt(24.03+((j*3)%7)*.047,1.008,v+.118+j*.021,j%2*1.2,.65,true);
+    frame(24.17,v,.703,.84,.94,'mfBench');
+    box('mfRubber',24.13,.941,v,.581,.012,.70);
+    box('gunmetal',23.88,.742,v,.082,.110,.737);
+    const signId='lane'+(i+1);
+    sign(signId,23.725,.816,v,.418,.151,pi);
+    headphones(24.05,.953,v+.185);
+    if(i!==1){
+      // Non-functional hand-marked scoreboard and signal box, not a weapon prop.
+      rounded(i?'mfBlue':'green',24.24,1.023,v-.141,.273,.14,.238);
+      box('gunmetal',24.081,.975,v-.141,.038,.092,.180);
+      for(const d of [-.060,-.012,.042])bolt(d<0?'mfAmber':'mfIce',24.057,1.031,v-.141+d,.011);
+      cord('rubber',[[24.33,1.017,v-.225],[24.44,.982,v-.219],[24.47,.970,v-.117],[24.39,.960,v-.053]],.007);
+    }else{
+      trunk(24.18,v-.14,.296,.28,.957,.115,true,'mfBlue');
+      box('paper',24.18,1.015,v-.102,.132,.016,.090);
+    }
     for(let n=0;n<11;n++){
-      const u=25.4+n*.59;
-      mark(u,u+.283,v-.568,v-.549,n%5?'ivoryPaint':'ochre');
+      const u=25.25+n*.697;stripe(n%5?'ivoryPaint':'ochre',u,u+.235,v-.581,v-.555);
     }
+    stripe('mfRubber',23.06,23.70,v-.374,v+.373);
+    wear(23.28,v,.86,1.12,1,(i-1)*.28);
+    wear(25.52,v+.10,1.38,1.79,1,i*.36);
   }
-  for(let i=0;i<22;i++){
-    const v=-5.305+i*.187;
-    mark(24.98,25.06,v,v+.148,i%2?'rubber':'ochre');
+  // A few clusters of spent brass and chipped finish near the stands.
+  for(let j=0;j<57;j++){
+    const v=lanes[j%3]+(rand()-.5)*.74,u=22.96+rand()*3.6,y=.012,angle=rand()*pi*2;
+    const du=Math.cos(angle)*.018,dv=Math.sin(angle)*.018;
+    rod('shell',u-du,y,v-dv,u+du,y,v+dv,.0085);
+    rod('shellMouth',u+du*.84,y,v+dv*.84,u+du*1.11,y,v+dv*1.11,.006);
   }
-  for(let j=0;j<105;j++){
-    const v=lanes[j%3]+(rnd()-.5)*.96,u=j<91?22.86+rnd()*3.49:27.8+rnd()*4.1,k=.66+rnd()*.46;
-    caseAt(u,.013*k,v,rnd()*pi*2,k,j%4===0);
+  for(let i=0;i<20;i++){
+    const v=-5.21+i*.194;
+    stripe(i%2?'rubber':'ochre',24.96,25.061,v,v+.159);
   }
-  // Hanging signs at different depths. The artwork is Bavarian heraldic
-  // parody on salvaged metal; no people or human silhouettes are used.
+  // Each hung prop has a different depth, hanger and finish. All targets
+  // are printed emblems, not people. The original floor colliders stay.
   for(const [i,v] of lanes.entries()){
-    const u=[29.12,31.22,30.08][i],top=wcRoofAt('practice',u,v)-b;
-    block('iron',u-.176,u+.176,top-.047,top+.032,v-.449,v+.449);
-    for(const d of [-.248,.248]){
-      pipe('gunmetal',[u,top-.048,v+d],[u,1.792,v+d],.012);
-      stamp('steel',loop,u-.012,1.773,v+d,[.025,.034,.026]);
+    const u=[29.12,31.22,30.08][i],top=roof(u,v);
+    box('gunmetal',u,top-.079,v,.37,.078,.817);
+    for(const d of [-.244,.244]){
+      rod('edge',u,top-.018,v+d,u,roof(u,v+d)+.055,v+d,.022);
+      box('iron',u,top-.078,v+d,.121,.036,.113);
+      rod('mfCast',u,top-.043,v+d,u,1.821,v+d,.012);
+      for(let j=0;j<4;j++)stamp('steel',ring,u,1.821-j*.024,v+d,[.019,.019,.020],j%2*pi/2);
     }
-    box('tunnelMetal',u,1.186,v,.084,.579,.778);
-    box(i===1?'wood':'blueTin',u-.047,1.228,v,.022,.510,.738);
-    artTile(i===1?'pretzel':'diamond',u-.060,1.478,v,.710,.482,pi);
-    for(const d of [-.319,.319])for(const y of [1.249,1.717]){
-      pipe('steel',[u-.050,y,v+d],[u-.067,y,v+d],.012);
-    }
-    artTile('impact',u-.062,1.456,v,.582,.376,pi);
-    hit(u-.054,u+.053,v-.392,v+.392);
+    rounded('darkWood',u,1.48,v,.111,.617,.827);
+    rounded(i===1?'wood':'mfBlue',u-.058,1.48,v,.040,.554,.775);
+    artTile(i===1?'pretzel':'diamond',u-.082,1.478,v,.733,.511,pi);
+    artTile('impact',u-.085,1.454,v,.607,.398,pi);
+    for(const d of [-.343,.343])for(const y of [1.247,1.714])bolt('brass',u-.092,y,v+d,.0105);
+    foot(u,v,.112,.784);
   }
-  for(let i=0;i<8;i++){
-    const v=-5.291+i*.572,h=1.855+(i%3)*.013;
-    block('rubber',33.304,33.497,.042,h,v,v+.557);
-    for(let k=0;k<5;k++)block('gunmetal',33.277,33.306,.11+k*.33,.133+k*.33,v+.017,v+.542);
-    if(i%2===0)artTile('impact',33.268,.99,v+.28,.493,1.53,pi,0,i*.29);
+  // End wall is dressed as a salvaged acoustic stage set rather than
+  // another flat cave face; the support beams and lamp cages are visible.
+  for(let i=0;i<7;i++){
+    const v=-5.057+i*.571;
+    box('gunmetal',33.48,.068,v,.244,1.867,.549);
+    box('mfBaffle',33.333,.123,v,.074,1.743,.486);
+    for(const d of [-.244,.244])rod('mfCast',33.280,.172,v+d,33.280,1.875,v+d,.012);
+    if(i%2===0)artTile('impact',33.283,1.047,v,.456,1.29,pi);
   }
-  hit(33.276,33.50,-5.29,-.732);
-  knob.dispose();loop.dispose();
+  foot(33.39,-3.343,.292,4.00);
+  sign('stage',33.225,2.164,-3.03,1.89,.319,pi);
+  utilityLamp(22.28,-3.23,2.25,pi/2,'mfAmber');utilityLamp(26.23,-3.20,2.26,pi/2);
+  utilityLamp(31.86,-3.14,2.28,pi/2);
+  ring.dispose();dispose();
 }
