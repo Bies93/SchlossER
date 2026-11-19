@@ -1,14 +1,18 @@
 import {architectureKit} from './architecture-kit.js';
 import {labGraphics,dressLab} from './lab-dressing.js';
+import {MALT_ROOMS,MALT_LIGHTS,fitMaltWing} from './lab-malt-wing.js';
 import {LAB,LAB_CUT,LAB_CELLS,LAB_LINKS,LAB_LAYER,labLower,labCellAt,labEdges} from './lab-layout.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y);
 const cellNames={chambers:'Klonkammern',lock:'Druckschleuse',spine:'Verteiler',archive:'Archiv',plant:'Maschinenraum',
-  return:'Wartungsgang',observation:'Beobachtung',vault:'Saal der Rückgabe'};
+  return:'Wartungsgang',observation:'Beobachtung',vault:'Saal der Rückgabe',
+  ...Object.fromEntries(Object.entries(MALT_ROOMS).map(([id,{name}])=>[id,name]))};
 const palettes={lock:['iron','green'],spine:['concrete','green'],archive:['archiveWall','rust'],
-  plant:['concrete','iron'],return:['concrete','rust'],observation:['ceramic','green'],vault:['vaultWall','rust']};
+  plant:['concrete','iron'],return:['concrete','rust'],observation:['ceramic','green'],vault:['vaultWall','rust'],
+  ...Object.fromEntries(Object.entries(MALT_ROOMS).map(([id,{palette}])=>[id,palette]))};
 const ports=Object.fromEntries(Object.keys(LAB_CELLS).map(id=>[id,LAB_LINKS.filter(([a,b])=>a===id||b===id)]));
-const own=new Set(['lock:chambers','lock:spine','archive:spine','plant:spine','plant:return','observation:return','observation:chambers','vault:plant']);
+const own=new Set(['lock:chambers','lock:spine','archive:spine','plant:spine','plant:return','observation:return','observation:chambers','vault:plant',
+  'vault:maltLock','maltLock:brewery','brewery:beerLab','brewery:ward','ward:cells']);
 
 // Find at most two rooms beyond the current room; the second doorway must
 // overlap the sight wedge of the first one. Camera frustum culling is additional.
@@ -112,10 +116,10 @@ function cellarKit(T,root,world,id,materials,graphics){
   cellarWalls(k,world,id);
   box(id==='vault'?'vaultWall':'concrete',x0,x1,ceiling,ceiling+.17,z0,z1);
   box('gasket',x0,x1,floor-.12,floor-.025,z0,z1);
-  const step=id==='archive'?.65:id==='plant'?.98:.84;
+  const step=MALT_ROOMS[id]?.tile??(id==='archive'?.65:id==='plant'?.98:.84);
   for(let x=x0,i=0;x<x1-.007;x+=step,i++)for(let z=z0,j=0;z<z1-.007;z+=step,j++){
     const n=(i*29+j*71+i*j*11)%17;
-    box(id==='observation'?(n<4?'gray':'ceramic'):id==='vault'?(n<3?'iron':'vaultWall'):n<2?'gray':'concrete',
+    box(MALT_ROOMS[id]?.tiles[n<3?1:0]??(id==='observation'?(n<4?'gray':'ceramic'):id==='vault'?(n<3?'iron':'vaultWall'):n<2?'gray':'concrete'),
       x+.004,Math.min(x+step-.004,x1),floor-.027,floor,z+.004,Math.min(z+step-.004,z1));
   }
   return {k,box,hit,obj,cylinder,pipe,luminaire,grille,poly,wheel,dress,
@@ -123,7 +127,9 @@ function cellarKit(T,root,world,id,materials,graphics){
 }
 
 function fitOut(T,root,world,id,materials,graphics){
-  const {k,box,hit,obj,cylinder,pipe,luminaire,grille,poly,wheel,dress,flush}=cellarKit(T,root,world,id,materials,graphics);
+  const kit=cellarKit(T,root,world,id,materials,graphics);
+  if(MALT_ROOMS[id]){fitMaltWing(T,kit,id);kit.flush();return;}
+  const {k,box,hit,obj,cylinder,pipe,luminaire,grille,poly,wheel,dress,flush}=kit;
   const {housing,stain,grill,dial,flag,plane,fastener,rod,plaque:label}=dress;
   const plaque=(head,lines,x,y,z,w=1.03,h=.48,ry=0,style)=>label(head,lines,x,y,z,w,h,ry,style);
   function cabinet(x,z,w,d,h,kind='green',index=0){
@@ -319,13 +325,13 @@ function fitOut(T,root,world,id,materials,graphics){
     // Stark contrast with the clinical rooms: stone, paired numbers on
     // benches, a ledger and an empty dais below disconnected machinery.
     luminaire(-22.67,15.04,'red');
-    for(const x of [-24.8,-21.1,-19.15]){
+    for(const x of [-25.76,-20.89,-19.15]){
       box('iron',x-.15,x+.15,floor,ceiling,19.12,19.28);
       box('rust',x-.226,x+.226,floor+.04,floor+.24,19.02,19.3);
     }
     for(const z of [15.58,17.15,18.7]){
       box('vaultWall',-25.82,-25.40,floor,ceiling,z-.19,z+.19);
-      for(const [i,x] of [-24.61,-20.05].entries()){
+      for(const [i,x] of [-24.61,-19.78].entries()){
         if(i===1&&z===15.58)continue;
         for(const side of [-1,1]){
           const ex=x+side*.43;
@@ -369,7 +375,8 @@ function fitOut(T,root,world,id,materials,graphics){
     }
     cylinder('iron',x,ceiling-.34,z,.47,.28);
     cylinder('ivory',x,ceiling-.502,z,.36,.06);
-    plaque('SAAL DER RÜCKGABE',['8 NAMEN  /  9 MARKEN','„Die Neunte blieb unbelegt.“','Letzte Sitzung: niemand anwesend.'],-22.39,1.95,19.263,2.03,1.02,Math.PI,'red');
+    plaque('SAAL DER RÜCKGABE',['8 NAMEN / 9 MARKEN','„Die Neunte blieb unbelegt.“','Letzte Sitzung: niemand anwesend.'],-24.72,1.95,19.263,1.52,.82,Math.PI,'red');
+    plaque('05 · SUDWERK',['NACHPRÜFUNG / UNTERDECK F'],-22.40,2.75,19.095,1.38,.34,Math.PI,'blue');
     housing('green',-19.325,floor+.50,18.895,1.25,.816,.49);
     housing('edge',-19.325,floor+.918,18.895,1.269,.066,.51);
     grill('iron',-19.30,.49,18.644,.91,.33,Math.PI);
@@ -377,7 +384,7 @@ function fitOut(T,root,world,id,materials,graphics){
     hit(-19.95,-18.70,18.66,19.15);
     label('VERZEICHNIS',['Acht Plätze gedeckt.','Kein Name für den letzten.'],-19.32,.981,18.86,.82,.39,Math.PI,'cream',-Math.PI/2,false);
     stain(-25.938,1.43,17.93,.88,2.40,Math.PI*.5,2);
-    stain(-23.1,1.26,19.291,1.11,2.27,Math.PI,0);
+    stain(-20.44,1.20,19.291,.62,2.21,Math.PI,0);
     for(let j=0;j<6;j++)cylinder('brass',-20.03-j*.112,floor+.015,18.13+(j%3)*.071,.038,.025);
   }
   flush();
@@ -388,9 +395,10 @@ const emitters={
   lock:[[-8.02,5.5,0xf67556,11.4,5.6]],spine:[[-9.34,8.43,0xffe5a8,13.5,8.1],[-15.95,8.48,0xd7e3bd,16,8.8],[-19.32,8.42,0xe38260,13,6.3]],
   archive:[[-12.40,13.24,0xffe1b5,30,8.0]],plant:[[-22.89,10.03,0xcbded6,20,8.3],[-24.15,12.03,0xed805e,13,5.2]],
   return:[[-23.73,2.28,0xd17d63,11.4,6.7],[-23.75,5.36,0xe6dfbc,14,5.7]],
-  observation:[[-23.51,-1.91,0xafe5da,21,6.9]],vault:[[-22.30,17.38,0xf3e0c2,26,7.4],[-23.53,14.78,0xdf6650,11,5.9]]
+  observation:[[-23.51,-1.91,0xafe5da,21,6.9]],vault:[[-22.30,17.38,0xf3e0c2,26,7.4],[-23.53,14.78,0xdf6650,11,5.9]],
+  ...MALT_LIGHTS
 };
-const unstable=new Set(['return','plant','lock']);
+const unstable=new Set(['return','plant','lock','ward','cells']);
 
 export function makeLabDeck(T,parent,world,materials,buildChamber){
   const deck=new T.Group(),rooms=new Map();deck.name='Projekt Bayern · Zellendeck';deck.visible=false;parent.add(deck);

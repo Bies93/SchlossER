@@ -2,7 +2,7 @@ import {LAB} from './lab-layout.js';
 import {randomSource} from './surface-detail.js';
 
 const p=(x,y,z)=>[x,y,z],Y=LAB.floor;
-const wTile=256,hTile=144,cols=6,rows=8;
+const wTile=256,hTile=144,cols=6,rows=12;
 const fillBlock=(c,x,y,w,h,s)=>{c.fillStyle=s;c.fillRect(x,y,w,h);};
 
 // One atlas for hand-authored room signs, instrument faces and documents.
@@ -58,6 +58,19 @@ export function labGraphics(T){
         c.font='11px monospace';c.fillText('AUSSENSTELLE F',98,66);
         c.save();c.translate(35,115);c.rotate(-.13);c.strokeStyle='#e3be99';c.strokeRect(-4,-19,193,27);
         c.font='bold 17px monospace';c.fillText('ABNAHME VERWEIGERT',3,0,181);c.restore();
+      }else if(type==='brewLedger'){
+        fillBlock(c,0,0,wTile,hTile,'#2b3731');
+        const ink='#ded0a2',frame='#7f8164';c.strokeStyle=frame;c.strokeRect(6,6,244,132);c.strokeRect(9,9,238,126);
+        c.fillStyle=ink;c.font='bold 21px Georgia,serif';c.fillText('SCHLOSS-SUD',14,35);
+        c.font='11px monospace';c.fillText('TAFEL DER NACHTSCHICHT',15,53);
+        c.strokeStyle='#b0a784';c.beginPath();c.moveTo(15,62);c.lineTo(239,62);
+        c.moveTo(15,89);c.lineTo(177,89);c.moveTo(15,114);c.lineTo(177,114);c.stroke();
+        c.font='bold 11px monospace';c.fillText('K–01    HAUPTSUD',15,81);c.fillText('K–02    STILLSTAND',15,106);
+        c.fillStyle='#e5b786';c.fillText('F–09    NICHT AUSGEGEBEN',15,130);
+        c.save();c.translate(212,91);c.strokeStyle='#bfa77b';c.lineWidth=1.3;
+        c.beginPath();c.moveTo(0,-26);c.quadraticCurveTo(-25,-6,0,28);c.quadraticCurveTo(25,-6,0,-26);c.stroke();
+        for(let j=0;j<5;j++){const y=-15+j*8;c.beginPath();c.moveTo(-12,y);c.quadraticCurveTo(0,y+14,12,y);c.stroke();}
+        c.restore();
       }else{
         fillBlock(c,0,0,wTile,hTile,'#bcb194');c.fillStyle='#413c2e';
         c.font='bold 16px Georgia,serif';c.fillText('UNTERDECK B / LEITUNG',13,26,225);

@@ -76,6 +76,8 @@ export function addPalaceLab(T,root,world,M){
     green:plain(0x526f68,.88,{...enamel,metalness:.16}),iron:plain(0x303939,.66,{metalness:.44}),
     rust:plain(0x82513f,.96,{...enamel,metalness:.20}),gray:plain(0x8a958b,.66,{metalness:.43}),
     gunmetal:plain(0x495651,.92,{...enamel,metalness:.25}),edge:plain(0x869890,.54,{metalness:.41}),
+    copper:plain(0xa86945,.78,{...enamel,metalness:.53}),copperDark:plain(0x694538,.91,{...enamel,metalness:.35}),
+    porcelain:plain(0xbab4a2,.64),beerGlass:plain(0x784b22,.30,{metalness:.20}),
     gasket:plain(0x252c2b),brass:plain(0xad8960,.59,{metalness:.51}),
     red:{material:glow(0xde5442,.66),cast:false},cold:{material:glow(0x86cfc1,.53),cast:false},
     ivory:{material:glow(0xe8dfb5,.31),cast:false},leather:plain(0x764a30),cloth:plain(0x5b715e),
