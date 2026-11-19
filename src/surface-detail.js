@@ -13,7 +13,7 @@ export function sharedSet(T,kind,size){
 }
 
 export function repeatSet(T,kind,size=512) {
-  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318,bedrock:809,stairStone:567,soilCrumb:833}[kind]);
+  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318,bedrock:809,stairStone:567,soilCrumb:833,galleryStone:497,galleryLime:403,cutMetal:721}[kind]);
   const field=n=>Float32Array.from({length:n*n},rng);
   const grids=[8,24,64].map(n=>[n,field(n)]);
   const noise=(i,x,y)=>{
@@ -59,6 +59,21 @@ export function repeatSet(T,kind,size=512) {
       const grain=Math.sin((y/size*17+2*b)*Math.PI)*1.9;
       const v=196+fine+grain-pore*28;
       write(x,y,v+5,v+2,v-5,.21+a*.05+b*.055+c*.125+f*.086-pore*.07,223+b*21+pore*12);
+    } else if(kind==='galleryStone'){
+      const phi=(x/size*3+y/size*4+a*.56+b*.13)*Math.PI*2;
+      const vein=Math.exp(-Math.abs(Math.sin(phi))*17)*clamp(.39+b*1.14+a*.27,0,1);
+      const pit=clamp((c*.49+f*.44-.245)*6.8,0,.65);
+      const v=214+a*16+b*10+c*9+f*9-vein*15-pit*19;
+      write(x,y,v+5,v+2,v-4,.166+a*.064+b*.034+c*.084+f*.056-pit*.086-vein*.031,210+b*27+c*13+pit*26-vein*10);
+    } else if(kind==='galleryLime'){
+      const drag=Math.sin((x/size*6+y/size*9+a*.38+b*.14)*Math.PI*2)*b*6.2;
+      const v=236+a*10+b*8+c*5+f*3+drag;
+      write(x,y,v+1,v,v-3,.13+a*.057+b*.063+c*.059+f*.024+drag*.006,227+b*13+c*12);
+    } else if(kind==='cutMetal'){
+      const s=Math.sin(y/size*Math.PI*154+b*.62)*2.2+Math.sin(y/size*Math.PI*282+a*.19)*1.1;
+      const oxidation=clamp((a*.31+b*.61+c*.19-.12)*2.7,0,.46);
+      const v=233+a*9+b*10+f*4+s-oxidation*35;
+      write(x,y,v+3,v+1,v-1,.12+b*.023+c*.016+s*.014,124+oxidation*160+s*6);
     } else if(kind==='labTile'){
       // Six by eight tile faces per shared 1.42 m repeat.
       const u=x/size*6,v=y/size*8,col=Math.floor(u),row=Math.floor(v),px=u-col,py=v-row;
@@ -114,7 +129,7 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }
-  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01,stairStone:2.22,soilCrumb:2.36}[kind];
+  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01,stairStone:2.22,soilCrumb:2.36,galleryStone:1.72,galleryLime:1.29,cutMetal:.95}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;

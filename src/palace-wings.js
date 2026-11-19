@@ -6,6 +6,7 @@ import {aroundLabOpening,labLower} from './lab-layout.js';
 import {furnishSouthGallery} from './south-gallery.js';
 import {furnishNorthLibrary} from './north-library.js';
 import {galleryHatch,splitHatchFloor} from './south-hatch.js';
+import {gallerySurfaces,southGalleryArch,galleryCeiling,galleryRunners,galleryPrints} from './south-gallery-architecture.js';
 
 const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
 
@@ -70,7 +71,8 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     flame:std(0xffe5bf,.58,{emissive:0xffcf87,emissiveIntensity:.72}),
     panes:std(0xa8bbce,.38,{map:paneMap,metalness:.27,envMapIntensity:.31,emissive:0xafbfd5,emissiveMap:paneMap,emissiveIntensity:.65}),
     windowSeal:std(0x302d28,.92),
-    bookA:std(0x6e4940),bookB:std(0x515f4c),bookC:std(0x4a5b68),bookD:std(0x8b7356)
+    bookA:std(0x6e4940),bookB:std(0x515f4c),bookC:std(0x4a5b68),bookD:std(0x8b7356),
+    ...gallerySurfaces(T)
   };
   const lightSites=[];
   let posterFace,hatch;
@@ -116,36 +118,50 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     const put=(m,g,u,y,d,s)=>{
       const M=new T.Matrix4().makeScale(...s);M.setPosition(v.set(...p(u,y,d)));k.geometry(m,g,M);
     };
-    const start=HALL.half,high=ceiling,accent=library?'blue':'red';
+    const start=HALL.half,high=ceiling,accent=library?'blue':'galleryCloth';
+    const wallBase=library?'limewash':'galleryLime',wallStone=library?'limestone':'galleryBand',wallTrim=library?'cut':'galleryCut';
     const floor=(m,l,r,b,t,d,f)=>{
       const cut=library?null:splitHatchFloor(l,r,d,f),spans=library?aroundLabOpening(l,r,d,f):cut.room;
       for(const [a,c,e,h] of spans)box(m,a,c,b,t,e,h);
       if(cut?.lid){const [a,c,e,h]=cut.lid;hatch.tile(m,a,c,b,t,e,h);}
     };
     // Matte perimeter, laid flags in the gallery, darker timber in the reading room.
-    floor('iron',start,outer,Y-.09,Y-.013,-Z,Z);
-    for(const d of [-Z,Z-.32])floor('tile2',start,outer,Y-.036,Y,d,d+.32);
-    for(let d=-Z+.32,row=0;d<Z-.34;d+=library?.30:.84,row++){
-      const width=library?1.68:.84,lim=Math.min(Z-.32,d+(library?.30:.84));
-      for(let u=start-(row%2)*width*.5,col=0;u<outer-.015;u+=width,col++){
-        const l=Math.max(start,u)+.005,r=Math.min(outer,u+width)-.005;
-        if(r-l<.018)continue;
-        floor(library?(row%5===col%5?'wood':'panel'):((row+col)%2?'tile0':'tile1'),l,r,Y-.028,Y,d+.004,lim-.005);
+    floor(library?'iron':'galleryGrout',start,outer,Y-.09,Y-.013,-Z,Z);
+    for(const d of [-Z,Z-.32]){
+      floor(library?'tile2':'galleryIvory',start,outer,Y-.036,Y,d,d+.32);
+      if(!library){
+        const f=d<0?d+.282:d+.036;
+        floor('galleryInlay',start,outer,Y-.003,Y+.0031,f,f+.024);
       }
     }
-    box('limewash',outer,outer+.31,Y,high+.09,-Z-.01,Z+.01);
-    box('limestone',outer-.065,outer,Y+.02,.19,-Z,Z);
+    for(let d=-Z+.32,row=0;d<Z-.34;d+=library?.30:.73,row++){
+      const width=library?1.68:.73,lim=Math.min(Z-.32,d+(library?.30:.73));
+      for(let u=start-(library?row%2:0)*width*.5,col=0;u<outer-.015;u+=width,col++){
+        const l=Math.max(start,u)+.005,r=Math.min(outer,u+width)-.005;
+        if(r-l<.018)continue;
+        const warm=(row+col)%2===0,wave=(row*83+col*47+row*col*19)%11;
+        floor(library?(row%5===col%5?'wood':'panel'):(warm?(wave<8?'galleryCream':'galleryIvory'):(wave<8?'galleryDove':'galleryGrey')),
+          l,r,Y-.028,Y,d+.0038,lim-.004);
+      }
+    }
+    box(wallBase,outer,outer+.31,Y,high+.09,-Z-.01,Z+.01);
+    box(wallStone,outer-.065,outer,Y+.02,.19,-Z,Z);
     // Small physical overlap with the hall's arch backstop, no open seam.
-    box('roof',start-.024,outer+.02,high,high+.10,-Z,Z);
+    box(library?'roof':'galleryRoof',start-.024,outer+.02,high,high+.10,-Z,Z);
     // Projecting ceiling frames break the long room into bays.
     for(const u of [4.53,8.27,12.39,16.57,20.71,24.89,28.66]){
-      box('cut',u-.14,u+.14,high-.167,high-.085,-Z+.095,Z-.095);
-      box('limestone',u-.095,u+.095,high-.097,high+.005,-Z+.10,Z-.10);
+      if(!library&&u===12.39)continue;
+      box(wallTrim,u-.14,u+.14,high-.167,high-.085,-Z+.095,Z-.095);
+      box(wallStone,u-.095,u+.095,high-.097,high+.005,-Z+.10,Z-.10);
     }
+    if(!library)galleryCeiling(k,box);
     const threshold=(d,y,a)=>p(partition-a,y,d);
-    interiorArch(k,threshold,Z,high,{half:1.53,brick:.20,thickness:.28});
+    if(library)interiorArch(k,threshold,Z,high,{half:1.53,brick:.20,thickness:.28});
+    else southGalleryArch(k,threshold,Z,high,{half:1.53,thickness:.28});
     for(const [a,b] of [[-Z,-1.53],[1.53,Z]])block(partition-.08,partition+.28,a,b);
-    box('cut',partition-.21,partition+.37,Y-.002,Y+.023,-1.48,1.48);
+    box(wallTrim,partition-.21,partition+.37,Y-.002,Y+.023,-1.48,1.48);
+    if(!library)for(const u of [partition-.185,partition+.322])
+      box('galleryInlay',u,u+.019,Y+.0232,Y+.025,-1.452,1.452);
     for(const side of [-1,1]){
       const edge=(u,y,d)=>p(side*u,y,side*(Z-d));
       const a=side===1?start:-outer,b=side===1?outer:-start;
@@ -158,16 +174,16 @@ export function addPalaceWings(T,root,world,common,poster,seal){
       let prior=a;
       for(const center of windows){
         const l=center-.69,r=center+.69,bottom=1.25,top=3.43;
-        wall('limewash',prior,l,Y,high,-.24,0);prior=r;
-        wall('limestone',l,r,Y,bottom,-.24,0);
-        wall('limewash',l,r,top,high,-.24,0);
+        wall(wallBase,prior,l,Y,high,-.24,0);prior=r;
+        wall(wallStone,l,r,Y,bottom,-.24,0);
+        wall(wallBase,l,r,top,high,-.24,0);
         wall('windowSeal',l+.017,r-.017,bottom+.018,top-.014,-.244,-.222);
         // Deep stone reveals, projecting sill, two rebated casements and
         // hardware on the room side. The drawn gradient is behind the bars.
-        wall('cut',l-.147,r+.147,bottom-.115,bottom-.038,-.23,.148);
-        wall('limestone',l-.136,r+.136,bottom-.041,bottom+.009,-.23,.179);
-        wall('cut',l-.067,r+.067,top-.011,top+.094,-.238,.054);
-        for(const x of [l,r-.059])wall('limestone',x,x+.059,bottom+.002,top,-.236,.035);
+        wall(wallTrim,l-.147,r+.147,bottom-.115,bottom-.038,-.23,.148);
+        wall(wallStone,l-.136,r+.136,bottom-.041,bottom+.009,-.23,.179);
+        wall(wallTrim,l-.067,r+.067,top-.011,top+.094,-.238,.054);
+        for(const x of [l,r-.059])wall(wallStone,x,x+.059,bottom+.002,top,-.236,.035);
         for(const x of [l+.058,r-.114])wall('rackOak',x,x+.055,bottom+.012,top-.012,-.202,-.098);
         for(const y of [bottom+.021,top-.068])wall('rackOak',l+.092,r-.092,y,y+.053,-.202,-.104);
         wall('rackOak',center-.037,center+.037,bottom+.046,top-.043,-.208,-.096);
@@ -184,26 +200,35 @@ export function addPalaceWings(T,root,world,common,poster,seal){
         for(const x of [l+.102,r-.102])for(const y of [1.54,3.14])
           wall('brass',x-.012,x+.012,y-.035,y+.035,-.122,-.093);
       }
-      wall('limewash',prior,b,Y,high,-.24,0);
-      wall(library?'darkWood':'limestone',a,b,Y+.02,.88,.005,.042);
-      wall('cut',a,b,.866,.945,.019,.104);
-      wall('limestone',a,b,3.96,4.124,.013,.097);
-      wall('cut',a,b,4.111,4.181,.018,.150);
+      wall(wallBase,prior,b,Y,high,-.24,0);
+      wall(library?'darkWood':wallStone,a,b,Y+.02,.88,.005,.042);
+      wall(wallTrim,a,b,.866,.945,.019,.104);
+      wall(wallStone,a,b,3.96,4.124,.013,.097);
+      wall(wallTrim,a,b,4.111,4.181,.018,.150);
+      if(!library){
+        wall('galleryCutShade',a,b,Y+.036,.205,.041,.071);
+        wall('galleryBand',a,b,.211,.232,.045,.073);
+        wall('galleryInlay',a,b,3.963,3.985,.0974,.105);
+      }
       const axes=[5.12,8.10,12.34,15.04,18.23,21.55,24.70,28.76];
       const panelSites=[6.61,11.0,14.92,18.27,21.65,25.15,28.21]
         .filter(u=>!windows.some(w=>Math.abs(w-side*u)<1.02));
       for(const U of axes){
-        if(panelSites.some(x=>Math.abs(x-U)<.56))continue;
+        if((!library&&U===12.34)||panelSites.some(x=>Math.abs(x-U)<.56))continue;
         const u=U*side;
-        wall('limestone',u-.146,u+.146,.19,3.966,-.018,.074);
-        wall('cut',u-.192,u+.192,.194,.289,-.016,.106);
-        wall('cut',u-.203,u+.203,3.82,3.971,-.016,.121);
+        wall(wallStone,u-.146,u+.146,.19,3.966,-.018,.074);
+        wall(wallTrim,u-.192,u+.192,.194,.289,-.016,.106);
+        wall(wallTrim,u-.203,u+.203,3.82,3.971,-.016,.121);
       }
       for(const U of panelSites){
         const u=side*U;
         wall(accent,u-.73,u+.73,1.20,3.63,.002,.026);
-        for(const x of [u-.75,u+.75])wall('cut',x-.029,x+.029,1.13,3.69,.02,.064);
-        for(const y of [1.15,3.66])wall('cut',u-.78,u+.78,y-.030,y+.030,.018,.069);
+        for(const x of [u-.75,u+.75])wall(wallTrim,x-.029,x+.029,library?1.13:1.182,library?3.69:3.628,.02,.064);
+        for(const y of [1.15,3.66])wall(wallTrim,u-.78,u+.78,y-.030,y+.030,.018,.069);
+        if(!library){
+          for(const x of [u-.708,u+.708])wall('galleryInlay',x-.0075,x+.0075,1.199,3.598,.027,.036);
+          for(const y of [1.202,3.598])wall('galleryInlay',u-.70,u+.70,y-.0061,y+.0061,.027,.036);
+        }
       }
     }
     function luminaire(u,d,h,wall=false){
@@ -224,7 +249,8 @@ export function addPalaceWings(T,root,world,common,poster,seal){
         const a=j*Math.PI/3,x=u+Math.sin(a)*rad*.796,z=d+Math.cos(a)*rad*.796;
         put('brass',cylinder,x,base-.127,z,[.009,.247,.009]);
       }
-      lightSites.push({point:p(u,base-.303,d),power:wall?5.8:17.5,color:wall?0xffcc9a:0xffe0bf,bias:wall?19:0});
+      lightSites.push({point:p(u,base-.303,d),power:wall?5.8:library?17.5:23.6,
+        color:wall?0xffcc9a:library?0xffe0bf:0xffe6ce,bias:wall?19:0});
     }
     for(const u of [7.72,16.77,24.55])luminaire(u,0,4.27);
     for(const d of [-5.4,5.4])luminaire(outer-.244,d,3.01,true);
@@ -302,10 +328,8 @@ export function addPalaceWings(T,root,world,common,poster,seal){
       }
     }else{
       posterFace=furnishSouthGallery(T,rootWing,world,materials,poster);
-      for(const [l,r] of [[5.7,10.72],[14.45,26.20]]){
-        box('rug',l,r,Y+.001,Y+.013,-1.19,1.19);
-        for(const d of [-1.13,1.065])box('rugStripe',l+.115,r-.12,Y+.012,Y+.016,d,d+.062);
-      }
+      galleryRunners(T,rootWing,k,materials);
+      galleryPrints(T,rootWing,box);
     }
     for(const d of [-3.16,3.16]){
       box('darkWood',outer-.162,outer-.06,1.37,3.23,d-1.53,d+1.53);
