@@ -183,7 +183,7 @@ async function start(){
      portalAction.disabled=!usable;
      portalText.textContent=status?choirLabels[status]:target.id==='lab-secret'
        ?(target.target===0?'Lockeres Buch untersuchen':usable?'Regal zurückschieben':'Regal offen')
-       :!usable?'Tür offen':(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
+       :!usable?(target.usable?'Durchgang freimachen · '+target.label:'Tür offen'):(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
    }
  }
  function handleDoor(){

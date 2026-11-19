@@ -211,7 +211,11 @@ export function makeHall(T,root,M,world,leaves,poster,seal){
     if(d.id!=='gallery-choir')d.target=1-d.target;
     return d;
   }
-  function usable(d,player){return d.id==='gallery-choir'||(d.id==='lab-secret'?lab.usable(player.body.position):d.target===0||!closeEnough(player.body.position,d,1.40))}
+  function usable(d,player){
+    const p=player.body.position;
+    if(d.usable)return d.usable(p);
+    return d.id==='gallery-choir'||(d.id==='lab-secret'?lab.usable(p):d.target===0||!closeEnough(p,d,1.40));
+  }
   function update(dt,p){
     wings.update(p,preset);
     let changed=lab.update(dt,p),shadow=false;

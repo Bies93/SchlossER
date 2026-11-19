@@ -1,4 +1,5 @@
 import {LAB,LAB_CELLS} from './lab-layout.js';
+import {cellDoor} from './lab-cell-doors.js';
 
 const {floor:Y,ceiling:C}=LAB;
 const pi=Math.PI,flat=-pi/2;
@@ -20,9 +21,9 @@ export const MALT_LIGHTS={
 
 // Pure scene dressing; fixtures and collider footprints use the same local
 // metre grid as LAB_CELLS. Repeated small pieces enter existing material batches.
-export function fitMaltWing(T,kit,id){
-  const {k,box,hit,pipe,obj,cylinder,luminaire,grille,wheel,dress}=kit;
-  const {housing:h,rod,plane,fastener,plaque,grill,dial,flag,stain}=dress;
+export function fitMaltWing(T,kit,id,doors){
+  const {k,box,hit,pipe,obj,cylinder,luminaire,grille,wheel,dress,props}=kit;
+  const {housing:h,rod,plane,plaque,grill,dial,flag,stain}=dress;
   const [x0,x1,z0,z1]=LAB_CELLS[id],owned=[];
   const solid=(m,x,y,z,w,H,d,a=0)=>h(m,x,Y+y,z,w,H,d,a);
   const line=(m,x,y,z,X,H,Z,r)=>rod(m,[x,Y+y,z],[X,Y+H,Z],r);
@@ -52,7 +53,11 @@ export function fitMaltWing(T,kit,id){
   }
   function paper(x,y,z,title,sub,style='cream',rot=pi){
     solid('leather',x,y,z,.49,.029,.337,rot);
-    plaque(title,sub,x,y+.017,z,.446,.283,rot,style,flat,false);
+    const dx=.021*Math.cos(rot),dz=-.021*Math.sin(rot);
+    props.folio(x+dx,Y+y+.011,z+dz,.442,.301,rot+.065,style==='red'?6:1,{loose:true,thickness:.016});
+    plaque(title,sub,x,y+.030,z,.410,.252,rot,style,flat,false);
+    const f=plane(x,Y+y+.034,z,rot,flat);
+    rod('brass',f(-.15,.12,0),f(-.075,.12,0),.007);
   }
   function mug(x,y,z,angle=0){
     const r=.087;
@@ -260,20 +265,11 @@ export function fitMaltWing(T,kit,id){
     const front=-21.34,wall=-24.47;
     overhead('iron',-19.22,33.30,39.87,2.96,.068);
     overhead('copperDark',-23.85,33.33,39.86,2.94,.053);
-    // Rail sections and hinged leaves are built with the same jamb outline
-    // used for collision. Cell C is open; D/E are solid barriers.
-    function grate(a,b,y=0,leaf=false,direction=0){
-      const f=(u,v,d)=>direction===0?[front+d,Y+v,b-u]:[front-u,Y+v,a-d];
-      const L=b-a,post=leaf?'edge':'gunmetal';
-      for(const edge of [0,L])k.box(post,f,edge-.033,edge+.033,y+.047,y+2.429,-.045,.045);
-      for(const v of [y+.085,y+.916,y+2.378])k.box(post,f,.006,L-.006,v-.028,v+.028,-.038,.039);
-      for(let u=.127;u<L-.079;u+=.165)rod('iron',f(u,y+.094,0),f(u,y+2.389,0),.019);
-      if(leaf){
-        const latch=L-.137;
-        k.box('gunmetal',f,latch-.097,latch+.074,y+1.03,y+1.20,.006,.056);
-        fastener(f,latch,y+1.09,.060,.025,true);
-        rod('brass',f(latch-.036,y+1.132,.060),f(latch+.091,y+1.132,.063),.016);
-      }
+    function grate(a,b){
+      const f=(u,v,d)=>[front+d,Y+v,b-u],L=b-a;
+      for(const e of [0,L])k.box('gunmetal',f,e-.033,e+.033,.047,2.429,-.045,.045);
+      for(const v of [.085,.916,2.378])k.box('gunmetal',f,.006,L-.006,v-.028,v+.028,-.038,.039);
+      for(let u=.127;u<L-.079;u+=.165)rod('iron',f(u,.094,0),f(u,2.389,0),.019);
     }
     for(const [i,a,b] of [[0,33.38,35.47],[1,35.63,37.63],[2,37.79,39.81]]){
       const z=(a+b)/2,open=i===0,gap=1.04;
@@ -285,16 +281,10 @@ export function fitMaltWing(T,kit,id){
       grate(a+.19+gap,b);
       hit(front-.05,front+.05,a,a+.19);
       hit(front-.05,front+.05,a+.19+gap,b);
-      if(open){
-        grate(a+.19,a+.19+gap,0,true,1);
-        hit(front-gap,front+.045,a+.143,a+.236);
-      }else{
-        grate(a+.19,a+.19+gap,0,true);
-        hit(front-.05,front+.05,a+.19,a+.19+gap);
-      }
       const letters=['C','D','E'];
+      doors.push(cellDoor(T,kit.root,kit.world,kit.materials,front,a+.19,gap,letters[i],open));
       solid('gunmetal',front,2.57,z,.18,.32,.65);
-      plaque('ZELLE '+letters[i],[['ENTRIEGELT','VERW. F–08','VERW. F–09'][i]],front+.096,2.58,z,.503,.22,pi/2,i===2?'red':'cream');
+      plaque('ZELLE '+letters[i],[['VERWAHRUNG','VERW. F–08','VERW. F–09'][i]],front+.096,2.58,z,.503,.22,pi/2,i===2?'red':'cream');
       // Empty cell furnishings: open metal frame, bedding and site-specific evidence.
       const px=-23.29,pz=z+.345;
       edgePosts(px,.254,pz,1.70,.44,.60);
@@ -323,7 +313,7 @@ export function fitMaltWing(T,kit,id){
         plaque('KEIN NACHTRAG',['Eintrag entfernt.'],x0+.033,1.804,z+.35,.55,.245,pi/2,'cream');
       }else{
         solid('rust',px+.22,.628,pz,.42,.033,.466,-.15);
-        solid('leather',px+.37,.66,pz+.07,.24,.03,.34,pi*.29);
+        props.folio(px+.35,Y+.648,pz+.071,.24,.34,pi*.29,6,{thickness:.028});
         for(let q=0;q<3;q++)line('rust',wall-.060,1.58-q*.111,z-.175,wall-.060,1.13-q*.060,z-.094,.010);
       }
     }

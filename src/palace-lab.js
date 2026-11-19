@@ -4,6 +4,7 @@ import {LAB,LAB_CUT,LAB_LAYER,labLower} from './lab-layout.js';
 import {cellarWalls,makeLabDeck} from './lab-wing.js';
 import {addLabGraffiti} from './lab-graffiti.js';
 import {dressLab} from './lab-dressing.js';
+import {stationery} from './interior-stationery.js';
 
 // Entirely fictional scenography: no real building connection or lab protocol.
 const {left,right,back,front}=LAB_CUT,{top,floor,ceiling,end,south,north}=LAB;
@@ -126,6 +127,7 @@ export function addPalaceLab(T,root,world,M){
     }
   }
   const capZ=back-.029,capEnd=front+.049,slide=2.48;
+  const books=stationery(T,r,cabinet,{cloth:['bookA','bookB','bookC','leather']});
   shelf('darkWood',gateX-.207,gateX+.059,top,2.65,capZ,capEnd);
   for(const z of [capZ,capEnd-.052])shelf('wood',gateX-.254,gateX+.076,.13,2.69,z,z+.052);
   for(const [i,y] of [.23,.67,1.12,1.57,2.02,2.48].entries()){
@@ -133,12 +135,13 @@ export function addPalaceLab(T,root,world,M){
     if(i===5)continue;
     for(let z=capZ+.085,j=0;z<capEnd-.11;j++){
       const wide=.056+(j%6)*.012;const h=.225+(j%5)*.025;
-      shelf(['bookA','bookB','bookC'][j%3],gateX-.368,gateX-.205,y+.022,y+h,z,z+wide);
-      if(j%3!==0)shelf('brass',gateX-.371,gateX-.363,y+h-.049,y+h-.038,z+.008,z+wide-.007);
-      z+=wide+.022;
+      const mid=z+wide*.5,x=gateX-.374+(j%3)*.007;
+      books.book((u,v,d)=>[x-d,y+.023+v,mid+u],wide,h-.022,.163+(j%3)*.009,j+i*3);
+      z+=wide+(j%5===3?.037:.009);
     }
   }
   shelf('brass',gateX-.414,gateX-.369,1.363,1.380,centre-.11,centre+.09);
+  books.finish('Geheimregal · Buchrücken');
   world.box(gateX-.39,capZ,gateX+.06,capEnd,p=>above(p)&&d.progress<.95);
   world.box(gateX-.39,capZ+slide,gateX+.06,capEnd+slide,p=>above(p)&&d.progress>=.95);
   a.flush('Treppenverkleidung');s.flush('Kellertreppe');r.flush('Bücherregal');
@@ -149,6 +152,7 @@ export function addPalaceLab(T,root,world,M){
   const usable=p=>d.target===0||Math.abs(p.x-gateX)>.60;
   return {
     target(p,look){
+      if(labLower(p.y))return deck.target(p,look);
       const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
@@ -167,6 +171,7 @@ export function addPalaceLab(T,root,world,M){
 
 function buildChambers(T,room,world,materials,graphics){
   const k=architectureKit(T,room,materials),below=p=>labLower(p.y);
+  const props=stationery(T,k,room,{cloth:['leather','bookB','bookC','green']});
   const dress=dressLab(T,k,room,graphics);
   const {housing,rod,flag,plaque,dial,grill,stain,fastener,plane}=dress;
   const box=(m,x0,x1,y0,y1,z0,z1)=>k.box(m,coords,x0,x1,y0,y1,z0,z1);
@@ -195,9 +200,7 @@ function buildChambers(T,room,world,materials,graphics){
     if(i%5===0)box('iron',x-.11,x+.23,floor,floor+.015,-.85,-.61);
   }
   for(const [x,z,kind] of [[right+1.1,-5.60,'red'],[-17.35,-5.12,'ivory'],[-14.4,1.40,'cold'],[-8.3,-3.53,'ivory']]){
-    box('iron',x-.39,x+.39,ceiling-.103,ceiling-.015,z-.135,z+.135);
-    box(kind,x-.328,x+.328,ceiling-.115,ceiling-.100,z-.077,z+.077);
-    for(const dx of [-.20,0,.20])box('iron',x+dx-.010,x+dx+.010,ceiling-.132,ceiling-.104,z-.101,z+.102);
+    dress.fixture(x,ceiling-.16,z,kind);
   }
   // Three empty chambers: clear sight through the front, substantial rear
   // shields and a temperature display. No live occupants or gore.
@@ -279,6 +282,8 @@ function buildChambers(T,room,world,materials,graphics){
   board(paper,.91,.57,-15.87,floor+1.064,-5.86,0,-Math.PI*.5);
   housing('paper',-14.98,floor+1.06,-5.76,.37,.040,.47,-.10);
   plaque('FREMDAKTE F',['FRANKEN · NICHT ABLEGEN'],-14.98,1.083,-5.74,.34,.42,0,'red',-Math.PI*.5,false);
+  props.folio(-16.51,floor+1.042,-5.58,.208,.258,-.18,5,{loose:true,thickness:.015});
+  rod('brass',[-16.45,floor+1.061,-5.548],[-16.29,floor+1.061,-5.64],.007);
   for(const x of [-16.47,-15.66,-14.86]){
     housing('gunmetal',x,floor+.716,-5.297,.64,.285,.073);
     rod('brass',[x-.10,floor+.772,-5.24],[x+.10,floor+.772,-5.24],.018);
@@ -314,8 +319,8 @@ function buildChambers(T,room,world,materials,graphics){
   plaque('BELEG F–09',['TRACHTENMUSTER NICHT ÜBERNOMMEN','Fundort: Ablage B'],tx-.16,1.005,tz,.54,.33,Math.PI,'cream',-Math.PI*.5,false);
   housing('iron',tx+.34,floor+1.018,tz+.02,.284,.112,.262);
   for(const dz of [-.06,.063])housing('brass',tx+.35,floor+1.080,tz+dz,.08,.014,.068);
-  housing('paper',tx+.23,floor+.334,tz-.032,.538,.065,.39,.075);
-  housing('leather',tx-.28,floor+.345,tz+.046,.33,.092,.374,-.13);
+  props.folio(tx+.28,floor+.308,tz-.034,.47,.37,Math.PI+.10,2,{thickness:.068});
+  props.folio(tx-.28,floor+.308,tz+.045,.32,.36,Math.PI-.20,7,{thickness:.058});
   world.box(tx-.65,tz-.33,tx+.61,tz+.33,below);
 
   // Empty costume rack: hanger and clothes only, no mannequin body.
@@ -351,5 +356,5 @@ function buildChambers(T,room,world,materials,graphics){
   }
   plaque('TRACHTENAUSGABE',['EINHEIT B · UNGETRAGEN'],rx-.568,2.716,rz,1.11,.215,-Math.PI*.5,'cream');
   world.box(rx-.62,rz-1.04,rx+.19,rz+1.04,below);
-  dress.flush();k.flush('Projekt Bayern · Beton, Technik und Kostüme');drum.dispose();ring.dispose();
+  props.finish('Klonkammern · Akten und Papier');dress.flush();k.flush('Projekt Bayern · Beton, Technik und Kostüme');drum.dispose();ring.dispose();
 }

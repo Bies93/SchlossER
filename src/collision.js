@@ -54,6 +54,24 @@ export function collisionWorld(bounds, radius, contains) {
   return {
     polygon,
     box: (x0, z0, x1, z1,enabled) => polygon([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],enabled),
+    // The broad phase covers the full sweep; the narrow phase uses the
+    // current rigid rectangle instead of leaving an invisible closed gate.
+    movingBox(x0,z0,x1,z1,pose,enabled=()=>true){
+      insert(x0,z0,x1,z1,p=>{
+        if(!enabled(p))return false;
+        const {x,z,ux,uz,half,depth}=pose;
+        const dx=p.x-x,dz=p.z-z,u=dx*ux+dz*uz,v=-dx*uz+dz*ux;
+        const cu=Math.max(-half,Math.min(half,u)),cv=Math.max(-depth,Math.min(depth,v));
+        let a=u-cu,b=v-cv;
+        const d=Math.hypot(a,b);
+        if(d>=radius-1e-8)return false;
+        if(d>1e-8){a*=(radius-d)/d;b*=(radius-d)/d;}
+        else if(half-Math.abs(u)<depth-Math.abs(v))a=(u<0?-1:1)*(half-Math.abs(u)+radius);
+        else b=(v<0?-1:1)*(depth-Math.abs(v)+radius);
+        p.x+=a*ux-b*uz;p.z+=a*uz+b*ux;
+        return true;
+      });
+    },
     circle(x, z, r) {
       insert(x-r, z-r, x+r, z+r, p => {
         const dx = p.x - x, dz = p.z - z, limit = r + radius, d2 = dx*dx + dz*dz;

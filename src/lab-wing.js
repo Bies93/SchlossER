@@ -1,6 +1,8 @@
 import {architectureKit} from './architecture-kit.js';
 import {labGraphics,dressLab} from './lab-dressing.js';
 import {MALT_ROOMS,MALT_LIGHTS,fitMaltWing} from './lab-malt-wing.js';
+import {cellDoorTarget} from './lab-cell-doors.js';
+import {stationery} from './interior-stationery.js';
 import {LAB,LAB_CUT,LAB_CELLS,LAB_LINKS,LAB_LAYER,labLower,labCellAt,labEdges} from './lab-layout.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y);
@@ -87,11 +89,8 @@ export function cellarWalls(k,world,id){
 function cellarKit(T,root,world,id,materials,graphics){
   const k=architectureKit(T,root,materials),[x0,x1,z0,z1]=LAB_CELLS[id];
   const dress=dressLab(T,k,root,graphics);
+  const props=stationery(T,k,root,{cloth:['leather','bookB','bookC','green']});
   const box=(m,a,b,y,Y,c,d)=>k.box(m,matrices,a,b,y,Y,c,d);
-  const poly=(m,points,y,Y)=>{for(let i=0;i<points.length;i++){
-    const [a,c]=points[i],[b,d]=points[(i+1)%points.length];
-    k.quad(m,[b,y,d],[a,y,c],[a,Y,c],[b,Y,d]);
-  }};
   const hit=(a,b,c,d)=>world.box(a,c,b,d,below);
   const drum=new T.CylinderGeometry(1,1,1,20),wheel=new T.TorusGeometry(1,.085,7,20),matrix=new T.Matrix4();
   const pos=new T.Vector3(),quat=new T.Quaternion(),scale=new T.Vector3(),up=new T.Vector3(0,1,0);
@@ -105,9 +104,7 @@ function cellarKit(T,root,world,id,materials,graphics){
     k.geometry(m,drum,matrix);
   }
   function luminaire(x,z,key='ivory',y=ceiling-.16){
-    box('iron',x-.42,x+.42,y+.012,y+.123,z-.126,z+.126);
-    box(key,x-.36,x+.36,y,y+.03,z-.092,z+.092);
-    for(const dx of [-.36,-.17,0,.17,.36])box('gray',x+dx-.011,x+dx+.011,y-.017,y+.019,z-.112,z+.112);
+    dress.fixture(x,y,z,key);
   }
   function grille(x,z,w,d){
     box('iron',x-w/2,x+w/2,floor-.019,floor+.007,z-d/2,z+d/2);
@@ -122,14 +119,14 @@ function cellarKit(T,root,world,id,materials,graphics){
     box(MALT_ROOMS[id]?.tiles[n<3?1:0]??(id==='observation'?(n<4?'gray':'ceramic'):id==='vault'?(n<3?'iron':'vaultWall'):n<2?'gray':'concrete'),
       x+.004,Math.min(x+step-.004,x1),floor-.027,floor,z+.004,Math.min(z+step-.004,z1));
   }
-  return {k,box,hit,obj,cylinder,pipe,luminaire,grille,poly,wheel,dress,
-    flush(){dress.flush();k.flush('Keller · '+cellNames[id]);drum.dispose();wheel.dispose()}};
+  return {k,box,hit,obj,cylinder,pipe,luminaire,grille,wheel,dress,props,root,world,materials,
+    flush(){dress.flush();props.finish('Keller · Register und Papierobjekte');k.flush('Keller · '+cellNames[id]);drum.dispose();wheel.dispose()}};
 }
 
-function fitOut(T,root,world,id,materials,graphics){
+function fitOut(T,root,world,id,materials,graphics,doors){
   const kit=cellarKit(T,root,world,id,materials,graphics);
-  if(MALT_ROOMS[id]){fitMaltWing(T,kit,id);kit.flush();return;}
-  const {k,box,hit,obj,cylinder,pipe,luminaire,grille,poly,wheel,dress,flush}=kit;
+  if(MALT_ROOMS[id]){fitMaltWing(T,kit,id,doors);kit.flush();return;}
+  const {k,box,hit,obj,cylinder,pipe,luminaire,grille,wheel,dress,props,flush}=kit;
   const {housing,stain,grill,dial,flag,plane,fastener,rod,plaque:label}=dress;
   const plaque=(head,lines,x,y,z,w=1.03,h=.48,ry=0,style)=>label(head,lines,x,y,z,w,h,ry,style);
   function cabinet(x,z,w,d,h,kind='green',index=0){
@@ -208,11 +205,17 @@ function fitOut(T,root,world,id,materials,graphics){
     label('VERMISSTENLISTE',['B-01 … B-08  /  NICHT ANWESEND','Ausgabe: 8 Trachten, ungetragen.','Rückgabe: 9 Garderobenmarken.'],-14.14,1.013,11.658,.81,.405,Math.PI,'cream',-Math.PI*.5,false);
     housing('brass',-14.14,floor+1.027,11.91,.28,.022,.045);
     label('RÜCKGABE',['Die neunte Marke blieb ohne Namen.','BESCHLUSS: AKTE GESCHLOSSEN.'],-11.45,2.76,15.198,1.67,.62,Math.PI,'red');
-    for(let i=0;i<8;i++){
-      const a=-14.73+i*.235,y=floor+.988+(i%3)*.013,z=11.97+(i%2)*.075;
-      box(i%3===0?'leather':'paper',a,a+.22,y,y+.023,z,z+.13);
-      box('ivory',a+.029,a+.078,y+.024,y+.025,z+.023,z+.11);
-    }
+    for(const [x,z,w,l,a,style,loose] of [
+      [-13.51,11.58,.235,.31,3.32,1,true],[-13.16,11.62,.27,.34,2.94,6,false],
+      [-12.81,11.79,.20,.245,2.94,0,false],[-13.42,12.045,.245,.237,-.11,4,false],
+      [-14.65,12.05,.235,.215,.12,2,true],[-14.33,12.042,.28,.24,-.05,7,false]
+    ])props.folio(x,floor+.988,z,w,l,a,style,{loose,thickness:loose?.012:.031});
+    // Smaller recognizable silhouettes: an ink stamp and two pencils.
+    housing('iron',-12.82,floor+1.00,11.50,.174,.028,.098,.11);
+    cylinder('wood',-12.82,floor+1.042,11.50,.030,.070);
+    cylinder('brass',-12.82,floor+1.081,11.50,.046,.029);
+    rod('ochre',[-13.27,floor+.998,11.95],[-13.15,floor+.998,12.063],.007);
+    rod('rust',[-13.22,floor+.998,11.934],[-13.08,floor+.998,12.024],.006);
     cabinet(-9.92,10.81,.74,.58,1.47,'green',5);
     box('iron',-10.22,-9.60,floor+1.46,floor+1.72,10.54,11.04);
     box('gasket',-10.193,-9.91,floor+1.53,floor+1.56,11.032,11.063);
@@ -313,6 +316,7 @@ function fitOut(T,root,world,id,materials,graphics){
     for(let iz=0;iz<3;iz++)for(let ix=0;ix<9;ix++)housing((iz+ix)%5?'gray':'brass',-24.25+ix*.062,floor+1.001,-2.46+iz*.069,.048,.016,.047);
     housing('leather',-23.23,floor+.989,-2.40,.48,.040,.30,.18);
     label('PROTOKOLL 08',['STIMME OHNE QUELLE'],-23.23,1.011,-2.392,.4,.202,0,'cream',-Math.PI*.5,false);
+    props.folio(-24.57,floor+.967,-2.40,.24,.18,.12,3,{loose:true,thickness:.014});
     grill('edge',-24.15,.54,-2.207,.52,.31);
     for(let j=0;j<4;j++){
       const x=-22.76+j*.33;
@@ -323,7 +327,7 @@ function fitOut(T,root,world,id,materials,graphics){
     stain(-22.51,1.41,-3.630,.84,1.02,0,0);
   }else if(id==='vault'){
     // Stark contrast with the clinical rooms: stone, paired numbers on
-    // benches, a ledger and an empty dais below disconnected machinery.
+    // Benches, a ledger and a floor inlay below disconnected machinery.
     luminaire(-22.67,15.04,'red');
     for(const x of [-25.76,-20.89,-19.15]){
       box('iron',x-.15,x+.15,floor,ceiling,19.12,19.28);
@@ -346,27 +350,24 @@ function fitOut(T,root,world,id,materials,graphics){
       }
     }
     const x=-22.28,z=17.70,p=Array.from({length:8},(_,i)=>{const a=(i+.5)*Math.PI/4;return [x+Math.cos(a)*1.26,z+Math.sin(a)*1.02]});
-    poly('iron',p,floor+.01,floor+.13);
-    // A decorative mosaic, not a diagram. It suggests the operators made
-    // the same ritual out of a factory inspection over and over.
-    for(let i=0;i<8;i++){
-      const a=p[i],b=p[(i+1)%8];k.triangle('gasket',[x,floor+.13,z],[b[0],floor+.13,b[1]],[a[0],floor+.13,a[1]],[.5,.5,0,0,1,0]);
+    // Floor finish only: no obstacle or change to the walk surface.
+    const n=64,surface=floor+.0035;
+    const outer=(i,ratio=1)=>{
+      i%=n;const a=p[Math.floor(i/8)],b=p[(Math.floor(i/8)+1)%8],t=(i%8)/8;
+      return [x+(a[0]+(b[0]-a[0])*t-x)*ratio,surface,z+(a[1]+(b[1]-a[1])*t-z)*ratio];
+    };
+    const round=(i,r)=>{const a=(i/n+.0625)*Math.PI*2;return [x+Math.cos(a)*r,surface,z+Math.sin(a)*r*.885];};
+    for(let i=0;i<n;i++){
+      const j=i+1,side=Math.floor(i/8);
+      k.quad('brass',outer(i,.953),outer(j,.953),outer(j),outer(i));
+      k.quad(side%2?'iron':'gunmetal',round(i,.902),round(j,.902),outer(j,.953),outer(i,.953));
+      k.quad('gray',round(i,.768),round(j,.768),round(j,.902),round(i,.902));
+      k.quad(i%8===0?'copperDark':'rust',round(i,.715),round(j,.715),round(j,.768),round(i,.768));
+      k.triangle('porcelain',[x,surface,z],round(j,.715),round(i,.715),[.5,.5,0,0,1,0]);
     }
-    world.polygon(p,below);
-    for(let i=0;i<8;i++){
-      const a=p[i],b=p[(i+1)%8];
-      box('ochre',a[0]-.042,a[0]+.042,floor+.13,floor+.145,a[1]-.042,a[1]+.042);
-      pipe('gray',[a[0],floor+.13,a[1]],[b[0],floor+.13,b[1]],.025);
-      for(const t of [.23,.77]){
-        const cx=a[0]+(b[0]-a[0])*t,cz=a[1]+(b[1]-a[1])*t;
-        rod(i%2?'rust':'brass',[cx,floor+.139,cz],[cx,floor+.160,cz],.025);
-      }
-    }
-    cylinder('gray',x,floor+.12,z,.923,.115);
-    obj('rust',wheel,x,floor+.197,z,.75,.75,.50,Math.PI/2);
     for(let row=-2;row<=2;row++)for(let col=-1;col<=1;col++){
       if(Math.abs(row)===2&&Math.abs(col)===1)continue;
-      const cx=x+col*.22+(row%2?.042:0),cz=z+row*.21,y=floor+.180;
+      const cx=x+col*.22+(row%2?.042:0),cz=z+row*.21,y=surface+.001;
       k.quad((row+col)%2?'green':'gray',[cx-.102,y,cz],[cx,y,cz+.103],[cx+.102,y,cz],[cx,y,cz-.103]);
     }
     for(const dx of [-.49,.49]){
@@ -383,6 +384,7 @@ function fitOut(T,root,world,id,materials,graphics){
     housing('leather',-19.32,floor+.962,18.88,.89,.030,.44);
     hit(-19.95,-18.70,18.66,19.15);
     label('VERZEICHNIS',['Acht Plätze gedeckt.','Kein Name für den letzten.'],-19.32,.981,18.86,.82,.39,Math.PI,'cream',-Math.PI/2,false);
+    props.folio(-18.86,floor+.952,18.81,.173,.26,Math.PI-.20,4,{loose:true,thickness:.013});
     stain(-25.938,1.43,17.93,.88,2.40,Math.PI*.5,2);
     stain(-20.44,1.20,19.291,.62,2.21,Math.PI,0);
     for(let j=0;j<6;j++)cylinder('brass',-20.03-j*.112,floor+.015,18.13+(j%3)*.071,.038,.025);
@@ -401,13 +403,13 @@ const emitters={
 const unstable=new Set(['return','plant','lock','ward','cells']);
 
 export function makeLabDeck(T,parent,world,materials,buildChamber){
-  const deck=new T.Group(),rooms=new Map();deck.name='Projekt Bayern · Zellendeck';deck.visible=false;parent.add(deck);
+  const deck=new T.Group(),rooms=new Map(),doors=[];deck.name='Projekt Bayern · Zellendeck';deck.visible=false;parent.add(deck);
   const lights=Array.from({length:4},()=>{const l=new T.PointLight(0xffffff,0,0,2);l.layers.set(LAB_LAYER);deck.add(l);return l});
   const hemi=new T.HemisphereLight(0xa4b0a7,0x444038,.86);hemi.layers.set(LAB_LAYER);deck.add(hemi);
   let last='',pathX=Infinity,pathZ=Infinity,preparation,phase=0,dim=1,affected=-1,normalPower=0;
   function build(id,graphics){
     const node=new T.Group();node.name='Projekt Bayern · '+cellNames[id];deck.add(node);
-    if(id==='chambers')buildChamber(node,graphics);else fitOut(T,node,world,id,materials,graphics);
+    if(id==='chambers')buildChamber(node,graphics);else fitOut(T,node,world,id,materials,graphics,doors);
     node.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
     rooms.set(id,node);
   }
@@ -457,6 +459,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     const active=!!id&&(labCameraMode(p)!=='surface'||opened&&id==='stairs');
     let changed=deck.visible!==active;deck.visible=active;
     if(!active){last='';phase=0;dim=1;return changed;}
+    for(const door of doors)changed=door.update(dt,p)||changed;
     phase=(phase+dt)%7.2;
     // One slow brownout on a nearby fixture; no strobe, particles or new lights.
     const strength=unstable.has(id)&&phase>5.55&&phase<6.16
@@ -482,7 +485,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     }
     return changed;
   };
-  return {update,visible:()=>deck.visible,prepare(renderer,scene,shaft){
+  return {update,target:(p,look)=>cellDoorTarget(doors,p,look),visible:()=>deck.visible,prepare(renderer,scene,shaft){
     return preparation??=prewarm(renderer,scene,shaft);
   }};
 }

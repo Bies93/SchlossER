@@ -197,6 +197,17 @@ export function dressLab(T,k,root,graphics){
     const a=.61+i*.93;
     rod(i%2?'rust':'iron',f(0,0,.057),f(Math.cos(a)*r*.51,Math.sin(a)*r*.51,.057),r*.045);
   }
+  function fixture(x,y,z,key){
+    housing('iron',x,y+.073,z,.854,.139,.265);
+    for(const dx of [-.29,.29])housing('iron',x+dx,y+.149,z,.134,.047,.253);
+    housing('edge',x,y+.026,z,.794,.042,.223);
+    for(const d of [-.046,.046])rod(key,[x-.344,y+.001,z+d],[x+.344,y+.001,z+d],.028);
+    for(const dx of [-.366,-.195,0,.195,.366]){
+      rod('gunmetal',[x+dx,y-.031,z-.106],[x+dx,y-.031,z+.106],.009);
+      for(const d of [-.107,.107])rod('gray',[x+dx,y-.032,z+d],[x+dx,y+.053,z+d],.009);
+    }
+    for(const d of [-.111,.111])rod('iron',[x-.380,y-.029,z+d],[x+.380,y-.029,z+d],.011);
+  }
   function flush(){
     for(const [kind,[xyz,uv]] of Object.entries(bins)){
       if(!xyz.length)continue;
@@ -206,5 +217,5 @@ export function dressLab(T,k,root,graphics){
     }
     pin.dispose();screw.dispose();disc.dispose();bevel.dispose();
   }
-  return {box,rod,housing,plane,fastener,plaque,flag,stain,grill,dial,flush};
+  return {box,rod,housing,plane,fastener,plaque,flag,stain,grill,dial,fixture,flush};
 }
