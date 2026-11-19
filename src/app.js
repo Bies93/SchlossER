@@ -10,7 +10,7 @@ import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
-import {addMonumentFooting} from './palace-detail.js';
+import {polishFriedrichMonument} from './palace-detail.js';
 import {cutPalaceOpenings} from './palace-openings.js';
 import {addPortalFacade,palaceMaterials} from './palace-facade.js';
 import {hallFloor,makeHall} from './palace-hall.js';
@@ -57,7 +57,8 @@ async function start(){
    sculptureMaterials(sculptures,finish);
    sculptures.traverse(o=>{if(o.isMesh){o.castShadow=!/Fountain_water|Water_jets|Aerated_spray/i.test(o.name);o.receiveShadow=true}});
    s.add(sculptures);
-   addMonumentFooting(T,s,finish);
+   const collar=polishFriedrichMonument(T,sculptures);
+   if(collar)walkSurfaces.push(collar);
  }
  const fountain=makeFountain(T,s,sculptures);
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);

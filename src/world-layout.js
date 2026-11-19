@@ -1,5 +1,6 @@
 import {HALL,WINGS} from './palace-openings.js';
 import {labLower} from './lab-layout.js';
+import {FRIEDRICH} from './palace-detail.js';
 
 // Y up; +Z toward Schlossplatz (west), +X toward Universitätsstraße (south).
 export const SPAWN = {x: 8, z: 43, yaw: .19, pitch: .12};
@@ -109,7 +110,8 @@ export function addFixedColliders(world) {
   for(const [a,b] of [[-10.35,-WINGS.z],[WINGS.z,10.35]]){
     world.box(-WINGS.outer,a,-HALL.half,b,surface);world.box(HALL.half,a,WINGS.outer,b,surface);
   }
-  world.box(-1.8, 29.35, 1.8, 32.65);   // Friedrich monument granite base
+  const {halfX,halfZ,z}=FRIEDRICH;
+  world.box(-halfX,z-halfZ,halfX,z+halfZ);
 
   // Rounded basin: a 9.82 m radius around a 9.5 m central span.
   const basin = Array.from({length: 64}, (_, i) => {

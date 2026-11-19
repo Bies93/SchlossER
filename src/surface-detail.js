@@ -135,7 +135,7 @@ export function ageMasonry(material,exposure,neutral=0) {
 export function sculptureMaterials(sculptures,finish){
   const {map:source,normalMap:relief}=finish('FOUNTAIN_STONE'),prepared=new Map();
   sculptures.traverse(o=>{
-    if(!o.isMesh)return;
+    if(!o.isMesh||o.name.startsWith('Friedrich_Denkmal_'))return;
     const src=o.material,name=src.name??'';
     if(!/bronze|granite|carved_stone|damp_stone|weathered_sandstone|damp_recesses|Rock_layer/i.test(name))return;
     const bronze=/bronze/i.test(name),wet=/damp/i.test(name),granite=/granite/i.test(name);
