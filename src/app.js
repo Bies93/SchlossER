@@ -68,7 +68,7 @@ async function start(){
  addFixedColliders(world);
  const hall=makeHall(T,model,stonework,world,leaves,poster,seal);
  const perimeter=addPerimeter(T,s,world,finish);
- const wc=addParkStair(T,s,world,finish);
+ const wc=addParkStair(T,s,world);
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
  walkSurfaces.push(...garden.floors);

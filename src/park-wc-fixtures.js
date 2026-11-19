@@ -1,4 +1,32 @@
 const pi=Math.PI;
+
+// One ceramic mould, including the lip and the hollow. Section depth is
+// greater at the foot of the bowl; the upper back runs close to the wall.
+function urinalMould(T){
+  const N=36,sections=[
+    [.83,.921,.026,.018],[.97,.932,.086,.107],[1,.938,.128,.204],
+    [.963,.938,.139,.211],[.874,.940,.132,.196],
+    [.751,.918,.070,.162],[.43,.841,.084,.126],[.155,.761,.129,.100],[.017,.741,.207,.009]
+  ];
+  function build(first,last){
+    const v=[],uv=[],index=[];
+    for(let j=first;j<=last;j++){
+      const [radius,center,back,lip]=sections[j];
+      for(let i=0;i<=N;i++){
+        const a=i/N*pi*2,s=Math.sin(a),c=Math.cos(a),low=(1-s)*.5;
+        const width=.190*(1-.22*Math.max(0,-s))*(1-.14*Math.max(0,s-.51));
+        v.push(-(back+lip*low**1.42),center+s*.291*radius,c*width*radius);uv.push(i/N,j/(sections.length-1));
+        if(j>first&&i<N){
+          const b=(j-first-1)*(N+1)+i,d=b+N+1;
+          index.push(b,b+1,d+1,b,d+1,d);
+        }
+      }
+    }
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(v,3));
+    g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(index);g.computeVertexNormals();return g;
+  }
+  return [build(0,4),build(4,8)];
+}
 export function furnishWashroom(T,{block,hit,stamp,pipe,print},id){
   const bead=new T.SphereGeometry(1,16,9),tube=new T.CylinderGeometry(1,1,1,16);
   const bowl=new T.LatheGeometry([[0,0],[.64,.008],[.79,.09],[.97,.44],[1,.57],[.97,.64],
@@ -21,9 +49,16 @@ export function furnishWashroom(T,{block,hit,stamp,pipe,print},id){
     hit(u-.329,u+.505,v-.273,v+.273);
     // Paper holder and folded paper roll, separate from the ceramic.
     const side=v<5.55?1:-1,uu=u-.24,zz=v+side*.357;
-    block('steel',uu-.018,uu+.021,.625,.749,zz-.099,zz+.098);
-    pipe('steel',[uu,.665,zz-.074],[uu,.665,zz+.077],.017);
-    pipe('paper',[uu-.012,.665,zz-.064],[uu-.012,.665,zz+.064],.061);
+    if(id==='menB'){
+      block('steel',uu-.092,uu+.092,.626,.745,5.552,5.573);
+      for(const s of [-1,1])pipe('steel',[uu+s*.072,.678,5.567],[uu+s*.072,.678,5.637],.009);
+      pipe('steel',[uu-.075,.678,5.637],[uu+.075,.678,5.637],.017);
+      pipe('paper',[uu-.063,.678,5.637],[uu+.063,.678,5.637],.050);
+    }else{
+      block('steel',uu-.018,uu+.021,.625,.749,zz-.099,zz+.098);
+      pipe('steel',[uu,.665,zz-.074],[uu,.665,zz+.077],.017);
+      pipe('paper',[uu-.012,.665,zz-.064],[uu-.012,.665,zz+.064],.061);
+    }
   }
   function sink(u,v,away){
     const center=v+away*.348;
@@ -44,20 +79,20 @@ export function furnishWashroom(T,{block,hit,stamp,pipe,print},id){
     for(const q of [-.262,.262])block('steel',u+q-.025,u+q+.025,1.193,1.231,g-.005,h+.005);
     hit(u-.305,u+.305,Math.min(v,v+away*.61),Math.max(v,v+away*.61));
   }
-  function urinal(u){
-    // Porcelain body has a vertical back, flared lip, inset bowl and trap.
-    const v=3.806;
-    fixture('china',bead,u,.940,v+.132,.167,.384,.287);
-    fixture('water',bead,u,.894,v+.268,.049,.251,.169);
-    fixture('china',bead,u,.717,v+.232,.16,.105,.272);
-    fixture('china',bowl,u,.646,v+.227,.158,.214,.254);
-    fixture('steel',tube,u,.681,v+.234,.040,.018,.044);
-    pipe('steel',[u,1.192,v+.138],[u,1.364,v+.138],.019);
-    pipe('steel',[u,1.36,v+.138],[u,1.36,v+.034],.020);
-    fixture('steel',tube,u,1.274,v+.139,.040,.062,.040);
-    pipe('steel',[u,.658,v+.155],[u,.488,v+.14],.028);
-    pipe('steel',[u,.489,v+.14],[u,.489,v+.027],.028);
-    hit(u-.289,u+.289,v,v+.393);
+  function urinal(u,mould){
+    const v=3.803;
+    block('china',u-.116,u+.116,.781,1.141,v+.004,v+.039);
+    stamp('china',mould[0],u,0,v,[1,1,1]);
+    stamp('chinaPocket',mould[1],u,0,v,[1,1,1]);
+    fixture('steel',tube,u,.746,v+.212,.028,.011,.029);
+    for(const [a,d] of [[0,0],[.010,.009],[-.010,.009],[.010,-.009],[-.010,-.009]])
+      fixture('dark',tube,u+a,.752,v+.212+d,.0028,.003,.0028);
+    pipe('steel',[u,1.21,v+.082],[u,1.356,v+.082],.020);
+    pipe('steel',[u,1.356,v+.082],[u,1.356,v+.012],.020);
+    fixture('steel',tube,u,1.271,v+.081,.036,.066,.036);
+    pipe('steel',[u,.669,v+.190],[u,.568,v+.179],.022);
+    pipe('steel',[u,.568,v+.179],[u,.568,v+.018],.022);
+    hit(u-.206,u+.206,v,v+.354);
   }
   if(id==='women'||id==='men'){
     const male=id==='men',wall=male?7.42:.405,dir=male?-1:1;
@@ -72,16 +107,20 @@ export function furnishWashroom(T,{block,hit,stamp,pipe,print},id){
     fixture('grout',tube,6.57,.478,z,.113,.011,.115);
     hit(6.392,6.75,z-.182,z+.182);
     if(male){
-      for(const u of [4.91,5.82,6.74])urinal(u);
+      const mould=urinalMould(T);
+      for(const u of [4.91,5.82,6.74])urinal(u,mould);
+      mould.forEach(g=>g.dispose());
       for(const u of [5.359,6.274])block('sea',u-.017,u+.017,.454,1.542,3.831,4.27);
     }
   }else{
-    const v={womenA:1.19,womenB:2.92,menA:4.78,menB:5.889}[id];
-    toilet(id==='menB'?8.35:8.566,v);
+    const v={womenA:1.19,womenB:2.92,menA:4.78,menB:5.86}[id];
+    toilet(id==='menB'?8.45:8.566,v);
     if(id==='menB'){
-      // The break in the rear wall reads only from inside the closed stall.
       block('gunmetal',8.92,9.05,-.008,.008,6.28,7.39);
-      print('arrow',9.080,1.38,7.172,.25,.225,Math.PI);
+      // Far enough from the jamb to stay entirely on the tiled wall.
+      block('tunnelMetal',9.074,9.102,1.263,1.515,5.872,6.139);
+      print('arrow',9.071,1.39,6.007,.243,.222,Math.PI);
+      for(const d of [5.889,6.122])block('steel',9.066,9.074,1.378,1.397,d-.008,d+.008);
     }
   }
   bead.dispose();tube.dispose();bowl.dispose();ring.dispose();

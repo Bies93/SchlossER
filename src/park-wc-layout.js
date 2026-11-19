@@ -62,7 +62,10 @@ export function wcCeilingAt(x,z,referenceY=0){
 }
 export function wcCameraMode(pos){
   const u=pos.z-Z,v=X-pos.x;
-  if(!lower(pos.y))return 'surface';
-  if(wcRoomAt(u,v))return v<.16?'threshold':'inside';
-  return u>=roomLeft-.04&&u<=W+.02&&v>-.93&&v<0?'threshold':'surface';
+  if(lower(pos.y)&&wcRoomAt(u,v))return v<.16?'threshold':'inside';
+  // The throat is visible from the turning landing, even while the player
+  // is still a whole flight above the threshold. Share both render layers.
+  const onReturn=u>=roomLeft-.09||v<returnStart+.06;
+  return onReturn&&u>=-.035&&u<=W+.04&&v>=back-.025&&v<.17&&pos.y<a+.86
+    ?'threshold':'surface';
 }

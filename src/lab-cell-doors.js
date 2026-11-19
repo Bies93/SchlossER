@@ -10,8 +10,9 @@ export function cellDoor(T,root,world,M,x,z,span,letter,open){
 export function wardDoor(T,root,world,M,x,z,span){
   return swingDoor(T,root,world,M,x,z,span,{id:'lab-ward-door',label:'Behandlungsstation',solid:true,heading:-turn,delta:turn,open:false});
 }
-export function utilityDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle=false}){
-  return swingDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle,open:false,solid:true,utility:true,heading:-turn,delta:turn});
+export function utilityDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle=false,hingeAtEnd=false}){
+  const heading=hingeAtEnd?turn:-turn;
+  return swingDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle,open:false,solid:true,utility:true,heading,delta:-heading});
 }
 function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=false,cubicle=false,heading=0,delta=-turn,floor=LAB.floor,lower=labLower}){
   const leaf=new T.Group();leaf.name=(utility?'WC-Tür · ':solid?'Stahltür · ':'Gittertür · ')+label;leaf.position.set(x,floor,z);root.add(leaf);

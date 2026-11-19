@@ -30,15 +30,31 @@ export function addWcInterior(T,scene,world){
     floorA:plain(0x85887a,.88,plaster),floorB:plain(0x979789,.85,plaster),floorC:plain(0x757c70,.92,plaster),
     rock:plain(0x807968,.98,stone),rockShade:plain(0x6e695c,.97,stone),rockWarm:plain(0x948471,.96,stone),cap:plain(0x736956,.93,stone),
     iron:plain(0x303935,.77,{metalness:.25}),gunmetal:plain(0x495550,.75,painted),
+    tunnelMetal:plain(0x645c50,.86,{...painted,metalness:.31}),oxide:plain(0x785244,.89,painted),
     green:plain(0x62776a,.91,painted),edge:plain(0x889788,.65,painted),brass:plain(0xa89968,.57,{metalness:.51}),
     steel:plain(0x87908e,.36,{metalness:.63}),glass:plain(0x566e6b,.26,{metalness:.5,envMapIntensity:.46}),
-    china:plain(0xd5dad2,.36),water:plain(0x667975,.32,{metalness:.15}),
+    china:plain(0xdadbd1,.32),chinaPocket:plain(0xbfc3b6,.34),water:plain(0x667975,.32,{metalness:.15}),
     lamp:{material:plain(0xf7eac3,.69,{emissive:0xffd297,emissiveIntensity:.61}),cast:false},
     wood:plain(0xb29065,.78,wood),darkWood:plain(0x8a664e,.88,wood),ochre:plain(0xb68245,.86,painted),
     red:plain(0x88554a,.91,painted),linen:plain(0xb2a27c,.97,cloth),fabric:plain(0x5c6a54,.92,cloth),rug:plain(0x805745,1,cloth),
     paper:plain(0xbcaa86),amber:plain(0x895a35,.42,{metalness:.18}),signal:{material:plain(0x9ec569,.73,{emissive:0x779742,emissiveIntensity:.61}),cast:false}
   };
-  const cyl=new T.CylinderGeometry(1,1,1,12),m=new T.Matrix4(),tmp=new T.Vector3(),len=new T.Vector3(),up=new T.Vector3(0,1,0),scale=new T.Vector3(),rot=new T.Quaternion();
+  const cyl=new T.CylinderGeometry(1,1,1,12),identity=new T.Matrix4(),m=new T.Matrix4(),tmp=new T.Vector3(),len=new T.Vector3(),up=new T.Vector3(0,1,0),scale=new T.Vector3(),rot=new T.Quaternion();
+  // Keep continuous normals across a rock panel; the triangulation should
+  // not print through the texture and turn the tight bend into sawteeth.
+  function relief(kit,material,nu,nv,point,reverse=false){
+    const positions=[],uv=[],index=[],row=nv+1;
+    for(let i=0;i<=nu;i++)for(let j=0;j<=nv;j++){
+      const [pos,s,t]=point(i,j);positions.push(...pos);uv.push(s,t);
+      if(i<nu&&j<nv){
+        const a=i*row+j,B=a+row,c=B+1,d=a+1;
+        index.push(...(reverse?[a,c,B,a,d,c]:[a,B,c,a,c,d]));
+      }
+    }
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+    geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geo.setIndex(index);geo.computeVertexNormals();
+    kit.geometry(material,geo,identity);geo.dispose();
+  }
   const toHit=(u,U,v,V)=>world.box(X-V,Z+u,X-v,Z+U,o=>lower(o.y));
   const partsArt=collectiveArt(T);
   const hemi=new T.HemisphereLight(0xb2c4bd,0x5d503b,.66);group.add(hemi);
@@ -58,7 +74,7 @@ export function addWcInterior(T,scene,world){
         const L=len.length();if(L<.002)return;
         m.compose(tmp.addScaledVector(len,.5),rot.setFromUnitVectors(up,len.normalize()),scale.set(r,L,r));k.geometry(mat,cyl,m);
       },
-      print(tile,u,y,v,w,h,angle=0){partsArt.mount(room,tile,...p(u,b+y,v),w,h,angle);}
+      print(tile,u,y,v,w,h,angle=0,options){partsArt.mount(room,tile,...p(u,b+y,v),w,h,angle,options);}
     };
     const [u0,u1,v0,v1]=bounds,rock=isRock(id),va=id==='landing'?v0+.0028:v0;
     block('grout',u0,u1,-.094,-.024,va,v1);
@@ -71,16 +87,11 @@ export function addWcInterior(T,scene,world){
     }
     if(rock){
       const nu=id==='tunnel'?3:24,nv=id==='tunnel'?20:Math.max(8,Math.ceil((v1-v0)*2.5));
-      const pt=(i,j)=>{
+      relief(k,'rockShade',nu,nv,(i,j)=>{
         const u=u0+(u1-u0)*i/nu,v=v0+(v1-v0)*j/nv;
         const seam=Math.sin(i/nu*Math.PI)*Math.sin(j/nv*Math.PI)*Math.sin(i*.71+j*.59)*.047;
         return [p(u,wcRoofAt(id,u,v)+seam,v),u*.79,v*.79];
-      };
-      for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){
-        const [a,s,t]=pt(i,j),[c,h,I]=pt(i+1,j),[d,M,N]=pt(i+1,j+1),[e,V,W]=pt(i,j+1);
-        const mat='rockShade';
-        k.triangle(mat,a,c,d,[s,t,h,I,M,N]);k.triangle(mat,a,d,e,[s,t,M,N,V,W]);
-      }
+      });
     }else block('paint',u0,u1,ceiling-b,ceiling-b+.12,v0,v1);
     for(const [axis,at,min,max,sign] of alongEdge(...bounds)){
       const map=axis==='u'?(sign>0?(s,y,d)=>p(at+d,y,-s):(s,y,d)=>p(at-d,y,s)):
@@ -108,22 +119,14 @@ export function addWcInterior(T,scene,world){
           skin('rockShade',l,r,b-.027,-.12);
           const steps=Math.max(1,Math.ceil((r-l)/.59));
           const height=[b-.02,b+.41,b+.88,b+1.36,b+1.80,-.54,-.106];
-          const rough=(i,j,d)=>{
+          relief(k,'rock',steps,height.length-1,(i,j)=>{
             const edge=i===0||i===steps,mid=j>0&&j<height.length-1;
             const u=l+(r-l)*i/steps+(edge?0:Math.sin(i*2.86+j*1.83)*.065);
             const h=height[j]+(mid&&!edge?Math.cos(i*2.12+j*3.43)*.058:0);
+            // Flat ends protect the portal margins and meet the sealed wall.
+            const d=edge?-.009:-(.035+(.5+.5*Math.cos(i*1.38+j*2.13))*(id==='collective'?.082:.058));
             return [inward(u,h,d),u*.83,h*.83];
-          };
-          // Rough relief is an interior skin over the sealed outline; keep
-          // the room-edge and portal margins flat instead of doubling seams.
-          const D=(i,j)=>i===0||i===steps?-.009:-(.033+(.5+.5*Math.cos(i*1.38+j*2.13))*.091);
-          for(let i=0;i<steps;i++)for(let j=0;j<height.length-1;j++){
-            const [a,s,t]=rough(i,j,D(i,j)),[c,h,I]=rough(i+1,j,D(i+1,j)),
-              [e,M,N]=rough(i+1,j+1,D(i+1,j+1)),[f,V,W]=rough(i,j+1,D(i,j+1));
-            const mat='rock';
-            if(orient>0){k.triangle(mat,c,a,f,[h,I,s,t,V,W]);k.triangle(mat,c,f,e,[h,I,V,W,M,N]);}
-            else{k.triangle(mat,a,c,e,[s,t,h,I,M,N]);k.triangle(mat,a,e,f,[s,t,M,N,V,W]);}
-          }
+          },orient>0);
         }else{
           skin('tile',l,r,b-.025,b+1.402);
           skin(id==='lobby'||id==='landing'?'paint':'tile',l,r,b+1.449,ceiling+.023);
@@ -144,10 +147,14 @@ export function addWcInterior(T,scene,world){
         for(const s of [l,r])solid(trim,s-.036,s+.036,b,top+.052,-.082,.082);
         solid(trim,l-.037,r+.037,top-.006,top+.056,-.082,.082);
         if(spec){
-          const [key,label]=spec,hinge=l+.042,[x,,z]=p(at,b,hinge);
-          const d=utilityDoor(T,room,world,materials,x,z,r-l-.084,{id:key,label,floor:b,lower,cubicle:areWeStalls});
+          // Reverse the secret cubicle's handing: the leaf parks against
+          // the empty flank, while the porcelain stays on the opposite side.
+          const [key,label]=spec,hingeAtEnd=key==='wc-men-b',hinge=hingeAtEnd?r-.042:l+.042,[x,,z]=p(at,b,hinge);
+          const d=utilityDoor(T,room,world,materials,x,z,r-l-.084,
+            {id:key,label,floor:b,lower,cubicle:areWeStalls,hingeAtEnd});
           d.zones=[owner,next];d.peek=areWeStalls;doors.push(d);activeLinks.set(L,d);
-          solid('steel',r-.051,r-.034,b+.933,b+1.097,-.05,.05);
+          if(hingeAtEnd)solid('steel',l+.034,l+.051,b+.933,b+1.097,-.05,.05);
+          else solid('steel',r-.051,r-.034,b+.933,b+1.097,-.05,.05);
         }
       }
       if(start<max)wall(start,max);
@@ -181,19 +188,24 @@ export function addWcInterior(T,scene,world){
     for(const d of doors)changed=d.update(dt,pos)||changed;
     if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return false;
     prev=id;lastU=u;lastV=v;
-    const visible=new Set([id]);let wave=[id];
-    for(let depth=0;depth<2;depth++){
+    const visible=new Set([id]),traversed=new Set([id]);let wave=[id];
+    // Through the opened cubicle, the illuminated turn must already be
+    // present. A closed door only exposes its owner and any cubicle gaps.
+    const reach=id==='men'||id==='menB'||isRock(id)?3:2;
+    for(let depth=0;depth<reach;depth++){
       const next=[];
       for(const room of wave)for(const l of LINKS){
         if(l[0]!==room&&l[1]!==room)continue;
         const leaf=activeLinks.get(l);
-        if(leaf&&!leaf.peek&&leaf.progress<=.01){
+        if(leaf&&leaf.progress<=.01){
           // The leaf and frame belong to the approach room. Keep that
           // owner visible from the inside even when the door is shut.
           if(l[1]===room)visible.add(l[0]);
+          if(leaf.peek)visible.add(l[0]===room?l[1]:l[0]);
           continue;
         }
-        const other=l[0]===room?l[1]:l[0];if(!visible.has(other)){visible.add(other);next.push(other);}
+        const other=l[0]===room?l[1]:l[0];visible.add(other);
+        if(!traversed.has(other)){traversed.add(other);next.push(other);}
       }
       wave=next;
     }

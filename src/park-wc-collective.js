@@ -1,9 +1,10 @@
 import {randomSource} from './surface-detail.js';
+import {b,wcRoofAt} from './park-wc-layout.js';
 
 const pi=Math.PI,tau=2*pi;
-const tiles=['women','men','keep','arrow','flag','map','poster','dial'];
+const tiles=['women','men','keep','arrow','flag','map','poster','dial','press','aid','flyer'];
 export function collectiveArt(T){
-  const c=document.createElement('canvas');c.width=1024;c.height=1024;const x=c.getContext('2d'),rand=randomSource(85210);
+  const c=document.createElement('canvas');c.width=1024;c.height=1536;const x=c.getContext('2d'),rand=randomSource(85210);
   function line(points,color,width=3){
     x.strokeStyle=color;x.lineWidth=width;x.beginPath();
     points.forEach(([u,v],i)=>i?x.lineTo(u,v):x.moveTo(u,v));x.stroke();
@@ -27,7 +28,7 @@ export function collectiveArt(T){
   for(const [i,t] of tiles.entries()){
     x.save();x.translate((i%2)*512,Math.floor(i/2)*256);
     x.beginPath();x.rect(0,0,512,256);x.clip();
-    const civic=i<4; x.fillStyle=civic?'#e2ddc2':i===4?'#595139':i===5?'#a19473':i===6?'#3b5249':'#263d36';
+    const civic=i<4; x.fillStyle=civic?'#e2ddc2':i===4?'#595139':i===5?'#a19473':i===6?'#3b5249':i===7?'#263d36':'#d4b98a';
     x.fillRect(0,0,512,256);
     if(t==='flag'){
       for(let j=15;j>0;j--){
@@ -65,6 +66,15 @@ export function collectiveArt(T){
       for(let j=0;j<18;j++)line([[52+j*23,171],[52+j*23,183-j%3*9]],'#acc28e',3);
       line([[49,153],[466,153]],'#acc28e',2);line([[334,124],[334,185]],'#dd9b61',3);
       text('NUR EMPFANG',256,218,21,'#b8c490');
+    }else if(t==='press'||t==='aid'||t==='flyer'){
+      const ink=t==='aid'?'#415442':'#733c36';
+      x.strokeStyle=ink;x.lineWidth=5;x.strokeRect(21,19,470,218);
+      x.fillStyle=ink;x.fillRect(22,34,468,58);
+      text(t==='press'?'FREIE PRESSE':t==='aid'?'TAUSCHREGAL':'MOOSFUNK',256,76,42,'#ead4a7','Georgia');
+      peace(90,153,29,ink);
+      text(t==='press'?'STIMMEN VON UNTEN':t==='aid'?'NIMM, WAS DU BRAUCHST':'KEINER BLEIBT ZURÜCK',293,142,24,ink);
+      text(t==='press'?'VON HAND GEDRUCKT':t==='aid'?'GIB, WAS DU KANNST':'SONNTAG · KÜCHE FÜR ALLE',302,187,19,ink);
+      line([[151,209],[463,209]],ink,2);
     }else{
       x.strokeStyle='#6f7968';x.lineWidth=4;x.strokeRect(16,18,480,218);
       if(t==='women'||t==='men'){
@@ -89,12 +99,22 @@ export function collectiveArt(T){
   const map=new T.CanvasTexture(c);map.colorSpace=T.SRGBColorSpace;map.anisotropy=3;
   const material=new T.MeshStandardMaterial({map,roughness:.91});
   const uv=(name)=>{
-    const i=tiles.indexOf(name),l=i%2*.5+.004,t=1-Math.floor(i/2)*.25-.004;return [l,t-.242,l+.492,t];
+    const i=tiles.indexOf(name),l=i%2*.5+.004,t=1-Math.floor(i/2)*256/c.height;
+    return [l,t-252/c.height,l+.492,t-4/c.height];
   };
-  return {mount(room,tile,x,y,z,w,h,angle){
-    const g=new T.PlaneGeometry(w,h),a=g.getAttribute('uv'),[l,b,r,t]=uv(tile);
-    for(let i=0;i<a.count;i++)a.setXY(i,a.getX(i)?r:l,a.getY(i)?t:b);
-    const m=new T.Mesh(g,material);m.name='Moosfunk · '+tile;m.position.set(x,y,z);m.rotation.y=angle;room.add(m);
+  const cloth=material.clone();cloth.roughness=1;cloth.side=T.DoubleSide;
+  return {mount(room,tile,x,y,z,w,h,angle,{folded=false,pitch=0}={}){
+    const g=new T.PlaneGeometry(w,h,folded?32:1,folded?8:1),a=g.getAttribute('uv'),[l,b,r,t]=uv(tile);
+    if(folded){
+      const v=g.getAttribute('position');
+      for(let i=0;i<v.count;i++){
+        const u=a.getX(i),drop=1-a.getY(i),wave=Math.sin(u*47.3+drop*2.8)+.51*Math.sin(u*83.9-drop*2.4);
+        v.setXYZ(i,v.getX(i),v.getY(i)-drop*drop*(.066*Math.sin(u*pi)+.013*Math.sin(u*26)),wave*(.008+.031*drop));
+      }
+      g.computeVertexNormals();
+    }
+    for(let i=0;i<a.count;i++)a.setXY(i,l+(r-l)*a.getX(i),b+(t-b)*a.getY(i));
+    const m=new T.Mesh(g,folded?cloth:material);m.name='Moosfunk · '+tile;m.position.set(x,y,z);m.rotation.set(pitch,angle,0,'YXZ');room.add(m);
   }};
 }
 
@@ -139,24 +159,64 @@ export function furnishCollective(T,kit,id){
     item('brass',cylinder,u,y+.199,v,.019,.014,.019);
   }
   if(id!=='collective'){
-    const isTunnel=id==='tunnel';
-    if(isTunnel){
-      pipe('iron',[9.35,1.644,6.30],[12.39,1.62,6.30],.038);
-      for(const u of [9.76,10.79,11.84])pipe('gunmetal',[u,1.64,6.30],[u,1.64,6.254],.052);
+    // Follow only solid rock. Each rail returns into the wall, with stand-offs
+    // anchored through the relief; nothing spans either portal or the turn.
+    if(id==='tunnel'){
+      pipe('tunnelMetal',[9.43,1.01,6.455],[12.35,1.01,6.455],.026);
+      for(const u of [9.43,10.28,11.33,12.35]){
+        frame('oxide',u-.063,u+.063,.918,1.095,6.246,6.382);
+        pipe('tunnelMetal',[u,1.01,6.362],[u,1.01,6.455],.019);
+        pipe('gunmetal',[u-.031,1.01,6.455],[u+.031,1.01,6.455],.033);
+        for(const y of [.944,1.071])pipe('iron',[u,y,6.376],[u,y,6.390],.011);
+      }
     }else{
-      print('poster',14.136,1.34,5.33,.95,.44,pi);
-      pipe('iron',[12.68,1.44,7.28],[12.68,1.44,5.89],.038);
+      frame('darkWood',13.986,14.166,1.27,1.646,5.10,5.88);
+      print('poster',13.982,1.461,5.49,.728,.32,pi);
+      pipe('tunnelMetal',[13.95,1.01,5.08],[13.95,1.01,7.16],.026);
+      for(const v of [5.08,5.76,6.45,7.16]){
+        frame('oxide',14.023,14.166,.918,1.095,v-.063,v+.063);
+        pipe('tunnelMetal',[14.040,1.01,v],[13.95,1.01,v],.019);
+        pipe('gunmetal',[13.95,1.01,v-.031],[13.95,1.01,v+.031],.033);
+        for(const y of [.944,1.071])pipe('iron',[14.028,y,v],[14.013,y,v],.011);
+      }
     }
   }else{
+    // Salvaged lining at the damp end of the vault, not another full wall.
+    for(let row=0;row<7;row++){
+      const y=.023+row*.209;
+      for(let u=11.31-(row%2)*.258,i=0;u<13.08;u+=.513,i++){
+        const l=Math.max(11.24,u)+.006,r=Math.min(13.15,u+.513)-.007;
+        if(r-l>.056)frame(['rockWarm','rock','cap','rockWarm'][(i+row*3)%4],l,r,y,y+.198,-4.178,-4.039+(i%3)*.009);
+      }
+    }
+    for(const [u,v] of [[11.35,-3.84],[19.95,-3.81],[11.35,2.52],[19.95,2.52]]){
+      frame('oxide',u-.136,u+.136,1.61,1.91,v-.115,v+.115);
+    }
+    const roof=(u,v)=>wcRoofAt('collective',u,v)-b;
+    for(const v of [-3.82,2.52]){
+      let prev;
+      for(let i=0;i<=22;i++){
+        const u=11.29+(20.00-11.29)*i/22,y=roof(u,v)-.106;
+        const pt=[u,y,v];
+        if(prev)pipe('tunnelMetal',prev,pt,.039);
+        if(i%4===0)pipe('oxide',[u,y-.003,v],[u,y+.16,v],.023);
+        prev=pt;
+      }
+      for(const u of [11.35,19.95])pipe('oxide',[u,1.723,v],[u,roof(u,v)-.10,v],.027);
+    }
     // An original faction identity, in canvas ink rather than borrowed game art.
-    const flag=19.988;
-    frame('wood',19.95,20.036,.868,2.054,-1.74,1.73);
-    pipe('brass',[19.925,2.075,-1.82],[19.925,2.075,1.82],.026);
-    print('flag',flag-.065,1.466,0,3.22,1.038,pi);
+    const flag=19.865;
+    pipe('darkWood',[flag,1.998,-1.82],[flag,1.998,1.82],.031);
+    for(const v of [-1.69,1.69]){
+      frame('iron',19.975,20.117,1.904,2.037,v-.049,v+.049);
+      pipe('brass',[flag,1.998,v],[20.012,1.971,v],.018);
+    }
+    print('flag',flag-.016,1.455,0,3.22,1.038,pi,{folded:true});
     frame('wood',13.22,16.55,.97,2.035,-4.116,-4.037);
     print('map',14.885,1.52,-4.024,3.02,.894,-pi/2);
     for(const u of [13.54,14.83,16.21])pipe('brass',[u,1.00,-4.019],[u,1.00,-3.998],.018);
-    print('poster',19.995,1.44,3.44,1.40,.72,pi);
+    frame('darkWood',19.957,20.115,1.088,1.814,2.69,4.19);
+    print('poster',19.952,1.45,3.44,1.40,.658,pi);
 
     // Radio bench and repair shelf; the receiver is a prop, not an interface.
     table(14.97,-3.54,3.43,.82,.948);
@@ -167,9 +227,21 @@ export function furnishCollective(T,kit,id){
       pipe('brass',[u,1.052,-3.329],[u,1.051,-3.268],.041);
       pipe('signal',[u,1.350,-3.319],[u,1.350,-3.295],.020);
     }
+    for(let i=0;i<5;i++){
+      const u=14.62+i*.102;
+      pipe('gunmetal',[u,1.076,-3.33],[u,1.076,-3.291],.014);
+      frame('paper',u-.012,u+.012,1.109,1.12,-3.308,-3.299);
+    }
+    pipe('brass',[14.30,1.446,-3.74],[14.39,1.76,-3.76],.012);
+    pipe('steel',[14.39,1.76,-3.76],[14.58,1.949,-3.82],.006);
+    item('iron',ball,14.58,1.949,-3.82,.012,.012,.012);
     for(const u of [13.83,15.95]){
       frame('darkWood',u-.193,u+.193,.948,1.32,-3.80,-3.33);
-      for(const [y,r] of [[1.034,.085],[1.22,.071]])pipe('iron',[u,y,-3.341],[u,y,-3.316],r);
+      for(const [y,r] of [[1.043,.076],[1.23,.073]]){
+        pipe('brass',[u,y,-3.342],[u,y,-3.318],r*1.10);
+        pipe('iron',[u,y,-3.315],[u,y,-3.306],r);
+        item('gunmetal',ball,u,y,-3.304,.025,.025,.014);
+      }
     }
     frame('ochre',15.89,16.41,.946,1.021,-3.38,-3.05);
     frame('paper',15.945,16.298,1.021,1.037,-3.323,-3.087);
@@ -191,6 +263,8 @@ export function furnishCollective(T,kit,id){
     for(const [j,v] of [-.945,.057,1.05].entries()){
       frame(j%2?'linen':'fabric',19.04,19.55,.303,.507,v-.468,v+.472);
       frame(j%2?'rug':'fabric',19.43,19.72,.471,.928,v-.473,v+.472);
+      pipe('darkWood',[19.039,.473,v-.445],[19.039,.473,v+.445],.007);
+      pipe('linen',[19.418,.883,v-.448],[19.418,.883,v+.448],.005);
       item(j%2?'rug':'linen',ball,19.42,.741,v+.08,.257,.185,.101,pi*.10);
     }
     for(const v of [-1.48,1.58])frame('darkWood',19.04,19.74,.287,.632,v-.080,v+.084);
@@ -215,13 +289,47 @@ export function furnishCollective(T,kit,id){
     for(const u of [17.59,18.67])crate(u,4.00,.80,.54,.253);
     for(const u of [17.43,17.68,18.37,18.83])cup(u,1.33,3.87,1);
     hit(17.02,19.45,3.61,4.34);
-    for(const [u,v] of [[12.42,-1.88],[13.08,-1.92],[13.07,-2.49]])crate(u,v,.51,.51);
-    print('poster',11.295,1.45,-1.86,1.55,.72,0);
+    // Hand-print corner: hinged screen, half-finished flyers and supplies.
+    table(12.66,-2.02,1.92,.87,.902);
+    crate(11.82,-3.07,.65,.56);
+    crate(12.49,-3.22,.63,.50);
+    const screen=[12.50,-2.02];
+    for(const u of [-.286,.286])frame('darkWood',screen[0]+u-.026,screen[0]+u+.026,.907,.997,-2.37,-1.70);
+    for(const v of [-2.348,-1.723])frame('darkWood',12.19,12.80,.907,.997,v-.023,v+.023);
+    frame('linen',12.233,12.767,.944,.957,-2.32,-1.752);
+    print('flyer',12.50,.959,-2.037,.48,.244,-pi/2,{pitch:-pi/2});
+    pipe('wood',[12.281,.985,-1.872],[12.71,.985,-1.829],.021);
+    pipe('gasket',[12.284,.977,-1.845],[12.71,.977,-1.804],.010);
+    item('red',cylinder,13.27,.972,-2.24,.079,.14,.079);
+    item('iron',cylinder,13.27,1.042,-2.24,.083,.022,.083);
+    for(let i=0;i<4;i++){
+      const angle=-pi/2+(i%2?-.18:.12),y=.904+i*.004,u=13.19+i*.044,v=-1.94+i*.041;
+      print(i%2?'press':'flyer',u,y,v,.266,.144,angle,{pitch:-pi/2});
+    }
+    frame('darkWood',11.183,11.322,1.14,1.848,-2.87,-1.09);
+    print('press',11.326,1.494,-1.98,1.68,.622,0);
+    for(const [u,v] of [[16.09,3.92],[16.48,3.91]])crate(u,v,.38,.56);
+    frame('sea',15.94,16.62,.381,.604,3.68,4.15);
+    frame('linen',15.925,16.64,.595,.631,3.66,4.17);
+    for(const u of [16.05,16.54])pipe('brass',[u,.553,3.676],[u,.533,3.647],.018);
+    frame('red',16.222,16.334,.622,.64,3.86,3.97);
+    frame('red',16.271,16.286,.625,.643,3.834,4.01);
+    frame('darkWood',15.45,16.98,1.16,1.846,4.638,4.797);
+    print('aid',16.214,1.503,4.634,1.43,.605,pi/2);
+    for(const [i,u] of [17.37,17.68,18.06,18.34,18.69,19.03].entries()){
+      const y=1.885;
+      frame(i%2?'linen':'paper',u-.102,u+.102,y,y+.075,3.94,4.20);
+      pipe('red',[u-.094,y+.035,3.938],[u+.094,y+.035,3.938],.011);
+    }
 
     let past=null;
     for(let i=0;i<=18;i++){
-      const u=12.45+i*.39,v=-1.14+Math.sin(i/18*pi)*.48,y=2.289-Math.sin(i/18*pi)*.37;
+      const u=12.45+i*.39,v=-1.14+Math.sin(i/18*pi)*.48,y=Math.min(roof(u,v)-.06,2.21-Math.sin(i/18*pi)*.30);
       if(past)pipe('gasket',past,[u,y,v],.009);past=[u,y,v];
+      if(i===0||i===18){
+        const r=roof(u,v);pipe('iron',[u,y,v],[u,r+.044,v],.012);
+        item('oxide',cylinder,u,r-.019,v,.043,.035,.043);
+      }
       if(i%2===0){pipe('iron',[u,y,v],[u,y-.062,v],.014);item(i%4?'signal':'lamp',ball,u,y-.081,v,.027,.036,.027);}
     }
   }
