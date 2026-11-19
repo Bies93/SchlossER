@@ -7,29 +7,33 @@ import {furnishNorthLibrary} from './north-library.js';
 
 const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
 
-export function interiorArch(k,p,span,top,{half=portal,thickness=.25,brick=.17}={}){
-  for(const [a,b] of [[-span,-half],[half,span]])k.box('limewash',p,a,b,Y,top,-thickness,0);
-  for(const a of [-half-brick,half])k.box('cut',p,a,a+brick,Y,spring,-thickness,.071);
-  k.box('limewash',p,-half,half,spring+rise+brick,top,-thickness,0);
-  const curve=(a,r,h,d)=>p(Math.cos(a)*r,spring+Math.sin(a)*h,d);
-  const n=20;
-  for(let i=0;i<n;i++){
-    const a=i*Math.PI/n,b=(i+1)*Math.PI/n;
-    for(const [m,d,r,h] of [['cut',.064,half+brick,rise+brick],['limewash',-thickness,half,rise]]){
-      const x=curve(a,half,rise,d),y=curve(b,half,rise,d);
-      if(d>0)k.quad(m,y,x,curve(a,r,h,d),curve(b,r,h,d),1.3);
-      else k.quad(m,x,y,p(Math.cos(b)*half,spring+rise+brick,d),p(Math.cos(a)*half,spring+rise+brick,d));
-    }
-    const t=curve(a,half,rise,.065),u=curve(b,half,rise,.065);
-    k.quad('cut',t,u,curve(b,half,rise,-thickness),curve(a,half,rise,-thickness));
-    const r=half+brick,head=spring+rise+brick;
-    k.quad('limewash',curve(b,r,rise+brick,0),curve(a,r,rise+brick,0),
-      p(Math.min(half,Math.cos(a)*r),head,0),p(Math.max(-half,Math.cos(b)*r),head,0));
+export function interiorArch(k,p,span,top,{half=portal,thickness=.25,brick=.17,wall='limewash',trim='cut'}={}){
+  const back=-thickness-.021;
+  for(const [a,b] of [[-span,-half],[half,span]])k.box(wall,p,a,b,Y,top,-thickness,0);
+  for(const a of [-half-brick,half])k.box(trim,p,a,a+brick,Y,spring,back,.071);
+  const curve=(a,r,h,d)=>p(-Math.cos(a)*r,spring+Math.sin(a)*h,d);
+  const faces=24;
+  for(let i=0;i<faces;i++){
+    const a=i*Math.PI/faces,b=(i+1)*Math.PI/faces;
+    const A=-Math.cos(a)*half,B=-Math.cos(b)*half;
+    // Solid masonry above the clear arch. Both skins span all the way to
+    // the ceiling overlap; the curved underside joins them inside the opening.
+    k.quad(wall,curve(a,half,rise,0),curve(b,half,rise,0),p(B,top,0),p(A,top,0),1.65,A);
+    k.quad(wall,curve(b,half,rise,-thickness),curve(a,half,rise,-thickness),p(A,top,-thickness),p(B,top,-thickness),1.65,-B);
+    k.quad(trim,curve(a,half,rise,back),curve(b,half,rise,back),curve(b,half,rise,.074),curve(a,half,rise,.074));
+    k.quad(trim,curve(a,half,rise,.074),curve(b,half,rise,.074),
+      curve(b,half+brick,rise+brick,.074),curve(a,half+brick,rise+brick,.074),1.35,A);
+    k.quad(trim,curve(a,half+brick,rise+brick,.074),curve(b,half+brick,rise+brick,.074),
+      curve(b,half+brick,rise+brick,0),curve(a,half+brick,rise+brick,0));
+    k.quad(trim,curve(b,half,rise,back),curve(a,half,rise,back),
+      curve(a,half+brick,rise+brick,back),curve(b,half+brick,rise+brick,back));
+    k.quad(trim,curve(b,half+brick,rise+brick,back),curve(a,half+brick,rise+brick,back),
+      curve(a,half+brick,rise+brick,-thickness),curve(b,half+brick,rise+brick,-thickness));
   }
   for(const side of [-1,1]){
     const a=side*half;
-    k.box('cut',p,a-.18,a+.18,spring-.085,spring+.007,-thickness,.124);
-    k.box('cut',p,a-.19,a+.19,Y,Y+.20,-thickness,.11);
+    k.box(trim,p,a-.175,a+.175,spring-.081,spring+.009,back-.014,.124);
+    k.box(trim,p,a-.19,a+.19,Y,Y+.20,back-.011,.11);
   }
 }
 
@@ -108,7 +112,8 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     }
     box('limewash',outer,outer+.31,Y,high+.09,-Z-.01,Z+.01);
     box('limestone',outer-.065,outer,Y+.02,.19,-Z,Z);
-    box('roof',start,outer+.02,high,high+.10,-Z,Z);
+    // Small physical overlap with the hall's arch backstop, no open seam.
+    box('roof',start-.024,outer+.02,high,high+.10,-Z,Z);
     // Projecting ceiling frames break the long room into bays.
     for(const u of [4.53,8.27,12.39,16.57,20.71,24.89,28.66]){
       box('cut',u-.14,u+.14,high-.167,high-.085,-Z+.095,Z-.095);
@@ -245,7 +250,9 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     ctx.strokeStyle='#bca77c';ctx.lineWidth=2;ctx.strokeRect(7,7,482,81);
     ctx.fillStyle='#f1e4c8';ctx.textAlign='center';ctx.font='43px Georgia';ctx.fillText(library?'LESESAAL':'GALERIE',248,63);
     const nameMap=new T.CanvasTexture(naming);nameMap.colorSpace=T.SRGBColorSpace;
-    information(start-.048,3.23,0,1.37,.24,nameMap);
+    box('darkWood',start-.118,start+.008,3.159,3.433,-.716,.716);
+    box('brass',start-.132,start-.113,3.169,3.423,-.700,.700);
+    information(start-.137,3.296,0,1.37,.24,nameMap);
     k.flush(rootWing.name);
   }
   cylinder.dispose();sphere.dispose();

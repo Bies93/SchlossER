@@ -4,6 +4,8 @@ import {portalFrame} from './palace-facade.js';
 import {interiorArch,addPalaceWings} from './palace-wings.js';
 import {addPalaceLab} from './palace-lab.js';
 import {labCameraMode} from './lab-wing.js';
+import {hallDressing} from './hall-dressing.js';
+import {sharedSet} from './surface-detail.js';
 
 const q=(x,y,z)=>[x,y,z],{floor:y,half,zMin,zMax}=HALL;
 const step=(t)=>Math.max(0,Math.min(1,t));
@@ -26,56 +28,91 @@ export function hallFloor(x,z){
 export function makeHall(T,root,M,world,leaves,poster,seal){
   const limestone=new T.MeshStandardMaterial({color:0xc6beac,roughness:.81});
   const limewash=new T.MeshStandardMaterial({color:0xdacfc0,roughness:.96});
-  const plaster=new T.MeshStandardMaterial({color:0xe1d7c6,roughness:.94,side:T.DoubleSide});
-  const tileA=M.floor.clone(),tileB=M.floor.clone(),tileC=M.floor.clone(),border=M.seam.clone();
-  tileA.color.setHex(0xc9bea9);tileB.color.setHex(0xb8ac99);tileC.color.setHex(0xd6c9b5);
+  const std=(color,roughness,extra)=>new T.MeshStandardMaterial({color,roughness,...extra});
+  const plasterSet=sharedSet(T,'plaster',256);
+  const plaster=std(0xece3d4,.98,{...plasterSet,side:T.DoubleSide,normalScale:new T.Vector2(.18,.18)});
+  const hallLime=std(0xe3d8c6,.99,{...plasterSet,normalScale:new T.Vector2(.33,.33)});
+  const hallPanel=std(0xcfc8b7,.99,{...plasterSet,normalScale:new T.Vector2(.31,.31)});
+  const copy=(mat,color,roughness)=>{
+    const copy=mat.clone();copy.color.setHex(color);copy.roughness=roughness;copy.vertexColors=false;return copy;
+  };
+  const hallStone=copy(M.cut,0xdbd4c8,.88),hallTrim=copy(M.cut,0xe8ded0,.83);
+  const tileA=copy(M.floor,0xd8d2c3,.89),tileB=copy(M.floor,0xc1b8a8,.93),tileC=copy(M.floor,0xccc5bb,.91);
+  const border=copy(M.seam,0x9a9081,.97),lineStone=copy(M.floor,0x736f64,.87),marginStone=copy(M.floor,0xafa597,.91);
+  const woodSet=sharedSet(T,'wood',256);
+  const hallOak=std(0xc8a687,.78,{...woodSet,normalScale:new T.Vector2(.38,.38)});
+  const hallSeat=std(0xe2c4a8,.73,{...woodSet,normalScale:new T.Vector2(.42,.42)});
+  const hallBronze=std(0xa5814e,.49,{metalness:.55});
+  const hallMat=std(0xe1d7ba,.96),hallShade=std(0xf5e9d3,.72,{emissive:0xffd099,emissiveIntensity:.72});
   for(const m of [tileA,tileB,tileC,border,M.floor])m.side=T.DoubleSide;
-  const warm=new T.MeshStandardMaterial({color:0xffe5ba,emissive:0xffbd6f,emissiveIntensity:.48,roughness:.8});
-  const MAT={...M,limestone,limewash,plaster,tileA,tileB,tileC,border,warm};
+  const MAT={...M,limestone,limewash,plaster,tileA,tileB,tileC,border,marginStone,lineStone,
+    hallLime,hallPanel,hallStone,hallTrim,hallOak,hallSeat,hallBronze,hallMat,hallShade};
   const room=new T.Group();room.name='Schloss · interpretierte Eingangshalle';root.add(room);
   const k=architectureKit(T,room,MAT),box=(m,l,r,b,t,a,d)=>k.box(m,q,l,r,b,t,a,d);
+  const dressing=hallDressing(T,k,room,world);
   const spring=3.42,rise=1.37;
-  // Thin stone joints, a broad perimeter band and quietly varied flagstones.
+  // Wall head crosses the wing roof plane, not just the lower springing
+  // line of the hall vault. The enclosure overlaps in section, not as trim.
+  const wallTop=WINGS.ceiling+.14;
   box('border',-half,half,y-.076,y-.013,zMin,zMax);
-  box('floor',-half,-half+.42,y-.031,y,zMin,zMax);
-  box('floor',half-.42,half,y-.031,y,zMin,zMax);
-  for(let z=zMin;z<zMax-.006;z+=.91){
-    const next=Math.min(z+.91,zMax),row=Math.round((z-zMin)/.91),offset=row%2?.45:0;
-    for(let x=-half+.42-offset;x<half-.42;x+=.90){
-      const l=Math.max(-half+.42,x),r=Math.min(half-.42,x+.90);
-      const kind=['tileA','tileA','tileB','tileC'][Math.abs((row*7+Math.floor(x*2))%4)];
-      box(kind,l+.006,r-.006,y-.024,y,z+.006,next-.006);
+  // One floor: inset pale flags along the main route, quieter margins and
+  // narrow stone fillets. The joints expose the stone bedding underneath.
+  const channels=[[-half,-3.52,'marginStone'],[-3.52,-2.04,'tileC'],[-2.04,-1.94,'lineStone'],
+    [-1.94,-1.82,'marginStone'],[-1.82,1.82,null],[1.82,1.94,'marginStone'],
+    [1.94,2.04,'lineStone'],[2.04,3.52,'tileC'],[3.52,half,'marginStone']];
+  for(const [lo,hi,key] of channels){
+    const narrow=hi-lo<.26,length=narrow?1.26:.83;
+    for(let z=zMin,row=0;z<zMax-.012;z+=length,row++){
+      const end=Math.min(z+length,zMax),width=key?hi-lo:.91,offset=key?0:row%2*.455;
+      for(let x=lo-offset,col=0;x<hi-.015;x+=width,col++){
+        const l=Math.max(lo,x),r=Math.min(hi,x+width);
+        const mat=key??['tileA','tileA','tileB','tileC','tileA'][(row*7+col*3+row*col)%5];
+        box(mat,l+.0035,r-.0035,y-.027,y,z+.004,end-.004);
+      }
     }
   }
   for(const side of [-1,1]){
     const wall=(z,a,d)=>[side*(half-d),a,side*z];
     const min=side>0?zMin:-zMax,max=side>0?zMax:-zMin;
     const span=WINGS.portal+.48;
-    k.box('limewash',wall,min,-span,y,spring+.035,-.23,0);
-    k.box('limewash',wall,span,max,y,spring+.035,-.23,0);
-    interiorArch(k,wall,span,spring+.035);
+    k.box('hallLime',wall,min,-span,y,wallTop,-.252,0);
+    k.box('hallLime',wall,span,max,y,wallTop,-.252,0);
+    interiorArch(k,wall,span,wallTop,{thickness:.252,wall:'hallLime',trim:'hallTrim'});
     for(const [a,b] of [[min,-WINGS.portal-.13],[WINGS.portal+.13,max]]){
-      k.box('limestone',wall,a,b,0,1.00,.006,.046);
-      k.box('cut',wall,a,b,.99,1.082,.022,.098);
-      k.box('seam',wall,a,b,y,.21,.04,.106);
+      k.box('hallStone',wall,a,b,y,.985,.006,.044);
+      for(let u=a+.36,i=0;u<b-.28;u+=.93,i++){
+        const l=u+(i%2)*.058;
+        k.box('hallTrim',wall,l,Math.min(l+.85,b-.13),.275,.846,.046,.064);
+        k.box('hallStone',wall,l+.036,Math.min(l+.816,b-.16),.311,.810,.066,.073);
+      }
+      for(const [low,high,depth,finish] of [[y,.183,.091,'marginStone'],[.184,.226,.103,'hallTrim'],
+        [.928,.985,.086,'hallStone'],[.984,1.056,.117,'hallTrim'],[1.056,1.086,.082,'hallStone']])
+        k.box(finish,wall,a,b,low,high,.025,depth);
     }
+    for(const [low,high,depth,finish] of [[3.235,3.272,.085,'hallStone'],[3.272,3.345,.123,'hallTrim'],
+      [3.345,3.407,.162,'hallStone'],[3.407,3.447,.195,'hallTrim']])
+      for(const [a,b] of [[min,-.89],[.89,max]])k.box(finish,wall,a,b,low,high,.008,depth);
     for(const [a,b] of [[zMin,-WINGS.portal],[WINGS.portal,zMax]]){
       const xs=[side*(half-.079),side*(half+.214)].sort((x,z)=>x-z);
       world.box(xs[0],a,xs[1],b);
     }
     for(const z of [-8.24,-3.44,3.44,8.24]){
-      k.box('limestone',wall,z-.218,z+.218,.16,spring,-.006,.147);
-      k.box('cut',wall,z-.295,z+.295,.17,.45,0,.211);
-      k.box('cut',wall,z-.278,z+.278,spring-.179,spring+.065,0,.215);
+      k.box('hallStone',wall,z-.188,z+.188,.16,spring,-.006,.147);
+      for(const dir of [-1,1])k.box('hallTrim',wall,z+dir*.136-.013,z+dir*.136+.013,.376,3.09,.137,.171);
+      k.box('hallStone',wall,z-.26,z+.26,.171,.376,0,.211);
+      k.box('hallTrim',wall,z-.229,z+.229,.373,.437,0,.186);
+      k.box('hallStone',wall,z-.231,z+.231,3.102,3.255,0,.196);
+      k.box('hallTrim',wall,z-.279,z+.279,3.245,3.429,0,.234);
     }
-    // Two shallow timber benches and two blind plaster panels along each side.
-    for(const z of [-5.71,5.71]){
-      const a=z-.92,b=z+.92;
-      k.box('oak',wall,a,b,.427,.509,.12,.52);
-      k.box('inset',wall,a+.09,a+.21,.077,.43,.19,.47);
-      k.box('inset',wall,b-.22,b-.088,.077,.43,.19,.47);
-      world.box(side>0?half-.55:-half,z-.94,side>0?half:-half+.55,z+.94);
+    for(const [i,z] of [-5.71,5.71].entries()){
+      const a=z-1.205,b=z+1.205,lo=1.257,hi=2.941;
+      k.box('hallPanel',wall,a,b,lo,hi,.001,.019);
+      for(const u of [a,b])k.box('hallTrim',wall,u-.021,u+.021,lo-.026,hi+.024,.019,.046);
+      for(const level of [lo,hi])k.box('hallTrim',wall,a-.022,b+.022,level-.024,level+.024,.019,.048);
+      dressing.bench(wall,side,z);
+      dressing.plaque(wall,z,2.057,1.27,.942,(side<0?0:2)+i);
     }
+    for(const z of [-9.49,9.49])dressing.sconce(wall,z);
   }
   // Smooth analytic normals on the barrel; the rest of the room retains
   // the crisp edges of the batched stonework.
@@ -85,7 +122,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal){
     return [Math.cos(a)*half,spring+Math.sin(a)*rise];
   });
   function vault(name,material,spans,lip=0){
-    const pos=[],norm=[],index=[];
+    const pos=[],norm=[],uv=[],index=[];
     for(const [a,b] of spans){
       const at=pos.length/3;
       for(let i=0;i<=slices;i++){
@@ -93,7 +130,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal){
         const pixel=curve[i],nx=-x/(half-lip*.72),ny=-h/rise,inv=1/Math.hypot(nx,ny);
         for(const z of [a,b]){
           pos.push(pixel[0]-x*lip*.72,pixel[1]-lip,z);
-          norm.push(nx*inv,ny*inv,0);
+          norm.push(nx*inv,ny*inv,0);uv.push(angle*1.32,z*.51);
         }
         if(i){const j=at+(i-1)*2;index.push(j,j+1,j+3,j,j+3,j+2)}
       }
@@ -101,19 +138,23 @@ export function makeHall(T,root,M,world,leaves,poster,seal){
     const geo=new T.BufferGeometry();
     geo.setIndex(index);geo.setAttribute('position',new T.Float32BufferAttribute(pos,3));
     geo.setAttribute('normal',new T.Float32BufferAttribute(norm,3));
+    geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
     const mesh=new T.Mesh(geo,material);mesh.name=name;mesh.receiveShadow=true;room.add(mesh);
   }
   vault('Halle · durchgehendes Tonnengewölbe',plaster,[[zMin,zMax]]);
-  vault('Halle · Gewölbegurte',limewash,[-8.24,-3.44,3.44,8.24].map(z=>[z-.13,z+.13]),.081);
+  const ribs=[-8.24,-3.44,3.44,8.24];
+  vault('Halle · Gewölbegurte',hallStone,ribs.map(z=>[z-.137,z+.137]),.074);
+  vault('Halle · Gewölbeprofile',hallTrim,ribs.flatMap(z=>[[z-.140,z-.097],[z+.097,z+.140]]),.106);
   for(const d of Object.values(PORTALS)){
     const p=portalFrame(d),east=d.side<0,start=-1.35,end=east?-.021:.033;
     for(const s of [-1,1]){
       const l=s<0?-half:d.half,r=s<0?-d.half:half;
-      k.box('wall',p,l,r,y,spring+rise,start,-.455);
-      k.box('cut',p,s*d.half-.036,s*d.half+.036,y,Math.min(d.spring,2.91),start,end);
+      k.box('hallStone',p,l,r,y,spring+rise,start,-.455);
+      k.box('hallTrim',p,s*d.half-.036,s*d.half+.036,y,Math.min(d.spring,2.91),start,end);
+      k.box('hallTrim',p,l,r,y+.026,.181,start-.081,start+.01);
     }
     const closeY=d.spring+d.rise;
-    k.box('wall',p,-d.half,d.half,closeY,spring+rise,start,-.30);
+    k.box('hallStone',p,-d.half,d.half,closeY,spring+rise,start,-.30);
     const corners=curve.map(([x,h])=>[d.side*x,h]).sort((a,b)=>a[0]-b[0]);
     // Smooth ceiling termination toward each portal; external masonry still
     // supplies the side recesses and the retained glass fanlight.
@@ -123,26 +164,22 @@ export function makeHall(T,root,M,world,leaves,poster,seal){
       if(a[1]>base&&b[1]>base){
         const points=[[a[0],base,z],[b[0],base,z],[b[0],b[1],z],[a[0],a[1],z]];
         if(d.side>0)points.reverse();
-        k.quad('wall',...points);
+        k.quad('hallLime',...points);
       }
     }
   }
   const lamps=[],bounces=[];
-  function lantern(z){
-    box('metal',-.015,.015,3.95,4.77,z-.015,z+.015);
-    box('bronze',-.18,.18,3.894,3.947,z-.192,z+.192);
-    box('bronze',-.141,.141,3.500,3.551,z-.141,z+.141);
-    box('warm',-.108,.108,3.548,3.89,z-.111,z+.111);
-    for(const x of [-.133,.133])for(const s of [-1,1])
-      box('metal',x-.012,x+.012,3.53,3.92,z+s*.134-.011,z+s*.134+.011);
-    const light=new T.PointLight(0xffd4aa,10,9,2);
-    light.position.set(0,3.53,z);room.add(light);lamps.push(light);
+  for(const [i,z] of [-6.05,0,6.05].entries()){
+    const bottom=i===1?3.37:3.59;
+    dressing.lantern(0,z,spring+rise-.005,bottom,i===1?.244:.210);
+    const light=new T.PointLight(i===1?0xffdfbd:0xffdab1,0,10.6,2);
+    light.position.set(0,bottom-.08,z);room.add(light);lamps.push(light);
   }
-  lantern(-6.03);lantern(0);lantern(6.17);
   for(const d of Object.values(PORTALS)){
-    const light=new T.PointLight(0xffecd0,0,7.3,2);
-    light.position.set(0,2.41,d.z-d.side*1.85);room.add(light);bounces.push(light);
+    const light=new T.PointLight(0xffdeb3,0,7.8,2);
+    light.position.set(0,2.67,d.z-d.side*2.64);room.add(light);bounces.push(light);
   }
+  dressing.finish();
   k.flush('Halle · Stein, Putz und Leuchten');
   const wings=addPalaceWings(T,root,world,MAT,poster,seal);
   const lab=addPalaceLab(T,root,world,MAT);
@@ -186,15 +223,18 @@ export function makeHall(T,root,M,world,leaves,poster,seal){
       for(const l of d.leaves)l.mesh.rotation.y=l.closed-l.sign*a;
       changed=true;shadow||=d.progress===d.target;
     }
-    const isNear=Math.abs(p.x)<15&&Math.abs(p.z)<25;
+    const isNear=p.y>-.9&&Math.abs(p.x)<18.5&&Math.abs(p.z)<25;
     if(lit!==isNear){lit=isNear;changed=true}
-    const outdoor=preset==='night'?.45:7.8;
+    const night=preset==='night';
     if(lit){
-      for(const [i,d] of doors.entries())bounces[i].intensity=outdoor*mix(.05,1,d.progress);
-      for(const lamp of lamps)lamp.intensity=preset==='night'?16.5:11.4;
+      for(const [i,d] of doors.entries()){
+        const light=bounces[i];light.color.setHex(night?0xffdeb3:0xffe1bc);
+        light.intensity=night?5.9+.48*d.progress:mix(4.7,12.2,d.progress);
+      }
+      for(const [i,lamp] of lamps.entries())lamp.intensity=i===1?(night?25.5:20.5):(night?22:17.0);
     }else for(const light of [...lamps,...bounces])light.intensity=0;
     return {changed,shadow};
   }
-  function setPreset(id){preset=id;wings.setPreset(id);warm.emissiveIntensity=id==='night'?.76:.45}
+  function setPreset(id){preset=id;wings.setPreset(id);hallShade.emissiveIntensity=id==='night'?.86:.58}
   return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible};
 }
