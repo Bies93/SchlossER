@@ -1,4 +1,5 @@
 import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
+import {makeEgoBody} from './ego-body.js';
 
 // Gameplay pulses affect only fictional creatures and authored light
 // markers. The architecture and other world meshes are never affected.
@@ -8,8 +9,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     rim=new T.DirectionalLight(0xb5c8dc,.62);
   key.position.set(-1,1.4,.45);rim.position.set(1.2,.65,-1);stage.add(h,key,rim);
   const hands=new T.Group(),held=new T.Group();hands.add(held);stage.add(hands);
-  const rig=egoAssets(T),{cap,shell}=rig.geometry,{frame,sleeve,cuff,pant,knee}=rig.materials;
-  const body=new T.Group();body.name='Ego-Körper · Bekleidung und Schritte';player.body.add(body);
+  const rig=egoAssets(T),{cap,shell}=rig.geometry,{frame,sleeve,cuff}=rig.materials;
+  const body=makeEgoBody(T,player.body);
   const V=(x,y,z)=>new T.Vector3(x,y,z),axis=V(0,1,0),linkDir=V(0,0,0);
   function shape(parent,geo,material,x,y,z,sx,sy,sz){
     const o=new T.Mesh(geo,material);o.position.set(x,y,z);o.scale.set(sx,sy,sz);parent.add(o);return o;
@@ -24,18 +25,6 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const wrap=shape(hands,shell,cuff,0,0,0,.082,.072,.073);
     return {side,forearm,wrap,
       wrist:V(0,0,0),elbow:V(0,0,0),end:V(0,0,0)};
-  });
-  // Keep the upper body behind the eye instead of obscuring both boots
-  // with a nearby solid waist panel when the player looks down.
-  shape(body,cap,pant,0,.97,.277,.329,.205,.212);
-  shape(body,shell,cuff,0,1.031,.224,.295,.058,.081);
-  const legs=[-1,1].map((side,i)=>{
-    const boot=rig.boots[i];body.add(boot);
-    return {side,boot,
-      thigh:shape(body,cap,pant,0,0,0,.180,.22,.170),
-      shin:shape(body,cap,pant,0,0,0,.138,.21,.134),
-      knee:shape(body,shell,knee,0,.48,0,.128,.155,.086),
-      hip:V(0,0,0),pivot:V(0,0,0),ankle:V(0,0,0)};
   });
   const modules=rig.devices;held.add(...modules);
   const {poses,wrists}=rig.hands;held.add(...poses);
@@ -256,16 +245,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       link(a.forearm,a.elbow,a.end,.139,.128);a.wrap.position.copy(a.wrist).lerp(a.elbow,.077);
       a.wrap.quaternion.copy(a.forearm.quaternion);
     }
-    for(const leg of legs){
-      const q=step+(leg.side<0?0:Math.PI),stride=Math.cos(q)*moving,lift=Math.max(0,Math.sin(q))*moving*(.103+running*.069),x=leg.side*.115;
-      leg.hip.set(x,.921,.167);leg.pivot.set(x+strafe*.036,.485+lift*.54,-.124-stride*.121);
-      leg.ankle.set(x+strafe*.070,.117+lift,-.106-stride*(.189+running*.12));
-      link(leg.thigh,leg.hip,leg.pivot,.165,.152);link(leg.shin,leg.pivot,leg.ankle,.132,.129);
-      leg.knee.position.copy(leg.pivot).addScaledVector(axis,.012);leg.knee.position.z-=.052;
-      leg.knee.rotation.x=.09+lift*.53;
-      leg.boot.position.copy(leg.ankle).y-=.112;
-      leg.boot.rotation.set(-Math.max(0,Math.sin(q))*moving*.195+stride*.081,leg.side*-.083+strafe*.11,0);
-    }
+    const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x});
     let effect=recent>now, burst=1-(now-pressed)/flashProfile.flash;
     if(flash.visible){
       effect=true;flash.visible=burst>0;
@@ -315,7 +295,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       e.target.timer=now+440;e.target.face.material.emissive.setHex(e.color);recent=now+440;return false;
     });
     for(const a of anchors)a.face.material.emissiveIntensity=.10+Math.max(0,(a.timer-now)/420)*2.5;
-    return delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||oldKick>.0001||effect||transition;
+    return changingBody||delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||oldKick>.0001||effect||transition;
   }
   function draw(renderer){
     if(!isActive()||selected<0||!equipmentAllowed())return;
@@ -345,5 +325,5 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     stop();
   }
   update(performance.now());
-  return {update,draw,preset,stop,setCombat};
+  return {update,draw,preset,stop,setCombat,bodyLayer:body.layer};
 }

@@ -1,6 +1,6 @@
 import {build} from 'esbuild';
 import {mkdir,writeFile} from 'node:fs/promises';
-const dir=new URL('../dist/krone-politur/',import.meta.url);await mkdir(dir,{recursive:true});
+const dir=new URL('../dist/krone-egoperspektive/',import.meta.url);await mkdir(dir,{recursive:true});
 const code=await build({stdin:{contents:`
 import * as T from 'three';
 import {CHAPTER_BENCH,CHAPTER_BAY_PATH,CHAPTER_CUT,CHAPTER_LAYER,CHAPTER_DROP} from './src/chapter-layout.js';
@@ -9,6 +9,7 @@ import {gardenMaterials} from './src/surface-detail.js';
 import {addBenches} from './src/garden-assets.js';
 import {addChapter} from './src/chapter.js';
 import {addBackdrop} from './src/backdrop.js';
+import {makeEgoBody} from './src/ego-body.js';
 import {collisionWorld} from './src/collision.js';
 import {BOUNDS,PLAYER,PARK_FLOOR} from './src/world-layout.js';
 try{
@@ -49,14 +50,18 @@ for(const [i,end] of [...route,...route.slice(0,-1).reverse()].entries()){
 }
 if(!target.usable(start)||chapter.floorAt(21,-36,F)!==F)throw Error('Stockwerk nicht konsistent');
 const c=new T.PerspectiveCamera(64,540/400,.065,140);
-for(const [x,y,z,X,Y,Z,closed] of [[18.23,F,-35.98,18.96,F+1.59,-38.15],[13.08,F,-38.68,10.20,F+1.39,-38.98],[23.51,F,-46.78,21.64,F+1.69,-54.91],[20.87,F,-52.13,25.97,F+1.03,-51.20],[23.34,F,-43.57,25.22,F+1.36,-45.54],[26.39,F,-34.19,18.88,F+1.60,-37.68]]){
- if(closed){target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);}
- const at=new T.Vector3(x,y,z);chapter.update(0,at);c.position.set(x,y+1.59,z);c.lookAt(X,Y,Z);
+const avatar=new T.Group(),outfit=makeEgoBody(T,avatar);s.add(avatar);
+for(const [x,y,z,X,Y,Z,pose] of [[21.65,F,-53.29,21.65,F+1.91,-55.81],[28.11,F,-34.18,27.96,F+1.54,-36.46],[28.06,F,-34.18,27.94,F+1.53,-32.59],[36.81,grade,-35.5,36.81,grade,-35.61,0],[27.83,F,-34.12,27.83,F,-34.24,0],[21.7,F,-50.9,21.7,F,-51.23,1]]){
+ const at=new T.Vector3(x,y,z);chapter.update(0,at);c.position.set(x,y+PLAYER.eye,z);c.lookAt(X,Y,Z);
+ avatar.visible=pose!==undefined;avatar.position.copy(at);avatar.rotation.y=Math.atan2(x-X,z-Z);
+ if(avatar.visible)outfit.update({step:.72,moving:pose,running:0,strafe:0,grounded:true,landing:0,pitch:-1.38});
+ outfit.layer(y===grade?0:CHAPTER_LAYER);
  if(y===grade){c.layers.set(0);r.render(s,c);}
  c.layers.set(CHAPTER_LAYER);r.autoClear=y!==grade;r.render(s,c);r.autoClear=true;
  const p=document.createElement('canvas');p.width=540;p.height=400;p.getContext('2d').drawImage(r.domElement,0,0);document.body.append(p);
- if(closed){target.target=1;for(let j=0;j<50;j++)chapter.update(.03,start);}
 }
+outfit.update({step:0,moving:0,running:0,strafe:0,grounded:true,landing:0,pitch:0});
+if(avatar.children[0].visible)throw Error('Körper bei horizontalem Blick sichtbar');
 target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);
 if(chapter.floorAt(A-.20,-34,grade)!==null||Math.abs(bench.position.z-CHAPTER_BENCH[1])>.001)throw Error('Luke schließt nicht sauber');
 document.title='Bank, Treppe und fünf Räume geprüft';

@@ -19,8 +19,12 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
   };
   const line=(m,pts,r)=>{for(let j=1;j<pts.length;j++)rod(m,...pts[j-1],...pts[j],r);};
   const craft=chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ring},cloth);
-  function frame(key,x,y,z,w,h,yaw=0){
+  function frame(key,x,y,z,w,h,yaw=0,recessed=false){
     const X=(s,d=0)=>x+Math.cos(yaw)*s+Math.sin(yaw)*d,Z=(s,d=0)=>z-Math.sin(yaw)*s+Math.cos(yaw)*d;
+    if(recessed){
+      const mount=(s,y,d)=>[X(s,d),F+y,Z(s,d)];
+      k.box('walnut',mount,-w/2-.026,w/2+.026,y-h/2-.020,y+h/2+.021,-.088,-.012);
+    }
     for(const s of [-1,1]){
       rod('darkWood',X(s*(w/2+.025)),y-h/2-.03,Z(s*(w/2+.025)),X(s*(w/2+.025)),y+h/2+.03,Z(s*(w/2+.025)),.032);
       rod('darkWood',X(-w/2-.04),y+s*(h/2+.017),Z(-w/2-.04),X(w/2+.04),y+s*(h/2+.017),Z(w/2+.04),.030);
@@ -161,15 +165,17 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
     table(27.67,-36.02,1.04,.68,.82);
     props.folio(27.86,F+.844,-35.94,.24,.19,.11,1,{loose:true,thickness:.012});
     candle(27.37,.84,-36.11,.12);brassToken(27.64,.846,-35.89);
-    frame('lodge',27.89,1.63,-36.45,1.30,.74);
-    frame('banned',28.26,1.55,-32.60,.91,.65,pi);
-    lamp(27.54,1.80,-36.38);lamp(27.20,1.80,-32.63,-1);
+    // A readable sign at eye level, with its light on the clear flank.
+    frame('lodge',28.05,1.591,-36.445,1.16,.64,0,true);
+    frame('banned',28.17,1.64,-32.596,1.06,.63,pi,true);
+    lamp(27.15,1.72,-36.469);lamp(27.15,1.72,-32.575,-1);
     wainscot(27.05,28.92,-36.46);
     carpet(27.90,-34.05,1.89,1.57,'blue');
-    for(const x of [27.41,27.84,28.27]){
-      rod('brass',x,1.68,-32.57,x,1.63,-32.75,.016);
-      bead('wood',x,1.70,-32.585,.041,.062,.028);
-      for(let j=0;j<3;j++)disk('iron',ring,x+.019*(j-1),1.565-j*.017,-32.77,.031,.029);
+    box('walnut',28.16,1.016,-32.596,.75,.154,.104);
+    for(const x of [27.92,28.16,28.40]){
+      rod('brass',x,1.093,-32.64,x,1.063,-32.747,.012);
+      bead('wood',x,1.093,-32.644,.025,.044,.018);
+      for(let j=0;j<3;j++)disk('iron',ring,x+.014*(j-1),1.012-j*.016,-32.743,.028,.023);
     }
   }else if(id==='salle'){
     carpet(21.07,-35.48,8.52,2.57,'velvetBlue');
@@ -249,8 +255,10 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
       }
       frame('seats',wallx,1.81,-48.30,1.13,.55,-s*pi/2);
     }
-    frame('duel',21.65,2.36,-55.67,2.46,1.22);
-    banner(18.02,2.04,-55.69,.99,1.51);banner(25.35,2.04,-55.69,.99,1.51);
+    // End wall ends at the vault's springing line; even the metal finials
+    // stay below the projecting stone cornice (2.444 m).
+    frame('duel',21.65,1.918,-55.773,2.38,.788,0,true);
+    banner(18.02,1.775,-55.751,.99,1.172);banner(25.35,1.775,-55.751,.99,1.172);
     for(const [s,x] of [[-1,19.63],[1,23.67]]){
       box('darkWood',x,.09,-55.72,.254,1.96,.167);
       box('wood',x,.91,-55.616,.201,.973,.064);

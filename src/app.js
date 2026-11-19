@@ -267,6 +267,10 @@ async function start(){
    const wcMode=wcCameraMode(p),chapterMode=chapter.mode(p),surface=mode!=='cellar'&&wcMode!=='inside'&&chapterMode!=='inside',cellar=hall.labVisible();
    wc.update(0,p);
    chapter.update(0,p);
+   // The body belongs to exactly one lit layer, including at open hatches.
+   viewmodel.bodyLayer(chapterMode==='inside'||chapterMode==='threshold'&&p.y<-.38?CHAPTER_LAYER:
+     wcMode==='inside'||wcMode!=='surface'&&p.y<-.38?WC_LAYER:
+     mode==='cellar'||mode==='threshold'&&p.y<-.38?LAB_LAYER:0);
    if(surface){
      c.layers.set(0);
      lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);
