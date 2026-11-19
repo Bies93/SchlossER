@@ -10,6 +10,11 @@ export const LAB_LAYER=3;
 // Above the highest possible jump under the cellar ceiling, below the palace floor.
 export const labLower=y=>y<-1.72;
 export const LODGE_RUN=(SOUTH_HATCH.end-SOUTH_HATCH.x0)/LAB.count;
+export const CLUB_STAIR={top:SOUTH_HATCH.end,foot:24.48,z0:-5.40,z1:-3.53,count:24,rise:.18};
+export const CLUB_FLOOR=LAB.floor-CLUB_STAIR.count*CLUB_STAIR.rise,CLUB_CEILING=LAB.floor-.30;
+export const clubStep= (CLUB_STAIR.top-CLUB_STAIR.foot)/CLUB_STAIR.count;
+export const clubStairY=x=>LAB.floor-CLUB_STAIR.rise*Math.min(CLUB_STAIR.count,Math.max(0,(CLUB_STAIR.top-x)/clubStep+.40));
+export const clubLevel=y=>y<LAB.floor-1.55;
 export const nearLodgeHatch=p=>p.x>SOUTH_HATCH.x0-3.95&&p.x<SOUTH_HATCH.x1+.27&&p.z>SOUTH_HATCH.z0-.43&&p.z<2.25;
 // Extents are interior dimensions. Shared edges and their clear spans define
 // movement, wall cuts and the render visibility graph in the same metre grid.
@@ -36,7 +41,9 @@ export const LAB_CELLS={
   ritesPass:[-11.15,-5.87,31.80,42.00],
   tasting:[-9.74,-1.57,22.90,31.80],
   southStair:[SOUTH_HATCH.x0,SOUTH_HATCH.end,SOUTH_HATCH.z0,SOUTH_HATCH.z1],
-  southVest:[SOUTH_HATCH.end,34.92,-8.72,-4.90],
+  southVest:[SOUTH_HATCH.end,34.92,-8.72,-3.40],
+  clubStair:[CLUB_STAIR.foot,CLUB_STAIR.top,CLUB_STAIR.z0,CLUB_STAIR.z1],
+  hopClub:[8.65,CLUB_STAIR.foot,-17.90,-3.36],
   southSpine:[29.44,34.92,-17.24,-8.72],
   southBarracksA:[18.10,29.44,-13.14,-8.82],
   southBarracksB:[19.65,29.44,-17.24,-13.14],
@@ -69,6 +76,8 @@ export const LAB_LINKS=[
   ['tasting','ritesPass','z',31.80,-9.01,-6.87],
   ['beerLab','tasting','x',-9.74,24.46,26.63],
   ['southStair','southVest','x',SOUTH_HATCH.end,SOUTH_HATCH.z0,SOUTH_HATCH.z1],
+  ['southVest','clubStair','x',CLUB_STAIR.top,CLUB_STAIR.z0,CLUB_STAIR.z1],
+  ['hopClub','clubStair','x',CLUB_STAIR.foot,CLUB_STAIR.z0,CLUB_STAIR.z1],
   ['southVest','southSpine','z',-8.72,30.90,33.19],
   ['southSpine','southBarracksA','x',29.44,-11.99,-10.02],
   ['southSpine','southBarracksB','x',29.44,-16.24,-14.27],
@@ -78,8 +87,9 @@ export const LAB_LINKS=[
 ];
 const cellEntries=Object.entries(LAB_CELLS);
 function contains([x0,x1,z0,z1],x,z,pad){return x>=x0-pad&&x<=x1+pad&&z>=z0-pad&&z<=z1+pad}
-export function labCellAt(x,z,pad=0){
-  for(const [key,bounds] of cellEntries)if(contains(bounds,x,z,pad))return key;
+export function labCellAt(x,z,pad=0,y=0){
+  if(clubLevel(y)&&contains(LAB_CELLS.hopClub,x,z,pad))return 'hopClub';
+  for(const [key,bounds] of cellEntries)if(key!=='hopClub'&&(key!=='clubStair'||labLower(y))&&contains(bounds,x,z,pad))return key;
   return null;
 }
 export function labEdges(id){
@@ -92,10 +102,18 @@ export function labEdges(id){
     return {axis,edge,min,max,sign,openings,solids};
   });
 }
+export function clubMix(p){
+  if(!labLower(p.y))return 0;
+  if(clubLevel(p.y)&&contains(LAB_CELLS.hopClub,p.x,p.z,.005))return 1;
+  if(contains(LAB_CELLS.clubStair,p.x,p.z,.01))return .04+.74*Math.min(1,Math.max(0,(CLUB_STAIR.top-p.x)/(CLUB_STAIR.top-CLUB_STAIR.foot)))**2;
+  return 0;
+}
 export function labFloorAt(x,z,referenceY=0,lodgeOpen=false){
   if(x>=left&&x<=right&&z>=back&&z<=front)
     return LAB.top-LAB.riser*Math.max(0,Math.min(LAB.count,(x-left)/LAB.run+.5));
-  const room=labCellAt(x,z,.002);
+  const room=labCellAt(x,z,.002,referenceY);
+  if(room==='clubStair')return clubStairY(x);
+  if(room==='hopClub')return CLUB_FLOOR;
   if(room==='southStair'){
     if(labLower(referenceY)||(lodgeOpen&&x<=SOUTH_HATCH.x1))return LAB.top-LAB.riser*
       Math.min(LAB.count,Math.max(0,(x-SOUTH_HATCH.x0)/LODGE_RUN+.38));
@@ -105,7 +123,9 @@ export function labFloorAt(x,z,referenceY=0,lodgeOpen=false){
   return null;
 }
 export function labCeilingAt(x,z,referenceY=0){
-  const cell=labLower(referenceY)&&labCellAt(x,z,.012);
+  const cell=labLower(referenceY)&&labCellAt(x,z,.012,referenceY);
+  if(cell==='hopClub')return CLUB_CEILING;
+  if(cell==='clubStair')return clubStairY(x)+2.85;
   if((cell==='southStair'||cell==='southVest')&&Math.abs(x-SOUTH_HATCH.end)<.15&&
     z>SOUTH_HATCH.z0&&z<SOUTH_HATCH.z1)return LAB.floor+2.265;
   if(cell==='southStair')return x>=SOUTH_HATCH.x1?LAB.top-.155:Infinity;

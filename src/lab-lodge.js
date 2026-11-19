@@ -170,12 +170,13 @@ export function lodgeDressing(T,kit,id,mount){
   if(id==='southVest'){
     board('entry',34.794,2.014,-6.58,2.18,.81,-pi/2);
     board('plaque',32.04,2.699,z0+.170,1.66,.34);
-    cupboard(34.31,-5.33,.84,.61,1.27,pi,3);
-    frame('slateBlue',34.26,1.358,-5.36,.468,.132,.366,.12);
-    paper('shift',34.23,1.438,-5.39,.419,.29,.43);
-    frame('darkWood',32.19,.443,-5.28,1.53,.079,.469);
-    for(const x of [31.57,32.81])frame('iron',x,.235,-5.28,.066,.443,.391);
-    footing(32.19,-5.28,1.54,.46);
+    cupboard(34.31,-3.84,.84,.61,1.27,pi,3);
+    frame('slateBlue',34.26,1.358,-3.87,.468,.132,.366,.12);
+    paper('shift',34.23,1.438,-3.90,.419,.29,.43);
+    frame('darkWood',32.19,.443,-3.73,1.53,.079,.469);
+    for(const x of [31.57,32.81])frame('iron',x,.235,-3.73,.066,.443,.391);
+    footing(32.19,-3.73,1.54,.46);
+    dress.plaque('II. UNTERGESCHOSS',['HOPFENAMT · NACHTBETRIEB','↓  TANZ & AUSSCHANK'],30.99,2.74,-4.47,1.62,.47,pi/2,'blue');
     kit.grille(31.37,-6.47,.52,1.17);
   }
   if(id==='southSpine'){

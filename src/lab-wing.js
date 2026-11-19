@@ -10,10 +10,12 @@ import {LAB,LAB_CUT,LAB_CELLS,LAB_LINKS,LAB_LAYER,labLower,labCellAt,labEdges,ne
 import {SOUTH_HATCH} from './palace-openings.js';
 import {LODGE_ROOMS,LODGE_LIGHTS,lodgeDressing,lodgeStair} from './lab-lodge.js';
 import {lodgeArt} from './lab-lodge-art.js';
+import {CLUB_FLOOR,CLUB_CEILING,clubLevel} from './lab-layout.js';
+import {hopStair,hopClub,CLUB_LIGHTS} from './lab-hop-club.js';
 
-const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y);
-const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS,...LODGE_ROOMS};
-const cellNames={southStair:'Wohntrakt · Verdeckter Abstieg',chambers:'Klonkammern',lock:'Druckschleuse',spine:'Verteiler',archive:'Archiv',plant:'Maschinenraum',
+const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y)&&!clubLevel(p.y);
+const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS,...LODGE_ROOMS,hopClub:{name:'Hopfenamt · Nachtbetrieb',palette:['riteWall','darkWood'],tiles:['vaultWall','fineStone'],tile:.78}};
+const cellNames={clubStair:'Treppe zum Hopfenamt',southStair:'Wohntrakt · Verdeckter Abstieg',chambers:'Klonkammern',lock:'Druckschleuse',spine:'Verteiler',archive:'Archiv',plant:'Maschinenraum',
   return:'Wartungsgang',observation:'Beobachtung',vault:'Saal der Rückgabe',
   ...Object.fromEntries(Object.entries(treatmentRooms).map(([id,{name}])=>[id,name]))};
 const palettes={lock:['iron','green'],spine:['concrete','green'],archive:['archiveWall','rust'],
@@ -22,7 +24,7 @@ const palettes={lock:['iron','green'],spine:['concrete','green'],archive:['archi
 const ports=Object.fromEntries(Object.keys(LAB_CELLS).map(id=>[id,LAB_LINKS.filter(([a,b])=>a===id||b===id)]));
 const own=new Set(['lock:chambers','lock:spine','archive:spine','plant:spine','plant:return','observation:return','observation:chambers','vault:plant',
   'vault:maltLock','maltLock:brewery','brewery:beerLab','brewery:ward','ward:cells','cells:infirmary',
-  'southVest:southStair',
+  'southVest:southStair','southVest:clubStair','hopClub:clubStair',
   ...LAB_LINKS.filter(([a,b])=>RITE_ROOMS[a]||RITE_ROOMS[b]||LODGE_ROOMS[a]&&LODGE_ROOMS[b]).map(([a,b])=>a+':'+b)]);
 
 // Find at most two rooms beyond the current room; the second doorway must
@@ -51,7 +53,7 @@ export function labVisibility(id,x,z){
 }
 
 export function labCameraMode(p){
-  const cell=labCellAt(p.x,p.z);
+  const cell=labCellAt(p.x,p.z,0,p.y);
   if(!cell||p.y>-.24)return 'surface';
   if(cell==='southStair')return p.x<SOUTH_HATCH.x1+.49?'threshold':'cellar';
   if(cell==='stairs'||cell==='chambers'&&p.x<LAB_CUT.right+2.45&&p.z>LAB_CUT.back-.65&&p.z<LAB_CUT.front+.65)return 'threshold';
@@ -59,6 +61,7 @@ export function labCameraMode(p){
 }
 
 export function cellarWalls(k,world,id){
+  const deep=id==='hopClub',floor=deep?CLUB_FLOOR:LAB.floor,ceiling=deep?CLUB_CEILING:LAB.ceiling,live=deep?p=>clubLevel(p.y):below;
   const [wall,skirt]=palettes[id]??['plaster','green'];
   for(const {axis,edge,sign,solids,openings} of labEdges(id)){
     const map=axis==='x'
@@ -75,7 +78,7 @@ export function cellarWalls(k,world,id){
     };
     const hit=(a,b)=>{
       const e=Math.min(edge,edge+sign*.17),f=Math.max(edge,edge+sign*.17);
-      if(axis==='x')world.box(e,a,f,b,below);else world.box(a,e,b,f,below);
+      if(axis==='x')world.box(e,a,f,b,live);else world.box(a,e,b,f,live);
     };
     for(const [a,b] of solids){
       // Each room provides just its inward-facing skin. At a shared boundary
@@ -110,11 +113,12 @@ export function cellarWalls(k,world,id){
 // Adjacent cells don't share duplicated floor faces. Directional wear,
 // pipes and furniture are batched by material within each room.
 function cellarKit(T,root,world,id,materials,graphics){
+  const deep=id==='hopClub',floor=deep?CLUB_FLOOR:LAB.floor,ceiling=deep?CLUB_CEILING:LAB.ceiling;
   const k=architectureKit(T,root,materials),[x0,x1,z0,z1]=LAB_CELLS[id];
   const dress=dressLab(T,k,root,graphics);
   const props=stationery(T,k,root,{cloth:['leather','bookB','bookC','green']});
   const box=(m,a,b,y,Y,c,d)=>k.box(m,matrices,a,b,y,Y,c,d);
-  const hit=(a,b,c,d)=>world.box(a,c,b,d,below);
+  const hit=(a,b,c,d)=>world.box(a,c,b,d,deep?p=>clubLevel(p.y):below);
   const drum=new T.CylinderGeometry(1,1,1,20),wheel=new T.TorusGeometry(1,.085,7,20),matrix=new T.Matrix4();
   const pos=new T.Vector3(),quat=new T.Quaternion(),scale=new T.Vector3(),up=new T.Vector3(0,1,0);
   function obj(m,g,x,y,z,sx,sy,sz,rx=0,ry=0,rz=0){
@@ -147,8 +151,10 @@ function cellarKit(T,root,world,id,materials,graphics){
 }
 
 function fitOut(T,root,world,id,materials,graphics,doors,rites,lodge){
+  if(id==='clubStair'){hopStair(T,root,world,materials);return;}
   if(id==='southStair'){lodgeStair(T,root,world,materials,lodge);return;}
   const kit=cellarKit(T,root,world,id,materials,graphics);
+  if(id==='hopClub'){hopClub(T,kit);kit.flush();return;}
   if(id==='infirmary'){addInfirmary(T,kit);kit.flush();return;}
   if(MALT_ROOMS[id]){fitMaltWing(T,kit,id,doors);kit.flush();return;}
   if(RITE_ROOMS[id]){fitRiteWing(T,kit,id,rites);kit.flush();return;}
@@ -424,7 +430,7 @@ const emitters={
   archive:[[-12.40,13.24,0xffe1b5,30,8.0]],plant:[[-22.89,10.03,0xcbded6,20,8.3],[-24.15,12.03,0xed805e,13,5.2]],
   return:[[-23.73,2.28,0xd17d63,11.4,6.7],[-23.75,5.36,0xe6dfbc,14,5.7]],
   observation:[[-23.51,-1.91,0xafe5da,21,6.9]],vault:[[-22.30,17.38,0xf3e0c2,26,7.4],[-23.53,14.78,0xdf6650,11,5.9]],
-  ...MALT_LIGHTS,infirmary:INFIRMARY_LIGHTS,...RITE_LIGHTS,...LODGE_LIGHTS
+  ...MALT_LIGHTS,infirmary:INFIRMARY_LIGHTS,...RITE_LIGHTS,...LODGE_LIGHTS,...CLUB_LIGHTS
 };
 const unstable=new Set(['return','plant','lock','ward','cells']);
 
@@ -482,12 +488,13 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
   }
   function update(p,opened,dt=0,lodgeShown=false){
     const seesHatch=lodgeShown&&!labLower(p.y)&&nearLodgeHatch(p);
-    const id=seesHatch?'southStair':labCellAt(p.x,p.z,.015)||(opened&&p.x>=LAB_CUT.left-1.4&&p.x<LAB_CUT.left&&p.z>=LAB_CUT.back&&p.z<=LAB_CUT.front?'stairs':null);
+    const id=seesHatch?'southStair':labCellAt(p.x,p.z,.015,p.y)||(opened&&p.x>=LAB_CUT.left-1.4&&p.x<LAB_CUT.left&&p.z>=LAB_CUT.back&&p.z<=LAB_CUT.front?'stairs':null);
     const active=!!id&&(labCameraMode(p)!=='surface'||opened&&id==='stairs'||seesHatch);
     let changed=deck.visible!==active;deck.visible=active;
     if(!active){last='';phase=0;dim=1;return changed;}
     for(const door of doors)changed=door.update(dt,p)||changed;
     phase=(phase+dt)%7.2;
+    if(id==='hopClub'&&dt>0){rooms.get(id).userData.turn?.(dt);changed=true;}
     // One slow brownout on a nearby fixture; no strobe, particles or new lights.
     const strength=unstable.has(id)&&phase>5.55&&phase<6.16
       ?1-.16*Math.sin((phase-5.55)/.61*Math.PI)**2:1;
@@ -496,12 +503,18 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
       dim=strength;
       return changed;
     }
-    hemi.intensity=id==='chapel'||id==='southShrine'?.40:id==='infirmary'||id==='southPrivate'?.54:.86;
+    hemi.intensity=id==='hopClub'?.47:id==='chapel'||id==='southShrine'?.40:id==='infirmary'||id==='southPrivate'?.54:.86;
     last=id;pathX=p.x;pathZ=p.z;
     const render=labVisibility(id,p.x,p.z);
     for(const [cell,group] of rooms){const see=render.has(cell);if(group.visible!==see)changed=true;group.visible=see}
     const choices=[...render].flatMap(cell=>(emitters[cell]??[]).map(src=>[src,Math.hypot(p.x-src[0],p.z-src[1])+(cell===id?-.9:2),cell]));
     choices.sort((a,b)=>a[1]-b[1]);
+    // The distant bar and PA remain legible from the stair. Reserve two of
+    // the four existing slots; the others follow the visitor as usual.
+    if(id==='hopClub')for(const [slot,x] of [[0,11.7],[1,18.7]]){
+      const i=choices.findIndex(([src,,cell])=>cell===id&&src[0]===x);
+      if(i>=0)choices.splice(slot,0,choices.splice(i,1)[0]);
+    }
     affected=unstable.has(id)?choices.slice(0,lights.length).findIndex(c=>c[2]===id):-1;
     dim=strength;
     for(let i=0;i<lights.length;i++){

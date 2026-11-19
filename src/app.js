@@ -19,7 +19,7 @@ import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
 import {addParkStair,wcHeightAt,wcCeilingAt,wcCameraMode,isWcInterior,WC_LAYER} from './park-stair.js';
-import {LAB_LAYER,labFloorAt,labCeilingAt} from './lab-layout.js';
+import {LAB_LAYER,labFloorAt,labCeilingAt,clubMix} from './lab-layout.js';
 import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {makeMoosfunk} from './moosfunk-quest.js';
@@ -67,7 +67,7 @@ async function start(){
  }
  const fountain=makeFountain(T,s,sculptures);
  // Exterior gate posts and tree trunks never extend into the new rooms.
- const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p));
+ const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p));
  addFixedColliders(world);
  const moosfunk=makeMoosfunk();
  const hall=makeHall(T,model,stonework,world,leaves,poster,seal,moosfunk);
@@ -281,7 +281,7 @@ async function start(){
    frame=0;
    if(active()){
      if(input.tick(time))dirty=true;
-     audio.ambience(player.body.position);
+     audio.ambience(player.body.position);audio.club(clubMix(player.body.position));
      chapelCue(time,player.body.position);
      orbCue(time,player.body.position);
      if(combat()&&desktopRound()){
