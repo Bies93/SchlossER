@@ -263,6 +263,13 @@ export function makeAudio(listener,musicUrl,choirUrl) {
     const a=listener(),x=at.x-a.x,z=at.z-a.z;
     return Math.max(-.67,Math.min(.67,(x*a.rightX+z*a.rightZ)/Math.max(Math.hypot(x,z),.8)));
   }
+  function hatch(open){
+    if(!live())return;
+    const t=ctx.currentTime+.009,delay=open?.02:.24;
+    tone(sfx,t,open?109:83,.16,.059,{type:'triangle',end:55,wet:.14});
+    grit(sfx,t+.048,.28,.056,220,1210,{wet:.12,attack:.07,rate:.72});
+    tone(sfx,t+delay+.21,180,.125,.028,{type:'triangle',end:83,wet:.16});
+  }
   function playMoosfunk(at,text){
     if(!live())return;
     const pan=tapePan(at),t=ctx.currentTime+.016;
@@ -295,7 +302,7 @@ export function makeAudio(listener,musicUrl,choirUrl) {
       grit(sfx,t,.86,v,980,4400,{wet:.20,attack:.26,rate:.88+random()*.06});
     }
   }
-  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };

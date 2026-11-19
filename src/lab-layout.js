@@ -1,4 +1,4 @@
-import {HALL} from './palace-openings.js';
+import {HALL,SOUTH_HATCH} from './palace-openings.js';
 
 export const LAB_CUT={left:-27.38,right:-20.78,back:-6.70,front:-4.40};
 const {left,right,back,front}=LAB_CUT;
@@ -9,6 +9,8 @@ LAB.floor=LAB.top-LAB.count*LAB.riser;
 export const LAB_LAYER=3;
 // Above the highest possible jump under the cellar ceiling, below the palace floor.
 export const labLower=y=>y<-1.72;
+export const LODGE_RUN=(SOUTH_HATCH.end-SOUTH_HATCH.x0)/LAB.count;
+export const nearLodgeHatch=p=>p.x>SOUTH_HATCH.x0-3.95&&p.x<SOUTH_HATCH.x1+.27&&p.z>SOUTH_HATCH.z0-.43&&p.z<2.25;
 // Extents are interior dimensions. Shared edges and their clear spans define
 // movement, wall cuts and the render visibility graph in the same metre grid.
 export const LAB_CELLS={
@@ -32,7 +34,15 @@ export const LAB_CELLS={
   nameFiles:[-15.86,-2.15,62.13,68.40],
   chapel:[-12.80,-2.15,42.00,53.75],
   ritesPass:[-11.15,-5.87,31.80,42.00],
-  tasting:[-9.74,-1.57,22.90,31.80]
+  tasting:[-9.74,-1.57,22.90,31.80],
+  southStair:[SOUTH_HATCH.x0,SOUTH_HATCH.end,SOUTH_HATCH.z0,SOUTH_HATCH.z1],
+  southVest:[SOUTH_HATCH.end,34.92,-8.72,-4.90],
+  southSpine:[29.44,34.92,-17.24,-8.72],
+  southBarracksA:[18.10,29.44,-13.14,-8.82],
+  southBarracksB:[19.65,29.44,-17.24,-13.14],
+  southMess:[22.20,34.92,-25.52,-17.24],
+  southPrivate:[15.30,22.20,-25.52,-19.30],
+  southShrine:[21.45,29.87,-31.95,-25.52]
 };
 // [room A, room B, fixed axis, edge, aperture centre MIN/MAX]
 export const LAB_LINKS=[
@@ -57,7 +67,14 @@ export const LAB_LINKS=[
   ['chapel','registry','z',53.75,-9.34,-7.10],
   ['ritesPass','chapel','z',42.00,-9.66,-7.41],
   ['tasting','ritesPass','z',31.80,-9.01,-6.87],
-  ['beerLab','tasting','x',-9.74,24.46,26.63]
+  ['beerLab','tasting','x',-9.74,24.46,26.63],
+  ['southStair','southVest','x',SOUTH_HATCH.end,SOUTH_HATCH.z0,SOUTH_HATCH.z1],
+  ['southVest','southSpine','z',-8.72,30.90,33.19],
+  ['southSpine','southBarracksA','x',29.44,-11.99,-10.02],
+  ['southSpine','southBarracksB','x',29.44,-16.24,-14.27],
+  ['southSpine','southMess','z',-17.24,30.73,33.16],
+  ['southMess','southPrivate','x',22.20,-23.25,-21.23],
+  ['southMess','southShrine','z',-25.52,24.66,26.75]
 ];
 const cellEntries=Object.entries(LAB_CELLS);
 function contains([x0,x1,z0,z1],x,z,pad){return x>=x0-pad&&x<=x1+pad&&z>=z0-pad&&z<=z1+pad}
@@ -75,14 +92,23 @@ export function labEdges(id){
     return {axis,edge,min,max,sign,openings,solids};
   });
 }
-export function labFloorAt(x,z,referenceY=0){
+export function labFloorAt(x,z,referenceY=0,lodgeOpen=false){
   if(x>=left&&x<=right&&z>=back&&z<=front)
     return LAB.top-LAB.riser*Math.max(0,Math.min(LAB.count,(x-left)/LAB.run+.5));
-  if(labLower(referenceY)&&labCellAt(x,z,.012))return LAB.floor;
+  const room=labCellAt(x,z,.002);
+  if(room==='southStair'){
+    if(labLower(referenceY)||(lodgeOpen&&x<=SOUTH_HATCH.x1))return LAB.top-LAB.riser*
+      Math.min(LAB.count,Math.max(0,(x-SOUTH_HATCH.x0)/LODGE_RUN+.38));
+    return null;
+  }
+  if(labLower(referenceY)&&(room||labCellAt(x,z,.012)))return LAB.floor;
   return null;
 }
 export function labCeilingAt(x,z,referenceY=0){
   const cell=labLower(referenceY)&&labCellAt(x,z,.012);
+  if((cell==='southStair'||cell==='southVest')&&Math.abs(x-SOUTH_HATCH.end)<.15&&
+    z>SOUTH_HATCH.z0&&z<SOUTH_HATCH.z1)return LAB.floor+2.265;
+  if(cell==='southStair')return x>=SOUTH_HATCH.x1?LAB.top-.155:Infinity;
   return cell&&cell!=='stairs'?LAB.ceiling:Infinity;
 }
 

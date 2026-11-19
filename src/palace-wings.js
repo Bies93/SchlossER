@@ -5,6 +5,7 @@ import {stationery} from './interior-stationery.js';
 import {aroundLabOpening,labLower} from './lab-layout.js';
 import {furnishSouthGallery} from './south-gallery.js';
 import {furnishNorthLibrary} from './north-library.js';
+import {galleryHatch,splitHatchFloor} from './south-hatch.js';
 
 const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
 
@@ -72,7 +73,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     bookA:std(0x6e4940),bookB:std(0x515f4c),bookC:std(0x4a5b68),bookD:std(0x8b7356)
   };
   const lightSites=[];
-  let posterFace;
+  let posterFace,hatch;
   const lamps=Array.from({length:3},()=>{
     const light=new T.PointLight(0xffdfb5,0,9.8,2);group.add(light);return light;
   });
@@ -104,6 +105,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
   const plaques=[print('ARCHITEKTUR UND GARTEN','#424d4d',true),print('SCHLOSS UND UNIVERSITÄT','#5b4540')];
   for(const sign of [-1,1]){
     const library=sign<0,rootWing=new T.Group();rootWing.name=library?'Nordflügel · Lesesaal':'Südflügel · Galerie';group.add(rootWing);
+    if(!library)hatch=galleryHatch(T,rootWing,world,materials);
     const p=(u,y,d)=>[sign*u,y,sign*d],k=architectureKit(T,rootWing,materials);
     const props=stationery(T,k,rootWing,{cloth:['bookA','bookB','bookC','bookD']});
     const box=(m,a,b,y,t,d,f)=>k.box(m,p,a,b,y,t,d,f);
@@ -116,8 +118,9 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     };
     const start=HALL.half,high=ceiling,accent=library?'blue':'red';
     const floor=(m,l,r,b,t,d,f)=>{
-      const spans=library?aroundLabOpening(l,r,d,f):[[l,r,d,f]];
+      const cut=library?null:splitHatchFloor(l,r,d,f),spans=library?aroundLabOpening(l,r,d,f):cut.room;
       for(const [a,c,e,h] of spans)box(m,a,c,b,t,e,h);
+      if(cut?.lid){const [a,c,e,h]=cut.lid;hatch.tile(m,a,c,b,t,e,h);}
     };
     // Matte perimeter, laid flags in the gallery, darker timber in the reading room.
     floor('iron',start,outer,Y-.09,Y-.013,-Z,Z);
@@ -319,11 +322,13 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     information(start-.137,3.296,0,1.37,.24,nameMap);
     props.finish(rootWing.name+' · Buchrücken und Papier');
     k.flush(rootWing.name);
+    if(!library)hatch.finish();
   }
   cylinder.dispose();sphere.dispose();
   const ray=new T.Raycaster(undefined,undefined,0,3.20),hits=[];
   const galleryCue={id:'gallery-choir',label:'BIES',x:0,z:0};
   return {
+    hatch,
     posterTarget(player,camera,look){
       // Only the south gallery artwork: the ray must hit its actual
       // pictured rectangle, not a nearby plaque or the opposite wall.

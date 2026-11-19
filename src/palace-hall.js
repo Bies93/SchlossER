@@ -200,7 +200,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   function targetFor(player,camera){
     camera.getWorldDirection(look);
     const p=player.body.position;
-    return lab.target(p,look)??wings.posterTarget(p,camera,look)??doors.find(d=>{
+    return lab.target(p,look)??wings.hatch.target(p,look)??wings.posterTarget(p,camera,look)??doors.find(d=>{
       const dx=-p.x,dz=d.z-p.z,distance=Math.hypot(dx,dz);
       return Math.abs(p.x)<2.05&&distance<3.2&&(distance<1.25||dx*look.x+dz*look.z>distance*.22);
     });
@@ -218,7 +218,8 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   }
   function update(dt,p){
     wings.update(p,preset);
-    let changed=lab.update(dt,p),shadow=false;
+    const hatchMoved=wings.hatch.update(dt,p);
+    let changed=lab.update(dt,p,wings.hatch.shown())||hatchMoved,shadow=hatchMoved&&wings.hatch.settled();
     for(const d of doors){
       if(d.progress===d.target)continue;
       if(d.target===0&&Math.abs(p.z-d.z)<.92&&Math.abs(p.x)<d.half+.36)d.target=1;
@@ -240,5 +241,5 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
     return {changed,shadow};
   }
   function setPreset(id){preset=id;wings.setPreset(id);hallShade.emissiveIntensity=id==='night'?.86:.58}
-  return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible};
+  return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible,lodgeOpen:wings.hatch.open};
 }

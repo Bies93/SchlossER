@@ -79,7 +79,7 @@ async function start(){
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z,referenceY=0)=>{
-   const cellar=labFloorAt(x,z,referenceY);
+   const cellar=labFloorAt(x,z,referenceY,hall.lodgeOpen());
    if(cellar!==null)return cellar;
    const stair=wcHeightAt(x,z,referenceY);
    if(stair!==null)return stair;
@@ -209,7 +209,7 @@ async function start(){
    activePortal=uid;portalAction.hidden=!target;
    if(target){
      portalAction.disabled=!usable;
-     portalText.textContent=target.action?target.label:status?choirLabels[status]:target.id==='lab-secret'
+     portalText.textContent=target.action?target.label:target.prompt?target.prompt(usable):status?choirLabels[status]:target.id==='lab-secret'
        ?(target.target===0?'Lockeres Buch untersuchen':usable?'Regal zurückschieben':'Regal offen')
        :!usable?(target.usable?'Durchgang freimachen · '+target.label:'Tür offen'):(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
    }
@@ -229,6 +229,7 @@ async function start(){
    }
    const target=local??hall.commit(player,c);if(!target)return;
    if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});
+   if(target.id==='gallery-hatch')audio.hatch(target.target===1);
    doorPrompt();refresh();
  }
  window.addEventListener('keydown',event=>{

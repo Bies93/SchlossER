@@ -5,6 +5,11 @@ export const PORTALS={
 };
 export const HALL={half:3.92,zMin:-11.12,zMax:11.30,floor:.071};
 export const WINGS={outer:29.1,z:7.70,portal:1.32,spring:2.44,rise:.59,ceiling:4.31,partition:12.45};
+// +X is south, -Z is east (left when facing the gallery poster).
+export const SOUTH_HATCH={x0:24.72,x1:28.91,z0:-7.27,z1:-5.70,end:30.88};
+export const SOUTH_HATCH_CUT={left:SOUTH_HATCH.x0,right:SOUTH_HATCH.x1,back:SOUTH_HATCH.z0,front:SOUTH_HATCH.z1};
+export const SOUTH_HATCH_OUTLINE=[[SOUTH_HATCH.x0,SOUTH_HATCH.z0],[SOUTH_HATCH.x1,SOUTH_HATCH.z0],
+  [SOUTH_HATCH.x1,SOUTH_HATCH.z1],[SOUTH_HATCH.x0,SOUTH_HATCH.z1]];
 export const inPalaceWing=(x,z)=>Math.abs(x)>=HALL.half-.03&&Math.abs(x)<=WINGS.outer&&Math.abs(z)<=WINGS.z;
 
 // Keep the bundled GLB as the base and subtract only the rebuilt masonry
@@ -13,6 +18,7 @@ export function cutPalaceOpenings(T,root){
   const geometryRegions=[
     {lo:[-1.356,-.10,8.34],hi:[1.356,2.929,13.21]},
     {lo:[-2.768,-.10,-13.16],hi:[2.768,4.315,-8.34]},
+    {lo:[SOUTH_HATCH.x0,-3.90,SOUTH_HATCH.z0],hi:[SOUTH_HATCH.x1,.080,SOUTH_HATCH.z1]},
     ...[-1,1].flatMap(s=>[[4.94,9.99],[10.45,14.48]].map(([y,top])=>({
       lo:[s===1?-2.32:-2.73,y,s===1?10.43:-13.18],
       hi:[s===1?2.32:2.73,top,s===1?13.19:-10.42]

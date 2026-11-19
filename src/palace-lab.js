@@ -100,7 +100,10 @@ export function addPalaceLab(T,root,world,M,moosfunk){
     fileLinen:plain(0x79796a,.91,fabric),fileKraft:plain(0xa78e65,.94,sharedSet(T,'plaster',256)),
     leafEdge:plain(0xb5a685,.96,sharedSet(T,'fineOak',256)),
     logeCloth:plain(0x67393a,.96,fabric),brocade:plain(0x94734b,.88,fabric),
-    wax:plain(0x9d835d,.76,{...fabric,emissive:0x736147,emissiveIntensity:.11})
+    wax:plain(0x9d835d,.76,{...fabric,emissive:0x736147,emissiveIntensity:.11}),
+    tintedBulb:{material:glow(0xe57a8f,.62),cast:false},
+    slateBlue:plain(0x556466,.91,fabric),plum:plain(0x714159,.87,{...fabric,side:T.DoubleSide}),
+    pinkRubber:plain(0xb06c7f,.47)
   };
   const a=architectureKit(T,shell,materials),s=architectureKit(T,shaft,materials),r=architectureKit(T,cabinet,materials);
   const sb=(m,x0,x1,y0,y1,z0,z1)=>a.box(m,coords,x0,x1,y0,y1,z0,z1);
@@ -172,14 +175,14 @@ export function addPalaceLab(T,root,world,M,moosfunk){
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
     usable,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
-    update(dt,p){
+    update(dt,p,lodgeShown=false){
       let changed=false;
       if(d.progress!==d.target){
         if(!d.target&&Math.abs(p.x-gateX)<.72&&p.z>back-.16&&p.z<front+slide+.19)d.target=1;
         const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
         const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;
       }
-      return deck.update(p,d.target===1,dt)||changed;
+      return deck.update(p,d.target===1,dt,lodgeShown)||changed;
     }
   };
 }

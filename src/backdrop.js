@@ -2,6 +2,7 @@ import {PERIMETER,insidePerimeter} from './world-layout.js';
 import {randomSource,sharedSet} from './surface-detail.js';
 import {WC_CUT} from './park-stair.js';
 import {LAB_CUT} from './lab-layout.js';
+import {SOUTH_HATCH_CUT} from './palace-openings.js';
 import {parkFacadeClearance} from './park-architecture.js';
 
 const tau=Math.PI*2;
@@ -270,7 +271,7 @@ export function addBackdrop(T,scene){
   // Split the original grid at the WC cutout, so its below-grade geometry
   // is genuinely visible. No clipping shader or extra render surface.
   const grid=Array.from({length:93},(_,i)=>1710*(i/92-.5));
-  const cutouts=[WC_CUT,LAB_CUT];
+  const cutouts=[WC_CUT,LAB_CUT,SOUTH_HATCH_CUT];
   const coordinates=(lo,hi)=>[...new Set([...grid,...cutouts.flatMap(c=>[c[lo],c[hi]])])].sort((a,b)=>a-b);
   const xs=coordinates('left','right'),zs=coordinates('back','front');
   const land=new T.BufferGeometry(),points=[],index=[],tints=[];
