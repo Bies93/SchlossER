@@ -3,6 +3,7 @@ import {randomSource,sharedSet} from './surface-detail.js';
 export function hqMaterials(T,{painted,cloth}){
   const color=(hex,extra={})=>new T.MeshStandardMaterial({color:hex,roughness:.88,...extra});
   return {
+    studioFelt:color(0x384e49,{...cloth,roughness:.99}),
     acoustic:color(0x897b62,{...sharedSet(T,'plaster',256),normalScale:new T.Vector2(.57,.57)}),
     pine:color(0xab8b60,sharedSet(T,'fineOak',256)),
     wool:color(0x906353,cloth),sage:color(0x687d69,cloth),tartan:color(0x4e6559,cloth),
@@ -37,7 +38,8 @@ const pages={
   quiet:['RUHEN IST ARBEIT','NACHTSCHICHT SCHLÄFT LINKS','WER SCHNARCHT, HAT MORGEN KÜCHENDIENST.'],
   wired:['RÜCKKANAL AKTIV','M–7 EINGESETZT · LEITUNG FREI','BAND 04 IM STUDIO VERFÜGBAR'],
   seed:['FÜR DIE KÜCHE','KISTE ZURÜCK INS BEET',''],
-  community:['KEINS ALLEIN','MOOSFUNK · WIR BLEIBEN HIER','']
+  community:['KEINS ALLEIN','MOOSFUNK · WIR BLEIBEN HIER',''],
+  console:[],meter:[],sleeve:[]
 };
 const keys=Object.keys(pages);
 export function hqArt(T){
@@ -50,6 +52,41 @@ export function hqArt(T){
   }
   for(const [i,id] of keys.entries()){
     c.save();c.translate((i%4)*512,Math.floor(i/4)*256);
+    if(['meter','console','sleeve'].includes(id)){
+      const rect=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h);};
+      const rule=(x,y,X,Y,col,weight=2)=>{c.strokeStyle=col;c.lineWidth=weight;c.beginPath();c.moveTo(x,y);c.lineTo(X,Y);c.stroke();};
+      if(id==='meter'){
+        rect(0,0,512,256,'#292c29');
+        for(const [i,x] of [21,264].entries()){
+          rect(x,18,226,185,'#131918');rect(x+6,24,214,173,'#e7cea1');
+          for(let j=0;j<24;j++){
+            const a=(-133+j*85/23)*Math.PI/180,red=j>17,rad=133;
+            const line=(r)=>[x+113+Math.cos(a)*r,182+Math.sin(a)*r];
+            rule(...line(rad),...line(rad-(j%4?8:16)),red?'#a03f2d':'#393730',j%4?2:3);
+          }
+          text('−20       −7       0     +3',x+113,46,13,'#4b3523');
+          rule(x+113,177,x+(i?124:100),56,'#a33426',3);
+          text('VU',x+113,146,25,'#3f392e','Georgia');text(i?'SUMME R':'SUMME L',x+113,231,17,'#d6c7aa');
+        }
+      }else if(id==='console'){
+        rect(0,0,512,256,'#33433e');
+        for(let j=0;j<10;j++){
+          const x=20+j*52.1;
+          rect(x+23,8,1,237,'#839182');
+          for(let n=0;n<9;n++)rect(x+8,122+10*n,n%2?4:8,1.8,'#c6c2a9');
+          rect(x-13,218,28,24,j<3?'#d5aa75':'#d4ccb3');
+          text(String(j+1).padStart(2,'0'),x+1,236,16,'#3e3c33');
+          for(const y of [19,57])for(let n=0;n<9;n++){const a=(205+n*16)*Math.PI/180;rect(x+12*Math.cos(a),y+10*Math.sin(a),1.8,2.8,'#b9b59f');}
+        }
+      }else{
+        rect(0,0,512,256,'#c8b898');rect(13,13,486,230,'#274c4b');
+        for(let n=0;n<9;n++){c.strokeStyle=n%3?'#dba767':'#ad5f48';c.lineWidth=3;c.beginPath();c.arc(103,132,18+n*8,0,Math.PI*2);c.stroke();}
+        rect(207,38,265,5,'#e4be83');text('FELDBAND 07',342,89,32,'#ead4a7');
+        text('STIMMEN AUS DEM STEIN',342,120,18,'#ead4a7');text('19 cm/s   •   MONO',342,184,17,'#e3b073');
+      }
+      for(let j=0;j<950;j++)rect(random()*512,random()*256,1.1,1.4,j%2?'#ffeacb19':'#130f1125');
+      c.restore();continue;
+    }
     const head=palette[i],base=i<5||i===14?'#cab38a':'#d8c69c',ink='#403b31';
     c.fillStyle=base;c.fillRect(0,0,512,256);
     c.lineWidth=3;c.strokeStyle='#4f4738';c.strokeRect(14,14,484,228);

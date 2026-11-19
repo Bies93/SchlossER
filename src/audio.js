@@ -3,10 +3,11 @@ const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
-  let choirBuffer,choirFetch,choirRequest,choirVoice,choirFailed=false;
+  const spokenClips=new Map();
+  let choirRequest,choirVoice,choirFailed=false;
   let radioVoice,radioAt;
   let levels={music:.48,sfx:.72};
   try{
@@ -110,13 +111,12 @@ export function makeAudio(listener,musicUrl,choirUrl) {
     if(!enabled)return 'muted';
     return choirVoice?'playing':choirRequest?'loading':choirFailed?'retry':'ready';
   }
-  function prepareChoir(){
-    if(choirBuffer)return Promise.resolve(choirBuffer);
-    return choirFetch??=fetch(choirUrl)
+  function prepareChoir(url){
+    if(!spokenClips.has(url))spokenClips.set(url,fetch(url)
       .then(r=>{if(!r.ok)throw Error('Chor nicht erreichbar');return r.arrayBuffer()})
       .then(bytes=>ctx.decodeAudioData(bytes))
-      .then(decoded=>choirBuffer=decoded)
-      .finally(()=>{choirFetch=null});
+      .catch(error=>{spokenClips.delete(url);throw error;}));
+    return spokenClips.get(url);
   }
   function stopChoir(){
     choirRequest=null;
@@ -140,19 +140,19 @@ export function makeAudio(listener,musicUrl,choirUrl) {
       }
     }
   }
-  async function playChoir(at){
+  async function playChoir(at,url=choirUrl){
     const status=choirStatus();
     if(!playing||(status!=='ready'&&status!=='retry')||(!ctx&&!setup()))return;
-    const request={at};choirRequest=request;choirFailed=false;
+    const request={at,url};choirRequest=request;choirFailed=false;
     try{
-      const [,buffer]=await Promise.all([ctx.resume(),prepareChoir()]);
+      const [,buffer]=await Promise.all([ctx.resume(),prepareChoir(url)]);
       if(choirRequest!==request||!live())return;
       const a=listener();
       if(Math.hypot(at.x-a.x,at.z-a.z)>4.8)return;
       const node=ctx.createBufferSource(),pan=ctx.createStereoPanner?.(),amp=gain(sfx,0);
       node.buffer=buffer;
       if(pan){node.connect(pan);pan.connect(amp);}else node.connect(amp);
-      const entry={at,node,pan,amp};choirVoice=entry;
+      const entry={at,node,pan,amp,url};choirVoice=entry;
       node.onended=()=>{
         node.disconnect();pan?.disconnect();amp.disconnect();
         if(choirVoice===entry){choirVoice=null;mix();}
@@ -303,6 +303,7 @@ export function makeAudio(listener,musicUrl,choirUrl) {
     }
   }
   return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
+    playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };

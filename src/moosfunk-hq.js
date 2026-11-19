@@ -9,8 +9,6 @@ export function furnishHQ(T,kit,id,quest){
     hoop=new T.TorusGeometry(1,.085,7,22),flat=hoop.clone().rotateX(-pi/2);
   const vessel=new T.LatheGeometry([[.47,0],[.53,.04],[.71,.21],[.92,.80],[1,.946],[.99,1],
     [.88,.995],[.87,.92],[.70,.43],[.48,.13],[0,.10]].map(([r,y])=>new T.Vector2(r,y)),19);
-  const pulp=id==='studio'?new T.LatheGeometry([[1,0],[.68,.18],[.52,.83],[.40,.98],[.25,.96],[.18,.46],[0,.41]]
-    .map(([r,y])=>new T.Vector2(r,y)),8):null;
   const roof=(u,v)=>wcRoofAt(id,u,v)-b;
   const box=(m,u,y,v,w,h,d)=>block(m,u-w/2,u+w/2,y,y+h,v-d/2,v+d/2);
   const bolt=(m,u,y,v,r=.014)=>stamp(m,ball,u,y,v,[r,r,r]);
@@ -72,9 +70,10 @@ export function furnishHQ(T,kit,id,quest){
     const front=v+face*.140;
     box('rubber',u,y-.092,front,.301,.326,.018);
     for(const [Y,R] of [[y+.014,r],[y+.157,r*.49]]){
-      pipe('brass',[u,Y,front-face*.001],[u,Y,front+face*.013],R*.95);
-      stamp('iron',ball,u,Y,front+face*.012,[R*.81,R*.70,.013]);
-      stamp('gunmetal',ball,u,Y,front+face*.025,[R*.28,R*.26,.010]);
+      pipe('gunmetal',[u,Y,front-face*.001],[u,Y,front+face*.013],R);
+      stamp('iron',ball,u,Y,front+face*.013,[.012,R*.86,R*.86]);
+      stamp('rubber',hoop,u,Y,front+face*.018,[R*.82,R*.82,R*.42],pi/2);
+      stamp('studioFelt',ball,u,Y,front+face*.024,[.019,R*.34,R*.34]);
     }
     for(const x of [-.128,.128])for(const Y of [y-.064,y+.198])bolt('steel',u+x,Y,front+face*.018,.008);
   }
@@ -111,75 +110,129 @@ export function furnishHQ(T,kit,id,quest){
   }
 
   if(id==='studio'){
-    // Egg-carton relief is real silhouette; a few missing panels leave the
-    // stone visible. The front desk and rear tape shelf use the same wood.
+    const {u}=radioSpot;
+    // Broad bands of absorption alternating with salvaged organ-pipe diffusers.
     for(let i=0;i<8;i++){
-      const u=14.24+i*.66,v=-8.79;
-      box('darkWood',u,.60,v,.635,1.231,.111);
-      box('acoustic',u,.64,v+.055,.592,1.145,.065);
-      for(let r=0;r<7;r++)for(let c=0;c<4;c++){
-        const u2=u-.215+c*.142,y=.746+r*.153;
-        stamp((r+c+i)%4===0?'paper':'acoustic',pulp,u2,y,v+.088,[.064,.064,.058],-pi/2,pi/2);
+      const U=14.24+i*.69,V=-8.78;
+      box('darkWood',U,.54,V,.668,1.47,.105);
+      box('studioFelt',U,.572,V+.061,.614,1.39,.043);
+      if(i%3!==1)for(let j=0;j<7;j++){
+        const depth=[.060,.104,.081,.043,.112,.074,.051][(j+i)%7];
+        box(j%4?'wood':'pine',U-.258+j*.086,.62,V+.083+depth*.5,.038,1.29,depth);
+      }else for(const Y of [.64,1.90])for(const D of [-.25,.25])bolt('brass',U+D,Y,V+.085,.012);
+    }
+    for(let j=0;j<4;j++){
+      const V=-8.41+j*.66;
+      box('darkWood',13.88,.57,V,.119,1.37,.62);
+      box('studioFelt',13.952,.61,V,.063,1.286,.56);
+      for(let n=0;n<8;n++)box('gunmetal',13.988,.68+n*.153,V,.012,.014,.516);
+    }
+
+    table(u,-8.18,3.68,1.04,.923,'iron','wood');
+    const base=.923;
+    box('gunmetal',u,base,-8.048,1.56,.095,.64);
+    box('studioFelt',u,1.018,-8.048,1.50,.025,.612);
+    hqTile('console',u,1.044,-8.048,1.48,.60,-pi/2,-pi/2);
+    for(const side of [-1,1]){
+      box('darkWood',u+side*.792,base,-8.048,.052,.137,.65);
+      box('pine',u+side*.792,1.06,-8.048,.044,.009,.64);
+    }
+    for(let i=0;i<10;i++){
+      const U=u-.669+i*.148;
+      box('rubber',U,1.046,-7.961,.015,.004,.178);
+      box(i===9?'toolRed':'ivoryPaint',U,1.051,-7.963+.052*Math.sin(i*1.76),.067,.021,.038);
+      box('iron',U,1.072,-7.963+.052*Math.sin(i*1.76),.048,.002,.004);
+      for(let j=0;j<2;j++){
+        const V=-8.197-j*.086;
+        stamp('steel',dial,U,1.052,V,[.032,.012,.032]);
+        stamp(j?'gunmetal':i%3?'blueTape':'brass',dial,U,1.073,V,[.028,.039,.028]);
+        pipe('paper',[U,1.094,V],[U+.020*Math.sin(i+j),1.094,V+.020*Math.cos(i+j)],.0027);
       }
+      box(i%4?'sage':'switchAmber',U,1.05,-8.103,.047,.012,.026);
     }
-    for(let i=0;i<4;i++){
-      const v=-8.50+i*.687;
-      box('darkWood',13.86,.61,v,.113,1.22,.648);
-      box('acoustic',13.95,.65,v,.093,1.14,.588);
-      for(let r=0;r<7;r++)for(let c=0;c<4;c++)stamp('acoustic',pulp,13.997,.745+r*.151,v-.211+c*.138,[.065,.055,.058],0,pi/2);
+    box('gunmetal',u,1.018,-8.403,1.51,.221,.112);
+    box('darkWood',u,1.233,-8.401,1.53,.019,.126);
+    hqTile('meter',u-.24,1.133,-8.344,.70,.186,-pi/2);
+    for(let i=0;i<12;i++)for(let j=0;j<2;j++)box(i<(j?8:10)?i<7?'switchGreen':'switchAmber':'rubber',u+.195+i*.041,1.099+j*.050,-8.342,.030,.023,.009);
+    for(const side of [-1,1]){
+      const U=u+side*1.53,V=-8.478;
+      box('rubber',U,base,V,.329,.048,.267);
+      speaker(U,V,base+.163,1,.105);
+      pipe('rubber',[U,.941,V+.15],[u+side*.70,.941,-8.396],.009);
     }
-    const {u,v}=radioSpot;
-    table(u,-8.24,3.49,.82,.923,'iron','pine');
-    box('gunmetal',u,.925,-8.03,1.52,.209,.55);
-    box('rubber',u,1.127,-8.045,1.49,.018,.49);
-    box('brass',u,1.087,-7.749,1.40,.021,.022);
-    for(let j=0;j<10;j++){
-      const A=u-.623+j*.138;
-      box('iron',A,1.148,-7.974,.028,.005,.259);
-      box(j%3===1?'blueTape':'ivoryPaint',A,1.152,-7.975+(j%3-1)*.059,.084,.024,.059);
-      for(let q=0;q<2;q++)stamp(q?'brass':'gunmetal',dial,A,1.157,-8.137-q*.069,[.029,.036,.029]);
+
+    // Two open metal reels, tape packs of different diameter and a separate transport.
+    const A=u-1.16;
+    box('darkWood',A,base,-7.957,.634,.124,.449);
+    box('blueTin',A,1.047,-7.957,.610,.017,.429);
+    for(const [j,D] of [-.149,.149].entries()){
+      const U=A+D,V=-8.012;
+      stamp('iron',dial,U,1.083,V,[j?.083:.114,.035,j?.083:.114]);
+      stamp('steel',flat,U,1.106,V,[.122,.057,.122]);
+      for(let n=0;n<3;n++){
+        const a=n*pi*2/3+.62*j;
+        pipe('steel',[U,1.105,V],[U+Math.cos(a)*.119,1.105,V+Math.sin(a)*.119],.009);
+      }
+      stamp('brass',dial,U,1.111,V,[.027,.023,.027]);
     }
-    box('blueTape',u,.991,v-.041,.49,.071,.054);
-    for(const q of [-.16,-.08,0,.08,.16])box(q<0?'signal':'switchAmber',u+q,1.016,v-.008,.042,.023,.014);
-    for(const s of [-1,1]){
-      speaker(u+s*1.29,-8.31,.923,1,.106);
-      pipe('rubber',[u+s*1.29,.932,-8.44],[u+s*.63,.942,-8.37],.010);
+    const path=[[A-.26,1.082,-8.014],[A-.177,1.082,-7.886],[A+.124,1.082,-7.886],[A+.23,1.082,-8.013]];
+    for(let j=1;j<path.length;j++)pipe('darkWood',path[j-1],path[j],.006);
+    for(const D of [-.177,.124])stamp('steel',dial,A+D,1.08,-7.886,[.023,.04,.023]);
+    for(let j=0;j<5;j++)box(j===4?'toolRed':'ivoryPaint',A-.147+j*.069,1.068,-7.795,.052,.018,.050);
+
+    // Articulated broadcast arm, tension spring, grille and suspended pop screen.
+    const U=u+.94;
+    stamp('iron',dial,U,.942,-8.222,[.094,.038,.094]);
+    for(const [a,B] of [[ [U,.95,-8.22],[U,1.17,-8.22] ],[[U,1.17,-8.22],[U+.20,1.52,-8.21]],[[U+.20,1.52,-8.21],[U-.14,1.45,-7.99]]]){
+      for(const d of [-.016,.016])pipe('gunmetal',[a[0],a[1],a[2]+d],[B[0],B[1],B[2]+d],.010);
+      bolt('brass',...B,.022);
     }
-    pipe('gunmetal',[u+.77,.964,-7.91],[u+.77,1.50,-7.91],.015);
-    pipe('steel',[u+.77,1.50,-7.91],[u+.47,1.44,-7.60],.012);
-    stamp('iron',ball,u+.472,1.439,-7.60,[.041,.072,.038],.3);
-    for(const y of [1.421,1.446,1.472])pipe('steel',[u+.441,y,-7.579],[u+.50,y,-7.579],.004);
-    box('blueTin',u-1.27,.923,-8.03,.498,.115,.361);
-    for(const a of [-.119,.124]){
-      stamp('iron',dial,u-1.27+a,1.052,-8.003,[.094,.027,.094]);
-      stamp('steel',flat,u-1.27+a,1.066,-8.003,[.069,.021,.069]);
-      stamp('brass',dial,u-1.27+a,1.069,-8.003,[.027,.013,.027]);
+    pipe('iron',[U-.14,1.45,-7.99],[U-.14,1.389,-7.99],.015);
+    stamp('metalSink',ball,U-.14,1.348,-7.99,[.052,.080,.052]);
+    for(let n=0;n<7;n++)stamp('gunmetal',flat,U-.14,1.294+n*.016,-7.99,[.055*Math.sin(.78+n*.26),.033,.055*Math.sin(.78+n*.26)]);
+    pipe('gunmetal',[U-.14,1.398,-7.99],[U-.14,1.39,-7.87],.005);
+    stamp('studioFelt',ball,U-.14,1.336,-7.87,[.009,.068,.068]);
+    // On their own stand, not floating beside the mic.
+    const H=u+1.47;
+    stamp('gunmetal',dial,H,.936,-7.906,[.101,.026,.101]);
+    pipe('brass',[H,.946,-7.906],[H,1.211,-7.906],.012);
+    for(let j=0;j<14;j++){
+      const pt=n=>[H+.099*Math.cos(n*pi/14),1.118+.112*Math.sin(n*pi/14),-7.906];
+      pipe('rubber',pt(j),pt(j+1),.013);
     }
-    pipe('wool',[u-1.389,1.067,-7.946],[u-1.329,1.053,-7.886],.004);
-    pipe('wool',[u-1.329,1.053,-7.886],[u-1.146,1.065,-7.946],.004);
+    for(const s of [-1,1])stamp('studioFelt',ball,H+s*.099,1.095,-7.906,[.045,.059,.028]);
     chair(15.77,-7.10,1,'wool');lowSeat(17.91,-7.06,.432,.48,.43,'sage');
-    const back=19.92;
-    for(const v of [-8.55,-5.14])box('iron',back,.024,v,.061,1.77,.061);
-    for(const y of [.254,.704,1.15,1.60])box('wood',19.85,y,-6.835,.369,.046,3.48);
-    for(let i=0;i<40;i++){
-      const row=i%3,v=-8.43+Math.floor(i/3)*.226,y=.30+row*.448;
-      if((i+row)%13===6)continue;
-      box(i%3?'darkWood':'blueTape',19.83,y,v,.278,.214,i%4===0?.090:.044);
-      box('paper',19.68,y+.133,v,.024,.028,.037);
+
+    for(const V of [-8.55,-5.14])for(const U of [19.68,20.02])box('gunmetal',U,.019,V,.035,1.80,.035);
+    for(const y of [.254,.704,1.15,1.60]){
+      box('wood',19.85,y,-6.835,.369,.046,3.48);
+      box('brass',19.658,y+.007,-6.835,.012,.012,3.47);
     }
+    for(let row=0;row<3;row++)for(let j=0;j<20;j++){
+      const V=-8.39+j*.16,Y=[.300,.750,1.196][row];
+      if((row===1&&j>13)||(j+row)%13===7)continue;
+      const m=['blueTape','pine','sage','toolRed','darkWood'][(row*11+Math.floor(j/3))%5];
+      const front=19.684+rnd()*.035,h=.216+rnd()*.056,w=.072+rnd()*.057;
+      box(m,front+.138,Y,V,.276,h,w);
+      box('paper',front-.003,Y+.022,V,.008,h*.72,w*.82);
+      for(let k=0;k<3;k++)box(k?'gunmetal':m,front-.008,Y+.045+k*.043,V,.004,.006,w*(k===2?.35:.62));
+      box('rubber',front-.006,Y+h-.038,V,.003,.015,w*.57);
+    }
+    // Featured tape, face-out; shelf list fixed to the top on metal supports.
+    box('paper',19.746,.751,-5.69,.082,.292,.486);
+    hqTile('sleeve',19.701,.901,-5.69,.482,.282,pi);
+    for(const V of [-6.61,-5.75])box('iron',19.77,1.635,V,.042,.42,.026);
+    wallSign('tapeList',19.69,1.906,-6.18,1.12,.412,pi);
     hit(19.65,20.10,-8.61,-5.09);
-    wallSign('tapeList',19.615,1.409,-6.18,1.13,.498,pi);
-    wallSign('airLog',14.052,1.481,-6.08,1.15,.556,0);
-    wallSign('liveSign',16.80,1.843,-8.63,1.15,.26,-pi/2);
+    wallSign('airLog',14.006,1.48,-6.11,1.05,.55,0);
+    wallSign('liveSign',16.75,2.05,-8.53,1.18,.265,-pi/2);
     shroud(16.07,-6.21,'studioLamp');shroud(18.65,-7.32,'workLamp');
     crate(19.06,-5.32,0,.72,.48,.35);
-    for(let i=0;i<10;i++){
-      const v=-5.50+i*.038,y=.226+i%3*.021;
-      box(i%3===0?'blueTape':i%3===1?'pine':'red',19.06,y,v,.324,.318,.022);
-      box('paper',19.06,y+.249,v+.013,.265,.049,.006);
+    for(let j=0;j<8;j++){
+      const V=-5.49+j*.044;
+      box(j%3?'pine':'blueTape',19.06,.198,V,.34,.32,.029);
     }
-    stamp('iron',dial,19.06,.471,-5.087,[.135,.014,.135],0,pi/2);
-    stamp('ochre',dial,19.050,.471,-5.087,[.041,.010,.041],0,pi/2);
+    hqTile('sleeve',19.06,.358,-5.164,.34,.32,-pi/2);
   }
 
   if(id==='kitchen'){
@@ -347,5 +400,4 @@ export function furnishHQ(T,kit,id,quest){
     shroud(23.64,10.54,'lamp');shroud(26.55,12.11,'studioLamp');
   }
   for(const g of [ball,dial,hoop,flat,vessel])g.dispose();
-  pulp?.dispose();
 }

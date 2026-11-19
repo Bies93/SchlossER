@@ -23,6 +23,7 @@ import {LAB_LAYER,labFloorAt,labCeilingAt} from './lab-layout.js';
 import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {makeMoosfunk} from './moosfunk-quest.js';
+import {ORB,X as wcX,Z as wcZ,wcZoneAt} from './park-wc-layout.js';
 import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
 
 const $ = id => document.getElementById(id);
@@ -98,7 +99,7 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir);
+ },payload.music,payload.galleryChoir,payload.orbVoice);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    const surface=hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
@@ -194,6 +195,21 @@ async function start(){
    audio.playChapel(CHAPEL_SOURCE,line,take);
  }
  const interactionLook=new T.Vector3();
+ const orbAt={x:wcX-ORB.v,z:wcZ+ORB.u},orbLine='Fürchte nicht die Stille. Noch ehe der erste Stein fiel, kannte ich deinen Namen. Tritt ins Licht.';
+ let orbHeard=false,orbSince=null;
+ function orbCue(time,pos){
+   const dx=orbAt.x-pos.x,dz=orbAt.z-pos.z,d=Math.hypot(dx,dz);
+   if(d>4.4||wcZoneAt(pos.z-wcZ,wcX-pos.x,pos.y)!=='deepOrb'){
+     if(orbHeard){audio.stopOrb();hideCaption();}
+     orbSince=null;orbHeard=false;return;
+   }
+   if(orbHeard)return;
+   const look=c.getWorldDirection(interactionLook);
+   if(d>3.15||(dx*look.x+dz*look.z)/Math.max(.01,d)<.48){orbSince=null;return;}
+   orbSince??=time;
+   if(time-orbSince<450)return;
+   orbHeard=true;showCaption('Stimme des Orbs — „'+orbLine+'“',13000);audio.playOrb(orbAt);
+ }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
    return moosfunk.target(pos,look)??wc.target(pos,look);
@@ -267,6 +283,7 @@ async function start(){
      if(input.tick(time))dirty=true;
      audio.ambience(player.body.position);
      chapelCue(time,player.body.position);
+     orbCue(time,player.body.position);
      if(combat()&&desktopRound()){
        if(firstRound&&round.prompt(player.body.position)){
          firstRound=false;
@@ -290,7 +307,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   leaveChapel();hideCaption();
+   leaveChapel();orbSince=null;hideCaption();
    input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();roundPrompt();
    if(focus) action.focus({preventScroll:true});
  }

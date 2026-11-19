@@ -9,6 +9,7 @@ export const WC_OUTLINE=[[X,Z],[X-back,Z],[X-back,Z+W],[X,Z+W]];
 export const DEEP_STAIR={top:11.18,bottom:5.30,left:-1.055,right:.385,count:20,rise:.165};
 export const DEEP_RUN=(DEEP_STAIR.top-DEEP_STAIR.bottom)/DEEP_STAIR.count;
 export const DEEP_FLOOR=b-DEEP_STAIR.count*DEEP_STAIR.rise;
+export const ORB={u:-19.64,v:.20};
 export const deepWalk=o=>o.y<b-1.16;
 export const upperWcWalk=o=>o.y>=b-.25&&lower(o.y);
 export const ROOMS={

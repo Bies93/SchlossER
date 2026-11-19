@@ -1,4 +1,4 @@
-import {b,DEEP_STAIR as stair,DEEP_RUN,DEEP_FLOOR,p,deepStairY,wcRoofAt} from './park-wc-layout.js';
+import {b,DEEP_STAIR as stair,DEEP_RUN,DEEP_FLOOR,p,deepStairY,wcRoofAt,ORB} from './park-wc-layout.js';
 import {randomSource} from './surface-detail.js';
 import {quiltPrint} from './moosfunk-brocade.js';
 import {shrineCraft} from './moosfunk-reliquary.js';
@@ -475,7 +475,7 @@ export function furnishDeep(T,m,id){
     lantern(-13.64,2.43,.17,'deepRose');
     framed('orb',-14.639,1.67,-2.07,1.22,.94,0);
   }else if(id==='deepOrb'){
-    const u=-19.64,v=.20;
+    const {u,v}=ORB;
     deepTile('chalk',u,.029,v,4.9,4.9,0,-turn,.10);
     craft.crown(u,v);
     hit(u-.70,u+.70,v-.70,v+.70);
