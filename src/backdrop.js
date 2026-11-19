@@ -110,7 +110,12 @@ export function addBackdrop(T,scene){
   function laneFree(x,z,w=0){return !laneAreas.some(l=>Math.hypot(x-l.x,z-l.z)<l.limit+w)}
   const sites=[];
   function placeHouse(x,z,angle,w,d,h,kind,detail){
-    if(insidePerimeter(x,z)||parkFacadeClearance(x+d*.48*Math.sin(angle),z-d*.48*Math.cos(angle),Math.min(6,w*.48))
+    const ux=Math.cos(angle),uz=Math.sin(angle);
+    // Never let a rotated background façade cut into the playable corner.
+    // A centre-only check can miss the long edge on a recessed frontage.
+    const overlaps=detail&&[-w*.50,0,w*.50].some(u=>[0,-d*.48,-d].some(v=>
+      insidePerimeter(x+u*ux-v*uz,z+u*uz+v*ux)));
+    if(overlaps||insidePerimeter(x,z)||parkFacadeClearance(x+d*.48*Math.sin(angle),z-d*.48*Math.cos(angle),Math.min(6,w*.48))
       ||sites.some(s=>Math.hypot(x-s.x,z-s.z)<Math.min(w,s.w)*.52&&detail))return;
     sites.push({x,z,w});
     const base=height(x,z),xdir=Math.cos(angle),zdir=Math.sin(angle);
@@ -194,12 +199,13 @@ export function addBackdrop(T,scene){
     const angle=Math.atan2(f.uz,f.ux);
     for(const depth of (city?[15.3,36.8,64]:[26,53])){
       const interval=city?range(7.8,11.9):range(15.0,24.0);
+      const lowRow=depth<16&&[2,3,4,16,17,18].includes(e.id);
       for(let u=interval*.44;u<f.L;u+=interval*range(.85,1.19)){
         if(!city&&rng()<(depth<30?.47:.68))continue;
         const [x,,z]=f.point(u,0,depth+range(-2.0,4.4)),w=range(6.1,Math.min(interval,13)),
           d=range(6.7,10.6),h=(city?range(6.4,10.7):range(4.6,7.9))+(depth>60?2.4:0);
         if(!laneFree(x,z,w*.37))continue;
-        placeHouse(x,z,angle+range(-.045,.054),w,d,h,Math.floor(range(0,3)),depth<53);
+        placeHouse(x,z,angle+range(-.045,.054),w,d,lowRow?Math.min(h,6.8):h,Math.floor(range(0,3)),depth<53);
       }
     }
   }

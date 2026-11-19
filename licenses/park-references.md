@@ -2,6 +2,8 @@
 
 Die Außenmodelle sind eigenständig modellierte, räumlich komprimierte Annäherungen. Fotos dienen nur als Form- und Materialreferenz; es werden keine Bilder daraus im Build ausgeliefert.
 
+Die Altstadtfront am Schloss- und Marktplatz greift das vom Auftraggeber beigefügte Platzfoto auf: Putzflächen, Steinrahmen, Dachgauben, Mansarddach und betonte Mittelachse. Die Nachbarhäuser sind eigenständige Typen auf der vorhandenen, komprimierten Platzkontur, keine Rekonstruktion einzelner Adressen.
+
 - Karte, Wegführung und Lagepunkte: [OpenStreetMap-Mitwirkende](https://www.openstreetmap.org/copyright), ODbL. [Schlossgarten](https://www.openstreetmap.org/way/543551459), [WC](https://www.openstreetmap.org/node/851580904), [Kollegienhaus](https://www.openstreetmap.org/way/27883773), [Konkordienkirche](https://www.openstreetmap.org/way/31989819), [Reiterdenkmal](https://www.openstreetmap.org/node/566152987).
 - WC: [Tourist-Information Erlangen, Ortsfoto](https://www.visit-erlangen.de/poi/oeffentliches_wc_im_schlossgar-42535/). Lage, 90°-Abzweig und U-Form folgen dem annotierten Kartenbild und der Ortsbeschreibung des Auftraggebers. Stufen, Maße und die beiden unteren WC-Kabinen sind frei angenähert; kein Bestandsaufmaß.
 - Parkentwicklung und Lage: [FAU, Schlossgarten im Erlanger Stadtlexikon](https://kommais.wisski.data.fau.de/wisski/navigate/2908/view), [Stadt Erlangen, Innenstadtkarte](https://ratsinfo.erlangen.de/getfile.asp?id=18096375&type=do).

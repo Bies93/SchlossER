@@ -1,4 +1,5 @@
-import {CITY_FLOOR, CITY_FRONTAGES, PERIMETER, GATES} from './world-layout.js';
+import {CITY_FLOOR, PERIMETER, GATES} from './world-layout.js';
+import {addCityFrontage} from './city-frontages.js';
 import {ageMasonry, repeatSet, sharedSet} from './surface-detail.js';
 import {WC_OUTLINE} from './park-stair.js';
 import {LAB_OUTLINE} from './lab-layout.js';
@@ -39,7 +40,9 @@ export function addPerimeter(T,scene,world,finish) {
     iron:tinted('METAL',0x383f38), doors:tinted('WOOD',0x6e5844),
     roof:tinted('ROOF_DARK',0x766962), lintel:tinted('SANDSTONE_CUT',0xd8c7aa),
     stucco:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.94}),
-    shopGlass:new T.MeshStandardMaterial({color:0x606066,vertexColors:true,roughness:.35,envMapIntensity:.69}),
+    sash:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.70}),
+    trimLine:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.77}),
+    canvasAwning:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.97,side:T.DoubleSide}),
     litGlass:new T.MeshStandardMaterial({color:0x5b5c55,vertexColors:true,roughness:.42,emissive:0xc89154,emissiveIntensity:0}),
     interior:new T.MeshStandardMaterial({color:0x292b27,vertexColors:true,roughness:.90}),
     tileRoof:new T.MeshStandardMaterial({color:0xbfb1a7,vertexColors:true,roughness:.88}),
@@ -60,7 +63,7 @@ export function addPerimeter(T,scene,world,finish) {
   Object.assign(materials.gutter,setts);
   materials.gutter.color.set(0xac9f8a);materials.gutter.roughness=1;materials.gutter.normalScale.setScalar(.30);
   for(const [key,exposure] of [['stone',.54],['base',.72],['cap',.15],['joint',.43],['lintel',.28],['stucco',.23],['tileRoof',.08],['houseStone',.26]])ageMasonry(materials[key],exposure);
-  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3,walk:4,curbstone:1.7,houseStone:2.5,stucco:1.65};
+  const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,tileRoof:1.48,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3,walk:4,curbstone:1.7,houseStone:2.5,stucco:1.65};
   const bins=new Map(), white=new T.Color(0xffffff);
   function quad(m,a,b,c,d,tint=white,offsetU=0,offsetV=0) {
     if(!bins.has(m))bins.set(m,{xyz:[],uv:[],colors:[]});
@@ -213,8 +216,6 @@ export function addPerimeter(T,scene,world,finish) {
       }
     }
   }
-  const houseTints=['#d5c8b3','#ddcbb6','#c9c9b9','#d2ad9a','#bac4b8','#d0c49f'];
-  const frames=['#343934','#555446','#4a5551','#563e39'];
   const walkSurfaces=[];
   function archRing(f,mid,half,spring,rise,d0,d1){
     const p=f.point, thick=.19, count=13;
@@ -249,113 +250,6 @@ export function addPerimeter(T,scene,world,finish) {
     const mesh=new T.Mesh(plane,new T.MeshStandardMaterial({map,roughness:.66}));
     mesh.name='Orientierung · '+label;mesh.receiveShadow=true;root.add(mesh);
   }
-  function opening(f,m,l,r,sill,head,d,color){
-    box(f,'interior',l,r,sill,head,d-.007,d-.002);
-    box(f,m,l+.022,r-.022,sill+.026,head-.024,d,d+.009,color);
-    for(const u of [l+.025,r-.064])box(f,'iron',u,u+.039,sill,head,d+.012,d+.042);
-    const mid=(l+r)*.5, cross=sill+(head-sill)*.62;
-    box(f,'iron',mid-.024,mid+.024,sill,head,d+.013,d+.050);
-    box(f,'iron',l,r,cross,cross+.038,d+.012,d+.052);
-  }
-  function door(f,l,r,top,m){
-    const mid=(l+r)/2;
-    box(f,'interior',l,r,.065,top,-.389,-.380);
-    box(f,m,l+.05,r-.05,.078,top-.17,-.377,-.310);
-    for(const x of [l+.17,mid,r-.17])
-      box(f,'doors',x-.032,x+.032,.12,top-.16,-.304,-.269);
-    for(const y of [.29,1.01,top-.43])
-      box(f,'doors',l+.079,r-.079,y,y+.071,-.306,-.272);
-    box(f,'iron',mid+.049,mid+.109,.94,1.023,-.269,-.237);
-    box(f,'base',l-.10,r+.10,-.039,.065,-.37,.124);
-    for(const x of [l-.11,r])box(f,'lintel',x,x+.11,.065,top,-.395,.044);
-    box(f,'lintel',l-.145,r+.145,top-.018,top+.105,-.398,.071);
-  }
-  function house(edge,f) {
-    const L=f.len,annex=edge.type==='annex',id=edge.id,
-      types=CITY_FRONTAGES[id]??Array.from({length:Math.max(1,Math.round(L/10))},(_,i)=>i%2?'plaster':'stone');
-    const weight=types.map((t,i)=>.75+((id*17+i*19)%13)*.055+(t==='corner'?.19:0)),sum=weight.reduce((a,b)=>a+b);
-    let start=0;
-    for(let i=0;i<types.length;i++){
-      const l=start,r= i===types.length-1?L:start+(weight[i]/sum)*L,w=r-l;start=r;
-      const type=types[i],salt=id*7+i,k=type==='stone',shop=type==='shop',corner=type==='corner', color=new T.Color(houseTints[salt%houseTints.length]);
-      const floors=annex?2:corner||salt%4===1?3:2, g=shop?3.60:3.12+(salt%3)*.15, upper=2.49+(salt%5)*.11,
-        top=g+(floors-1)*upper+.25, depth=6.8+(salt%3)*1.05, face=k?'houseStone':'stucco',front=.022,inner=-.42;
-      block(f,l,r,-depth,.075);
-      box(f,'stucco',l,r,groundY,top,-depth,inner+.01,color);
-      const base=.39, count=Math.max(1,Math.round(w/(shop?2.9:3.05)));
-      for(let j=0;j<count;j++){
-        const a=l+w*j/count,b=l+w*(j+1)/count,mid=(a+b)*.5,entry=j===(salt%count);
-        const half=(b-a)*(entry?.246:shop?.368:.267),lo=mid-half,hi=mid+half;
-        const sill=entry?.058:shop?.48:.85, head=entry?2.47:shop?2.72:2.25;
-        const lowMat=k?'stone':'base';
-        const solid=(p,q)=>{
-          box(f,lowMat,p,q,groundY,base+.025,inner,.067,color);
-          box(f,face,p,q,base+.025,g,inner,front,color);
-        };
-        solid(a,lo);solid(hi,b);
-        if(sill>base+.035){box(f,lowMat,lo,hi,groundY,base,inner,.067,color);
-          box(f,face,lo,hi,base,sill,inner,front,color);}
-        box(f,face,lo,hi,head,g,inner,front,color);
-        if(entry)door(f,lo,hi,head,'doors');
-        else {
-          opening(f,shop&&salt%3===1?'litGlass':shop?'shopGlass':'glass',lo,hi,sill,head,-.276,new T.Color(frames[salt%4]));
-          box(f,'lintel',lo-.112,hi+.112,sill-.073,sill,inner,.091);
-        }
-        if(shop){
-          box(f,'doors',a+.13,b-.13,2.90,3.14,-.03,.093);
-          box(f,'lintel',a+.12,b-.12,3.135,3.18,-.04,.118);
-        }
-      }
-      if(k||corner)box(f,'lintel',l,r,g-.062,g+.064,-.29,.116);
-      for(let j=1;j<floors;j++){
-        const base=g+(j-1)*upper,ceil=j===floors-1?top:base+upper,
-          bays=Math.max(1,Math.round(w/(corner?2.7:2.34))),step=w/bays,
-          sill=base+.48,head=base+(k?1.97:1.85);
-        box(f,face,l,r,base,sill,inner,front,color);
-        box(f,face,l,r,head,ceil,inner,front,color);
-        for(let k=0;k<bays;k++){
-          const mid=l+(k+.5)*step,half=Math.min(step*.33,corner?.62:.51),u=mid-half,v=mid+half;
-          box(f,face,l+k*step,u,sill,head,inner,front,color);
-          box(f,face,v,l+(k+1)*step,sill,head,inner,front,color);
-          opening(f,(salt+j*11+k*7)%27===0?'litGlass':'glass',u,v,sill,head,-.285,new T.Color(frames[(salt+j+k)%4]));
-          box(f,'lintel',u-.09,v+.09,sill-.063,sill,-.24,.11);
-          box(f,'lintel',u-.055,v+.055,sill-.09,sill-.063,-.12,.075);
-          if(corner||type==='stone'){
-            for(const x of [u-.075,v])box(f,'lintel',x,x+.075,sill,head,-.17,.045);
-            box(f,'lintel',u-.105,v+.105,head,head+.10,-.168,.066);
-          }
-          if(type!=='stone'&&!corner&&(salt+j*3+k*5)%11<3){
-            const color=new T.Color(['#746654','#637365','#806b5b'][salt%3]);
-            for(const x of [u-.25,v])box(f,'doors',x,x+.24,sill+.027,head-.018,-.036,.039,color);
-          }
-        }
-      }
-      if(w>3.8){
-        const a=corner?r-.24:l+.17;
-        box(f,'iron',a,a+.073,.27,top-.15,.054,.124);
-        for(const y of [.34,g,top-.42])box(f,'iron',a-.023,a+.095,y,y+.025,.016,.137);
-      }
-      box(f,'lintel',l,r,top-.172,top-.056,-.26,.159);
-      box(f,'lintel',l,r,top-.057,top+.027,-.23,.199);
-      box(f,'iron',l,r,top+.025,top+.086,.164,.23);
-      const p=f.point,y=top+.063,peak=y+(corner?2.89:1.45+(salt%4)*.37),roof=k?'roof':'tileRoof';
-      const a=p(l-.08,y,.22),b=p(r+.08,y,.22),c=p(r+.08,y,-depth-.14),d=p(l-.08,y,-depth-.14),
-        hip=corner?w*.20:(type==='plaster'?.17:Math.min(.88,w*.21)),
-        e=p(l+hip,peak,-depth*.52),g2=p(r-hip,peak,-depth*.52);
-      if(corner){
-        const knee=y+(peak-y)*.62,a2=p(l+.17,knee,-depth*.22),b2=p(r-.17,knee,-depth*.22);
-        quad(roof,a,b,b2,a2);quad(roof,a2,b2,g2,e);
-        quad(roof,d,a,a2,e);quad(roof,b,c,g2,b2);
-      }else {quad(roof,a,b,g2,e);quad(roof,d,a,e,e);quad(roof,b,c,g2,g2);}
-      quad(roof,c,d,e,g2);
-      if(w>6)box(f,'base',l+w*.62,l+w*.62+.47,peak-.64,peak+.48,-depth*.53-1.14,-depth*.53-.59);
-    }
-    // Lightly raised house apron: same footprint serves the visual floor and
-    // player's downward query, with a low stone edge rather than a blocker.
-    const p=f.point;
-    quad('walk',p(.08,-.014,.01),p(L-.08,-.014,.01),p(L-.08,-.015,1.15),p(.08,-.015,1.15));
-    quad('curbstone',p(.08,-.015,1.15),p(L-.08,-.015,1.15),p(L-.08,-.046,1.32),p(.08,-.046,1.32));
-  }
 
   const houses=new Set(['house','annex','streetGate']);
   for(const e of PERIMETER){
@@ -377,7 +271,7 @@ export function addPerimeter(T,scene,world,finish) {
       cap(f,.04,L-.04,3.42,.13,1.50);
       quad('walk',p(width,.00,.02),p(L-width,.00,.02),p(L-width,-.017,1.57),p(width,-.017,1.57));
     } else if(city){
-      house(e,f);
+      addCityFrontage(T,e,f,{box,quad,block,groundY});
       if(e.id===3||e.id===17)plaque(f,1.15,2.94,'Schlossplatz');
       else if(e.id===8||e.id===16)plaque(f,1.15,2.94,'Hauptstraße');
     }

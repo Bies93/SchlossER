@@ -27,7 +27,7 @@ const CITY = [
 // Hero frontages, in order along the city half of the existing contour.
 // These are types and material families, not IDs of real historic buildings.
 export const CITY_FRONTAGES = {
-  2:['stone','plaster'],3:['stone','shop','plaster'],4:['corner'],
+  2:['civic','plaster'],3:['stone','shop','plaster'],4:['corner'],
   6:['corner'],7:['plaster','stone'],8:['corner','shop'],9:['stone','plaster','shop'],
   10:['shop','stone'],11:['plaster','shop','corner'],12:['stone','plaster'],
   13:['corner','stone'],15:['corner'],16:['plaster','shop'],
