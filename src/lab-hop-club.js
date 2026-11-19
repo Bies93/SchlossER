@@ -1,6 +1,9 @@
 import {architectureKit} from './architecture-kit.js';
 import {LAB,CLUB_STAIR as S,CLUB_FLOOR as F,CLUB_CEILING as C,clubStairY,clubStep,labLower} from './lab-layout.js';
 import {randomSource} from './surface-detail.js';
+import {hopFinishes,nightMarquee} from './hopfenamt-finishes.js';
+import {schankCraft} from './hopfenamt-schank.js';
+import {danceLights,mirrorSilver} from './hopfenamt-licht.js';
 
 const pi=Math.PI, coord=(x,y,z)=>[x,y,z],drop=F-LAB.floor,rand=randomSource;
 // Only the nearest four emitters occupy real light slots, shared with the rest of the cellar.
@@ -52,7 +55,7 @@ function prints(T,root){
   const editions=[['HOPFENAMT','NACHTBETRIEB · SEIT SCHICHT NULL','#17454b','#e1b269'],
     ['TRINK NACH VORSCHRIFT','OBERBAYERISCHES KONTROLLGETRÄNK','#712f38','#ebc488'],
     ['DIE LOGE SIEHT MIT','NUR DIE GARDEROBE IST UNBEWACHT','#283959','#e4c77d'],
-    ['POLKASCHALTER','HEUTE: ZAPFHAHN-POLKA / 114 BPM','#44314b','#e2ad83']];
+    ['SCHLOSSKELLER 2099','FRÄNKISCHER ENDZEIT-RAVE · 32 TAKTE','#44314b','#e2ad83']];
   editions.forEach(([title,sub,paper,ink],i)=>{
     a.save();a.translate(i%2*512,(i>>1)*256);a.fillStyle=paper;a.fillRect(0,0,512,256);
     a.strokeStyle=ink;a.fillStyle=ink;a.lineWidth=2;a.strokeRect(10,9,492,238);
@@ -77,6 +80,7 @@ function prints(T,root){
 }
 
 export function hopClub(T,kit){
+  hopFinishes(T,kit.materials);
   const {root,hit,obj,cylinder,pipe,dress}=kit,{housing,flag}=dress,print=prints(T,root),rng=rand(4921);
   const bx=(m,x,y,z,w,h,d,angle=0)=>housing(m,x,F+y,z,w,h,d,angle);
   const cyl=(m,x,y,z,r,h)=>cylinder(m,x,F+y,z,r,h);
@@ -85,6 +89,7 @@ export function hopClub(T,kit){
   const ball=(m,x,y,z,a,b,c)=>obj(m,sphere,x,F+y,z,a,b,c);
   const tor=(m,x,y,z,r,angle=0,rx=0)=>obj(m,ring,x,F+y,z,r,r,r,rx,angle);
   const solid=(x,z,w,d)=>hit(x-w/2,x+w/2,z-d/2,z+d/2);
+  const craft=schankCraft(T,kit,{bx,cyl,bar,tor});
   function poster(i,x,y,z,w,h,a=0){
     bx('darkWood',x,y,z,w+.13,h+.13,.082,a);
     print(i,x+Math.sin(a)*.046,y,z+Math.cos(a)*.046,w,h,a);
@@ -110,51 +115,87 @@ export function hopClub(T,kit){
   }
   // Schank: panelled front, rail, ceramic fonts, drip tray and shelves of bottles.
   bx('darkWood',11.50,.54,-9.55,1.02,1.06,6.18);solid(11.5,-9.55,1.04,6.18);
-  bx('wood',11.50,1.10,-9.55,1.15,.13,6.34);
+  bx('darkWood',11.50,1.075,-9.55,1.15,.083,6.34);
+  for(let j=0;j<4;j++)kit.box('hopOak',10.926+j*.287,11.212+j*.287,F+1.116,F+1.166,-12.72,-6.38);
+  bar('brass',12.080,1.126,-12.68,12.080,1.126,-6.41,.012);
   bx('barGlow',12.04,.986,-9.55,.017,.016,6.08);
   for(let j=0;j<7;j++){
     const z=-12.17+j*.87;bx('wood',12.02,.57,z,.052,.79,.78);
     bx('leather',12.054,.57,z,.024,.62,.60);
+    // A raised lozenge, beaded moulding and small rosette catch the grazing strip light.
+    for(const sign of [-1,1]){
+      bar('copper',12.073,.56,z+sign*.238,12.073,.81,z,.012);
+      bar('copper',12.073,.56,z+sign*.238,12.073,.31,z,.012);
+      bx('hopOak',12.081,.57,z+sign*.32,.025,.68,.019);
+    }
+    ball('brass',12.081,.56,z,.018,.047,.047);
     if(j%2===0)bar('brass',12.02,.22,z,12.27,.22,z,.032);
   }
   bar('brass',12.27,.22,-12.46,12.27,.22,-6.62,.037);
-  for(const z of [-11.36,-9.51,-7.66]){
-    cyl('brass',11.49,1.20,z,.112,.07);cyl('porcelain',11.49,1.42,z,.080,.40);
-    ball('slateBlue',11.49,1.64,z,.089,.062,.089);
-    bar('brass',11.53,1.49,z,11.68,1.49,z,.025);bar('brass',11.68,1.49,z,11.68,1.423,z,.020);
+  for(const [i,z] of [-11.36,-9.51,-7.66].entries()){
+    craft.tap(11.49,1.166,z,i);
     bx('iron',11.75,1.177,z,.344,.019,.34);
     for(let j=0;j<7;j++)bx('gray',11.75,1.19,z-.127+j*.042,.29,.009,.010);
-  }
-  function mug(x,y,z){
-    cyl('beerGlass',x,y+.096,z,.068,.19);cyl('foam',x,y+.194,z,.065,.018);
-    tor('brass',x+.078,y+.108,z,.046);
   }
   for(const y of [1.17,1.83]){
     bx('wood',8.95,y,-9.54,.48,.074,5.8);
     for(const Z of [-11.85,-9.53,-7.20])bar('iron',8.72,y-.27,Z,9.12,y-.05,Z,.025);
-    for(let n=0;n<23;n++){if(n%8===5)continue;const z=-12.16+n*.24,x=8.98+rng()*.08,h=.16+rng()*.10;
-      cyl(n%4?'beerGlass':'green',x,y+.039+h/2,z,.054,h);cyl('beerGlass',x,y+h+.083,z,.026,.095);
-      cyl('brass',x,y+h+.134,z,.029,.015);cyl(n%3?'fileKraft':'canvas',x,y+.12,z,.055,.066);}
+    bx('brass',9.191,y-.018,-9.54,.012,.019,5.73);
+    bx('barGlow',9.12,y-.048,-9.54,.054,.012,5.53);
+    for(let n=0;n<23;n++){if(n%8===5)continue;
+      craft.flasche(8.99+rng()*.084,y+.039,-12.15+n*.238+rng()*.048,n);}
   }
   for(let j=0;j<4;j++){
-    const z=-11.87+j*1.59;cyl('iron',12.75,.043,z,.228,.085);cyl('brass',12.75,.39,z,.049,.67);
-    tor('brass',12.75,.28,z,.172,0,pi/2);cyl('logeCloth',12.75,.77,z,.23,.115);solid(12.75,z,.42,.42);
-    mug(11.83,1.167,z);
+    const z=-11.87+j*1.59;craft.stool(12.75,z);solid(12.75,z,.42,.42);
+    craft.mug(11.84,1.167,z,j);
   }
-  poster(1,8.77,2.85,-9.55,3.55,1.43,pi/2);
+  poster(1,8.93,2.90,-9.55,3.32,1.18,pi/2);
+  // Reeded backbar with amber picture lights and a hanging stemware rack.
+  for(const z of [-12.09,-6.99]){
+    bx('hopOak',8.84,2.85,z,.16,1.30,1.23);
+    bx('glassDark',8.933,2.85,z,.035,1.16,1.09);
+    for(const s of [-1,1]){
+      bx('brass',8.965,2.85,z+s*.463,.020,1.09,.016);
+      bar('brass',8.97,2.32,z,8.97,2.84,z+s*.44,.009);
+      bar('brass',8.97,2.84,z+s*.44,8.97,3.37,z,.009);
+    }
+    bar('gunmetal',8.86,3.57,z,9.14,3.57,z,.029);
+    bar('brass',9.14,3.55,z-.27,9.14,3.55,z+.27,.045);
+    bx('barGlow',9.14,3.512,z,.059,.017,.46);
+  }
+  for(let j=0;j<6;j++){
+    const z=-10.36+j*.31;
+    cyl('hopGlint',9.07,1.781,z,.059,.012);
+    cyl('hopGlint',9.07,1.726,z,.009,.108);
+    ball('hopGlass',9.07,1.597,z,.062,.091,.062);
+    tor('hopGlint',9.07,1.540,z,.049,0,pi/2);
+  }
   // Banquettes are recessed to one side; keep the landing-to-bar diagonal unobstructed.
   for(let j=0;j<3;j++){
     const z=-7.42-j*3.29;
-    bx('darkWood',23.72,.23,z,1.10,.43,2.92);bx('logeCloth',23.98,.89,z,.27,1.10,2.88);
+    bx('darkWood',23.72,.23,z,1.10,.43,2.92);bx('leather',23.98,.89,z,.27,1.10,2.88);
+    // One sprung, diamond-buttoned back rather than separate pill shapes.
+    const back=new T.PlaneGeometry(2.85,.82,72,24),pv=back.attributes.position;
+    for(let n=0;n<pv.count;n++){
+      const u=pv.getX(n),v=pv.getY(n),a=u/.478+v/.375,b=u/.478-v/.375;
+      const l=Math.sin(pi*a)**2,r=Math.sin(pi*b)**2;
+      const hem=Math.min(1,(1.427-Math.abs(u))/.060,(.411-Math.abs(v))/.041);
+      pv.setXYZ(n,23.838-hem*(.028+.060*(l*r)**.32),F+1.013+v,z+u);
+    }
+    back.computeVertexNormals();kit.k.geometry('hopVelvet',back,new T.Matrix4());back.dispose();
+    for(let n=-5;n<=5;n++)for(const v of (n%2?[-.1875,.1875]:[-.375,0,.375])){
+      craft.grain('brass',23.807,1.013+v,z+n*.239,.009,.012,.012);
+    }
+    bar('brass',23.90,1.423,z-1.38,23.90,1.423,z+1.38,.015);
     for(let q=0;q<4;q++){
       const V=z-1.07+q*.715;bx('leather',23.63,.52,V,.83,.17,.693);
-      ball('brass',23.835,1.03,V,.026,.028,.028);
+      bar('copperDark',23.215,.525,V-.32,23.215,.525,V+.32,.009);
     }
     solid(23.68,z,1.19,2.91);
     cyl('iron',22.44,.06,z,.32,.10);cyl('brass',22.44,.40,z,.080,.62);cyl('wood',22.44,.78,z,.61,.086);
     solid(22.44,z,1.09,1.09);
-    mug(22.55,.824,z+.18);mug(22.24,.824,z-.08);
-    cyl('brass',22.44,.85,z-.22,.102,.055);ball('barGlow',22.44,.963,z-.22,.081,.119,.081);
+    craft.mug(22.55,.824,z+.18,j);craft.mug(22.24,.824,z-.08,j+1);
+    craft.lamp(22.44,.824,z-.25);
   }
   // Booth, vinyl decks, layered PA cones, patch leads and a little illuminated crest.
   bx('darkWood',16.65,.61,-16.33,3.92,1.22,.89);solid(16.65,-16.33,3.95,.92);
@@ -168,30 +209,56 @@ export function hopClub(T,kit){
     bx('wood',x,1.324,-16.33,.90,.088,.65);cyl('iron',x,1.383,-16.33,.258,.038);cyl('brocade',x,1.406,-16.33,.084,.006);
     tor('gray',x,1.405,-16.33,.237,0,pi/2);
     bar('brass',x+.32,1.42,-16.51,x+.15,1.42,-16.28,.012);
+    cyl('gray',x+.30,1.409,-16.54,.054,.048);
+    bx('gunmetal',x+.142,1.414,-16.265,.052,.028,.065,-.24);
+    for(let n=0;n<3;n++)tor('gunmetal',x,1.405,-16.33,.112+n*.036,0,pi/2);
+    for(let n=0;n<4;n++)bx(n?'gasket':'tintedBulb',x-.28+n*.032,1.378,-16.10,.024,.017,.036);
   }
   for(let n=0;n<6;n++){const x=16.30+n*.12;bx('gasket',x,1.286,-16.22,.018,.012,.23);
     bx('porcelain',x,1.301,-16.22+.062*Math.sin(n),.068,.028,.037);cyl('copper',x,1.31,-16.47,.033,.056);}
   for(const x of [13.62,19.70]){
     bx('darkWood',x,.86,-16.52,1.0,1.72,.81);solid(x,-16.52,1,.82);
     bx('gasket',x,.86,-16.094,.923,1.57,.050);
+    for(const s of [-1,1]){
+      bx('gunmetal',x+s*.457,.85,-16.046,.034,1.59,.054);
+      for(const h of [.11,.84,1.61])craft.grain('brass',x+s*.455,h,-16.011,.012,.012,.005);
+    }
     for(const [y,r] of [[.50,.333],[1.20,.228],[1.52,.078]]){
       tor('gray',x,y,-16.05,r);ball('gunmetal',x,y,-16.047,r*.91,r*.91,.046);
       ball('gasket',x,y,-15.999,r*.35,r*.35,.039);
     }
   }
-  for(const [x,z,w,i] of [[16.63,-17.78,3.70,3],[12.30,-3.51,2.75,2],[18.36,-3.51,3.14,0]]){
+  bx('copperDark',16.63,2.73,-17.74,5.12,1.77,.16);
+  nightMarquee(T,root,16.63,F+2.73,-17.65);
+  for(const [x,z,w,i] of [[21.74,-3.51,1.76,3],[12.30,-3.51,2.75,2],[18.36,-3.51,3.14,0]]){
     poster(i,x,2.55,z,w,w*.49,z<-10?0:pi);
   }
   for(const x of [11.4,21.90])flag('bavaria',x,drop+2.49,-17.78,2.42,1.87,0);
+  const salt=new T.IcosahedronGeometry(1,0);
   // A real continuous knot with crossed tails, coarse salt and a hanging loop.
   for(let j=0;j<3;j++){
-    const z=-7.44-j*3.29,x=24.30,y=2.27;
-    const points=[[-.33,-.24],[-.06,-.05],[.39,.22],[.46,.02],[.31,-.22],[0,-.29],[-.31,-.22],[-.46,.02],[-.39,.22],[.06,-.05],[.33,-.24]];
-    const path=new T.CatmullRomCurve3(points.map(([v,h],i)=>new T.Vector3(x-.05*Math.sin(i*.8),F+y+h,z+v)));
-    const geom=new T.TubeGeometry(path,48,.061,8,false);kit.k.geometry('ochre',geom,new T.Matrix4());geom.dispose();
-    for(let s=0;s<21;s++){const v=path.getPoint((s+.48)/21);ball('porcelain',v.x-.052,v.y-F+.012,v.z,.008,.012,.014);}
-    for(const s of [-1,1])bar('brass',24.34,2.85,z,24.29,2.49,z+s*.35,.012);
+    const z=-7.44-j*3.29,x=24.05,y=2.37;
+    const points=[[-.34,-.23,-.042],[-.22,-.17,-.085],[.10,.073,-.114],[.35,.32,-.036],[.526,.21,0],[.525,-.016,.01],[.34,-.241,.02],[0,-.331,.043],[-.35,-.231,.027],[-.54,.002,.012],[-.51,.22,0],[-.345,.31,-.01],[-.12,.08,-.008],[.14,-.10,-.04],[.345,-.225,-.079]];
+    const path=new T.CatmullRomCurve3(points.map(([v,h,d])=>new T.Vector3(x+d,F+y+h,z+v)));
+    const radius=t=>.037+.068*Math.sin(t*pi)**1.6+.030*Math.exp(-((t-.5)**2)/.009);
+    const geom=new T.TubeGeometry(path,76,1,10,false),pos=geom.attributes.position;
+    for(let row=0;row<=76;row++){
+      const t=row/76,P=path.getPointAt(t),r=radius(t);
+      for(let n=0;n<=10;n++){const i=row*11+n;pos.setXYZ(i,P.x+(pos.getX(i)-P.x)*r,P.y+(pos.getY(i)-P.y)*r,P.z+(pos.getZ(i)-P.z)*r);}
+    }
+    geom.computeVertexNormals();kit.k.geometry('hopDough',geom,new T.Matrix4());geom.dispose();
+    for(const t of [0,1]){const P=path.getPointAt(t);craft.grain('hopDough',P.x,P.y-F,P.z,.038,.038,.038);}
+    // Split belly and irregular salt crystals, applied on the visible crust.
+    const belly=path.getPointAt(.50);
+    ball('hopCrust',belly.x-.115,belly.y-F+.033,belly.z,.027,.029,.183);
+    for(let s=0;s<37;s++){
+      const t=(s+.2+.58*rng())/37,P=path.getPointAt(t),a=(rng()-.5)*1.85,r=radius(t);
+      obj('porcelain',salt,P.x-r*Math.cos(a),P.y+r*Math.sin(a),P.z,.009,.009+rng()*.006,.012,rng(),rng(),0);
+    }
+    bx('hopOak',24.34,2.95,z,.23,.15,.24);
+    for(const s of [-1,1])bar('brass',24.22,2.98,z,24.04,2.68,z+s*.35,.011);
   }
+  salt.dispose();
   // Mirror facets share one flat-shaded mesh, a single slow turn, and no shadow map.
   const mirror=new T.BufferGeometry(),verts=[],colors=[];
   const point=(a,b)=>[.437*Math.cos(b)*Math.sin(a),.437*Math.sin(b),.437*Math.cos(b)*Math.cos(a)];
@@ -206,7 +273,7 @@ export function hopClub(T,kit){
   }
   mirror.setAttribute('position',new T.Float32BufferAttribute(verts,3));mirror.computeVertexNormals();
   mirror.setAttribute('color',new T.Float32BufferAttribute(colors,3));
-  const globe=new T.Mesh(mirror,new T.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.24,metalness:.48}));
+  const globe=new T.Mesh(mirror,mirrorSilver(T));
   globe.position.set(16.60,F+3.02,-11);root.add(globe);
   const scatter=new T.InstancedMesh(new T.CircleGeometry(1,9),new T.MeshBasicMaterial({
     color:0xffdfd0,transparent:true,opacity:.24,depthWrite:false,blending:T.AdditiveBlending}),54),dummy=new T.Object3D();
@@ -217,11 +284,10 @@ export function hopClub(T,kit){
     dummy.scale.set(.034+rng()*.042,.021+rng()*.029,1);dummy.updateMatrix();
     scatter.setMatrixAt(i,dummy.matrix);scatter.setColorAt(i,new T.Color(i%3?0xb8e8ff:0xffaac2));
   }
-  root.add(scatter);root.userData.turn=dt=>{globe.rotation.y+=dt*.28;scatter.rotation.y-=dt*.14;};
+  const animate=danceLights(T,root,{bar,bx,cyl}),still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  root.add(scatter);root.userData.turn=dt=>{if(!still){globe.rotation.y+=dt*.28;scatter.rotation.y-=dt*.14;animate(dt);}};
   bar('iron',16.60,3.44,-11,16.60,C-F,-11,.022);
-  for(const [x,z] of [[13.35,-13.60],[19.68,-13.60],[13.35,-8.45],[19.68,-8.45]]){
-    bar('iron',x,C-F,z,x,3.47,z,.021);cyl('gunmetal',x,3.38,z,.16,.24);
-    cyl(x>16?'tintedBulb':'cold',x,3.24,z,.139,.027);
-  }
-  ring.dispose();sphere.dispose();
+  cyl('gunmetal',16.60,3.70,-11,.076,.19);
+  for(const h of [2.615,3.425])tor('gray',16.60,h,-11,.158,0,pi/2);
+  craft.dispose();ring.dispose();sphere.dispose();
 }

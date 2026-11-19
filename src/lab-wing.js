@@ -14,7 +14,7 @@ import {CLUB_FLOOR,CLUB_CEILING,clubLevel} from './lab-layout.js';
 import {hopStair,hopClub,CLUB_LIGHTS} from './lab-hop-club.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y)&&!clubLevel(p.y);
-const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS,...LODGE_ROOMS,hopClub:{name:'Hopfenamt · Nachtbetrieb',palette:['riteWall','darkWood'],tiles:['vaultWall','fineStone'],tile:.78}};
+const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS,...LODGE_ROOMS,hopClub:{name:'Hopfenamt · Nachtbetrieb',palette:['hopBrick','darkWood'],tiles:['hopPaver','fineStone'],tile:.78}};
 const cellNames={clubStair:'Treppe zum Hopfenamt',southStair:'Wohntrakt · Verdeckter Abstieg',chambers:'Klonkammern',lock:'Druckschleuse',spine:'Verteiler',archive:'Archiv',plant:'Maschinenraum',
   return:'Wartungsgang',observation:'Beobachtung',vault:'Saal der Rückgabe',
   ...Object.fromEntries(Object.entries(treatmentRooms).map(([id,{name}])=>[id,name]))};
@@ -138,7 +138,7 @@ function cellarKit(T,root,world,id,materials,graphics){
     for(let j=z-d*.5+.035;j<z+d*.5-.02;j+=.069)box('gray',x-w*.46,x+w*.46,floor+.007,floor+.012,j,j+.018);
   }
   cellarWalls(k,world,id);
-  box(id==='vault'?'vaultWall':'concrete',x0,x1,ceiling,ceiling+.17,z0,z1);
+  box(deep?'hopTin':id==='vault'?'vaultWall':'concrete',x0,x1,ceiling,ceiling+.17,z0,z1);
   box('gasket',x0,x1,floor-.12,floor-.025,z0,z1);
   const step=treatmentRooms[id]?.tile??(id==='archive'?.65:id==='plant'?.98:.84);
   for(let x=x0,i=0;x<x1-.007;x+=step,i++)for(let z=z0,j=0;z<z1-.007;z+=step,j++){

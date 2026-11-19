@@ -1,7 +1,7 @@
 // Build a local, self-contained contact sheet from the normal cellar, lights and collision world.
 import {build} from 'esbuild';
 import {mkdir,writeFile} from 'node:fs/promises';
-const dir=new URL('../dist/hopfenamt/',import.meta.url);await mkdir(dir,{recursive:true});
+const dir=new URL('../dist/hopfenamt-nacht/',import.meta.url);await mkdir(dir,{recursive:true});
 const app=await build({stdin:{resolveDir:process.cwd(),contents:`
 import * as T from 'three';import {addPalaceLab} from './src/palace-lab.js';
 import {collisionWorld} from './src/collision.js';import {BOUNDS,PLAYER} from './src/world-layout.js';
@@ -25,7 +25,7 @@ for(const [i,a] of [...route,...route.slice(0,-1).reverse()].entries()){
 }
 if(Math.abs(floor-LAB.floor)>.01||labFloorAt(21,-11,F)!==F||labFloorAt(21,-11,LAB.floor)!==LAB.floor)throw Error('Stockwerke nicht getrennt');
 const camera=new T.PerspectiveCamera(67,680/464,.05,100);camera.layers.set(3);
-for(const [x,z,X,Z,h] of [[33.91,-4.52,26.5,-4.47,-1.10],[23.32,-4.70,14.49,-12.38,1.26],[15.93,-14.70,10.51,-8.93,1.43],[12.61,-9.58,18.10,-15.93,1.72]]){
+for(const [x,z,X,Z,h] of [[13.52,-7.20,10.93,-9.91,1.38],[20.34,-6.35,15.90,-14.29,1.91],[11.01,-8.82,11.62,-9.57,1.45],[20.27,-11.46,23.85,-10.81,1.81]]){
   const y=x>32?LAB.floor:F;lab.update(.03,{x,y,z});camera.position.set(x,y+1.64,z);camera.lookAt(X,y+h,Z);
   r.render(s,camera);const c=document.createElement('canvas');c.width=680;c.height=464;c.getContext('2d').drawImage(r.domElement,0,0);document.body.append(c);
 }

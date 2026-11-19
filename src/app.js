@@ -99,7 +99,7 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice);
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    const surface=hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';

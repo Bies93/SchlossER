@@ -3,10 +3,10 @@ const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl,orbUrl) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
-  let danceBus,danceWet=0,danceBeat=0,danceNext=0;
+  let danceBus,danceWet=0,danceBuffer,danceLoad,danceRetry=0,danceNode,danceStart=0,danceOffset=0;
   const spokenClips=new Map();
   let choirRequest,choirVoice,choirFailed=false;
   let radioVoice,radioAt;
@@ -169,7 +169,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl) {
     if(!ctx)return;
     const t=ctx.currentTime;
     master.gain.setTargetAtTime(playing&&enabled?.55:0,t,.038);
-    music.gain.setTargetAtTime(levels.music*(choirVoice?.42:1)*(1-.96*danceWet),t,choirVoice?.085:.23);
+    music.gain.setTargetAtTime(levels.music*(choirVoice?.42:1)*(1-danceWet),t,choirVoice?.085:.23);
     danceBus?.gain.setTargetAtTime(levels.music*danceWet*.88,t,.12);
     sfx.gain.setTargetAtTime(levels.sfx,t,.046);
   }
@@ -304,32 +304,32 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl) {
       grit(sfx,t,.86,v,980,4400,{wet:.20,attack:.26,rate:.88+random()*.06});
     }
   }
-  // Original eight-bar "Zapfhahn-Polka": pump bass, offbeat free reeds and a
-  // drum machine. Short lookahead only; never queue missed beats after a stall.
+  // One decoded loop for stair and dance floor. Movement only changes gain.
   function club(amount){
     if(!live())amount=0;
-    if(amount&&!danceBus)danceBus=gain(master,0);
-    if((!amount&&danceWet)||Math.abs(danceWet-amount)>.009){
-      if(!danceWet){danceBeat=0;danceNext=ctx.currentTime+.035;}
-      danceWet=amount;mix();
+    if(!amount){
+      if(!danceNode)return;
+      const n=danceNode,t=ctx.currentTime;danceNode=null;
+      danceOffset=(danceOffset+t-danceStart)%n.loopEnd;
+      danceWet=0;mix();n.stop(t+.12);return;
     }
-    if(!amount||!levels.music)return;
-    const now=ctx.currentTime,tick=60/114/2;
-    if(danceNext<now-.06)danceNext=now+.012;
-    while(danceNext<now+.11){
-      const n=danceBeat++%64,t=Math.max(now+.005,danceNext),j=n%8;
-      const bass=[38,38,43,45,38,47,45,38][Math.floor(n/8)],hz=m=>440*2**((m-69)/12);
-      if(j%2===0){
-        tone(danceBus,t,92,.15,.32,{end:44,attack:.006});
-        tone(danceBus,t+.013,hz(bass+(j===4?7:0)),.29,.28,{wave:ac,attack:.023});
-        if(j%4===2)grit(danceBus,t,.095,.15,1000,4700,{});
-      }else{
-        for(const k of [12,16,19])tone(danceBus,t,hz(bass+k),.155,.059,{wave:ac,attack:.022,shiver:5});
-        grit(danceBus,t,.055,.071,3700,7100,{});
+    if(!danceBuffer){
+      if(!danceLoad&&ctx.currentTime>=danceRetry){
+        danceLoad=fetch(clubUrl).then(r=>{if(!r.ok)throw Error('Clubtrack fehlt');return r.arrayBuffer();})
+          .then(bytes=>ctx.decodeAudioData(bytes)).then(buffer=>{danceBuffer=buffer;})
+          .catch(()=>{danceRetry=ctx.currentTime+20;}).finally(()=>{danceLoad=null;});
       }
-      if(j===0||j===3||j===5||j===6)tone(danceBus,t+.018,hz(bass+24+[4,0,0,7,0,9,7,0][j]),.194,.080,{type:'triangle',attack:.026});
-      danceNext+=tick;
+      return;
     }
+    if(!danceNode){
+      danceBus??=gain(master,0);
+      const n=ctx.createBufferSource();n.buffer=danceBuffer;n.loop=true;
+      // 32 bars, exact musical end from the 44.1 kHz WAV master (no MP3 tail).
+      n.loopEnd=Math.min(danceBuffer.duration,2454261/44100);
+      n.connect(danceBus);n.onended=()=>n.disconnect();danceStart=ctx.currentTime;
+      n.start(danceStart,danceOffset);danceNode=n;
+    }
+    if(Math.abs(danceWet-amount)>.005||amount===1&&danceWet!==1){danceWet=amount;mix();}
   }
   return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,club,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
