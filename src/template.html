@@ -10,6 +10,8 @@
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
 body{height:100vh;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);font:14px/1.45 system-ui,"Segoe UI",sans-serif;color:var(--ink)}
+body[data-state=playing]{grid-template-rows:minmax(0,1fr)}
+body[data-state=playing]>header{display:none}
 [hidden]{display:none!important}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;padding:calc(env(safe-area-inset-top) + 3px) max(12px,env(safe-area-inset-right)) 3px max(12px,env(safe-area-inset-left));background:#141b1a;border-bottom:1px solid var(--line)}
 .brand,.tools,.actions{display:flex;align-items:center;gap:10px}
@@ -27,8 +29,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .tool svg{display:block;width:17px;height:17px}
 .tool.icon{display:grid;place-items:center;padding:0}
 #pause,#overlay,#error,#loading,#leave,#drag-hint,#stick,.paused-copy,.touch-copy{display:none}
-body[data-state=playing] #pause{display:inline-flex;align-items:center}
-body[data-state=playing] #info{display:none}
+#pause{position:absolute;z-index:4;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));padding:0;background:#141d1bdb}
+body[data-state=playing][data-input=touch] #pause{display:grid;place-items:center}
 body[data-state=loading] #loading,body[data-state=error] #error,
 body[data-state=ready] #overlay,body[data-state=paused] #overlay,
 body[data-state=paused] #leave,body[data-state=paused] .paused-copy{display:block}
@@ -90,12 +92,12 @@ body[data-input=touch] #portal-action kbd{display:none}
   <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span class="brand-subtitle">Schloss &amp; Garten</span><span class="brand-signature">I <span class="brand-heart">❤️</span> BIES</span></div>
   <div class="tools">
     <button class="tool" id="audio-toggle" type="button" aria-pressed="true" title="Ton umschalten (M)">Ton an</button>
-    <button class="tool" id="pause" type="button" title="Pause (Escape)">Pause</button>
     <button class="tool" id="info" type="button" aria-haspopup="dialog">Hilfe</button>
   </div>
 </header>
 <main aria-label="Erlanger Schloss und Schlossgarten">
   <div id="canvas"></div>
+  <button class="tool" id="pause" type="button" aria-label="Rundgang pausieren" title="Pause">Ⅱ</button>
   <div class="panel" id="loading" role="status"><p class="eyebrow">Erlangen zu Fuß</p><p id="loading-text">Der Rundgang wird geladen …</p></div>
   <section class="panel" id="overlay" aria-label="Rundgang">
     <p class="eyebrow">Erlangen zu Fuß</p>

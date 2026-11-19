@@ -71,12 +71,16 @@ export function addPalaceLab(T,root,world,M){
   const darkWood=M.oak.clone();darkWood.color.setHex(0x604738);darkWood.vertexColors=false;
   const plaster=plain(0x747a71,.92,sharedSet(T,'plaster',256));
   plaster.normalScale.setScalar(.40);
-  const enamel=sharedSet(T,'enamel',256);
+  const enamel=sharedSet(T,'enamel',256),fabric=sharedSet(T,'canvas',128),labTile=sharedSet(T,'labTile',256);
   const materials={
     plaster,concrete:plain(0x626462,.9,sharedSet(T,'plaster',256)),wood,darkWood,
     green:plain(0x526f68,.88,{...enamel,metalness:.16}),iron:plain(0x303939,.66,{metalness:.44}),
     rust:plain(0x82513f,.96,{...enamel,metalness:.20}),gray:plain(0x8a958b,.66,{metalness:.43}),
     gunmetal:plain(0x495651,.92,{...enamel,metalness:.25}),edge:plain(0x869890,.54,{metalness:.41}),
+    labTileWall:plain(0xc4cdbb,.86,{...labTile,normalScale:new T.Vector2(.32,.32)}),
+    labFloorPatch:plain(0x747b6f,.91,sharedSet(T,'plaster',256)),
+    infCloth:plain(0x667b75,1,{...fabric,side:T.DoubleSide}),infClothPale:plain(0xa8ad91,1,{...fabric,side:T.DoubleSide}),
+    infSheet:plain(0xb3b19a,.94,fabric),infPad:plain(0x4f6054,.77,fabric),
     copper:plain(0xa86945,.78,{...enamel,metalness:.53}),copperDark:plain(0x694538,.91,{...enamel,metalness:.35}),
     porcelain:plain(0xbab4a2,.64),beerGlass:plain(0x784b22,.30,{metalness:.20}),
     gasket:plain(0x252c2b),brass:plain(0xad8960,.59,{metalness:.51}),
@@ -293,7 +297,7 @@ function buildChambers(T,room,world,materials,graphics){
   // A light wash makes the flag and the scratched-out rival program visible
   // immediately when coming down the stairs; nothing protrudes into the route.
   flag('bavaria',-18.40,2.00,south+.063,2.44,1.24);
-  plaque('PROJEKT BAYERN',['SEKTION B · UNTERDECK ERLANGEN','BAUREIHE B: 8 FREIGABEN / 9 MARKEN'],-15.81,2.057,south+.037,1.94,.68,0,'blue');
+  plaque('PROJEKT BAYERN',['SEKTION B · UNTERDECK ERLANGEN','BAUREIHE B · NICHT FÜR DEN PUBLIKUMSVERKEHR'],-15.81,2.057,south+.037,1.94,.68,0,'blue');
   flag('franconia',-13.83,2.035,south+.036,1.43,.75);
   plaque('VERGLEICHSREIHE',['B: TRACHTENAUSGABE GENEHMIGT','F: ERGEBNIS AUS DEM REGISTER ENTFERNT'],-11.975,2.015,south+.035,1.67,.61);
   plaque('01 · SCHLEUSE',['WEITER ZUM ARCHIV UND ZUR TECHNIK'],-8.02,2.73,north-.207,1.39,.34,Math.PI);
@@ -316,7 +320,7 @@ function buildChambers(T,room,world,materials,graphics){
   rod('edge',[tx-.626,floor+1.05,tz-.223],[tx-.626,floor+1.05,tz+.223],.023);
   for(const dz of [-.223,.223])rod('edge',[tx-.626,floor+1.05,tz+dz],[tx-.54,floor+.91,tz+dz],.021);
   housing('leather',tx-.16,floor+.986,tz,.61,.031,.404);
-  plaque('BELEG F–09',['TRACHTENMUSTER NICHT ÜBERNOMMEN','Fundort: Ablage B'],tx-.16,1.005,tz,.54,.33,Math.PI,'cream',-Math.PI*.5,false);
+  plaque('WERKSTATTBELEG',['MUSTER · MATERIALPRÜFUNG','Ablage: Kostümabteilung'],tx-.16,1.005,tz,.54,.33,Math.PI,'cream',-Math.PI*.5,false);
   housing('iron',tx+.34,floor+1.018,tz+.02,.284,.112,.262);
   for(const dz of [-.06,.063])housing('brass',tx+.35,floor+1.080,tz+dz,.08,.014,.068);
   props.folio(tx+.28,floor+.308,tz-.034,.47,.37,Math.PI+.10,2,{thickness:.068});

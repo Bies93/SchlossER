@@ -13,7 +13,7 @@ export function sharedSet(T,kind,size){
 }
 
 export function repeatSet(T,kind,size=512) {
-  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404}[kind]);
+  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318}[kind]);
   const field=n=>Float32Array.from({length:n*n},rng);
   const grids=[8,24,64].map(n=>[n,field(n)]);
   const noise=(i,x,y)=>{
@@ -45,6 +45,15 @@ export function repeatSet(T,kind,size=512) {
     } else if(kind==='plaster'){
       const v=a*11+b*8+c*5+f*2;
       write(x,y,225+v,223+v,218+v,a*.01+b*.035+c*.086+f*.037,221+b*21+c*12);
+    } else if(kind==='labTile'){
+      // Six by eight tile faces per shared 1.42 m repeat.
+      const u=x/size*6,v=y/size*8,col=Math.floor(u),row=Math.floor(v),px=u-col,py=v-row;
+      const edge=Math.min(px,1-px,py,1-py),seal=clamp((edge-.009)/.034,0,1);
+      const chip=clamp((a*.3+c*.53+f*.06-.25)*4,0,.7),t=Math.sin(col*6.3+row*65.7)*7+a*13+b*8-chip*20;
+      write(x,y,lerp(138,205+t,seal),lerp(139,206+t,seal),lerp(127,194+t,seal),seal*.16+c*.04,lerp(231,163+chip*40+b*12,seal));
+    } else if(kind==='canvas'){
+      const weave=Math.sin(x*Math.PI*.5)*Math.sin(y*Math.PI*.5),v=a*10+b*7+c*2.5+weave*2.7;
+      write(x,y,214+v,213+v,199+v,b*.030+weave*.026+f*.016,224+weave*7);
     } else if(kind==='enamel'){
       const pit=clamp((b*.36+c*.61+f*.06-.23)*5.7,0,.82),v=a*21+b*12+c*6-pit*49;
       write(x,y,238+v+pit*7,237+v,231+v-pit*13,b*.021+c*.032+f*.014-pit*.061,179+b*22+pit*61);
@@ -91,7 +100,7 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }
-  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45}[kind];
+  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;

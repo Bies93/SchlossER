@@ -25,7 +25,8 @@ export const LAB_CELLS={
   brewery:[-26.22,-16.24,22.76,30.15],
   beerLab:[-16.24,-9.74,23.16,28.72],
   ward:[-20.38,-16.30,30.15,33.04],
-  cells:[-24.55,-16.30,33.04,40.12]
+  cells:[-24.55,-16.30,33.04,40.12],
+  infirmary:[-27.65,-13.60,40.12,53.75]
 };
 // [room A, room B, fixed axis, edge, aperture centre MIN/MAX]
 export const LAB_LINKS=[
@@ -42,7 +43,8 @@ export const LAB_LINKS=[
   ['maltLock','brewery','z',22.76,-23.36,-21.34],
   ['brewery','beerLab','x',-16.24,24.45,26.48],
   ['brewery','ward','z',30.15,-19.49,-17.20],
-  ['ward','cells','z',33.04,-19.52,-17.23]
+  ['ward','cells','z',33.04,-19.52,-17.23],
+  ['cells','infirmary','z',40.12,-19.42,-17.19]
 ];
 const cellEntries=Object.entries(LAB_CELLS);
 function contains([x0,x1,z0,z1],x,z,pad){return x>=x0-pad&&x<=x1+pad&&z>=z0-pad&&z<=z1+pad}

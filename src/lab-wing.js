@@ -1,20 +1,22 @@
 import {architectureKit} from './architecture-kit.js';
 import {labGraphics,dressLab} from './lab-dressing.js';
 import {MALT_ROOMS,MALT_LIGHTS,fitMaltWing} from './lab-malt-wing.js';
+import {INFIRMARY,INFIRMARY_LIGHTS,addInfirmary} from './lab-infirmary.js';
 import {cellDoorTarget} from './lab-cell-doors.js';
 import {stationery} from './interior-stationery.js';
 import {LAB,LAB_CUT,LAB_CELLS,LAB_LINKS,LAB_LAYER,labLower,labCellAt,labEdges} from './lab-layout.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y);
+const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY};
 const cellNames={chambers:'Klonkammern',lock:'Druckschleuse',spine:'Verteiler',archive:'Archiv',plant:'Maschinenraum',
   return:'Wartungsgang',observation:'Beobachtung',vault:'Saal der Rückgabe',
-  ...Object.fromEntries(Object.entries(MALT_ROOMS).map(([id,{name}])=>[id,name]))};
+  ...Object.fromEntries(Object.entries(treatmentRooms).map(([id,{name}])=>[id,name]))};
 const palettes={lock:['iron','green'],spine:['concrete','green'],archive:['archiveWall','rust'],
-  plant:['concrete','iron'],return:['concrete','rust'],observation:['ceramic','green'],vault:['vaultWall','rust'],
-  ...Object.fromEntries(Object.entries(MALT_ROOMS).map(([id,{palette}])=>[id,palette]))};
+  plant:['concrete','iron'],return:['concrete','rust'],observation:['labTileWall','green'],vault:['vaultWall','rust'],
+  ...Object.fromEntries(Object.entries(treatmentRooms).map(([id,{palette}])=>[id,palette]))};
 const ports=Object.fromEntries(Object.keys(LAB_CELLS).map(id=>[id,LAB_LINKS.filter(([a,b])=>a===id||b===id)]));
 const own=new Set(['lock:chambers','lock:spine','archive:spine','plant:spine','plant:return','observation:return','observation:chambers','vault:plant',
-  'vault:maltLock','maltLock:brewery','brewery:beerLab','brewery:ward','ward:cells']);
+  'vault:maltLock','maltLock:brewery','brewery:beerLab','brewery:ward','ward:cells','cells:infirmary']);
 
 // Find at most two rooms beyond the current room; the second doorway must
 // overlap the sight wedge of the first one. Camera frustum culling is additional.
@@ -56,25 +58,38 @@ export function cellarWalls(k,world,id){
       :(u,y,v)=>sign===1?[u,y,edge+v]:[-u,y,edge-v];
     const along=axis==='x'?-sign:sign;
     const panel=(m,a,b,y,Y,d0,d1)=>k.box(m,map,along===1?a:-b,along===1?b:-a,y,Y,d0,d1);
+    const face=(m,a,b,low,high,depth)=>{
+      if(b-a<.002)return;
+      const left=along===1?a:-b,right=along===1?b:-a,s=1.42;
+      const A=map(right,low,depth),B=map(left,low,depth),C=map(left,high,depth),D=map(right,high,depth);
+      k.triangle(m,A,B,C,[-right/s,low/s,-left/s,low/s,-left/s,high/s]);
+      k.triangle(m,A,C,D,[-right/s,low/s,-left/s,high/s,-right/s,high/s]);
+    };
     const hit=(a,b)=>{
       const e=Math.min(edge,edge+sign*.17),f=Math.max(edge,edge+sign*.17);
       if(axis==='x')world.box(e,a,f,b,below);else world.box(a,e,b,f,below);
     };
     for(const [a,b] of solids){
-      panel(wall,a,b,floor-.1,ceiling+.09,0,.17);
-      panel(skirt,a,b,floor+.08,floor+.86,-.023,-.002);
-      panel('iron',a,b,floor+.023,floor+.11,-.047,-.004);
-      if(b-a>.8)panel(skirt,a+.16,b-.16,ceiling-.25,ceiling-.21,-.027,-.003);
+      // Each room provides just its inward-facing skin. At a shared boundary
+      // the opposite skin is back-culled instead of overlapping a second slab.
+      face(wall,a,b,floor-.1,ceiling+.09,0);
+      face(skirt,a,b,floor+.111,floor+.851,-.004);
+      face('gunmetal',a,b,floor+.026,floor+.112,-.005);
+      if(b-a>.8)face(skirt,a+.13,b-.13,ceiling-.254,ceiling-.216,-.004);
       hit(a,b);
     }
     for(const [a,b] of openings){
       if(id==='chambers'&&axis==='x'&&a===LAB_CUT.back)continue;
-      panel(wall,a,b,floor+2.38,ceiling+.10,0,.17);
       const adjacent=(ports[id].find(([j,l,p,q,A])=>p===axis&&q===edge&&A===a)??[]).slice(0,2).find(key=>key!==id);
-      if(!own.has(id+':'+adjacent))continue;
+      if(!own.has(id+':'+adjacent)){
+        if(!own.has(adjacent+':'+id))face(wall,a,b,floor+2.38,ceiling+.10,0);
+        continue;
+      }
+      // A single solid lintel/portal owns the transition, including reveals.
+      panel(wall,a,b,floor+2.451,ceiling+.10,-.166,.166);
       for(const [s,t] of [[a-.109,a+.009],[b-.009,b+.109]]){
         panel('iron',s,t,floor+.02,floor+2.43,-.123,.12);
-        panel('gray',s+.022,t-.022,floor+.15,floor+2.39,-.13,.13);
+        panel('gray',s+.022,t-.022,floor+.15,floor+2.39,-.137,.135);
       }
       panel('iron',a-.11,b+.11,floor+2.265,floor+2.46,-.125,.125);
       panel('green',a+.045,b-.045,floor+2.32,floor+2.43,-.134,.134);
@@ -113,10 +128,10 @@ function cellarKit(T,root,world,id,materials,graphics){
   cellarWalls(k,world,id);
   box(id==='vault'?'vaultWall':'concrete',x0,x1,ceiling,ceiling+.17,z0,z1);
   box('gasket',x0,x1,floor-.12,floor-.025,z0,z1);
-  const step=MALT_ROOMS[id]?.tile??(id==='archive'?.65:id==='plant'?.98:.84);
+  const step=treatmentRooms[id]?.tile??(id==='archive'?.65:id==='plant'?.98:.84);
   for(let x=x0,i=0;x<x1-.007;x+=step,i++)for(let z=z0,j=0;z<z1-.007;z+=step,j++){
     const n=(i*29+j*71+i*j*11)%17;
-    box(MALT_ROOMS[id]?.tiles[n<3?1:0]??(id==='observation'?(n<4?'gray':'ceramic'):id==='vault'?(n<3?'iron':'vaultWall'):n<2?'gray':'concrete'),
+    box(treatmentRooms[id]?.tiles[n<3?1:0]??(id==='observation'?(n<4?'gray':'ceramic'):id==='vault'?(n<3?'iron':'vaultWall'):n<2?'gray':'concrete'),
       x+.004,Math.min(x+step-.004,x1),floor-.027,floor,z+.004,Math.min(z+step-.004,z1));
   }
   return {k,box,hit,obj,cylinder,pipe,luminaire,grille,wheel,dress,props,root,world,materials,
@@ -125,6 +140,7 @@ function cellarKit(T,root,world,id,materials,graphics){
 
 function fitOut(T,root,world,id,materials,graphics,doors){
   const kit=cellarKit(T,root,world,id,materials,graphics);
+  if(id==='infirmary'){addInfirmary(T,kit);kit.flush();return;}
   if(MALT_ROOMS[id]){fitMaltWing(T,kit,id,doors);kit.flush();return;}
   const {k,box,hit,obj,cylinder,pipe,luminaire,grille,wheel,dress,props,flush}=kit;
   const {housing,stain,grill,dial,flag,plane,fastener,rod,plaque:label}=dress;
@@ -202,9 +218,9 @@ function fitOut(T,root,world,id,materials,graphics,doors){
     housing('green',-13.74,floor+.849,11.47,2.21,.164,.11);
     hit(-14.94,-12.56,11.38,12.22);
     housing('leather',-14.14,floor+.998,11.686,.91,.027,.505);
-    label('VERMISSTENLISTE',['B-01 … B-08  /  NICHT ANWESEND','Ausgabe: 8 Trachten, ungetragen.','Rückgabe: 9 Garderobenmarken.'],-14.14,1.013,11.658,.81,.405,Math.PI,'cream',-Math.PI*.5,false);
+    label('ÜBERGABEBUCH',['ABTEILUNG B / AUFSICHT','Schichtübergabe nur mit Gegenzeichnung.','Bestand: an das Hauptarchiv gemeldet.'],-14.14,1.013,11.658,.81,.405,Math.PI,'cream',-Math.PI*.5,false);
     housing('brass',-14.14,floor+1.027,11.91,.28,.022,.045);
-    label('RÜCKGABE',['Die neunte Marke blieb ohne Namen.','BESCHLUSS: AKTE GESCHLOSSEN.'],-11.45,2.76,15.198,1.67,.62,Math.PI,'red');
+    label('HAUPTARCHIV',['Nur protokollierte Übergaben.','AKTEN NICHT AUS DER HAND GEBEN.'],-11.45,2.76,15.198,1.67,.62,Math.PI,'red');
     for(const [x,z,w,l,a,style,loose] of [
       [-13.51,11.58,.235,.31,3.32,1,true],[-13.16,11.62,.27,.34,2.94,6,false],
       [-12.81,11.79,.20,.245,2.94,0,false],[-13.42,12.045,.245,.237,-.11,4,false],
@@ -295,7 +311,7 @@ function fitOut(T,root,world,id,materials,graphics,doors){
       stain(-22.555,1.22,z+.37,.53,2.18,-Math.PI*.5,i%2?1:0);
     }
     plaque('BEOBACHTUNG',['NOTAUSGANG ZUR SEKTION B'],-24.933,1.74,1.45,1.00,.46,Math.PI/2,'blue');
-    plaque('MARKE 09',['GEFUNDEN AM ABFLUSS','Nicht zurückbuchen.'],-24.935,1.21,3.73,.68,.34,Math.PI/2,'red');
+    plaque('PRÜFMELDUNG',['ABFLUSS TEILWEISE VERSTOPFT','Wartung ausstehend.'],-24.935,1.21,3.73,.68,.34,Math.PI/2,'red');
     housing('gunmetal',-24.824,floor+.938,3.73,.25,.055,.47);
     cylinder('brass',-24.79,floor+.983,3.69,.058,.028);
     rod('iron',[-24.91,floor+.74,3.63],[-24.80,floor+.913,3.63],.022);
@@ -376,18 +392,17 @@ function fitOut(T,root,world,id,materials,graphics,doors){
     }
     cylinder('iron',x,ceiling-.34,z,.47,.28);
     cylinder('ivory',x,ceiling-.502,z,.36,.06);
-    plaque('SAAL DER RÜCKGABE',['8 NAMEN / 9 MARKEN','„Die Neunte blieb unbelegt.“','Letzte Sitzung: niemand anwesend.'],-24.72,1.95,19.263,1.52,.82,Math.PI,'red');
+    plaque('SAAL DER RÜCKGABE',['ÜBERGABE / NACHTSCHICHT','Zutritt nur für Dienstpersonal.'],-24.72,1.95,19.263,1.52,.82,Math.PI,'red');
     plaque('05 · SUDWERK',['NACHPRÜFUNG / UNTERDECK F'],-22.40,2.75,19.095,1.38,.34,Math.PI,'blue');
     housing('green',-19.325,floor+.50,18.895,1.25,.816,.49);
     housing('edge',-19.325,floor+.918,18.895,1.269,.066,.51);
     grill('iron',-19.30,.49,18.644,.91,.33,Math.PI);
     housing('leather',-19.32,floor+.962,18.88,.89,.030,.44);
     hit(-19.95,-18.70,18.66,19.15);
-    label('VERZEICHNIS',['Acht Plätze gedeckt.','Kein Name für den letzten.'],-19.32,.981,18.86,.82,.39,Math.PI,'cream',-Math.PI/2,false);
+    label('VERZEICHNIS',['Bestand der Übergabestelle.','Keine Ausbuchung ohne Freigabe.'],-19.32,.981,18.86,.82,.39,Math.PI,'cream',-Math.PI/2,false);
     props.folio(-18.86,floor+.952,18.81,.173,.26,Math.PI-.20,4,{loose:true,thickness:.013});
     stain(-25.938,1.43,17.93,.88,2.40,Math.PI*.5,2);
     stain(-20.44,1.20,19.291,.62,2.21,Math.PI,0);
-    for(let j=0;j<6;j++)cylinder('brass',-20.03-j*.112,floor+.015,18.13+(j%3)*.071,.038,.025);
   }
   flush();
 }
@@ -398,7 +413,7 @@ const emitters={
   archive:[[-12.40,13.24,0xffe1b5,30,8.0]],plant:[[-22.89,10.03,0xcbded6,20,8.3],[-24.15,12.03,0xed805e,13,5.2]],
   return:[[-23.73,2.28,0xd17d63,11.4,6.7],[-23.75,5.36,0xe6dfbc,14,5.7]],
   observation:[[-23.51,-1.91,0xafe5da,21,6.9]],vault:[[-22.30,17.38,0xf3e0c2,26,7.4],[-23.53,14.78,0xdf6650,11,5.9]],
-  ...MALT_LIGHTS
+  ...MALT_LIGHTS,infirmary:INFIRMARY_LIGHTS
 };
 const unstable=new Set(['return','plant','lock','ward','cells']);
 

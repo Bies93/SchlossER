@@ -10,6 +10,8 @@
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
 body{height:100vh;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);font:14px/1.45 system-ui,"Segoe UI",sans-serif;color:var(--ink)}
+body[data-state=playing]{grid-template-rows:minmax(0,1fr)}
+body[data-state=playing]>header{display:none}
 [hidden]{display:none!important}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;padding:calc(env(safe-area-inset-top) + 3px) max(12px,env(safe-area-inset-right)) 3px max(12px,env(safe-area-inset-left));background:#141b1a;border-bottom:1px solid var(--line)}
 .brand,.tools,.actions{display:flex;align-items:center;gap:10px}
@@ -27,8 +29,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .tool svg{display:block;width:17px;height:17px}
 .tool.icon{display:grid;place-items:center;padding:0}
 #pause,#overlay,#error,#loading,#leave,#drag-hint,#stick,.paused-copy,.touch-copy{display:none}
-body[data-state=playing] #pause{display:inline-flex;align-items:center}
-body[data-state=playing] #info{display:none}
+#pause{position:absolute;z-index:4;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));padding:0;background:#141d1bdb}
+body[data-state=playing][data-input=touch] #pause{display:grid;place-items:center}
 body[data-state=loading] #loading,body[data-state=error] #error,
 body[data-state=ready] #overlay,body[data-state=paused] #overlay,
 body[data-state=paused] #leave,body[data-state=paused] .paused-copy{display:block}
@@ -114,12 +116,12 @@ THE SOFTWARE.
   <div class="brand"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65" aria-hidden="true"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg><b>Erlangen</b><span class="brand-subtitle">Schloss &amp; Garten</span><span class="brand-signature">I <span class="brand-heart">❤️</span> BIES</span></div>
   <div class="tools">
     <button class="tool" id="audio-toggle" type="button" aria-pressed="true" title="Ton umschalten (M)">Ton an</button>
-    <button class="tool" id="pause" type="button" title="Pause (Escape)">Pause</button>
     <button class="tool" id="info" type="button" aria-haspopup="dialog">Hilfe</button>
   </div>
 </header>
 <main aria-label="Erlanger Schloss und Schlossgarten">
   <div id="canvas"></div>
+  <button class="tool" id="pause" type="button" aria-label="Rundgang pausieren" title="Pause">Ⅱ</button>
   <div class="panel" id="loading" role="status"><p class="eyebrow">Erlangen zu Fuß</p><p id="loading-text">Der Rundgang wird geladen …</p></div>
   <section class="panel" id="overlay" aria-label="Rundgang">
     <p class="eyebrow">Erlangen zu Fuß</p>
@@ -173,6 +175,6 @@ THE SOFTWARE.
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert; der hintere Park ist für den Rundgang verkürzt. Maßkontrolle: Bayerische Vermessungsverwaltung. Parkwege und Lagepunkte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=bdbcde4802e0"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=f5d6d3efe083"></script>
 </body>
 </html>

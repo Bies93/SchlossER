@@ -1,12 +1,12 @@
 import {LAB,LAB_CELLS} from './lab-layout.js';
-import {cellDoor} from './lab-cell-doors.js';
+import {cellDoor,wardDoor} from './lab-cell-doors.js';
 
 const {floor:Y,ceiling:C}=LAB;
 const pi=Math.PI,flat=-pi/2;
 export const MALT_ROOMS={
   maltLock:{name:'Schleuse · Sudwerk',palette:['concrete','copperDark'],tiles:['concrete','gasket'],tile:.72},
   brewery:{name:'Sudwerk 05',palette:['archiveWall','copperDark'],tiles:['concrete','gray'],tile:.92},
-  beerLab:{name:'Nachprüfung · Reihe B/F',palette:['ceramic','green'],tiles:['porcelain','gray'],tile:.63},
+  beerLab:{name:'Nachprüfung · Reihe B/F',palette:['labTileWall','green'],tiles:['porcelain','gray'],tile:.63},
   ward:{name:'Verwahrung · Aufnahme',palette:['concrete','gunmetal'],tiles:['concrete','gasket'],tile:.76},
   cells:{name:'Verwahrung · Trakt F',palette:['vaultWall','iron'],tiles:['vaultWall','concrete'],tile:.91}
 };
@@ -99,7 +99,7 @@ export function fitMaltWing(T,kit,id,doors){
       const x=-23.30+i*.324;
       box(i%2?'gasket':'ochre',x,x+.292,Y+.003,Y+.007,20.04,20.16);
     }
-    plaque('SUDWERK 05',['MALZ / LABOR / NACHTSCHICHT','Karte B–09 an der Aufnahme abgeben.'],-23.86,1.71,20.93,1.19,.57,pi/2,'blue');
+    plaque('SUDWERK 05',['MALZ / LABOR / NACHTSCHICHT','Arbeitskarten an der Aufnahme abgeben.'],-23.86,1.71,20.93,1.19,.57,pi/2,'blue');
     solid('green',-21.041,1.35,21.0,.149,.68,.50);
     dial(-21.126,1.49,21.04,.102,-pi/2,1);
     grill('gray',-21.126,1.19,21.0,.347,.135,-pi/2);
@@ -219,7 +219,7 @@ export function fitMaltWing(T,kit,id,doors){
     hit(-10.44,-9.78,25.66,26.98);
     plaque('NACHPRÜFUNG',['BIERVERTRÄGLICHKEIT · KLONREIHE B','Kontrollreihe F: dieselbe Charge 05.'],-13.1,2.11,z0+.039,1.93,.79,0,'blue');
     flag('schematic',-11.14,2.14,z0+.037,1.19,.67,0);
-    plaque('F–09',['NAME GELÖSCHT / BECHER NICHT ABGEHOLT'],-11.33,2.15,z1-.037,1.00,.47,pi,'red');
+    plaque('PROBENABLAGE',['VERWERFUNG NUR AUF ANWEISUNG'],-11.33,2.15,z1-.037,1.00,.47,pi,'red');
     solid('ceramic',-13.06,1.493,z1-.032,2.95,.37,.064);
     for(const x of [-14.12,-13.56,-13.00,-12.44,-11.88])solid('gasket',x,1.492,z1-.069,.005,.35,.008);
     for(const x of [-12.49,-11.98])line('edge',x,1.314,z1-.069,x,1.314,z1-.405,.025);
@@ -234,7 +234,7 @@ export function fitMaltWing(T,kit,id,doors){
     const x=-17.046,z=31.45;
     bench(x,z,1.17,.99,.955,'darkWood');
     solid('green',x,1.24,z+.211,.936,.51,.411);
-    plaque('NACHTWACHE',['AKTE F–09 · ÜBERSTELLUNG OFFEN','Becher und Marken einziehen.'],x,1.25,z-.003,.841,.38,pi,'crt');
+    plaque('NACHTWACHE',['NACHTSCHICHT · ÜBERSTELLUNG OFFEN','Becher und Marken einziehen.'],x,1.25,z-.003,.841,.38,pi,'crt');
     tray(x-.283,1.00,z-.262,.42,.29);
     for(const [i,q] of [-.37,-.268,-.183].entries())cylinder(i===1?'rust':'brass',x+q,Y+1.037,z-.249,.040,.018);
     paper(x+.278,.986,z-.251,'SCHICHT 03',['Tür C offen lassen.'],'cream');
@@ -284,7 +284,7 @@ export function fitMaltWing(T,kit,id,doors){
       const letters=['C','D','E'];
       doors.push(cellDoor(T,kit.root,kit.world,kit.materials,front,a+.19,gap,letters[i],open));
       solid('gunmetal',front,2.57,z,.18,.32,.65);
-      plaque('ZELLE '+letters[i],[['VERWAHRUNG','VERW. F–08','VERW. F–09'][i]],front+.096,2.58,z,.503,.22,pi/2,i===2?'red':'cream');
+      plaque('ZELLE '+letters[i],['VERWAHRUNG'],front+.096,2.58,z,.503,.22,pi/2,i===2?'red':'cream');
       // Empty cell furnishings: open metal frame, bedding and site-specific evidence.
       const px=-23.29,pz=z+.345;
       edgePosts(px,.254,pz,1.70,.44,.60);
@@ -306,7 +306,7 @@ export function fitMaltWing(T,kit,id,doors){
       if(i===0){
         solid('canvas',px+.39,.638,pz+.04,.57,.05,.453,.21);
         mug(px-.17,.624,pz-.10,pi*.11);
-        paper(-23.65,.03,z-.36,'ANTRAG F–08',['Abholung verweigert.'],'cream',pi/2);
+        paper(-23.65,.03,z-.36,'PERSONALBUCH',['Ablage: Wachdienst.'],'cream',pi/2);
       }else if(i===1){
         for(const y of [1.23,1.76])line('iron',wall-.069,y,z-.356,wall+.077,y,z-.356,.021);
         solid('rust',wall-.047,1.462,z-.365,.075,.602,.071);
@@ -322,14 +322,13 @@ export function fitMaltWing(T,kit,id,doors){
     grille(-21.94,37.1,.58,2.20);
     bench(-17.04,37.32,1.08,1.29,.958,'green');
     tray(-17.06,1.00,37.59,.73,.43);mug(-17.17,1.02,37.55,1.1);
-    paper(-17.05,.983,37.12,'KARTE F–09',['RÜCKGABE: KEIN NAME','Status: gesperrt.'],'red',pi/2);
-    plaque('VERWAHRUNG F',['Die Liste zählt acht.','Hier waren es neun.'],x1-.038,1.95,37.36,1.57,.70,-pi/2,'blue');
-    const px=-18.28,pz=z1-.063;
-    solid('iron',px,1.133,pz,1.72,2.36,.106);
-    solid('gunmetal',px,1.15,pz-.063,1.44,2.16,.049);
-    for(const x of [px-.594,px+.594])solid('edge',x,1.158,pz-.102,.056,2.073,.044);
-    plaque('VERSIEGELT',['KEIN EINTRAG IM BESTANDSPLAN'],px,1.62,pz-.102,.87,.38,pi,'red');
-    solid('red',px,2.47,pz-.064,.196,.055,.046);
+    paper(-17.05,.983,37.12,'WACHBUCH',['MELDUNG: STATION GESCHLOSSEN','Keine Übergabe ohne Aufsicht.'],'red',pi/2);
+    plaque('VERWAHRUNG F',['STATION HINTER DER STAHLTÜR','Zutritt nur für den Nachtdienst.'],x1-.038,1.95,37.36,1.57,.70,-pi/2,'blue');
+    const px=-18.305,pz=z1;
+    doors.push(wardDoor(T,kit.root,kit.world,kit.materials,-17.29,pz+.015,2.04));
+    plaque('BEHANDLUNGSSTATION',['PERSONAL / NACHTZUGANG'],px,2.756,pz-.205,1.49,.314,pi,'red');
+    solid('red',-16.92,2.32,pz-.055,.104,.062,.075);
+    dial(-16.93,1.58,pz-.053,.097,pi,2);
     stain(px,.007,39.56,.98,.68,0,2,flat);
   }
   for(const g of owned)g.dispose();

@@ -2,7 +2,7 @@ import {LAB} from './lab-layout.js';
 import {randomSource} from './surface-detail.js';
 
 const p=(x,y,z)=>[x,y,z],Y=LAB.floor;
-const wTile=256,hTile=144,cols=6,rows=12;
+const wTile=256,hTile=144,cols=6,rows=14;
 const fillBlock=(c,x,y,w,h,s)=>{c.fillStyle=s;c.fillRect(x,y,w,h);};
 
 // One atlas for hand-authored room signs, instrument faces and documents.
@@ -66,7 +66,7 @@ export function labGraphics(T){
         c.strokeStyle='#b0a784';c.beginPath();c.moveTo(15,62);c.lineTo(239,62);
         c.moveTo(15,89);c.lineTo(177,89);c.moveTo(15,114);c.lineTo(177,114);c.stroke();
         c.font='bold 11px monospace';c.fillText('K–01    HAUPTSUD',15,81);c.fillText('K–02    STILLSTAND',15,106);
-        c.fillStyle='#e5b786';c.fillText('F–09    NICHT AUSGEGEBEN',15,130);
+        c.fillStyle='#e5b786';c.fillText('NACHTAUSGABE GESPERRT',15,130);
         c.save();c.translate(212,91);c.strokeStyle='#bfa77b';c.lineWidth=1.3;
         c.beginPath();c.moveTo(0,-26);c.quadraticCurveTo(-25,-6,0,28);c.quadraticCurveTo(25,-6,0,-26);c.stroke();
         for(let j=0;j<5;j++){const y=-15+j*8;c.beginPath();c.moveTo(-12,y);c.quadraticCurveTo(0,y+14,12,y);c.stroke();}
