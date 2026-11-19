@@ -134,8 +134,9 @@ export function furnishGreenhouse(T,{block,hit,pipe,stamp,artTile}){
     for(const d of [-.096,.096])pipe('gunmetal',[u-.60,y-.044,v+d],[u+.60,y-.044,v+d],.008);
   }
   for(const v of [1.16,6.35]){
-    pipe('tunnelMetal',[21.55,1.72,v],[29.68,1.72,v],.024);
-    for(const u of [21.6,23.22,25.92,28.37,29.59]){
+    const end=v<2?29.68:28.47;
+    pipe('tunnelMetal',[21.55,1.72,v],[end,1.72,v],.024);
+    for(const u of [21.6,23.22,25.92,28.37,29.59].filter(u=>u<end)){
       const wall=v<2?.729:6.598;
       box('oxide',u,1.648,wall,.131,.142,.062);
       pipe('gunmetal',[u,1.721,wall],[u,1.721,v],.020);
@@ -167,12 +168,13 @@ export function furnishGreenhouse(T,{block,hit,pipe,stamp,artTile}){
   for(const [A,B] of [[[30.15,1.225,4.158],[30.15,1.36,4.156]],[[30.15,1.36,4.156],[30.15,1.399,4.25]],
     [[30.15,1.399,4.25],[30.15,1.367,4.368]],[[30.15,1.367,4.368],[30.15,1.260,4.438]]])pipe('gunmetal',A,B,.014);
   for(const [i,v] of [2.60,3.03].entries())stamp('tote',ball,30.26,.375,v,[.188,.073,.195],i*.36);
-  for(const v of [5.45,5.99]){
-    box('darkWood',29.47,.024,v,.69,.259,.49);
-    for(const d of [-.247,.247])for(let n=0;n<3;n++)box('wood',29.47,.052+.096*n,v+d,.675,.074,.024);
-    for(const d of [-.238,.238])box('iron',29.13,.051,v+d,.047,.233,.079);
-    hit(29.12,29.82,v-.254,v+.254);
-    artTile('seedLabel',29.099,.180,v,.258,.137,pi);
+  for(const u of [28.98,29.71]){
+    const v=1.18;
+    box('darkWood',u,.024,v,.69,.259,.49);
+    for(const d of [-.247,.247])for(let n=0;n<3;n++)box('wood',u,.052+.096*n,v+d,.675,.074,.024);
+    for(const d of [-.238,.238])box('iron',u-.34,.051,v+d,.047,.233,.079);
+    hit(u-.35,u+.35,v-.254,v+.254);
+    artTile('seedLabel',u-.371,.180,v,.258,.137,pi);
   }
   block('darkWood',20.19,20.26,1.129,1.823,4.41,5.83);
   artTile('growSign',20.266,1.476,5.12,1.34,.60,0);

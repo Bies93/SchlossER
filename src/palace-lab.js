@@ -1,4 +1,5 @@
 import {architectureKit} from './architecture-kit.js';
+import {spareSpot} from './moosfunk-quest.js';
 import {sharedSet,randomSource} from './surface-detail.js';
 import {LAB,LAB_CUT,LAB_LAYER,labLower} from './lab-layout.js';
 import {cellarWalls,makeLabDeck} from './lab-wing.js';
@@ -62,7 +63,7 @@ function terminalDisplay(T){
   const map=new T.CanvasTexture(sheet);map.colorSpace=T.SRGBColorSpace;return map;
 }
 
-export function addPalaceLab(T,root,world,M){
+export function addPalaceLab(T,root,world,M,moosfunk){
   const shell=new T.Group(),shaft=new T.Group(),cabinet=new T.Group();root.add(shell,shaft,cabinet);
   shell.name='Lesesaal · Verkleidung der Kellertreppe';shaft.name='Projekt Bayern · Treppenschacht';cabinet.name='Regal mit lockerem Buch';
   const plain=(color,roughness=.88,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
@@ -153,7 +154,7 @@ export function addPalaceLab(T,root,world,M){
   shaft.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
   cabinet.traverse(o=>{if(o.isMesh)o.castShadow=false});
   addLabGraffiti(T,shell);
-  const deck=makeLabDeck(T,root,world,materials,(room,graphics)=>buildChambers(T,room,world,materials,graphics));
+  const deck=makeLabDeck(T,root,world,materials,(room,graphics)=>buildChambers(T,room,world,materials,graphics,moosfunk));
   const usable=p=>d.target===0||Math.abs(p.x-gateX)>.60;
   return {
     target(p,look){
@@ -174,7 +175,7 @@ export function addPalaceLab(T,root,world,M){
   };
 }
 
-function buildChambers(T,room,world,materials,graphics){
+function buildChambers(T,room,world,materials,graphics,moosfunk){
   const k=architectureKit(T,room,materials),below=p=>labLower(p.y);
   const props=stationery(T,k,room,{cloth:['leather','bookB','bookC','green']});
   const dress=dressLab(T,k,room,graphics);
@@ -287,6 +288,18 @@ function buildChambers(T,room,world,materials,graphics){
   board(paper,.91,.57,-15.87,floor+1.064,-5.86,0,-Math.PI*.5);
   housing('paper',-14.98,floor+1.06,-5.76,.37,.040,.47,-.10);
   plaque('FREMDAKTE F',['FRANKEN · NICHT ABLEGEN'],-14.98,1.083,-5.74,.34,.42,0,'red',-Math.PI*.5,false);
+  const {x:sx,z:sz}=spareSpot;
+  box('gunmetal',sx-.107,sx+.107,floor+1.038,floor+1.065,sz-.111,sz+.096);
+  box('canvas',sx-.094,sx+.094,floor+1.066,floor+1.077,sz-.099,sz+.079);
+  plaque('M–7',['MOOSFUNK · SICHERGESTELLT'],sx,1.082,sz+.127,.214,.081,0,'cream',-Math.PI*.5,false);
+  const picked=new T.Group();picked.name='Moosfunk · Ersatzschalter M–7';room.add(picked);
+  const part=architectureKit(T,picked,materials),piece=(m,A,B,Y,H,C,D)=>part.box(m,coords,sx+A,sx+B,floor+Y,floor+H,sz+C,sz+D);
+  piece('gunmetal',-.077,.077,1.077,1.115,-.052,.051);
+  piece('canvas',-.065,.065,1.113,1.142,-.040,.037);
+  piece('rust',-.044,.043,1.138,1.164,-.027,.029);
+  for(const a of [-.055,.055])piece('brass',a-.008,a+.008,1.106,1.116,.044,.069);
+  part.flush('M–7');
+  moosfunk?.bind(phase=>{picked.visible=phase==='missing';});
   props.folio(-16.51,floor+1.042,-5.58,.208,.258,-.18,5,{loose:true,thickness:.015});
   rod('brass',[-16.45,floor+1.061,-5.548],[-16.29,floor+1.061,-5.64],.007);
   for(const x of [-16.47,-15.66,-14.86]){

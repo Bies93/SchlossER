@@ -73,6 +73,8 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #ghoul-notice{top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 26px);padding:8px 13px;text-align:center;pointer-events:none}
 #ghoul-notice[data-kind=hurt],#ghoul-notice[data-kind=failed]{border-color:#a26c54;background:#392721ed}
 #ghoul-notice[data-kind=won]{border-color:#a1a673}
+#moosfunk-caption{position:absolute;z-index:2;left:50%;bottom:calc(clamp(128px,21%,187px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(580px,calc(100% - 30px));width:max-content;padding:10px 15px;border:1px solid #8e8367;border-radius:6px;background:#151b19f5;color:var(--ink);font-size:.92rem;line-height:1.42;text-align:center;pointer-events:none}
+body:not([data-state=playing]) #moosfunk-caption{display:none}
 body:not([data-state=playing]) #ghoul-notice,body:not([data-mode=ghouls]) :is(#ghoul-notice,#ghoul-action){display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
 #stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
@@ -160,6 +162,7 @@ THE SOFTWARE.
   <button id="portal-action" type="button" hidden><kbd aria-hidden="true">E</kbd><span id="portal-text">Tür öffnen</span></button>
   <button id="ghoul-action" type="button" hidden><kbd aria-hidden="true">R</kbd><span id="ghoul-text">Ghoul-Runde starten</span></button>
   <div id="ghoul-notice" role="status" hidden></div>
+  <div id="moosfunk-caption" role="status" hidden></div>
   <div id="stick" aria-hidden="true"><span></span></div>
   <button type="button" id="jump">Sprung</button>
 </main>
@@ -175,6 +178,6 @@ THE SOFTWARE.
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert; der hintere Park ist für den Rundgang verkürzt. Maßkontrolle: Bayerische Vermessungsverwaltung. Parkwege und Lagepunkte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=4aa0941f3797"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=b7a5bdf9cca4"></script>
 </body>
 </html>

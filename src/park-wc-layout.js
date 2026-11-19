@@ -14,7 +14,11 @@ export const ROOMS={
   tunnel:[9.10,12.60,6.24,7.42],bend:[12.60,14.17,4.81,7.42],
   collective:[11.18,20.12,-4.20,4.81],
   practice:[20.12,33.65,-5.43,-.64],
-  greenhouse:[20.12,30.85,.69,6.65]
+  greenhouse:[20.12,30.85,.69,6.65],
+  studio:[13.75,20.12,-8.98,-4.20],
+  workshop:[14.17,20.12,4.81,11.79],
+  plenum:[20.12,27.99,6.65,13.18],
+  kitchen:[27.99,35.77,6.65,13.18]
 };
 // [room A, room B, axis, wall, start, end, doorspec?]. Room A owns
 // each portal; neither neighbour builds a second frame over it.
@@ -30,10 +34,16 @@ export const LINKS=[
   ['tunnel','bend','u',12.60,6.24,7.42],
   ['bend','collective','v',4.81,12.63,14.14],
   ['collective','practice','u',20.12,-3.94,-2.35],
-  ['collective','greenhouse','u',20.12,2.34,4.08]
+  ['collective','greenhouse','u',20.12,2.34,4.08],
+  ['collective','studio','v',-4.20,16.91,18.48,['mf-studio-door','Schallschutztür']],
+  ['collective','workshop','v',4.81,14.57,16.23],
+  ['greenhouse','kitchen','v',6.65,28.69,30.18],
+  ['workshop','plenum','u',20.12,7.40,9.14],
+  ['plenum','kitchen','u',27.99,10.11,11.83]
 ];
 const ids=Object.keys(ROOMS);
-export const isAnnex=id=>id==='practice'||id==='greenhouse';
+export const isNewHQ=id=>id==='studio'||id==='workshop'||id==='plenum'||id==='kitchen';
+export const isAnnex=id=>id==='practice'||id==='greenhouse'||isNewHQ(id);
 export const isRock=id=>id==='tunnel'||id==='bend'||id==='collective'||isAnnex(id);
 export function wcRoomAt(u,v,tolerance=.001){
   return ids.find(id=>{const [u0,u1,v0,v1]=ROOMS[id];return u>=u0-tolerance&&u<=u1+tolerance&&v>=v0-tolerance&&v<=v1+tolerance;})??null;

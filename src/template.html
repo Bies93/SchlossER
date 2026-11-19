@@ -73,6 +73,8 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #ghoul-notice{top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 26px);padding:8px 13px;text-align:center;pointer-events:none}
 #ghoul-notice[data-kind=hurt],#ghoul-notice[data-kind=failed]{border-color:#a26c54;background:#392721ed}
 #ghoul-notice[data-kind=won]{border-color:#a1a673}
+#moosfunk-caption{position:absolute;z-index:2;left:50%;bottom:calc(clamp(128px,21%,187px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(580px,calc(100% - 30px));width:max-content;padding:10px 15px;border:1px solid #8e8367;border-radius:6px;background:#151b19f5;color:var(--ink);font-size:.92rem;line-height:1.42;text-align:center;pointer-events:none}
+body:not([data-state=playing]) #moosfunk-caption{display:none}
 body:not([data-state=playing]) #ghoul-notice,body:not([data-mode=ghouls]) :is(#ghoul-notice,#ghoul-action){display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
 #stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
@@ -136,6 +138,7 @@ body[data-input=touch] #portal-action kbd{display:none}
   <button id="portal-action" type="button" hidden><kbd aria-hidden="true">E</kbd><span id="portal-text">Tür öffnen</span></button>
   <button id="ghoul-action" type="button" hidden><kbd aria-hidden="true">R</kbd><span id="ghoul-text">Ghoul-Runde starten</span></button>
   <div id="ghoul-notice" role="status" hidden></div>
+  <div id="moosfunk-caption" role="status" hidden></div>
   <div id="stick" aria-hidden="true"><span></span></div>
   <button type="button" id="jump">Sprung</button>
 </main>

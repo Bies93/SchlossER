@@ -10,20 +10,26 @@ export function cellDoor(T,root,world,M,x,z,span,letter,open){
 export function wardDoor(T,root,world,M,x,z,span){
   return swingDoor(T,root,world,M,x,z,span,{id:'lab-ward-door',label:'Behandlungsstation',solid:true,heading:-turn,delta:turn,open:false});
 }
-export function utilityDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle=false,hingeAtEnd=false}){
-  const heading=hingeAtEnd?turn:-turn;
-  return swingDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle,open:false,solid:true,utility:true,heading,delta:-heading});
+export function utilityDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle=false,hingeAtEnd=false,acoustic=false}){
+  const heading=acoustic?0:hingeAtEnd?turn:-turn;
+  return swingDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle,acoustic,open:false,solid:true,utility:true,heading,delta:acoustic?turn:-heading});
 }
-function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=false,cubicle=false,heading=0,delta=-turn,floor=LAB.floor,lower=labLower}){
+function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=false,cubicle=false,acoustic=false,heading=0,delta=-turn,floor=LAB.floor,lower=labLower}){
   const leaf=new T.Group();leaf.name=(utility?'WC-Tür · ':solid?'Stahltür · ':'Gittertür · ')+label;leaf.position.set(x,floor,z);root.add(leaf);
   const k=architectureKit(T,leaf,M),p=(u,y,d)=>[-d,y,u];
   const box=(m,a,b,l,h,c,d)=>k.box(m,p,a,b,l,h,c,d);
   if(utility){
-    const low=cubicle?.137:.022,top=cubicle?1.889:2.059;
+    const low=cubicle?.137:.022,top=acoustic?1.87:cubicle?1.889:2.059;
     box('iron',-.012,span+.011,low,top,-.026,.026);
     for(const s of [-1,1]){
       const t=s<0?[-.035,-.026]:[.026,.035],profile=s<0?[-.043,-.034]:[.034,.043];
-      box('green',.023,span-.022,low+.023,top-.022,...t);
+      box(acoustic?'darkWood':'green',.023,span-.022,low+.023,top-.022,...t);
+      if(acoustic){
+        const [a,b]=s<0?[-.067,-.034]:[.034,.067];
+        box('fabric',.075,span-.25,low+.105,top-.13,a,b);
+        for(let j=.18;j<span-.2;j+=.16)
+          box('wood',j-.009,j+.009,low+.107,top-.136,s<0?a-.008:b-.003,s<0?a+.003:b+.008);
+      }
       for(const u of [.036,span-.037])box('edge',u-.009,u+.009,low+.021,top-.022,...profile);
       for(const y of [low+.03,top-.034])box('edge',.032,span-.033,y-.009,y+.009,...profile);
       const mount=s<0?[-.055,-.033]:[.033,.055];
@@ -69,7 +75,8 @@ function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=fa
   };
   geometry(door.progress);
   world.movingBox(x-span-.16,z-span-.16,x+span+.16,z+span+.16,pose,p=>lower(p.y));
-  door.usable=p=>door.target===0||![0,.25,.5,.75,1].some(t=>occupied(heading+delta*t,p));
+  const samples=acoustic?[0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1]:[0,.25,.5,.75,1];
+  door.usable=p=>!acoustic&&door.target===0||!samples.some(t=>occupied(heading+delta*t,p));
   door.update=(dt,p)=>{
     if(dt<=0||door.progress===door.target)return false;
     const next=Math.max(0,Math.min(1,door.progress+(door.target?1:-1)*dt/(utility?.47:solid?.82:.56)));

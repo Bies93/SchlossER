@@ -7,6 +7,7 @@ export function makeAudio(listener,musicUrl,choirUrl) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
   let choirBuffer,choirFetch,choirRequest,choirVoice,choirFailed=false;
+  let radioVoice,radioAt;
   let levels={music:.48,sfx:.72};
   try{
     const saved=JSON.parse(localStorage.getItem('schlosser.audio')||'null');
@@ -178,12 +179,12 @@ export function makeAudio(listener,musicUrl,choirUrl) {
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
   function pause(){
-    playing=false;stopTrack();stopChoir();mix();
+    playing=false;stopTrack();stopChoir();stopRadio();mix();
   }
   function toggle(){
     enabled=!enabled;store();mix();
     if(enabled&&playing)play();
-    else{stopTrack();stopChoir();}
+    else{stopTrack();stopChoir();stopRadio();}
     return enabled;
   }
   function shot(which){
@@ -240,8 +241,34 @@ export function makeAudio(listener,musicUrl,choirUrl) {
     tone(sfx,t,f,length,vol*(hard?.19:.14),{wave:ac,end:f*(kind==='down'?.49:.69),attack:hard?.045:.088,pan,wet,shiver:78});
     grit(sfx,t+.033,length*.8,vol*.16,155,hard?1720:1170,{attack:.08,pan,wet,rate:.74});
   }
+  function stopRadio(){
+    if(!radioVoice)return;
+    radioVoice=null;radioAt=null;globalThis.speechSynthesis?.cancel();
+  }
+  function playMoosfunk(at,text){
+    if(!live())return;
+    stopRadio();
+    const here=listener(),dx=at.x-here.x,dz=at.z-here.z,d=Math.hypot(dx,dz);
+    const pan=Math.max(-.67,Math.min(.67,(dx*here.rightX+dz*here.rightZ)/Math.max(d,.8)));
+    const t=ctx.currentTime+.016;
+    grit(sfx,t,.18,.093,860,2700,{pan,wet:.08,attack:.021});
+    tone(sfx,t+.082,680,.105,.088,{type:'triangle',end:599,pan,wet:.10});
+    tone(sfx,t+.188,510,.098,.061,{type:'triangle',end:425,pan,wet:.11});
+    // No online speech dependency. The full caption is present even if the
+    // device does not have a local German voice or the sound is switched off.
+    try{
+      const synth=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
+      const local=synth?.getVoices().find(v=>v.localService&&v.lang.toLowerCase().startsWith('de'));
+      if(!Voice||!local)return;
+      radioAt=at;const message=new Voice(text);radioVoice=message;
+      message.voice=local;message.lang=local.lang;message.pitch=.84;message.rate=.91;message.volume=levels.sfx*.61;
+      message.onend=message.onerror=()=>{if(radioVoice===message){radioVoice=null;radioAt=null;}};
+      synth.speak(message);
+    }catch{radioVoice=null;radioAt=null;}
+  }
   function ambience(p){
     updateChoir();
+    if(radioAt&&Math.hypot(radioAt.x-p.x,radioAt.z-p.z)>4.8)stopRadio();
     if(!live()||ctx.currentTime<bedTime)return;
     bedTime=ctx.currentTime+1.2;
     const d=Math.hypot(p.x*.85,p.z+47);
@@ -250,7 +277,7 @@ export function makeAudio(listener,musicUrl,choirUrl) {
       grit(sfx,t,.86,v,980,4400,{wet:.20,attack:.26,rate:.88+random()*.06});
     }
   }
-  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,playChoir,choirStatus,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,playChoir,choirStatus,playMoosfunk,mode:on=>{combat=on},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };

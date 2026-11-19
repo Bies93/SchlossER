@@ -1,12 +1,14 @@
 import {architectureKit} from './architecture-kit.js';
 import {sharedSet,randomSource} from './surface-detail.js';
 import {utilityDoor} from './lab-cell-doors.js';
-import {ROOMS,LINKS,X,Z,p,b,ceiling,lower,wcRoomAt,wcRoofAt,wcCameraMode,isRock,isAnnex} from './park-wc-layout.js';
+import {ROOMS,LINKS,X,Z,p,b,ceiling,lower,wcRoomAt,wcRoofAt,wcCameraMode,isRock,isAnnex,isNewHQ} from './park-wc-layout.js';
 import {furnishWashroom} from './park-wc-fixtures.js';
 import {furnishCollective,collectiveArt} from './park-wc-collective.js';
 import {moosfunkAnnexArt,annexMaterials} from './moosfunk-art.js';
 import {furnishPractice} from './moosfunk-practice.js';
 import {furnishGreenhouse} from './moosfunk-greenhouse.js';
+import {hqArt,hqMaterials} from './moosfunk-hq-art.js';
+import {furnishHQ} from './moosfunk-hq.js';
 
 export const WC_LAYER=4;
 const lampSites=[
@@ -17,11 +19,16 @@ const lampSites=[
   [13.66,3.05,0xffd097,15,6.2],[16.58,.39,0xfb965c,23,7.8],
   [18.32,-2.58,0xe8b976,19,6.9],[18.48,2.91,0x92beb4,14,5.3],
   [22.18,-3.28,0xffc899,17,6.3],[26.15,-2.98,0xc0c7bf,19,6.9],[30.45,-2.98,0xeab781,19,7.4],[32.90,-2.90,0xefb985,15,6.4],
-  [22.05,3.69,0xebca9f,17,6.6],[24.42,3.45,0xd5e8ba,18,6.9],[27.20,4.12,0xcae6c3,18,7.0],[29.81,3.52,0xf7d3a5,18,6.6]
+  [22.05,3.69,0xebca9f,17,6.6],[24.42,3.45,0xd5e8ba,18,6.9],[27.20,4.12,0xcae6c3,18,7.0],[29.81,3.52,0xf7d3a5,18,6.6],
+  [16.09,-6.49,0xe9a376,16,5.7],[18.69,-7.55,0xcdc9d0,15,5.7],
+  [15.89,7.36,0x98bdb9,17,6.4],[17.79,10.37,0xd2e0d2,22,6.4],[18.95,8.34,0xffc27e,9,5.7],
+  [21.80,8.27,0xe4b480,15,5.6],[23.78,10.32,0xffcd8d,19,6.3],[25.86,12.08,0xb99181,13,5.2],
+  [30.03,8.46,0xd5dfb8,14,6.1],[31.91,10.29,0xffd29a,21,6.4],[34.35,11.98,0xefdfba,19,6.8]
 ];
 const alongEdge=(u0,u1,v0,v1)=>[['u',u0,v0,v1,-1],['u',u1,v0,v1,1],['v',v0,u0,u1,-1],['v',v1,u0,u1,1]];
+const portals=Object.fromEntries(Object.keys(ROOMS).map(id=>[id,LINKS.filter(([a,b])=>a===id||b===id)]));
 
-export function addWcInterior(T,scene,world){
+export function addWcInterior(T,scene,world,quest){
   const group=new T.Group();group.name='WC · Untergeschosse und Moosfunk';group.visible=false;scene.add(group);
   const layers=new Map(),doors=[],activeLinks=new Map();
   const plain=(color,roughness=.86,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
@@ -42,7 +49,7 @@ export function addWcInterior(T,scene,world){
     wood:plain(0xb29065,.78,wood),darkWood:plain(0x8a664e,.88,wood),ochre:plain(0xb68245,.86,painted),
     red:plain(0x88554a,.91,painted),linen:plain(0xb2a27c,.97,cloth),fabric:plain(0x5c6a54,.92,cloth),rug:plain(0x805745,1,cloth),
     paper:plain(0xbcaa86),amber:plain(0x895a35,.42,{metalness:.18}),signal:{material:plain(0x9ec569,.73,{emissive:0x779742,emissiveIntensity:.61}),cast:false},
-    ...annexMaterials(T,{painted,plaster,cloth})
+    ...annexMaterials(T,{painted,plaster,cloth}),...hqMaterials(T,{painted,cloth})
   };
   const cyl=new T.CylinderGeometry(1,1,1,12),identity=new T.Matrix4(),m=new T.Matrix4(),tmp=new T.Vector3(),len=new T.Vector3(),up=new T.Vector3(0,1,0),scale=new T.Vector3(),rot=new T.Quaternion();
   // Keep continuous normals across a rock panel; the triangulation should
@@ -63,6 +70,7 @@ export function addWcInterior(T,scene,world){
   const toHit=(u,U,v,V)=>world.box(X-V,Z+u,X-v,Z+U,o=>lower(o.y));
   const partsArt=collectiveArt(T);
   const annexArt=moosfunkAnnexArt(T);
+  const hq=hqArt(T);
   const hemi=new T.HemisphereLight(0xb2c4bd,0x5d503b,.66);group.add(hemi);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);group.add(l);return l;});
   for(const [id,bounds] of Object.entries(ROOMS)){
@@ -72,8 +80,9 @@ export function addWcInterior(T,scene,world){
     const hit=toHit;
     const method={
       block,hit,k,room,art:partsArt,
-      stamp(mat,g,u,y,v,dimensions,angle=0){
-        m.makeRotationY(angle).scale(scale.set(...dimensions));m.setPosition(...p(u,b+y,v));k.geometry(mat,g,m);
+      stamp(mat,g,u,y,v,dimensions,angle=0,pitch=0){
+        if(pitch)m.makeRotationFromEuler(new T.Euler(pitch,angle,0,'YXZ'));else m.makeRotationY(angle);
+        m.scale(scale.set(...dimensions));m.setPosition(...p(u,b+y,v));k.geometry(mat,g,m);
       },
       pipe(mat,A,B,r){
         tmp.fromArray(p(A[0],b+A[1],A[2]));len.fromArray(p(B[0],b+B[1],B[2])).sub(tmp);
@@ -81,7 +90,8 @@ export function addWcInterior(T,scene,world){
         m.compose(tmp.addScaledVector(len,.5),rot.setFromUnitVectors(up,len.normalize()),scale.set(r,L,r));k.geometry(mat,cyl,m);
       },
       print(tile,u,y,v,w,h,angle=0,options){partsArt.mount(room,tile,...p(u,b+y,v),w,h,angle,options);},
-      artTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){annexArt.mount(room,tile,p(u,b+y,v),w,h,angle,pitch,roll);}
+      artTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){annexArt.mount(room,tile,p(u,b+y,v),w,h,angle,pitch,roll);},
+      hqTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){return hq.mount(room,tile,p(u,b+y,v),w,h,angle,pitch,roll);}
     };
     const [u0,u1,v0,v1]=bounds,rock=isRock(id),extra=isAnnex(id),va=id==='landing'?v0+.0028:v0;
     block('grout',u0,u1,-.094,-.024,va,v1);
@@ -156,9 +166,10 @@ export function addWcInterior(T,scene,world){
         if(spec){
           // Reverse the secret cubicle's handing: the leaf parks against
           // the empty flank, while the porcelain stays on the opposite side.
-          const [key,label]=spec,hingeAtEnd=key==='wc-men-b',hinge=hingeAtEnd?r-.042:l+.042,[x,,z]=p(at,b,hinge);
+          const [key,label]=spec,acoustic=key==='mf-studio-door',hingeAtEnd=key==='wc-men-b',hinge=hingeAtEnd?r-.042:l+.042;
+          const [x,,z]=axis==='u'?p(at,b,hinge):p(hinge,b,at);
           const d=utilityDoor(T,room,world,materials,x,z,r-l-.084,
-            {id:key,label,floor:b,lower,cubicle:areWeStalls,hingeAtEnd});
+            {id:key,label,floor:b,lower,cubicle:areWeStalls,hingeAtEnd,acoustic});
           d.zones=[owner,next];d.peek=areWeStalls;doors.push(d);activeLinks.set(L,d);
           if(hingeAtEnd)solid('steel',l+.034,l+.051,b+.933,b+1.097,-.05,.05);
           else solid('steel',r-.051,r-.034,b+.933,b+1.097,-.05,.05);
@@ -171,7 +182,8 @@ export function addWcInterior(T,scene,world){
       const top=wcRoofAt(id,u,v)-b-.018;
       block('iron',u-.25,u+.25,top-.099,top,v-.104,v+.104);
       block('edge',u-.224,u+.224,top-.116,top-.097,v-.081,v+.081);
-      for(const shift of [-.043,.043])method.pipe(id==='greenhouse'?'growLamp':'lamp',[u-.195,top-.121,v+shift],[u+.195,top-.121,v+shift],.024);
+      const tube=id==='greenhouse'?'growLamp':id==='studio'?'studioLamp':id==='workshop'?'workLamp':'lamp';
+      for(const shift of [-.043,.043])method.pipe(tube,[u-.195,top-.121,v+shift],[u+.195,top-.121,v+shift],.024);
       for(const d of [-.204,0,.204])method.pipe('iron',[u+d,top-.152,v-.095],[u+d,top-.152,v+.095],.009);
     }
     if(id==='lobby'){
@@ -184,11 +196,21 @@ export function addWcInterior(T,scene,world){
     if(['women','men','womenA','womenB','menA','menB'].includes(id))furnishWashroom(T,method,id);
     if(id==='practice')furnishPractice(T,method);
     else if(id==='greenhouse')furnishGreenhouse(T,method);
+    else if(isNewHQ(id))furnishHQ(T,method,id,quest);
     else if(rock)furnishCollective(T,method,id);
     if(id==='collective')for(const [tile,v] of [['rangeSign',-3.145],['growSign',3.21]]){
       // Hang labels over the portal, clear of the wood behind the banner.
       method.block('darkWood',19.86,20.06,1.916,2.102,v-.52,v+.52);
       method.artTile(tile,19.853,2.010,v,1,.161,Math.PI);
+    }
+    const labels={collective:[['studioSign',17.69,-4.062,-Math.PI/2],['workSign',15.38,4.669,Math.PI/2]],
+      greenhouse:[['kitchenSign',29.43,6.503,Math.PI/2]],workshop:[['plenumSign',19.978,8.27,Math.PI]],
+      plenum:[['kitchenSign',27.85,10.97,Math.PI]],kitchen:[['plenumSign',28.13,10.97,0]]};
+    for(const [tile,u,v,angle] of labels[id]??[]){
+      const du=Math.cos(angle),dv=-Math.sin(angle),w=Math.abs(dv)*1.18+Math.abs(du)*.100,d=Math.abs(du)*1.18+Math.abs(dv)*.100;
+      const U=u-du*.058,V=v-dv*.058;
+      method.block('darkWood',U-w/2,U+w/2,1.930,2.091,V-d/2,V+d/2);
+      method.hqTile(tile,u,2.006,v,1.13,.135,angle);
     }
     k.flush('WC · '+id);
   }
@@ -202,29 +224,47 @@ export function addWcInterior(T,scene,world){
     for(const d of doors)changed=d.update(dt,pos)||changed;
     if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return false;
     prev=id;lastU=u;lastV=v;
-    const visible=new Set([id]),traversed=new Set([id]);let wave=[id];
-    // Through the opened cubicle, the illuminated turn must already be
-    // present. A closed door only exposes its owner and any cubicle gaps.
-    const reach=id==='men'||id==='menB'||isRock(id)?3:2;
-    for(let depth=0;depth<reach;depth++){
-      const next=[];
-      for(const room of wave)for(const l of LINKS){
-        if(l[0]!==room&&l[1]!==room)continue;
+    const visible=new Set([id]),tau=2*Math.PI;
+    // Intersect doorway sight arcs along a path instead of drawing the whole
+    // loop of rooms. Direct neighbours still render before the threshold.
+    function arc([,,axis,edge,a,b]){
+      const U=axis==='u'?edge:u,V=axis==='v'?edge:v,t=axis==='u'?v:u;
+      if(Math.abs(axis==='u'?U-u:V-v)<.22&&t>a-.20&&t<b+.20)return null;
+      const A=axis==='u'?Math.atan2(a-v,U-u):Math.atan2(V-v,a-u);
+      const B=axis==='u'?Math.atan2(b-v,U-u):Math.atan2(V-v,b-u);
+      const centre=axis==='u'?Math.atan2((a+b)/2-v,U-u):Math.atan2(V-v,(a+b)/2-u);
+      const rel=angle=>Math.atan2(Math.sin(angle-centre),Math.cos(angle-centre));
+      return [centre+Math.min(rel(A),rel(B))-.11,centre+Math.max(rel(A),rel(B))+.11];
+    }
+    function sight(room,visits,wedge,depth){
+      if(depth===0)return;
+      for(const l of portals[room]){
+        const other=l[0]===room?l[1]:l[0];
+        if(visits.includes(other))continue;
+        const span=arc(l);
+        let next=span??wedge;
+        if(span&&wedge){
+          next=null;
+          for(const s of [-tau,0,tau]){
+            const lo=Math.max(wedge[0],span[0]+s),hi=Math.min(wedge[1],span[1]+s);
+            if(lo<=hi){next=[lo,hi];break;}
+          }
+          if(!next)continue;
+        }
         const leaf=activeLinks.get(l);
         if(leaf&&leaf.progress<=.01){
           // The leaf and frame belong to the approach room. Keep that
           // owner visible from the inside even when the door is shut.
           if(l[1]===room)visible.add(l[0]);
-          if(leaf.peek)visible.add(l[0]===room?l[1]:l[0]);
+          if(leaf.peek)visible.add(other);
           continue;
         }
-        const other=l[0]===room?l[1]:l[0];
-        if(isAnnex(other)&&other!==id&&id!=='collective'&&!(id==='bend'&&v<5.56))continue;
         visible.add(other);
-        if(!traversed.has(other)){traversed.add(other);next.push(other);}
+        sight(other,[...visits,other],next,depth-1);
       }
-      wave=next;
     }
+    const reach=id==='men'||id==='menB'||isRock(id)?3:2;
+    sight(id,[id],null,reach);
     for(const [key,room] of layers){changed||=room.visible!==visible.has(key);room.visible=visible.has(key);}
     const near=lampSites.filter(([u,v])=>visible.has(wcRoomAt(u,v))).map(l=>{
       const key=wcRoomAt(l[0],l[1]),bias=key!==id&&(isAnnex(key)||isAnnex(id))?2.6:0;

@@ -7,7 +7,7 @@ import {addParkIvy} from './park-ivy.js';
 export {WC_CUT,WC_OUTLINE,wcHeightAt,wcCeilingAt,wcCameraMode,isWcInterior} from './park-wc-layout.js';
 export {WC_LAYER} from './park-wc-interior.js';
 
-export function addParkStair(T,scene,world){
+export function addParkStair(T,scene,world,quest){
   const root=new T.Group();root.name='Schlossgarten · WC-Treppe und Kabinen';scene.add(root);
   const plain=(color,roughness=.86)=>new T.MeshStandardMaterial({color,roughness});
   const concrete=new T.MeshStandardMaterial({...sharedSet(T,'plaster',512),color:0xa6a594,roughness:.94});
@@ -113,5 +113,5 @@ export function addParkStair(T,scene,world){
   // The stair-side cap is the only visible part above grade. The actual
   // vestibule ceiling and walls below it belong to the new lighting pass.
 
-  return addWcInterior(T,scene,world);
+  return addWcInterior(T,scene,world,quest);
 }

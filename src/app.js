@@ -22,6 +22,7 @@ import {addParkStair,wcHeightAt,wcCeilingAt,wcCameraMode,isWcInterior,WC_LAYER} 
 import {LAB_LAYER,labFloorAt,labCeilingAt} from './lab-layout.js';
 import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+import {makeMoosfunk} from './moosfunk-quest.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -66,9 +67,10 @@ async function start(){
  // Exterior gate posts and tree trunks never extend into the new rooms.
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p));
  addFixedColliders(world);
- const hall=makeHall(T,model,stonework,world,leaves,poster,seal);
+ const moosfunk=makeMoosfunk();
+ const hall=makeHall(T,model,stonework,world,leaves,poster,seal,moosfunk);
  const perimeter=addPerimeter(T,s,world,finish);
- const wc=addParkStair(T,s,world);
+ const wc=addParkStair(T,s,world,moosfunk);
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
  walkSurfaces.push(...garden.floors);
@@ -171,27 +173,39 @@ async function start(){
    e.preventDefault();startRound();
  });
  const portalAction=$('portal-action'),portalText=$('portal-text');
+ const caption=$('moosfunk-caption');
+ let captionTimer=0;
  const interactionLook=new T.Vector3();
- const wcTarget=()=>wc.target(player.body.position,c.getWorldDirection(interactionLook));
+ const localTarget=()=>{
+   const pos=player.body.position,look=c.getWorldDirection(interactionLook);
+   return moosfunk.target(pos,look)??wc.target(pos,look);
+ };
  const choirLabels={ready:'Chor erklingen lassen',loading:'Chor wird geladen …',playing:'Der Chor erklingt',
    muted:'Für den Chor den Ton einschalten',retry:'Chor erneut laden',unavailable:'Chor nicht verfügbar'};
  function doorPrompt(){
-   const target=active()?(wcTarget()??hall.targetFor(player,c)):null;
+   const target=active()?(localTarget()??hall.targetFor(player,c)):null;
    const status=target?.id==='gallery-choir'?audio.choirStatus():'';
-   const usable=target&&hall.usable(target,player)&&(!status||status==='ready'||status==='retry');
-   const uid=target?target.id+':'+target.target+':'+usable+':'+status:'';
+   const usable=target&&(target.action||hall.usable(target,player))&&(!status||status==='ready'||status==='retry');
+   const uid=target?target.id+':'+target.target+':'+usable+':'+status+':'+target.label:'';
    if(uid===activePortal)return;
    activePortal=uid;portalAction.hidden=!target;
    if(target){
      portalAction.disabled=!usable;
-     portalText.textContent=status?choirLabels[status]:target.id==='lab-secret'
+     portalText.textContent=target.action?target.label:status?choirLabels[status]:target.id==='lab-secret'
        ?(target.target===0?'Lockeres Buch untersuchen':usable?'Regal zurückschieben':'Regal offen')
        :!usable?(target.usable?'Durchgang freimachen · '+target.label:'Tür offen'):(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
    }
  }
  function handleDoor(){
    if(!active())return;
-   const local=wcTarget();
+   const local=localTarget();
+   if(local?.action){
+     const notice=moosfunk.use(local);if(!notice)return;
+     clearTimeout(captionTimer);caption.textContent=notice.text;caption.hidden=false;
+     captionTimer=setTimeout(()=>{caption.hidden=true},notice.voice?9600:7800);
+     if(notice.voice)audio.playMoosfunk(notice.where,notice.voice);
+     doorPrompt();refresh();return;
+   }
    if(local){
      if(!local.usable(player.body.position))return;
      local.target=1-local.target;
