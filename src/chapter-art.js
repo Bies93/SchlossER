@@ -1,4 +1,5 @@
 import {randomSource,sharedSet} from './surface-detail.js';
+import {chapterFinishes} from './chapter-finishes.js';
 
 const art={
   crest:['BUND DER EISERNEN KRONE','SIEGEL DES INNEREN KREISES','KEIN EINTRITT OHNE PFAND'],
@@ -79,5 +80,6 @@ export function chapterMaterials(T){
     blue:std(0x394f5b,.94,cloth),wine:std(0x6b3740,.94,cloth),piping:std(0xa1855a,.86,cloth),paper:std(0xc9ba94,.92),
     soot:std(0x292528,.96),bookA:std(0x5b4734,.92,cloth),bookB:std(0x614044,.91,cloth),bookC:std(0x4f625c,.91,cloth),
     iron:std(0x576067,.50,{...plate,metalness:.56}),steel:std(0xa6b1b4,.34,{...plate,metalness:.60}),brass:std(0xb28e58,.51,{metalness:.52}),
-    wax:std(0xc6b288,.79),flame:std(0xffda9c,.71,{emissive:0xff9b39,emissiveIntensity:1.8}),filament:std(0xd8cab0,.68,{emissive:0xffbe7d,emissiveIntensity:.82})};
+    wax:std(0xc6b288,.79),flame:std(0xffda9c,.71,{emissive:0xff9b39,emissiveIntensity:1.8}),filament:std(0xd8cab0,.68,{emissive:0xffbe7d,emissiveIntensity:.82}),
+    ...chapterFinishes(T)};
 }

@@ -2,6 +2,7 @@ import {architectureKit} from './architecture-kit.js';
 import {CHAPTER_ROOMS,CHAPTER_LINKS,CHAPTER_STEP as S,CHAPTER_DROP} from './chapter-layout.js';
 import {chapterArt} from './chapter-art.js';
 import {dressChapter} from './chapter-props.js';
+import {armorialCloth} from './chapter-finishes.js';
 import {randomSource} from './surface-detail.js';
 
 const p=(x,y,z)=>[x,y,z],names={vestibule:'Pförtnerkammer',salle:'Waffengalerie',archive:'Archiv der Aufnahmen',chapter:'Kapitelsaal',duel:'Fechtboden · Kronsaal'};
@@ -9,7 +10,7 @@ const roofAt=(z,a,b)=>2.53+.88*Math.sqrt(Math.max(0,1-((2*z-a-b)/(b-a))**2));
 const node=(T,parent,name)=>{const n=new T.Group();n.name=name;parent.add(n);return n;};
 
 export function chapterInterior(T,root,world,material,grade,isBelow){
-  const F=grade-CHAPTER_DROP,objects=new Map(),atlas=chapterArt(T,root),rnd=randomSource(518019);
+  const F=grade-CHAPTER_DROP,objects=new Map(),atlas=chapterArt(T,root),cloth=armorialCloth(T),rnd=randomSource(518019);
   const stair=node(T,root,'Eiserne Krone · Treppenlauf');
   const k=architectureKit(T,stair,material);
   const box=(m,a,A,y,Y,z,Z)=>k.box(m,p,a,A,grade+y,grade+Y,z,Z);
@@ -91,16 +92,30 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
       }
       section(start,max);
     }
-    // One curved skin, with a distinct set of voussoir ribs that descend
-    // into the wall. All strips of the vault share the world-scaled stone.
-    const arcs=24;
+    // Continuous smooth normals and arclength UVs across the vault.
+    // The intentional transverse ribs have a separate, bevelled moulding.
+    const arcs=40;
     const knot=(x,i)=>{const angle=i*Math.PI/arcs,z=(b+B)/2-(B-b)/2*Math.cos(angle);return p(x,F+roofAt(z,b,B),z);};
-    for(let i=0;i<arcs;i++)m.quad(i%5?'stone2':'stone',knot(a,i),knot(A,i),knot(A,i+1),knot(a,i+1),1.28,i*.08);
-    for(let x=a+.35;x<A-.20;x+=(A-a)/3){
+    const verts=[],uv=[],idx=[];let walked=0;
+    for(let i=0;i<=arcs;i++){
+      const v=knot(a,i),w=knot(A,i);
+      if(i){const prev=knot(a,i-1);walked+=Math.hypot(v[1]-prev[1],v[2]-prev[2]);}
+      verts.push(...v,...w);uv.push(a/1.7,walked/1.7,A/1.7,walked/1.7);
+      if(i){const u=(i-1)*2;idx.push(u,u+1,u+3,u,u+3,u+2);}
+    }
+    const barrel=new T.BufferGeometry();barrel.setAttribute('position',new T.Float32BufferAttribute(verts,3));
+    barrel.setAttribute('uv',new T.Float32BufferAttribute(uv,2));barrel.setIndex(idx);barrel.computeVertexNormals();
+    m.geometry(id==='duel'?'vaultBlue':'vaultLime',barrel,new T.Matrix4());barrel.dispose();
+    for(const z of [b,B]){
+      const sign=z===b?1:-1,[d,D]=[z+sign*.041,z+sign*.122].sort((a,b)=>a-b);
+      B0('stone3',a+.07,A-.07,2.47,2.54,d,D);
+      B0('stone2',a+.08,A-.08,2.444,2.478,d+sign*.011,D+sign*.011);
+    }
+    for(let x=a+.49;x<A-.21;x+=(A-a)/3){
+      const cross=[[-.120,.005],[-.106,-.039],[-.067,-.057],[-.053,-.093],[.053,-.093],[.067,-.057],[.106,-.039],[.120,.005]];
+      const point=(j,s)=>{const v=knot(x+cross[s][0],j);v[1]+=cross[s][1];return v;};
       for(let i=0;i<arcs;i++){
-        const low=(X,j)=>{const v=knot(X,j);v[1]-=.072;return v;};
-        m.quad(i%2?'stone3':'stone',low(x-.068,i),low(x+.068,i),low(x+.068,i+1),low(x-.068,i+1),1);
-        for(const v of [x-.068,x+.068])m.quad('stone2',...((v<x)?[knot(v,i),low(v,i),low(v,i+1),knot(v,i+1)]:[low(v,i),knot(v,i),knot(v,i+1),low(v,i+1)]),1);
+        for(let l=1;l<cross.length;l++)m.quad(l%2?'stone2':'stone3',point(i,l-1),point(i,l),point(i+1,l),point(i+1,l-1),.72,i*.063);
       }
     }
     B0('mortar',a,A,-.086,-.029,b,B);
@@ -110,7 +125,7 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
         if(r>l&&v>y+.004)B0(rnd()<.23?'stone2':'sole',l,r,-.037,0,y+.004,v);
       }
     }
-    dressChapter(T,{room,k:m,box:B0,hit,F,rect,id,print:(key,...args)=>{
+    dressChapter(T,{room,k:m,box:B0,hit,F,rect,id,cloth,print:(key,...args)=>{
       room.add(atlas(key,args[0],F+args[1],...args.slice(2)));
     }});
     m.flush('Eiserne Krone · '+names[id]);

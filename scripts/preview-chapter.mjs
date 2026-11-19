@@ -1,6 +1,6 @@
 import {build} from 'esbuild';
 import {mkdir,writeFile} from 'node:fs/promises';
-const dir=new URL('../dist/krone-kronboden/',import.meta.url);await mkdir(dir,{recursive:true});
+const dir=new URL('../dist/krone-politur/',import.meta.url);await mkdir(dir,{recursive:true});
 const code=await build({stdin:{contents:`
 import * as T from 'three';
 import {CHAPTER_BENCH,CHAPTER_BAY_PATH,CHAPTER_CUT,CHAPTER_LAYER,CHAPTER_DROP} from './src/chapter-layout.js';
@@ -49,7 +49,7 @@ for(const [i,end] of [...route,...route.slice(0,-1).reverse()].entries()){
 }
 if(!target.usable(start)||chapter.floorAt(21,-36,F)!==F)throw Error('Stockwerk nicht konsistent');
 const c=new T.PerspectiveCamera(64,540/400,.065,140);
-for(const [x,y,z,X,Y,Z,closed] of [[37.30,grade,-32.14,33.82,grade+.27,-33.92,true],[36.07,grade,-33.60,32.63,grade-.78,-34.14],[23.51,F,-46.78,21.64,F+1.57,-54.91],[26.37,F,-34.19,18.88,F+1.60,-37.68],[23.09,F,-39.36,24.44,F+1.50,-44.1],[15.79,F,-36.08,10.04,F+1.49,-39.1]]){
+for(const [x,y,z,X,Y,Z,closed] of [[18.23,F,-35.98,18.96,F+1.59,-38.15],[13.08,F,-38.68,10.20,F+1.39,-38.98],[23.51,F,-46.78,21.64,F+1.69,-54.91],[20.87,F,-52.13,25.97,F+1.03,-51.20],[23.34,F,-43.57,25.22,F+1.36,-45.54],[26.39,F,-34.19,18.88,F+1.60,-37.68]]){
  if(closed){target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);}
  const at=new T.Vector3(x,y,z);chapter.update(0,at);c.position.set(x,y+1.59,z);c.lookAt(X,Y,Z);
  if(y===grade){c.layers.set(0);r.render(s,c);}

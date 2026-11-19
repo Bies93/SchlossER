@@ -85,10 +85,10 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const sources={
     stair:[[29.88,grade-2.21,-34.17,0xf3c394,14,6],[33.02,grade-.97,-34.12,0xcfdbec,12,5]],
     vestibule:[[27.73,floor+2.01,-35.57,0xffdb9f,24,6.9]],
-    salle:[[18.78,floor+2.45,-37.42,0xeec798,29,8],[24.10,floor+2.64,-34.73,0xd5dfeb,31,8.6]],
+    salle:[[18.58,floor+2.20,-37.18,0xeecfa6,23,7.8],[24.10,floor+2.53,-34.73,0xd5dfeb,29,8.6]],
     archive:[[23.48,floor+2.50,-44.17,0xe6b67c,32,8],[25.63,floor+1.91,-40.74,0xa9c7d0,16,6]],
     chapter:[[10.96,floor+2.70,-38.85,0xf5c384,35,8],[14.50,floor+2.57,-40.93,0xadc3dd,20,7]],
-    duel:[[22.50,floor+2.68,-48.50,0xe4c7a2,26,8],[20.13,floor+2.78,-52.03,0xc8d4e1,30,9],[23.92,floor+2.68,-54.03,0xf3c48a,27,8]]
+    duel:[[22.50,floor+2.49,-48.50,0xe4cdb4,26,8.8],[20.13,floor+2.40,-52.03,0xc8d4e1,28,9],[22.22,floor+2.45,-54.03,0xf1c18e,29,8]]
   };
   room.traverse(o=>{o.layers.set(CHAPTER_LAYER);if(o.isMesh)o.castShadow=false;});
   const smooth=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n);};
@@ -125,6 +125,10 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     if(cell==='duel')visible.add('salle');
     for(const [id,group] of objects)group.visible=visible.has(id);
     const pool=[...visible].flatMap(id=>(sources[id]??[]).map(a=>[a,Math.hypot(p.x-a[0],p.z-a[2])+(id===cell?-3:0)])).sort((a,b)=>a[1]-b[1]);
+    if(cell==='duel'){
+      const rear=pool.findIndex(([src])=>src===sources.duel[2]);
+      if(rear>=lights.length)pool.splice(2,0,pool.splice(rear,1)[0]);
+    }
     ambient.intensity=cell==='chapter'?.56:cell==='stair'?.48:.71;
     for(const [i,l] of lights.entries()){
       const a=pool[i]?.[0];l.intensity=a?.[4]??0;

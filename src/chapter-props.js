@@ -1,7 +1,8 @@
 import {stationery} from './interior-stationery.js';
 import {randomSource} from './surface-detail.js';
+import {chapterCraft} from './chapter-craft.js';
 
-export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
+export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
   const pi=Math.PI,rnd=randomSource(9318+id.charCodeAt(0)),ball=new T.SphereGeometry(1,14,9),pin=new T.CylinderGeometry(1,1,1,12),
     ring=new T.TorusGeometry(1,.085,7,20),pos=new T.Vector3(),scale=new T.Vector3(),quat=new T.Quaternion(),rot=new T.Euler(),
     up=new T.Vector3(0,1,0),end=new T.Vector3(),dir=new T.Vector3(),mat=new T.Matrix4();
@@ -17,6 +18,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     if(L>.001)k.geometry(m,pin,mat.compose(pos.addScaledVector(dir,.5),quat.setFromUnitVectors(up,dir.normalize()),scale.set(r,L,r)));
   };
   const line=(m,pts,r)=>{for(let j=1;j<pts.length;j++)rod(m,...pts[j-1],...pts[j],r);};
+  const craft=chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ring},cloth);
   function frame(key,x,y,z,w,h,yaw=0){
     const X=(s,d=0)=>x+Math.cos(yaw)*s+Math.sin(yaw)*d,Z=(s,d=0)=>z-Math.sin(yaw)*s+Math.cos(yaw)*d;
     for(const s of [-1,1]){
@@ -93,46 +95,30 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     for(let j=0;j<7;j++)lozenge(x-w*.41+j*w*.136,z,Math.min(d*.14,w*.045));
   }
   function shelf(x,z,w,d){
-    for(const s of [-1,1])box('darkWood',x+s*(w*.5-.031),.027,z,.062,2.05,d);
-    for(const y of [.28,.72,1.14,1.58,2.06]){
-      box('wood',x,y,z,w,.047,d+.021);rod('brass',x-w*.478,y+.037,z+d*.51,x+w*.478,y+.037,z+d*.51,.006);
-      if(y>2)continue;
+    const gap=w-.144;
+    for(const s of [-1,1]){
+      const X=x+s*(w*.5-.035),out=x+s*w*.5;
+      box('walnut',X,.121,z,.070,1.974,d);
+      box('wood',out+s*.007,.196,z,.014,1.68,d-.075);
+      box('walnut',out+s*.017,.227,z,.010,1.617,d-.131);
+      for(const D of [-d*.5+.069,d*.5-.069])
+        rod('inlayGold',out+s*.023,.253,z+D,out+s*.023,1.801,z+D,.006);
+    }
+    box('darkWood',x,.119,z-d*.5+.019,gap,.1+1.83,.033);
+    box('walnut',x,.024,z,w+.035,.096,d+.027);
+    box('polishedWood',x,2.095,z,w+.055,.076,d+.051);
+    for(const y of [.28,.72,1.14,1.58]){
+      // Board ends sit inside the carcass: no coplanar end faces against the sides.
+      box('wood',x,y,z+.014,gap,.041,d-.054);
+      rod('brass',x-gap*.476,y+.026,z+d*.5-.008,x+gap*.476,y+.026,z+d*.5-.008,.006);
       let X=x-w*.5+.095;
       while(X<x+w*.5-.108){
-        const q=.024+rnd()*.057,H=.187+rnd()*.114,V=z+.041+(rnd()-.5)*.066;
-        box('paper',X,y+.051,V,q*.82,H-.021,d*.51);
-        box(['bookA','bookB','bookC','darkWood'][Math.floor(rnd()*4)],X,y+.051,V+d*.253,q,H,.027);
-        for(const y0 of [.079,H+.026])box('piping',X,y+y0,V+d*.28,q*.91,.008,.011);
-        if(rnd()<.77)box('paper',X,y+H*.64,V+d*.291,q*.66,.039,.005);
+        const q=.025+rnd()*.061,H=.173+rnd()*.142,V=z+d*.44-rnd()*.048,t=(rnd()-.5)*.13,s=Math.sin(t),c=Math.cos(t);
+        props.book((a,b,f)=>[X+a*c-b*s,F+y+.043+a*s+b*c,V+f],q,H,d*(.43+rnd()*.24),Math.floor(rnd()*8));
         X+=q+.019+rnd()*.026;
       }
     }
-    foot(x,z,w,d);
-  }
-  function helmet(x,y,z,pose=0){
-    // Display-only heraldic headpiece: layered visor, raised comb, rivets
-    // and a wooden turned mount. No human or manequin geometry.
-    cylinder('darkWood',x,y+.024,z,.175,.048);cylinder('wood',x,y+.123,z,.053,.17);
-    bead('iron',x,y+.288,z,.145,.157,.148);
-    bead('steel',x,y+.339,z,.128,.120,.136);
-    bead('iron',x,y+.261,z+.090,.108,.096,.113);
-    box('soot',x,y+.308,z+.182,.170,.022,.019);
-    rod('brass',x-.114,y+.299,z+.147,x-.096,y+.296,z+.192,.009);
-    rod('brass',x-.096,y+.296,z+.192,x+.096,y+.296,z+.192,.009);
-    for(let j=0;j<7;j++)bead('brass',x-.077+j*.026,y+.266,z+.194,.008);
-    for(const s of [-1,1])bead('brass',x+s*.132,y+.307,z+.066,.019,.019,.017);
-    if(pose){bead('wine',x,y+.463,z-.029,.028,.046,.127);bead('piping',x,y+.428,z-.015,.039,.023,.072);}
-  }
-  function bladeDisplay(x,y,z,s){
-    // Two tapered, closed silhouettes set flat on the notice board, purely decorative.
-    const point=(a,b,c)=>[x+a*Math.cos(s)-b*Math.sin(s),F+y+a*Math.sin(s)+b*Math.cos(s),z+c];
-    const a=point(-.027,.047,0),b=point(.027,.047,0),c=point(0,.609,0),d=point(0,.103,.017);
-    const UV=[0,0,1,0,.5,1];
-    k.triangle('steel',a,d,c,UV);k.triangle('iron',d,b,c,UV);
-    const Q=(dx,dy)=>{const [X,Y,Z]=point(dx,dy,.006);return [X,Y-F,Z];};
-    line('brass',[Q(-.115,.014),Q(-.072,.038),Q(.056,.034),Q(.112,.001)],.013);
-    rod('darkWood',...Q(0,.037),...Q(0,-.136),.019);
-    bead('brass',...Q(0,-.146),.033);
+    foot(x,z,w+.041,d+.035);
   }
   function wainscot(a,A,z,side=1){
     box('darkWood',(a+A)*.5,.052,z,A-a,.882,.087);
@@ -148,6 +134,17 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     cylinder('brass',x,y+.009,z,.041,.016);
     mesh('soot',ring,x,y+.020,z,.023,.023,.034,pi/2);
     bead('wine',x,y+.016,z,.011,.010,.012);
+  }
+  function sidePanels(z,Z,x,sign){
+    const l=Z-z;
+    box('walnut',x,.055,(z+Z)*.5,.103,.891,l);
+    for(let v=z+.267;v<Z-.27;v+=.531){
+      box('wood',x+sign*.065,.162,v,.033,.627,.46);
+      box('walnut',x+sign*.083,.192,v,.025,.541,.38);
+      for(const q of [-1,1])rod('inlayGold',x+sign*.098,.211,v+q*.179,x+sign*.098,.711,v+q*.179,.005);
+    }
+    box('polishedWood',x+sign*.015,.920,(z+Z)*.5,.138,.068,l+.009);
+    rod('inlayGold',x+sign*.088,.953,z+.024,x+sign*.088,.953,Z-.024,.007);
   }
   function chandelier(x,z){
     rod('iron',x,2.62,z,x,3.48,z,.018);
@@ -175,7 +172,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
       for(let j=0;j<3;j++)disk('iron',ring,x+.019*(j-1),1.565-j*.017,-32.77,.031,.029);
     }
   }else if(id==='salle'){
-    carpet(21.07,-35.48,8.52,2.57,'blue');
+    carpet(21.07,-35.48,8.52,2.57,'velvetBlue');
     wainscot(16.32,26.64,-32.59,-1);
     chandelier(21.43,-35.45);
     for(const [x,z] of [[18.25,-33.00],[24.46,-33.00]]){
@@ -183,10 +180,13 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
       for(let j=0;j<8;j++)bead('brass',x-.86+j*.245,.503,z-.241,.009);
     }
     for(const x of [18.92,25.04]){
-      table(x,-38.13,1.79,.66,.855);
-      helmet(x-.51,.879,-38.08,true);helmet(x+.52,.879,-38.08);
-      box('darkWood',x,1.316,-38.53,1.66,1.013,.118);box('wine',x,1.365,-38.463,1.53,.90,.012);
-      bladeDisplay(x,1.672,-38.44,.38);bladeDisplay(x,1.672,-38.411,-.48);
+      craft.sideTable(x,-38.11,1.79,.66,.855,'velvetBlue');
+      craft.helmet(x-.53,.876,-38.05,true);craft.helmet(x+.49,.876,-38.05);
+      craft.armorial(x,1.971,-38.405,1.57,1.04);
+      craft.rapier(x-.161,1.708,-38.273,-.49,'velvetBlue');
+      craft.rapier(x+.161,1.715,-38.231,.49,'velvetRed');
+      box('brass',x,.875,-37.903,.184,.013,.073);
+      brassToken(x+.076,.882,-38.18);
     }
     frame('salle',21.30,1.82,-32.617,1.66,.73,pi);
     for(const x of [17.88,24.9])banner(x,1.748,-32.661,.91,1.39,pi);
@@ -195,7 +195,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
   }else if(id==='archive'){
     shelf(20.70,-45.49,2.90,.48);shelf(25.57,-45.49,1.99,.48);
     shelf(20.50,-41.66,2.08,.63);
-    table(25.17,-42.21,2.39,.89,.916);
+    craft.sideTable(25.17,-42.21,2.39,.89,.916,'velvetBlue');
     props.folio(24.82,F+.941,-42.15,.39,.273,.41,0,{loose:true,thickness:.014});
     props.folio(25.73,F+.941,-42.31,.371,.246,2.87,2,{loose:false,thickness:.038});
     candle(24.23,.94,-42.40,.174);candle(25.86,.94,-42.40,.118);
@@ -213,11 +213,13 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     // Open floor for the scene's ritual, separate from the display gallery.
     // A border within the continuous parquet makes the centre readable.
     const X=21.65,Z=-50.86;
-    for(let i=0;i<26;i++){
-      const x=17.16+i*.346;
-      for(let j=0;j<13;j++){
-        const z=-55.22+j*.678+(i%2)*.062;
-        box((i+j)%6===0?'darkWood':'wood',x,.002,z,.342,.015,.672);
+    const w=.89,P=(x,z)=>[x,F+.016,z];
+    for(let i=0;i<11;i++)for(let j=0;j<10;j++){
+      const x=16.76+i*w,z=-55.38+j*w,dir=(i+j)%2===0,n=5;
+      for(let stripe=0;stripe<n;stripe++){
+        const m=(i+j+stripe)%5?'parquetAmber':'parquetDeep',a=stripe*w/n+.0017,A=(stripe+1)*w/n-.0014;
+        if(dir)k.quad(m,P(x+.002,z+A),P(x+w-.002,z+A),P(x+w-.002,z+a),P(x+.002,z+a),1.11,(stripe+j)%4*.173);
+        else k.quad(m,P(x+a,z+.002),P(x+a,z+w-.002),P(x+A,z+w-.002),P(x+A,z+.002),1.11,(stripe+i)%4*.191);
       }
     }
     for(const s of [-1,1]){
@@ -234,15 +236,17 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     wainscot(16.34,26.94,-55.78);
     for(const s of [-1,1]){
       const x=X+s*4.57;
+      const wallx=s<0?16.315:26.975;
+      sidePanels(-55.63,-46.06,wallx,-s);
       for(const z of [-52.80,-49.77]){
-        box('darkWood',x,.050,z,.60,.392,2.87);
-        box('blue',x,.43,z,.559,.110,2.73);
-        box('wine',x+s*.225,.552,z,.119,.626,2.76);
-        for(let n=0;n<12;n++)bead('brass',x+s*.155,1.079,z-1.20+n*.219,.013);
-        foot(x,z,.627,2.89);
+        craft.bench(x,z,s);
       }
-      const wallx=s<0?16.31:26.98;
       banner(wallx,2.22,-51.20,.96,1.46,-s*pi/2);
+      for(const z of [-53.48,-49.10]){
+        box('stone3',wallx,1.345,z,.160,.842,.218);
+        box('honedMarble',wallx-s*.079,1.418,z,.039,.695,.168);
+        for(const y of [1.364,2.128])box('inlayGold',wallx-s*.083,y,z,.059,.031,.194);
+      }
       frame('seats',wallx,1.81,-48.30,1.13,.55,-s*pi/2);
     }
     frame('duel',21.65,2.36,-55.67,2.46,1.22);
@@ -260,42 +264,39 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
       bead('brass',x,2.18,-55.635,.033,.044,.018);
     }
     for(const x of [18.03,25.25]){
-      table(x,-54.87,1.33,.64,.85);helmet(x-.253,.875,-54.83);
+      craft.sideTable(x,-54.87,1.33,.64,.85);craft.helmet(x-.253,.875,-54.83,x<20);
       props.folio(x+.28,F+.877,-54.84,.225,.179,.21,3,{loose:true,thickness:.012});
       candle(x+.31,.873,-55.05,.147);
     }
     for(const x of [20.9,22.4])lamp(x,2.01,-45.94,-1);
     chandelier(X,-48.73);chandelier(X,-53.10);
   }else{
-    carpet(12.68,-38.61,5.22,2.90);
+    carpet(12.68,-38.61,5.22,2.90,'velvetRed');
     wainscot(9.45,15.67,-42.77);
+    sidePanels(-42.70,-34.52,9.42,1);
     chandelier(12.73,-38.55);
-    // Empty ceremonial chair, lacquered steps, brass nails and velvet.
-    box('stone3',10.39,.034,-38.93,1.52,.139,2.44);
-    box('stone',10.18,.173,-38.93,1.15,.152,2.13);foot(10.36,-38.93,1.63,2.46);
-    for(const s of [-1,1]){
-      const z=-38.93+s*.50;
-      box('darkWood',10.17,.33,z,.88,.188,.141);
-      box('wood',9.87,.50,z,.157,1.83,.154);
-      bead('brass',9.87,2.36,z,.086,.087,.087);
-      box('wood',10.46,.52,z,.116,.34,.14);
-      rod('darkWood',9.92,.912,z,10.56,.912,z,.064);
+    craft.throne(9.94,-38.93);
+    craft.armorial(9.44,1.764,-38.93,1.29,1.84,pi/2,true);
+    for(const z of [-39.86,-38.0]){
+      box('honedMarble',9.56,.062,z,.295,.231,.303);
+      cylinder('honedMarble',9.52,1.32,z,.104,2.062);
+      for(let j=0;j<7;j++){
+        const a=(j-3)*.34,x=9.52+.099*Math.cos(a),Z=z+.099*Math.sin(a);
+        rod('stone3',x,.335,Z,x,2.252,Z,.010);
+      }
+      cylinder('inlayGold',9.52,2.308,z,.13,.035);
+      box('stone3',9.51,2.353,z,.27,.104,.266);
     }
-    box('darkWood',10.16,.514,-38.93,.849,.087,1.049);
-    box('wine',10.17,.605,-38.93,.779,.104,.929);
-    box('darkWood',9.82,.651,-38.93,.201,1.56,.951);
-    box('wine',9.931,.807,-38.93,.038,1.259,.782);
-    for(let j=0;j<7;j++)for(let i=0;i<4;i++)bead('brass',9.958,1.03+j*.119,-39.208+i*.181,.011);
-    for(const s of [-1,1]){
-      rod('piping',9.957,.857,-38.93+s*.407,9.957,2.051,-38.93+s*.407,.011);
-      const points=Array.from({length:13},(_,i)=>[9.95,2.026+.184*Math.sin(i*pi/24),-38.93+s*.43*Math.cos(i*pi/24)]);
-      line('wood',points,.039);line('brass',points.map(([x,y,z])=>[x+.029,y+.024,z]),.012);
-    }
-    bead('brass',9.991,2.152,-38.93,.036,.094,.067);
     banner(9.51,2.24,-40.83,.92,1.50,pi/2);banner(9.51,2.23,-37.02,.92,1.5,pi/2);
     for(const z of [-41.05,-36.71]){
-      table(10.56,z,.92,.88,.774);
-      for(let j=0;j<4;j++)candle(10.31+j*.157,.80,z+(j%2?.19:-.17),.08+j*.031);
+      craft.sideTable(10.56,z,.92,.88,.78);
+      const x=10.62,Z=z+.18;
+      cylinder('walnut',x,.812,Z,.116,.026);cylinder('inlayGold',x,.902,Z,.034,.173);
+      for(let j=0;j<3;j++){
+        const a=j*2*pi/3,x0=x+.142*Math.cos(a),z0=Z+.142*Math.sin(a);
+        line('inlayGold',[[x,.923,Z],[(x+x0)*.5,.931,(Z+z0)*.5],[x0,1.016,z0],[x0,1.103,z0]],.014);
+        candle(x0,1.094,z0,.112+j*.035);
+      }
     }
     box('wine',10.60,.795,-41.05,.40,.028,.33);
     cylinder('brass',10.60,.855,-41.05,.117,.042);
@@ -304,11 +305,11 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
       rod('brass',x,.867,z,x,.947,z,.017);bead('wine',x,.944,z,.017,.020,.017);
     }
     for(const x of [12.38,14.52]){
-      table(x,-35.00,1.70,.67,.43);box('blue',x,.456,-35.00,1.56,.066,.532);
+      craft.sideTable(x,-35.00,1.70,.67,.45,'velvetBlue');box('velvetBlue',x,.476,-35.00,1.53,.058,.52);
     }
     frame('decree',12.77,1.75,-42.72,1.67,1.05);
     frame('dynasty',15.12,1.85,-42.73,1.13,.89);
     lamp(11.31,1.91,-42.73);lamp(14.19,1.91,-42.73);lamp(13.63,2.04,-34.45,-1);
   }
-  props.finish('Eiserne Krone · Papiere');for(const g of [ball,pin,ring])g.dispose();
+  props.finish('Eiserne Krone · Papiere');craft.dispose();for(const g of [ball,pin,ring])g.dispose();
 }
