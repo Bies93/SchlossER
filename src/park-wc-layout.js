@@ -50,14 +50,16 @@ export const DEEP_ROOMS={
   deepStair:[DEEP_STAIR.bottom,DEEP_STAIR.top,DEEP_STAIR.left,DEEP_STAIR.right],
   deepLanding:[2.46,DEEP_STAIR.bottom,-2.62,1.88],
   deepLounge:[-14.75,2.46,-6.45,6.84],
-  deepOrb:[-22.26,-14.75,-3.98,4.38]
+  deepOrb:[-25.62,-14.75,-3.98,4.38],
+  deepVotive:[-25.12,-20.02,-9.04,-3.98]
 };
 export const ZONE_ROOMS={...ROOMS,...DEEP_ROOMS};
 export const ZONE_LINKS=[...LINKS,
   ['collective','deepStair','u',DEEP_STAIR.top,DEEP_STAIR.left,DEEP_STAIR.right],
   ['deepLanding','deepStair','u',DEEP_STAIR.bottom,DEEP_STAIR.left,DEEP_STAIR.right],
   ['deepLanding','deepLounge','u',2.46,-1.56,1.37],
-  ['deepLounge','deepOrb','u',-14.75,-.93,1.29,['mf-orb-door','Tür zum Voodoo-Raum']]
+  ['deepLounge','deepOrb','u',-14.75,-.93,1.29,['mf-orb-door','Tür zum Voodoo-Raum']],
+  ['deepOrb','deepVotive','v',-3.98,-24.34,-22.78]
 ];
 const ids=Object.keys(ROOMS);
 const deepIds=Object.keys(DEEP_ROOMS);

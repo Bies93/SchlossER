@@ -236,7 +236,7 @@ export function addWcInterior(T,scene,world,quest){
     let changed=group.visible!==!!id;group.visible=!!id;
     if(!id){prev='';return changed;}
     for(const d of doors)changed=d.update(dt,pos)||changed;
-    const pulsing=dt>0&&orb&&layers.get('deepOrb').visible&&(id==='deepOrb'||id==='deepLounge'&&u<-9.8);
+    const pulsing=dt>0&&orb&&layers.get('deepOrb').visible&&(id==='deepOrb'||id==='deepVotive'||id==='deepLounge'&&u<-9.8);
     if(pulsing)orb(dt);
     if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return Boolean(pulsing);
     prev=id;lastU=u;lastV=v;
@@ -293,12 +293,19 @@ export function addWcInterior(T,scene,world,quest){
       const beacon=near.findIndex(([l])=>l[0]===-13.64&&lightRoom(l)===id);
       if(beacon>=3)near.splice(2,0,near.splice(beacon,1)[0]);
     }
+    if(id==='deepOrb'){
+      // Keep the reredos and the orb legible together, even from the door.
+      for(const [slot,U] of [[0,-19.64],[1,-24.55]]){
+        const i=near.findIndex(([l])=>lightRoom(l)===id&&l[0]===U);
+        if(i>=0)near.splice(slot,0,near.splice(i,1)[0]);
+      }
+    }
     for(let i=0;i<lights.length;i++){
       const l=lights[i],src=near[i]?.[0];if(!src){l.intensity=0;continue}
       const [u,v,color,watts,distance,,height]=src,key=lightRoom(src);
       l.position.set(...p(u,height===undefined?wcRoofAt(key,u,v)-.33:wcLevel(key)+height,v));l.intensity=watts;l.color.setHex(color);l.distance=distance;
     }
-    hemi.intensity=id==='deepOrb'?.40:id==='deepLounge'?.70:.66;
+    hemi.intensity=id==='deepVotive'?.32:id==='deepOrb'?.40:id==='deepLounge'?.70:.66;
     return changed;
   }
   async function warm(renderer,source){
