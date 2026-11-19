@@ -3,9 +3,10 @@ const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl) {
+export function makeAudio(listener,musicUrl,choirUrl) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
+  let choirBuffer,choirFetch,choirRequest,choirVoice,choirFailed=false;
   let levels={music:.48,sfx:.72};
   try{
     const saved=JSON.parse(localStorage.getItem('schlosser.audio')||'null');
@@ -103,11 +104,70 @@ export function makeAudio(listener,musicUrl) {
     voice.gain.cancelScheduledValues(t);voice.gain.setTargetAtTime(0,t,.013);
     source.stop(t+.055);source=null;voice=null;
   }
+  function choirStatus(){
+    if(!choirUrl||!(globalThis.AudioContext||globalThis.webkitAudioContext))return 'unavailable';
+    if(!enabled)return 'muted';
+    return choirVoice?'playing':choirRequest?'loading':choirFailed?'retry':'ready';
+  }
+  function prepareChoir(){
+    if(choirBuffer)return Promise.resolve(choirBuffer);
+    return choirFetch??=fetch(choirUrl)
+      .then(r=>{if(!r.ok)throw Error('Chor nicht erreichbar');return r.arrayBuffer()})
+      .then(bytes=>ctx.decodeAudioData(bytes))
+      .then(decoded=>choirBuffer=decoded)
+      .finally(()=>{choirFetch=null});
+  }
+  function stopChoir(){
+    choirRequest=null;
+    if(!choirVoice)return;
+    const entry=choirVoice,now=ctx.currentTime;choirVoice=null;
+    entry.amp.gain.cancelScheduledValues(now);entry.amp.gain.setTargetAtTime(0,now,.037);
+    entry.node.stop(now+.15);mix();
+  }
+  function updateChoir(){
+    if(!choirVoice)return;
+    const {at,amp,pan}=choirVoice,a=listener(),dx=at.x-a.x,dz=at.z-a.z,d=Math.hypot(dx,dz);
+    if(d>9.5){stopChoir();return;}
+    const t=ctx.currentTime,volume=1.33/(1+(Math.max(0,d-.9)/4.2)**2.3);
+    if(choirVoice.volume===undefined||Math.abs(volume-choirVoice.volume)>.010){
+      choirVoice.volume=volume;amp.gain.setTargetAtTime(volume,t,.055);
+    }
+    if(pan){
+      const balance=Math.max(-.60,Math.min(.60,(dx*a.rightX+dz*a.rightZ)/Math.max(d,.9)));
+      if(choirVoice.balance===undefined||Math.abs(balance-choirVoice.balance)>.014){
+        choirVoice.balance=balance;pan.pan.setTargetAtTime(balance,t,.07);
+      }
+    }
+  }
+  async function playChoir(at){
+    const status=choirStatus();
+    if(!playing||(status!=='ready'&&status!=='retry')||(!ctx&&!setup()))return;
+    const request={at};choirRequest=request;choirFailed=false;
+    try{
+      const [,buffer]=await Promise.all([ctx.resume(),prepareChoir()]);
+      if(choirRequest!==request||!live())return;
+      const a=listener();
+      if(Math.hypot(at.x-a.x,at.z-a.z)>4.8)return;
+      const node=ctx.createBufferSource(),pan=ctx.createStereoPanner?.(),amp=gain(sfx,0);
+      node.buffer=buffer;
+      if(pan){node.connect(pan);pan.connect(amp);}else node.connect(amp);
+      const entry={at,node,pan,amp};choirVoice=entry;
+      node.onended=()=>{
+        node.disconnect();pan?.disconnect();amp.disconnect();
+        if(choirVoice===entry){choirVoice=null;mix();}
+      };
+      node.start();updateChoir();mix();
+    }catch{
+      if(choirRequest===request)choirFailed=true;
+    }finally{
+      if(choirRequest===request)choirRequest=null;
+    }
+  }
   function mix(){
     if(!ctx)return;
     const t=ctx.currentTime;
     master.gain.setTargetAtTime(playing&&enabled?.55:0,t,.038);
-    music.gain.setTargetAtTime(levels.music,t,.046);
+    music.gain.setTargetAtTime(levels.music*(choirVoice?.42:1),t,choirVoice?.085:.23);
     sfx.gain.setTargetAtTime(levels.sfx,t,.046);
   }
   function play(){
@@ -118,12 +178,12 @@ export function makeAudio(listener,musicUrl) {
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
   function pause(){
-    playing=false;stopTrack();mix();
+    playing=false;stopTrack();stopChoir();mix();
   }
   function toggle(){
     enabled=!enabled;store();mix();
     if(enabled&&playing)play();
-    else stopTrack();
+    else{stopTrack();stopChoir();}
     return enabled;
   }
   function shot(which){
@@ -181,6 +241,7 @@ export function makeAudio(listener,musicUrl) {
     grit(sfx,t+.033,length*.8,vol*.16,155,hard?1720:1170,{attack:.08,pan,wet,rate:.74});
   }
   function ambience(p){
+    updateChoir();
     if(!live()||ctx.currentTime<bedTime)return;
     bedTime=ctx.currentTime+1.2;
     const d=Math.hypot(p.x*.85,p.z+47);
@@ -189,7 +250,7 @@ export function makeAudio(listener,musicUrl) {
       grit(sfx,t,.86,v,980,4400,{wet:.20,attack:.26,rate:.88+random()*.06});
     }
   }
-  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,playChoir,choirStatus,mode:on=>{combat=on},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };

@@ -23,7 +23,7 @@ export function hallFloor(x,z){
 
 // Freely interpreted public rooms; not a survey of the existing interior.
 // The exterior entrance thresholds remain shared with the façade assembly.
-export function makeHall(T,root,M,world,leaves,poster){
+export function makeHall(T,root,M,world,leaves,poster,seal){
   const limestone=new T.MeshStandardMaterial({color:0xc6beac,roughness:.81});
   const limewash=new T.MeshStandardMaterial({color:0xdacfc0,roughness:.96});
   const plaster=new T.MeshStandardMaterial({color:0xe1d7c6,roughness:.94,side:T.DoubleSide});
@@ -144,7 +144,7 @@ export function makeHall(T,root,M,world,leaves,poster){
     light.position.set(0,2.41,d.z-d.side*1.85);room.add(light);bounces.push(light);
   }
   k.flush('Halle · Stein, Putz und Leuchten');
-  const wings=addPalaceWings(T,root,world,MAT,poster);
+  const wings=addPalaceWings(T,root,world,MAT,poster,seal);
   const lab=addPalaceLab(T,root,world,MAT);
 
   const doors=Object.values(PORTALS).map(d=>({...d,leaves:leaves[d.id],progress:0,target:0}));
@@ -163,7 +163,7 @@ export function makeHall(T,root,M,world,leaves,poster){
   function targetFor(player,camera){
     camera.getWorldDirection(look);
     const p=player.body.position;
-    return lab.target(p,look)??doors.find(d=>{
+    return lab.target(p,look)??wings.posterTarget(p,camera,look)??doors.find(d=>{
       const dx=-p.x,dz=d.z-p.z,distance=Math.hypot(dx,dz);
       return Math.abs(p.x)<2.05&&distance<3.2&&(distance<1.25||dx*look.x+dz*look.z>distance*.22);
     });
@@ -171,9 +171,10 @@ export function makeHall(T,root,M,world,leaves,poster){
   function commit(player,camera){
     const d=targetFor(player,camera);if(!d)return false;
     if(!usable(d,player))return false;
-    d.target=1-d.target;return true;
+    if(d.id!=='gallery-choir')d.target=1-d.target;
+    return d;
   }
-  function usable(d,player){return d.id==='lab-secret'?lab.usable(player.body.position):d.target===0||!closeEnough(player.body.position,d,1.40)}
+  function usable(d,player){return d.id==='gallery-choir'||(d.id==='lab-secret'?lab.usable(player.body.position):d.target===0||!closeEnough(player.body.position,d,1.40))}
   function update(dt,p){
     wings.update(p,preset);
     let changed=lab.update(dt,p),shadow=false;

@@ -40,10 +40,10 @@ async function start(){
  };
  const decode=(name,url)=>need(name,()=>loader.loadAsync(url).then(g=>g.scene));
  const mapsP=Promise.all(Object.entries(payload.maps).map(async([name,layers])=>[name,Object.fromEntries(await Promise.all(Object.entries(layers).map(async([k,src])=>[k,await need(name+'_'+k+'.webp',()=>tl.loadAsync(src))])))]));
- const posterP=payload.galleryPoster?tl.loadAsync(payload.galleryPoster).catch(()=>null):null;
- const [model,mapPairs,sculptures,poster]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
-   decode('skulpturen.glb',payload.sculptures),posterP]);
- if(poster){poster.colorSpace=T.SRGBColorSpace;poster.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
+ const image=url=>url?tl.loadAsync(url).catch(()=>null):null;
+ const [model,mapPairs,sculptures,poster,seal]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
+   decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal)]);
+ for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
  const exterior=palaceExterior(T,finish);
  const walkSurfaces=[], importedGravel=[];
@@ -65,7 +65,7 @@ async function start(){
  const fountain=makeFountain(T,s,sculptures);
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
- const hall=makeHall(T,model,stonework,world,leaves,poster);
+ const hall=makeHall(T,model,stonework,world,leaves,poster,seal);
  const perimeter=addPerimeter(T,s,world,finish);
  const wc=addParkStair(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
@@ -94,7 +94,7 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music);
+ },payload.music,payload.galleryChoir);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    const surface=hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
@@ -170,21 +170,26 @@ async function start(){
    e.preventDefault();startRound();
  });
  const portalAction=$('portal-action'),portalText=$('portal-text');
+ const choirLabels={ready:'Chor erklingen lassen',loading:'Chor wird geladen …',playing:'Der Chor erklingt',
+   muted:'Für den Chor den Ton einschalten',retry:'Chor erneut laden',unavailable:'Chor nicht verfügbar'};
  function doorPrompt(){
    const target=active()?hall.targetFor(player,c):null;
-   const usable=target&&hall.usable(target,player);
-   const uid=target?target.id+':'+target.target+':'+usable:'';
+   const status=target?.id==='gallery-choir'?audio.choirStatus():'';
+   const usable=target&&hall.usable(target,player)&&(!status||status==='ready'||status==='retry');
+   const uid=target?target.id+':'+target.target+':'+usable+':'+status:'';
    if(uid===activePortal)return;
    activePortal=uid;portalAction.hidden=!target;
    if(target){
      portalAction.disabled=!usable;
-     portalText.textContent=target.id==='lab-secret'
+     portalText.textContent=status?choirLabels[status]:target.id==='lab-secret'
        ?(target.target===0?'Lockeres Buch untersuchen':usable?'Regal zurückschieben':'Regal offen')
        :!usable?'Tür offen':(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
    }
  }
  function handleDoor(){
-   if(!active()||!hall.commit(player,c))return;
+   if(!active())return;
+   const target=hall.commit(player,c);if(!target)return;
+   if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});
    doorPrompt();refresh();
  }
  window.addEventListener('keydown',event=>{
@@ -304,7 +309,7 @@ async function start(){
    c.updateProjectionMatrix();refresh();
  }
  $('loading-text').textContent='Die 3D-Szene wird vorbereitet …';
- if(poster)r.initTexture(poster);
+ for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;

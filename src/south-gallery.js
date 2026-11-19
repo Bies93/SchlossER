@@ -265,6 +265,7 @@ function framedPoster(T,root,fit,texture){
   box('lamp',x-.240,x-.173,t+.180,t+.187,-.56,.56);
   box('labelWood',x-.062,x-.016,1.335,1.57,1.103,1.571);
   plate(6,(a,b)=>[x-.065,1.451+b*.083,1.337+a*.21]);
+  return sheet;
 }
 
 export function furnishSouthGallery(T,root,world,common,poster){
@@ -289,6 +290,7 @@ export function furnishSouthGallery(T,root,world,common,poster){
     crystal:new T.CylinderGeometry(.27,1,1,6),gem:new T.IcosahedronGeometry(1,0)
   };
   const a=furniture(T,entry,world,materials,shapes);entrance(a);a.done();
-  const b=furniture(T,rear,world,materials,shapes);displays(b);framedPoster(T,rear,b,poster);b.done();
+  const b=furniture(T,rear,world,materials,shapes);displays(b);const posterFace=framedPoster(T,rear,b,poster);b.done();
   for(const g of Object.values(shapes))g.dispose();
+  return posterFace;
 }

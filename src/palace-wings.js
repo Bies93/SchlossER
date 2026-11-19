@@ -33,7 +33,7 @@ export function interiorArch(k,p,span,top,{half=portal,thickness=.25,brick=.17}=
   }
 }
 
-export function addPalaceWings(T,root,world,common,poster){
+export function addPalaceWings(T,root,world,common,poster,seal){
   const group=new T.Group();group.name='Schloss · Galerie und Lesesaal';root.add(group);
   const std=(color,roughness=.92,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   const copy=(mat,color)=>{const m=mat.clone();m.color.setHex(color);m.vertexColors=false;return m;};
@@ -49,6 +49,7 @@ export function addPalaceWings(T,root,world,common,poster){
     bookA:std(0x6e4940),bookB:std(0x515f4c),bookC:std(0x4a5b68),bookD:std(0x8b7356)
   };
   const lightSites=[];
+  let posterFace;
   const lamps=Array.from({length:3},()=>{
     const light=new T.PointLight(0xffdfb5,0,9.8,2);group.add(light);return light;
   });
@@ -170,10 +171,11 @@ export function addPalaceWings(T,root,world,common,poster){
     }
     for(const u of [7.72,16.77,24.55])luminaire(u,0,4.27);
     for(const d of [-5.4,5.4])luminaire(27.99,d,3.32,true);
-    function information(u,y,d,w,h,image){
-      const mat=new T.MeshStandardMaterial({map:image,roughness:.89});
+    function information(u,y,d,w,h,image,extra={}){
+      const mat=new T.MeshStandardMaterial({map:image,roughness:.89,...extra});
       const m=new T.Mesh(new T.PlaneGeometry(w,h),mat);
       m.position.set(...p(u,y,d));m.rotation.y=sign===1?-Math.PI*.5:Math.PI*.5;rootWing.add(m);
+      return m;
     }
     function rack(u,d,w=2.42){
       const l=u-w*.5,r=u+w*.5;
@@ -195,6 +197,15 @@ export function addPalaceWings(T,root,world,common,poster){
     }
     if(library){
       furnishNorthLibrary(T,rootWing,world,materials);
+      if(seal){
+        const y=2.30,w=1.64,h=w*9/8,l=-w/2,r=w/2,b=y-h/2,t=y+h/2;
+        box('darkWood',outer-.161,outer-.056,b-.098,t+.098,l-.098,r+.098);
+        box('brass',outer-.186,outer-.156,b-.059,t+.059,l-.060,r+.060);
+        box('darkWood',outer-.198,outer-.180,b-.031,t+.031,l-.031,r+.031);
+        const plate=information(outer-.203,y,0,w,h,seal,
+          {emissive:0x6a5842,emissiveMap:seal,emissiveIntensity:.25});
+        plate.name='Nordflügel · Logensiegel zwischen den Tafeln';plate.receiveShadow=true;
+      }
       for(const [u,d] of [[8.38,-6.12],[14.45,-6.30],[17.13,-6.30],[19.81,-6.30],[22.50,-6.30],[25.18,-6.30]])rack(u,d);
       for(const [u,d] of [[18.18,1.55],[23.36,1.55]]){
         box('darkWood',u-1.56,u+1.56,.832,.932,d-.62,d+.62);
@@ -218,7 +229,7 @@ export function addPalaceWings(T,root,world,common,poster){
         put('flame',sphere,u+.92,1.331,d-.10,[.18,.111,.13]);
       }
     }else{
-      furnishSouthGallery(T,rootWing,world,materials,poster);
+      posterFace=furnishSouthGallery(T,rootWing,world,materials,poster);
       for(const [l,r] of [[5.7,10.72],[14.45,26.20]]){
         box('rug',l,r,Y+.001,Y+.013,-1.19,1.19);
         for(const d of [-1.13,1.065])box('rugStripe',l+.115,r-.12,Y+.012,Y+.016,d,d+.062);
@@ -238,7 +249,21 @@ export function addPalaceWings(T,root,world,common,poster){
     k.flush(rootWing.name);
   }
   cylinder.dispose();sphere.dispose();
+  const ray=new T.Raycaster(undefined,undefined,0,3.20),hits=[];
+  const galleryCue={id:'gallery-choir',label:'BIES',x:0,z:0};
   return {
+    posterTarget(player,camera,look){
+      // Only the south gallery artwork: the ray must hit its actual
+      // pictured rectangle, not a nearby plaque or the opposite wall.
+      if(!posterFace||player.x<outer-3.7||player.x>=outer||Math.abs(player.z)>1.88||player.y<-.16||look.x<.12)return null;
+      camera.getWorldPosition(ray.ray.origin);
+      ray.ray.direction.copy(look);
+      hits.length=0;
+      if(!ray.intersectObject(posterFace,false,hits).length)return null;
+      posterFace.getWorldPosition(v);
+      galleryCue.x=v.x;galleryCue.z=v.z;
+      return galleryCue;
+    },
     update(p,id){
       const engaged=Math.abs(p.z)<Z+.18&&Math.abs(p.x)<outer+.09;
       const nearest=engaged?lightSites.map(point=>({point,d:(point[0]-p.x)**2+(point[2]-p.z)**2}))

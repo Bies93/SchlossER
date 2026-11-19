@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="768" height="864" viewBox="0 0 720 810">
+  <title>Logensiegel · Das Auge und der Zirkel</title>
+  <desc>Eigenständige fiktive Kupferstich-Illustration in antikem Messing und gedämpftem Rot.</desc>
+  <defs>
+    <radialGradient id="ground" cx="48%" cy="38%" r="68%">
+      <stop stop-color="#353732"/><stop offset=".7" stop-color="#252824"/><stop offset="1" stop-color="#1b1d1b"/>
+    </radialGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#d9bf91"/><stop offset=".42" stop-color="#a98155"/><stop offset=".69" stop-color="#cda879"/><stop offset="1" stop-color="#806244"/>
+    </linearGradient>
+    <radialGradient id="vellum" cx="51%" cy="35%" r="70%">
+      <stop stop-color="#d6b987"/><stop offset=".7" stop-color="#ba996c"/><stop offset="1" stop-color="#886645"/>
+    </radialGradient>
+    <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(28)">
+      <path d="M0 0v7m3-7v3" stroke="#191c19" stroke-width=".82" opacity=".56"/>
+    </pattern>
+    <pattern id="grain" width="31" height="29" patternUnits="userSpaceOnUse">
+      <path d="M2 11h.3m5 13h.3m4-20h.3m8 13h.3m9 7h.3m-2-17h.3m-13 15h.3" stroke="#b19773" stroke-width=".85" stroke-linecap="round" opacity=".23"/>
+    </pattern>
+    <clipPath id="disc"><circle cx="360" cy="390" r="176"/></clipPath>
+    <clipPath id="pyramid"><path d="M241 523 305 417h110l64 106z"/></clipPath>
+    <clipPath id="cone"><path d="m360 238 77 140H283z"/></clipPath>
+    <g id="tip">
+      <path d="M0-12 5 0 0 12-5 0z" fill="#ac835a" stroke="#d2b88c" stroke-width="1.15"/>
+      <path d="M0-7V7M-3 0h6" stroke="#32322b" stroke-width=".9"/>
+    </g>
+    <g id="frond">
+      <path d="M128 528c-49-44-78-90-74-150 3-55 33-90 18-122 30 15 34 48 17 83-24 50-5 104 39 150 25 26 42 65 22 100-3-25-8-44-22-61z"
+            fill="#77604a" stroke="#c2a879" stroke-width="2"/>
+      <path d="M133 526c-48-53-67-97-62-145 4-48 26-74 4-114 7 47-18 72-18 121-1 52 18 97 76 147 12 11 18 33 17 54 17-43-1-45-17-63z" fill="url(#hatch)"/>
+      <path d="M139 523c-43-59-53-108-43-143 8-25 21-42 14-66 29 24 12 50 1 74-12 26-1 63 18 95 9 16 17 25 10 40z" fill="#8e6c50" stroke="#bc9d73" stroke-width="1.7"/>
+      <path d="M112 481C43 443 27 372 48 336c-6 29 5 63 34 89 0-19-5-31-18-40 34 4 28 56 48 96zm29 61c-33-22-64-28-78-56 14 7 30 9 48 12-28-26-43-20-50-33 25-7 40 9 53 20s28 31 27 57z"
+            fill="#664f3f" stroke="#b08e66" stroke-width="1.65"/>
+      <path d="M143 531c-45-58-64-110-51-150m-6 42c-14-38-10-65-4-82m-19 42c2 40 14 68 35 88m-26 20c27 11 47 21 61 35m-53-214c5-13 6-25 2-35m38 73c-8 20-16 32-18 49"
+            fill="none" stroke="#d2b88c" stroke-width="1.3" opacity=".81"/>
+    </g>
+    <g id="wing">
+      <path d="M281 179c-16-26-35-43-70-54-53-15-111-31-160-71 11 35 37 61 80 82-28-3-47-11-64-22 10 27 41 44 85 51-22 4-37 2-53-2 22 21 48 27 86 29l-32 8c36 17 79 11 122-7z"
+            fill="#8c6a53" stroke="#c0a479" stroke-width="2"/>
+      <path d="M281 181c-26-23-56-37-95-46C139 125 95 103 60 71c18 38 86 67 142 79-57-9-91-21-119-36 31 35 93 56 151 51-30 11-66 10-101 3 38 20 87 22 135 9-23 15-53 20-85 20 36 10 65 5 94-7z"
+            fill="url(#hatch)" stroke="#c7aa80" stroke-width="1.5"/>
+      <path d="M68 79c36 31 94 51 141 63m-111-15c43 22 89 32 131 30m-97 13c41 8 85 5 113-2m-50 27c29-2 49-10 74-19"
+            fill="none" stroke="#cfaa7b" stroke-width="1.2"/>
+    </g>
+    <g id="corner">
+      <path d="M0 54C3 23 20 5 54 0M8 43C13 26 27 13 43 8M0 17 17 0m-17 2 2-2" fill="none" stroke="#a38660" stroke-width="1.6"/>
+      <path d="m17 27 8-10 9-2-2 9-10 9z" fill="#a48660"/>
+    </g>
+  </defs>
+  <rect width="720" height="810" rx="9" fill="url(#ground)"/>
+  <rect x="1" y="1" width="718" height="808" rx="8" fill="url(#grain)"/>
+  <g fill="none">
+    <rect x="14" y="14" width="692" height="782" rx="3" stroke="#9b7a56" stroke-width="2.2"/>
+    <rect x="24" y="24" width="672" height="762" rx="3" stroke="#735f47"/>
+    <path d="M92 34h178m180 0h178M92 776h178m180 0h178M34 100v126m0 358v126m652-610v126m0 358v126" stroke="#9c805c" stroke-width="1.6"/>
+  </g>
+  <use xlink:href="#corner" transform="translate(33 33)"/>
+  <use xlink:href="#corner" transform="translate(687 33) scale(-1 1)"/>
+  <use xlink:href="#corner" transform="translate(33 777) scale(1 -1)"/>
+  <use xlink:href="#corner" transform="translate(687 777) scale(-1 -1)"/>
+
+  <use xlink:href="#wing"/><use xlink:href="#wing" transform="translate(720 0) scale(-1 1)"/>
+  <use xlink:href="#frond"/><use xlink:href="#frond" transform="translate(720 0) scale(-1 1)"/>
+  <path d="M154 537c10 59 68 99 112 124 42 25 68 48 94 80 26-32 52-55 94-80 44-25 102-65 112-124-38 50-99 61-144 58-39-2-62 26-62 26s-23-28-62-26c-45 3-106-8-144-58z"
+        fill="#725947" stroke="#a88b63" stroke-width="2.4"/>
+  <path d="M161 550c40 46 93 49 136 49 30 0 50 13 63 33 13-20 33-33 63-33 43 0 96-3 136-49-30 67-125 96-199 182-74-86-169-115-199-182z" fill="url(#hatch)"/>
+  <path d="M188 584c44 33 97 39 149 92m195-92c-44 33-97 39-149 92m-106-44c32 18 60 48 83 76 23-28 51-58 83-76"
+        fill="none" stroke="#ba986c" stroke-width="2"/>
+  <path d="m360 647 11 18 20 4-16 13 3 21-18-10-18 10 3-21-16-13 20-4z" fill="#a58057" stroke="#d0a878" stroke-width="1.8"/>
+  <path d="m360 655 7 16 17 1-13 11 3 12-14-6-14 6 3-12-13-11 17-1z" fill="#5c473b"/>
+
+  <!-- Rim and engraved graduations, reusing concentric circles. -->
+  <circle cx="360" cy="390" r="247" fill="#2a2823" stroke="#bb9c70" stroke-width="2"/>
+  <circle cx="360" cy="390" r="240" fill="none" stroke="#785c47" stroke-width="5"/>
+  <circle cx="360" cy="390" r="231" fill="none" stroke="#c1a47a" stroke-width="1.8"/>
+  <circle cx="360" cy="390" r="223" fill="none" stroke="#ad8d65" stroke-width="7" stroke-dasharray="1.6 6.8" transform="rotate(-2 360 390)"/>
+  <circle cx="360" cy="390" r="212" fill="none" stroke="#805950" stroke-width="13"/>
+  <circle cx="360" cy="390" r="214" fill="none" stroke="#c49c72" stroke-width="1.1" stroke-dasharray="3 3"/>
+  <circle cx="360" cy="390" r="200" fill="none" stroke="#bb996c" stroke-width="2"/>
+  <circle cx="360" cy="390" r="193" fill="none" stroke="#947452" stroke-width="5" stroke-dasharray="4 3"/>
+  <circle cx="360" cy="390" r="185" fill="none" stroke="#b89464" stroke-width="2"/>
+  <path d="M360 145 568 515 152 515zM360 635 152 265 568 265z" fill="none" stroke="#d7b583" stroke-width="2.1" opacity=".66"/>
+  <g>
+    <use xlink:href="#tip" transform="translate(360 151)"/>
+    <use xlink:href="#tip" transform="translate(360 629)"/>
+    <use xlink:href="#tip" transform="translate(121 390) rotate(90)"/>
+    <use xlink:href="#tip" transform="translate(599 390) rotate(90)"/>
+    <use xlink:href="#tip" transform="translate(186 217) rotate(-40)"/>
+    <use xlink:href="#tip" transform="translate(534 217) rotate(40)"/>
+    <use xlink:href="#tip" transform="translate(186 563) rotate(40)"/>
+    <use xlink:href="#tip" transform="translate(534 563) rotate(-40)"/>
+  </g>
+  <circle cx="360" cy="390" r="176" fill="url(#vellum)" stroke="#211e1a" stroke-width="3.1"/>
+  <g clip-path="url(#disc)">
+    <circle cx="360" cy="390" r="169" fill="none" stroke="#8b6b46" stroke-width="1.4"/>
+    <path d="M360 390V183m0 207 44-203m-44 203 83-190m-83 190 129-176m-129 176 159-135m-159 135 191-83m-191 83 214-36m-214 36 221 11m-221-11 202 54m-202-54 184 94m-184-94 159 143m-159-143 113 189m-113-189 64 205m-64-205-7 212m7-212-54 209m54-209-97 192m97-192-145 163m145-163-186 116m186-116-202 67m202-67-219 14m219-14-220-39m220 39-202-78m202 78-173-119m173 119-130-172m130 172-77-199m77 199-36-204"
+          stroke="#645039" fill="none" stroke-width="1.6" opacity=".77"/>
+    <circle cx="360" cy="390" r="192" fill="none" stroke="#362d22" stroke-width="42" stroke-dasharray=".63 4.18" opacity=".48"/>
+    <rect x="178" y="213" width="364" height="354" fill="url(#grain)"/>
+  </g>
+
+  <!-- Eye, pyramid and masonry. Broad shapes remain legible from the aisle. -->
+  <path d="m360 238 77 140H283z" fill="#594b37" stroke="#33281e" stroke-width="4"/>
+  <path d="m360 251 66 120H294z" fill="#ae8b61" stroke="#d6b984" stroke-width="1.8"/>
+  <path d="M280 354c55-40 99-41 160 1m-159 9c48-33 99-34 158 0m-158 8c55-30 101-32 158 0m-126-76c30-12 60-15 94-1m-105 9c47-21 75-18 117 2m-130 12c52-23 93-23 141 1"
+        clip-path="url(#cone)" fill="none" stroke="#684f35" stroke-width="1.6"/>
+  <path d="M307 337q24-22 52-23 26 0 54 23-24 21-53 22-31 0-53-22z" fill="#d2b48a" stroke="#372a20" stroke-width="3"/>
+  <path d="M309 336q49-34 103 .8m-97 11q45 28 90 0" fill="none" stroke="#5b4433" stroke-width="1.6"/>
+  <circle cx="360" cy="337" r="14" fill="#806248" stroke="#483327" stroke-width="1.9"/>
+  <circle cx="360" cy="337" r="10.4" fill="none" stroke="#b99a72" stroke-width="5" stroke-dasharray=".75 2"/>
+  <circle cx="360" cy="337" r="6.5" fill="#25241c"/><circle cx="356.8" cy="333" r="2.2" fill="#e2c9a1"/>
+  <path d="M241 523 305 417h110l64 106z" fill="#a4835d" stroke="#423224" stroke-width="4.3"/>
+  <g clip-path="url(#pyramid)">
+    <path d="M241 523 305 417h16l-49 106z" fill="#785b41"/>
+    <path d="M240 441h244m-245 15h246m-248 16h249m-249 16h249m-249 16h250m-250 14h250M332 420v21m54-21v21m-78 0v15m51-15v15m50-15v15m-78 0v16m54-16v16m54-16v16m-128 0v16m49-16v16m51-16v16m-130 0v16m52-16v16m52-16v16m51-16v16m-125 0v19m49-19v19m52-19v19m52-19v19"
+          fill="none" stroke="#5c4730" stroke-width="2"/>
+    <rect x="241" y="417" width="238" height="104" fill="url(#hatch)" opacity=".68"/>
+    <path d="M270 519 320 420m-74 99h229m-166-98h102" fill="none" stroke="#c8a776" stroke-width="2"/>
+  </g>
+  <path d="m342 405 18-12 18 12m-28 0 10-9 10 9" fill="none" stroke="#715739" stroke-width="1.7"/>
+
+  <!-- The four satellite marks: compass, moon, sun and square. -->
+  <g fill="url(#brass)" stroke="#c2a275" stroke-width="2.8">
+    <circle cx="360" cy="143" r="34"/><circle cx="159" cy="390" r="34"/>
+    <circle cx="561" cy="390" r="34"/><circle cx="360" cy="617" r="28"/>
+  </g>
+  <g fill="#3c3328" stroke="#5c4937" stroke-width="1.6">
+    <circle cx="360" cy="143" r="28"/><circle cx="159" cy="390" r="28"/>
+    <circle cx="561" cy="390" r="28"/><circle cx="360" cy="617" r="22"/>
+  </g>
+  <path d="M165 372c-12 6-14 25 1 33-20 5-31-10-26-23 4-8 13-12 25-10z" fill="#cba976" stroke="#d4b58a"/>
+  <path d="M156 381l2-2m-5 8 4-3m-4 12 5-3m-10-4 2-2" stroke="#80634a" fill="none"/>
+  <circle cx="561" cy="390" r="10.8" fill="#d2ad77"/>
+  <circle cx="561" cy="390" r="17" fill="none" stroke="#c39768" stroke-width="6" stroke-dasharray="1.2 4.3"/>
+  <path d="m347 157 13-32 13 32m-22-5 9-23 9 23" fill="none" stroke="#d2b38a" stroke-width="2"/>
+  <circle cx="360" cy="127" r="4" fill="#412f28" stroke="#d2b38a" stroke-width="1.5"/>
+  <path d="m344 612 16 16 16-16-4-4-12 12-12-12zm9 19 7 7 7-7" fill="none" stroke="#d1ab7a" stroke-width="2"/>
+  <path d="m360 68 7 13 15 2-10 10 2 15-14-7-14 7 2-15-10-10 15-2z"
+        fill="#ad8559" stroke="#d2ac7e" stroke-width="2"/>
+  <g fill="#b1926e" font-family="Georgia, serif" font-size="16" letter-spacing="3.6" text-anchor="middle">
+    <text x="360" y="767">LUX · UMBRA</text>
+  </g>
+</svg>
