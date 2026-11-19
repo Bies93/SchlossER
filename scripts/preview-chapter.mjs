@@ -1,28 +1,42 @@
 import {build} from 'esbuild';
 import {mkdir,writeFile} from 'node:fs/promises';
-const dir=new URL('../dist/eiserne-krone/',import.meta.url);await mkdir(dir,{recursive:true});
+const dir=new URL('../dist/krone-kronboden/',import.meta.url);await mkdir(dir,{recursive:true});
 const code=await build({stdin:{contents:`
 import * as T from 'three';
-import {CHAPTER_BENCH,CHAPTER_CUT,CHAPTER_LAYER,CHAPTER_DROP} from './src/chapter-layout.js';
-import {gardenTerrain} from './src/garden-ground.js';
+import {CHAPTER_BENCH,CHAPTER_BAY_PATH,CHAPTER_CUT,CHAPTER_LAYER,CHAPTER_DROP} from './src/chapter-layout.js';
+import {gardenTerrain,pathNetwork} from './src/garden-ground.js';
+import {gardenMaterials} from './src/surface-detail.js';
 import {addBenches} from './src/garden-assets.js';
 import {addChapter} from './src/chapter.js';
+import {addBackdrop} from './src/backdrop.js';
 import {collisionWorld} from './src/collision.js';
 import {BOUNDS,PLAYER,PARK_FLOOR} from './src/world-layout.js';
 try{
 const s=new T.Scene(),w=collisionWorld(BOUNDS,PLAYER.radius),r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
 r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.03;r.setSize(540,400);
-const surface=new T.MeshStandardMaterial({color:0x786e5d}),[a,A,b,B]=CHAPTER_CUT,cut=[[a,b],[A,b],[A,B],[a,B]];
+const net=pathNetwork(T);
+net.add([[37,-25],[36,-49],[41,-79]],3.35);
+net.add([[13,-39],[26,-32],[39,-24]],2.5);
+net.add([[37.1,-40],[47.8,-42],[57.8,-45.3]],2.6,'compact');
+net.add(CHAPTER_BAY_PATH,1.66,'compact');
+const {ground:surface}=gardenMaterials(T,net.texture(),net.rect),[a,A,b,B]=CHAPTER_CUT,cut=[[a,b],[A,b],[A,B],[a,B]];
 const ground=gardenTerrain(T,PARK_FLOOR,surface,1.78,[cut]),benchCover=gardenTerrain(T,cut,surface).meshes;
 s.add(...ground.meshes);const bench=addBenches(T,s,w,ground.height);
-const light=new T.HemisphereLight(0xffe0bb,0x818381,1.2);s.add(light);
+const light=new T.HemisphereLight(0xf2eaf2,0x88837a,1.67);s.add(light);
+const sun=new T.DirectionalLight(0xffd5a7,1.05);sun.position.set(50,40,25);s.add(sun);
+const sky=new T.Mesh(new T.SphereGeometry(95,16,12),new T.MeshBasicMaterial({color:0xb0a9b3,side:T.BackSide,depthWrite:false}));
+sky.position.set(35,0,-34);sky.renderOrder=-90;s.add(sky);
+const {ground:farGround}=addBackdrop(T,s);
+farGround.updateWorldMatrix(true,false);
+const ray=new T.Raycaster(new T.Vector3((a+A)/2,2,(b+B)/2),new T.Vector3(0,-1,0));
+if(ray.intersectObject(farGround,false).length)throw Error('Fernboden überdeckt die Treppe');
 const chapter=addChapter(T,s,w,{bench,benchCover,heightAt:ground.height}),grade=ground.height(...CHAPTER_BENCH),F=grade-CHAPTER_DROP;
-const start={x:38.15,y:grade,z:-34};
+const start={x:A+.63,y:grade,z:-34};
 const target=chapter.target(start,{x:-1,z:0});
 if(!target||!target.usable(start))throw Error('Bank nicht erreichbar');
-if(chapter.floorAt(36,-34,grade)!==null)throw Error('Abstieg vor dem Öffnen aktiv');
+if(chapter.floorAt(A-.20,-34,grade)!==null)throw Error('Abstieg vor dem Öffnen aktiv');
 target.target=1;for(let j=0;j<50;j++)chapter.update(.03,start);
-const route=[[38.15,-34],[29.52,-34],[24.2,-34],[22.95,-35.78],[22.95,-44.56],[22.95,-36.3],[14.77,-36.30],[11.80,-38]];
+const route=[[start.x,-34],[28.66,-34],[24.2,-34],[22.95,-35.78],[23.47,-43.87],[23.47,-47.65],[21.68,-52.25],[23.47,-47.65],[23.47,-43.87],[22.95,-36.3],[14.77,-36.30],[11.80,-38]];
 let prev=grade;
 for(const [i,end] of [...route,...route.slice(0,-1).reverse()].entries()){
  const pt=window.pt??end,n=Math.max(1,Math.ceil(Math.hypot(end[0]-pt[0],end[1]-pt[1])/.041));
@@ -35,15 +49,17 @@ for(const [i,end] of [...route,...route.slice(0,-1).reverse()].entries()){
 }
 if(!target.usable(start)||chapter.floorAt(21,-36,F)!==F)throw Error('Stockwerk nicht konsistent');
 const c=new T.PerspectiveCamera(64,540/400,.065,140);
-for(const [x,y,z,X,Y,Z] of [[39.26,grade,-32.50,34.42,grade-.9,-34.01],[30.78,F,-34.07,27.00,F+1.34,-34.63],[26.37,F,-34.19,18.88,F+1.60,-37.68],[23.09,F,-39.36,24.44,F+1.50,-44.1],[15.79,F,-36.08,10.04,F+1.49,-39.1],[20.40,F,-37.12,18.72,F+1.55,-38.4]]){
+for(const [x,y,z,X,Y,Z,closed] of [[37.30,grade,-32.14,33.82,grade+.27,-33.92,true],[36.07,grade,-33.60,32.63,grade-.78,-34.14],[23.51,F,-46.78,21.64,F+1.57,-54.91],[26.37,F,-34.19,18.88,F+1.60,-37.68],[23.09,F,-39.36,24.44,F+1.50,-44.1],[15.79,F,-36.08,10.04,F+1.49,-39.1]]){
+ if(closed){target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);}
  const at=new T.Vector3(x,y,z);chapter.update(0,at);c.position.set(x,y+1.59,z);c.lookAt(X,Y,Z);
  if(y===grade){c.layers.set(0);r.render(s,c);}
  c.layers.set(CHAPTER_LAYER);r.autoClear=y!==grade;r.render(s,c);r.autoClear=true;
  const p=document.createElement('canvas');p.width=540;p.height=400;p.getContext('2d').drawImage(r.domElement,0,0);document.body.append(p);
+ if(closed){target.target=1;for(let j=0;j<50;j++)chapter.update(.03,start);}
 }
 target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);
-if(chapter.floorAt(36,-34,grade)!==null||Math.abs(bench.position.z-CHAPTER_BENCH[1])>.001)throw Error('Luke schließt nicht sauber');
-document.title='Bank, Treppe und vier Räume geprüft';
+if(chapter.floorAt(A-.20,-34,grade)!==null||Math.abs(bench.position.z-CHAPTER_BENCH[1])>.001)throw Error('Luke schließt nicht sauber');
+document.title='Bank, Treppe und fünf Räume geprüft';
 }catch(e){document.body.textContent=e.stack;document.title=e.message}
 `,resolveDir:process.cwd()},bundle:true,minify:true,write:false});
 await writeFile(new URL('preview.html',dir),'<!doctype html><meta charset=utf-8><style>*{margin:0}body{display:grid;grid-template-columns:repeat(3,540px);background:#101011;color:white}</style><body><script>'+code.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'</script>');

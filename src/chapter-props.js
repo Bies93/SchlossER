@@ -134,22 +134,50 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     rod('darkWood',...Q(0,.037),...Q(0,-.136),.019);
     bead('brass',...Q(0,-.146),.033);
   }
+  function wainscot(a,A,z,side=1){
+    box('darkWood',(a+A)*.5,.052,z,A-a,.882,.087);
+    for(let x=a+.25;x<A-.21;x+=.49){
+      box('wood',x,.132,z+side*.057,.432,.635,.035);
+      box('darkWood',x,.183,z+side*.079,.327,.523,.024);
+      for(const s of [-1,1])rod('piping',x+s*.157,.207,z+side*.096,x+s*.157,.682,z+side*.096,.006);
+    }
+    box('wood',(a+A)*.5,.914,z+side*.019,A-a,.074,.118);
+    box('brass',(a+A)*.5,.948,z+side*.078,A-a,.012,.007);
+  }
+  function brassToken(x,y,z){
+    cylinder('brass',x,y+.009,z,.041,.016);
+    mesh('soot',ring,x,y+.020,z,.023,.023,.034,pi/2);
+    bead('wine',x,y+.016,z,.011,.010,.012);
+  }
+  function chandelier(x,z){
+    rod('iron',x,2.62,z,x,3.48,z,.018);
+    cylinder('brass',x,2.615,z,.101,.058);
+    mesh('iron',ring,x,2.59,z,.49,.49,.22,pi/2);
+    for(let n=0;n<8;n++){
+      const a=n*pi/4,X=x+Math.cos(a)*.491,Z=z+Math.sin(a)*.491;
+      rod('brass',x,2.592,z,X,2.58,Z,.012);
+      cylinder('iron',X,2.579,Z,.080,.025);candle(X,2.595,Z,.087);
+    }
+  }
   if(id==='vestibule'){
-    chest(29.46,-35.83,1.08,.54,.60);
-    table(28.07,-36.02,1.46,.68,.82);
-    props.folio(28.49,F+.844,-35.94,.24,.19,.11,1,{loose:true,thickness:.012});
-    candle(27.65,.84,-36.03,.12);
-    frame('lodge',28.67,1.63,-36.47,1.30,.74);
-    frame('banned',29.28,1.55,-32.60,.91,.65,pi);
+    chest(28.59,-35.83,.71,.54,.60);
+    table(27.67,-36.02,1.04,.68,.82);
+    props.folio(27.86,F+.844,-35.94,.24,.19,.11,1,{loose:true,thickness:.012});
+    candle(27.37,.84,-36.11,.12);brassToken(27.64,.846,-35.89);
+    frame('lodge',27.89,1.63,-36.45,1.30,.74);
+    frame('banned',28.26,1.55,-32.60,.91,.65,pi);
     lamp(27.54,1.80,-36.38);lamp(27.20,1.80,-32.63,-1);
-    carpet(28.65,-34.05,2.59,1.72,'blue');
-    for(const x of [27.59,28.16,28.74]){
+    wainscot(27.05,28.92,-36.46);
+    carpet(27.90,-34.05,1.89,1.57,'blue');
+    for(const x of [27.41,27.84,28.27]){
       rod('brass',x,1.68,-32.57,x,1.63,-32.75,.016);
       bead('wood',x,1.70,-32.585,.041,.062,.028);
       for(let j=0;j<3;j++)disk('iron',ring,x+.019*(j-1),1.565-j*.017,-32.77,.031,.029);
     }
   }else if(id==='salle'){
     carpet(21.07,-35.48,8.52,2.57,'blue');
+    wainscot(16.32,26.64,-32.59,-1);
+    chandelier(21.43,-35.45);
     for(const [x,z] of [[18.25,-33.00],[24.46,-33.00]]){
       table(x,z,2.14,.59,.452);box('wine',x,.474,z,2.00,.068,.47);
       for(let j=0;j<8;j++)bead('brass',x-.86+j*.245,.503,z-.241,.009);
@@ -165,7 +193,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     for(const x of [17.52,21.22,26.08])lamp(x,1.94,-38.49);
     lamp(19.97,1.978,-32.636,-1);lamp(22.77,1.978,-32.636,-1);
   }else if(id==='archive'){
-    shelf(21.41,-45.49,3.83,.48);shelf(25.25,-45.49,2.63,.48);
+    shelf(20.70,-45.49,2.90,.48);shelf(25.57,-45.49,1.99,.48);
     shelf(20.50,-41.66,2.08,.63);
     table(25.17,-42.21,2.39,.89,.916);
     props.folio(24.82,F+.941,-42.15,.39,.273,.41,0,{loose:true,thickness:.014});
@@ -175,11 +203,73 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
     cylinder('soot',25.46,1.085,-42.269,.028,.012);
     for(let i=0;i<4;i++)box(i%2?'bookC':'bookA',25.86,1.002+i*.032,-42.14,.29,.029,.174);
     frame('archive',19.20,1.762,-43.84,1.28,.89,pi/2);
+    frame('dynasty',19.20,1.779,-39.80,1.22,.95,pi/2);
+    frame('duel',23.52,2.378,-45.57,1.12,.219);
+    brassToken(25.02,.942,-42.43);brassToken(25.15,.942,-42.39);
     frame('banned',26.61,1.805,-40.90,1.32,.902,-pi/2);
     lamp(20.44,2.20,-45.64);lamp(25.38,2.20,-45.64);
     carpet(23.10,-43.41,1.42,2.95,'wine');
+  }else if(id==='duel'){
+    // Open floor for the scene's ritual, separate from the display gallery.
+    // A border within the continuous parquet makes the centre readable.
+    const X=21.65,Z=-50.86;
+    for(let i=0;i<26;i++){
+      const x=17.16+i*.346;
+      for(let j=0;j<13;j++){
+        const z=-55.22+j*.678+(i%2)*.062;
+        box((i+j)%6===0?'darkWood':'wood',x,.002,z,.342,.015,.672);
+      }
+    }
+    for(const s of [-1,1]){
+      box('darkWood',X+s*1.672,.018,Z,.094,.006,7.05);
+      box('piping',X+s*1.587,.020,Z,.012,.008,6.95);
+      box('darkWood',X,.018,Z+s*3.489,3.25,.006,.102);
+      box('piping',X,.021,Z+s*3.403,3.174,.008,.015);
+    }
+    for(const z of [Z-2.96,Z+2.96]){
+      const a=.102,x=X;
+      line('brass',[[x-a,.026,z],[x,.026,z+a],[x+a,.026,z],[x,.026,z-a],[x-a,.026,z]],.007);
+    }
+    wainscot(16.48,22.52,-45.90,-1);wainscot(24.52,26.90,-45.90,-1);
+    wainscot(16.34,26.94,-55.78);
+    for(const s of [-1,1]){
+      const x=X+s*4.57;
+      for(const z of [-52.80,-49.77]){
+        box('darkWood',x,.050,z,.60,.392,2.87);
+        box('blue',x,.43,z,.559,.110,2.73);
+        box('wine',x+s*.225,.552,z,.119,.626,2.76);
+        for(let n=0;n<12;n++)bead('brass',x+s*.155,1.079,z-1.20+n*.219,.013);
+        foot(x,z,.627,2.89);
+      }
+      const wallx=s<0?16.31:26.98;
+      banner(wallx,2.22,-51.20,.96,1.46,-s*pi/2);
+      frame('seats',wallx,1.81,-48.30,1.13,.55,-s*pi/2);
+    }
+    frame('duel',21.65,2.36,-55.67,2.46,1.22);
+    banner(18.02,2.04,-55.69,.99,1.51);banner(25.35,2.04,-55.69,.99,1.51);
+    for(const [s,x] of [[-1,19.63],[1,23.67]]){
+      box('darkWood',x,.09,-55.72,.254,1.96,.167);
+      box('wood',x,.91,-55.616,.201,.973,.064);
+      box('brass',x,1.991,-55.595,.222,.076,.046);
+      for(let j=0;j<4;j++){
+        const X=x-.071+j*.047;
+        rod('brass',X,1.019,-55.58,X,1.792,-55.58,.008);
+      }
+      const curl=Array.from({length:12},(_,i)=>{const a=i*.36;return [x+s*Math.sin(a)*(.109-i*.005),2.17+Math.cos(a)*(.109-i*.005),-55.64];});
+      line('brass',curl,.011);
+      bead('brass',x,2.18,-55.635,.033,.044,.018);
+    }
+    for(const x of [18.03,25.25]){
+      table(x,-54.87,1.33,.64,.85);helmet(x-.253,.875,-54.83);
+      props.folio(x+.28,F+.877,-54.84,.225,.179,.21,3,{loose:true,thickness:.012});
+      candle(x+.31,.873,-55.05,.147);
+    }
+    for(const x of [20.9,22.4])lamp(x,2.01,-45.94,-1);
+    chandelier(X,-48.73);chandelier(X,-53.10);
   }else{
     carpet(12.68,-38.61,5.22,2.90);
+    wainscot(9.45,15.67,-42.77);
+    chandelier(12.73,-38.55);
     // Empty ceremonial chair, lacquered steps, brass nails and velvet.
     box('stone3',10.39,.034,-38.93,1.52,.139,2.44);
     box('stone',10.18,.173,-38.93,1.15,.152,2.13);foot(10.36,-38.93,1.63,2.46);
@@ -217,6 +307,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print}){
       table(x,-35.00,1.70,.67,.43);box('blue',x,.456,-35.00,1.56,.066,.532);
     }
     frame('decree',12.77,1.75,-42.72,1.67,1.05);
+    frame('dynasty',15.12,1.85,-42.73,1.13,.89);
     lamp(11.31,1.91,-42.73);lamp(14.19,1.91,-42.73);lamp(13.63,2.04,-34.45,-1);
   }
   props.finish('Eiserne Krone · Papiere');for(const g of [ball,pin,ring])g.dispose();

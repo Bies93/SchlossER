@@ -1,4 +1,4 @@
-import {CHAPTER_BENCH,CHAPTER_CUT,CHAPTER_STEP as S,CHAPTER_ROOMS,CHAPTER_LINKS,CHAPTER_LAYER,CHAPTER_DROP,
+import {CHAPTER_BENCH,CHAPTER_CUT,CHAPTER_STEP as S,CHAPTER_LINKS,CHAPTER_LAYER,CHAPTER_DROP,
   chapterContains,chapterCell,chapterStairFloor} from './chapter-layout.js';
 import {chapterInterior} from './chapter-interior.js';
 import {chapterMaterials} from './chapter-art.js';
@@ -7,20 +7,58 @@ import {architectureKit} from './architecture-kit.js';
 export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const [x,z,yaw]=CHAPTER_BENCH,[xa,xb,za,zb]=CHAPTER_CUT;
   const grade=heightAt(x,z),floor=grade-CHAPTER_DROP,slide=2.11;
-  const room=new T.Group(),lid=new T.Group(),material=chapterMaterials(T);
-  room.name='Bund der Eisernen Krone · Untergrund';room.visible=false;scene.add(room,lid);
+  const room=new T.Group(),lid=new T.Group(),landing=new T.Group(),guard=new T.Group(),material=chapterMaterials(T);
+  room.name='Bund der Eisernen Krone · Untergrund';room.visible=false;scene.add(room,lid,landing,guard);
+  landing.name='Südweg · Sitznische und Schachtrahmen';
+  guard.name='Südweg · Klappgeländer';guard.position.set(xa,grade+.021,zb);guard.rotation.x=-Math.PI*.5;guard.visible=false;
   lid.name='Südweg · getarnte Luke';lid.position.set(xa,grade,za);
   for(const mesh of benchCover){
     mesh.geometry.translate(-xa,-grade,-za);
     mesh.name='Südweg · versenkter Kiesdeckel';lid.add(mesh);
   }
   const k=architectureKit(T,lid,material),P=(x,y,z)=>[x-xa,y,z-za];
-  k.box('iron',P,xa+.014,xb-.014,-.094,-.042,za+.014,zb-.014);
-  for(const u of [xa+.21,(xa+xb)/2,xb-.21]){
-    k.box('steel',P,u-.030,u+.030,-.121,-.085,za+.080,zb-.077);
-    k.box('brass',P,u-.090,u+.090,-.127,-.043,za+.022,za+.065);
+  k.box('coal',P,xa+.017,xb-.017,-.119,-.013,za+.012,zb-.012);
+  const panel=(xb-xa-.144)/3;
+  for(let i=0;i<3;i++){
+    const a=xa+.072+i*panel,A=a+panel;
+    k.box('iron',P,a+.053,A-.053,-.146,-.116,za+.11,zb-.11);
+    for(const v of [za+.105,zb-.105])k.box('steel',P,a+.014,A-.014,-.162,-.139,v-.014,v+.014);
+    for(const u of [a+.053,A-.052])k.box('steel',P,u-.012,u+.012,-.163,-.140,za+.117,zb-.122);
+    for(const u of [a+.032,A-.035])for(const v of [za+.12,zb-.12])
+      k.box('brass',P,u-.012,u+.012,-.171,-.149,v-.014,v+.014);
+    k.box('brass',P,(a+A)*.5-.115,(a+A)*.5+.115,-.166,-.119,za+.012,za+.056);
+    k.box('iron',P,(a+A)*.5-.057,(a+A)*.5+.057,-.158,-.048,za-.068,za+.013);
   }
   k.flush('Luke · Rahmen und Beschläge');
+  const trim=architectureKit(T,landing,material),G=(x,y,z)=>[x,y+grade,z];
+  const strip=(m,a,A,y,Y,z,Z)=>trim.box(m,G,a,A,y,Y,z,Z);
+  for(const z of [za,zb]){
+    const a=z===za?z-.104:z,A=z===za?z:z+.104;
+    strip('stone3',xa,xb,-.056,.019,a,A);
+    for(let x0=xa+.29;x0<xb-.14;x0+=.51)strip('stone2',x0-.008,x0+.008,.019,.021,a+.008,A-.006);
+  }
+  for(const x0 of [xa,xb]){
+    strip('stone3',x0-(x0===xa?.096:0),x0+(x0===xb?.096:0),-.057,.021,za-.10,zb+.099);
+  }
+  for(const x0 of [xa+(xb-xa)*.166,xa+(xb-xa)*.50,xa+(xb-xa)*.834])
+    strip('iron',x0-.095,x0+.095,-.010,.027,za-.069,za-.002);
+  for(const z0 of [-32.76,-31.09])strip('stone2',x-.46,x+.53,-.035,.021,z0-.114,z0+.114);
+  trim.flush('Sitznische · Sandsteineinfassung');
+  const rail=architectureKit(T,guard,material),R=(x,y,z)=>[x-xa,y,z-zb];
+  const rbox=(m,a,A,y,Y,z,Z)=>rail.box(m,R,a,A,y,Y,z,Z);
+  for(const x0 of [xa+.098,xa+1.11,xb-1.10,xb-.102]){
+    rbox('iron',x0-.026,x0+.026,0,.81,zb-.024,zb+.025);
+    rbox('brass',x0-.046,x0+.046,.78,.822,zb-.036,zb+.037);
+    rbox('iron',x0-.047,x0+.047,0,.059,zb-.041,zb+.043);
+  }
+  for(let x0=xa+.271;x0<xb-.22;x0+=.22){
+    rbox('iron',x0-.012,x0+.012,.147,.762,zb-.011,zb+.014);
+    rbox('brass',x0-.024,x0+.024,.55,.593,zb-.018,zb+.019);
+  }
+  rbox('iron',xa+.074,xb-.077,.138,.169,zb-.014,zb+.015);
+  rbox('iron',xa+.073,xb-.076,.744,.777,zb-.035,zb+.037);
+  rbox('brass',xa+.072,xb-.075,.771,.803,zb-.035,zb+.038);
+  rail.flush('Südweg · Gusseisen und Messinghandlauf');
   const c=Math.cos(yaw),s=Math.sin(yaw),close=(p,pad=0)=>chapterContains(CHAPTER_CUT,p.x,p.z,pad);
   let progress=0,active='',prepared;
   const passable=()=>progress>.92;
@@ -45,17 +83,18 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const ambient=new T.HemisphereLight(0xcad3de,0x886655,.70);room.add(ambient);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);room.add(l);return l;});
   const sources={
-    stair:[[31.3,grade-2.07,-34.13,0xf3c394,12,6],[34.2,grade-.92,-34.11,0xb7c7dc,7,4]],
-    vestibule:[[28.18,floor+2.01,-35.57,0xffdb9f,24,6.9]],
+    stair:[[29.88,grade-2.21,-34.17,0xf3c394,14,6],[33.02,grade-.97,-34.12,0xcfdbec,12,5]],
+    vestibule:[[27.73,floor+2.01,-35.57,0xffdb9f,24,6.9]],
     salle:[[18.78,floor+2.45,-37.42,0xeec798,29,8],[24.10,floor+2.64,-34.73,0xd5dfeb,31,8.6]],
     archive:[[23.48,floor+2.50,-44.17,0xe6b67c,32,8],[25.63,floor+1.91,-40.74,0xa9c7d0,16,6]],
-    chapter:[[10.96,floor+2.70,-38.85,0xf5c384,35,8],[14.50,floor+2.57,-40.93,0xadc3dd,20,7]]
+    chapter:[[10.96,floor+2.70,-38.85,0xf5c384,35,8],[14.50,floor+2.57,-40.93,0xadc3dd,20,7]],
+    duel:[[22.50,floor+2.68,-48.50,0xe4c7a2,26,8],[20.13,floor+2.78,-52.03,0xc8d4e1,30,9],[23.92,floor+2.68,-54.03,0xf3c48a,27,8]]
   };
   room.traverse(o=>{o.layers.set(CHAPTER_LAYER);if(o.isMesh)o.castShadow=false;});
   const smooth=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n);};
   function mode(p){
     const cell=progress>.06&&p.y<grade+.36&&chapterCell(p.x,p.z,.035);
-    if(cell==='stair'&&p.y>grade-1.97&&p.x>=xa-.08)return 'threshold';
+    if(cell==='stair'&&p.x>=xa-.68)return 'threshold';
     if(cell&&isBelow(p))return 'inside';
     return 'surface';
   }
@@ -63,10 +102,14 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     const from=progress;
     if(progress!==target.target&&dt){
       progress=Math.max(0,Math.min(1,progress+dt*(target.target?1:-1)*.81));
-      bench.position.z=z+slide*smooth(progress/.48);
+      const dz=slide*smooth(progress/.48);
+      bench.position.z=z+dz;bench.position.x=x+dz*c;
+      benchPose.x=bench.position.x+.034*s;
       benchPose.z=bench.position.z+.034*c;
-      bench.position.y=heightAt(x,bench.position.z);
-      lid.rotation.x=-Math.PI*.515*smooth((progress-.35)/.65);
+      bench.position.y=heightAt(bench.position.x,bench.position.z);
+      const turn=smooth((progress-.45)/.55);
+      lid.rotation.x=-Math.PI*.505*turn;
+      guard.rotation.x=-Math.PI*.5*(1-turn);guard.visible=turn>.04;
     }
     const cell=mode(p)==='surface'?
       (progress>.06&&p.x>xa-4&&p.x<xb+8&&p.z>za-6&&p.z<zb+6?'stair':null):chapterCell(p.x,p.z,.035);
@@ -79,6 +122,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     // From a landing the second opening can actually be seen in alignment.
     if(cell==='stair'||cell==='vestibule'){visible.add('vestibule');visible.add('salle');}
     if(cell==='chapter'||cell==='archive'){visible.add('salle');visible.add('vestibule');}
+    if(cell==='duel')visible.add('salle');
     for(const [id,group] of objects)group.visible=visible.has(id);
     const pool=[...visible].flatMap(id=>(sources[id]??[]).map(a=>[a,Math.hypot(p.x-a[0],p.z-a[2])+(id===cell?-3:0)])).sort((a,b)=>a[1]-b[1]);
     ambient.intensity=cell==='chapter'?.56:cell==='stair'?.48:.71;
@@ -91,7 +135,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   return {mode,visible:()=>room.visible,isBelow,update,
     target(p,look){
       if(p.y<grade-.28)return null;
-      const dx=x-p.x,dz=bench.position.z-p.z;
+      const dx=bench.position.x-p.x,dz=bench.position.z-p.z;
       // The closing control is on the inside edge of the original bench bay.
       const d=target.target?Math.hypot(p.x-xb,p.z-z):Math.hypot(dx,dz);
       if(d>(target.target?2:2.24))return null;

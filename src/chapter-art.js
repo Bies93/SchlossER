@@ -3,19 +3,22 @@ import {randomSource,sharedSet} from './surface-detail.js';
 const art={
   crest:['BUND DER EISERNEN KRONE','SIEGEL DES INNEREN KREISES','KEIN EINTRITT OHNE PFAND'],
   lodge:['DIE PFÖRTNERKAMMER','MÄNTEL LINKS · PFÄNDER RECHTS','DER SCHLÜSSEL BLEIBT IM HAUS'],
-  salle:['FECHTSAAL DER DREI FARBEN','SAALBUCH: SÄMTLICHE GÄSTE ABGEWIESEN','SCHAUDEGEN · NICHT ENTNEHMEN'],
+  salle:['GALERIE DER DREI FARBEN','SAALBUCH: SÄMTLICHE GÄSTE ABGEWIESEN','SCHAUDEGEN · NICHT ENTNEHMEN'],
   archive:['ARCHIV DER AUFNAHMEN','BLATT 12 – STIMMRECHT NUR FÜR DIE ALTEN','WIDERSPRUCH: NICHT PROTOKOLLIERT'],
   decree:['DER LEERE STUHL','BIS ZUR RÜCKKEHR DES ERBEN','NEUE BESCHLÜSSE GELTEN ALS ALTE'],
-  banned:['GÄSTELISTE','M. ACKER            GESTRICHEN','GRUND: FRAGTE WESSEN KRONE']
+  banned:['GÄSTELISTE','M. ACKER            GESTRICHEN','GRUND: FRAGTE WESSEN KRONE'],
+  duel:['DER KRONBODEN','EIGENE STIMME. ALTE REIHENFOLGE.','MENSURSAAL · NUR FÜR DEN BUND'],
+  dynasty:['DAS HAUS OHNE ERBEN','I. TITEL   II. SIEGEL   III. ERBWART','LETZTE VERSAMMLUNG: VERTAGT'],
+  seats:['SITZORDNUNG','ÄLTESTE ZUERST · GÄSTE STEHEN','DIE KRONE BLEIBT UNBESETZT']
 };
 export function chapterArt(T,root){
-  const keys=Object.keys(art),c=document.createElement('canvas');c.width=1536;c.height=1024;
+  const keys=Object.keys(art),c=document.createElement('canvas');c.width=1536;c.height=1536;
   const a=c.getContext('2d'),rng=randomSource(8912);
   function type(t,y,size,ink,face='Georgia'){a.font='bold '+size+'px '+face;a.textAlign='center';a.fillStyle=ink;a.fillText(t,256,y,454);}
   for(const [i,key] of keys.entries()){
     a.save();a.translate(i%3*512,Math.floor(i/3)*512);
-    const banner=key==='crest',base=banner?'#263c45':['#b39e7e','#442931','#303e47','#c4ae85','#5b2c37','#b6a282'][i];
-    const gold=banner||i===1||i===2||i===4?'#e6c891':'#514032';
+    const banner=key==='crest',base=banner?'#263c45':['#b39e7e','#442931','#303e47','#c4ae85','#5b2c37','#b6a282','#502c3b','#bca786','#303e47'][i];
+    const gold=banner||[1,2,4,6,8].includes(i)?'#e6c891':'#514032';
     a.fillStyle=base;a.fillRect(0,0,512,512);
     a.strokeStyle=gold;a.lineWidth=4;a.strokeRect(18,18,476,476);a.lineWidth=2;a.strokeRect(27,27,458,458);
     if(banner){
@@ -36,6 +39,12 @@ export function chapterArt(T,root){
       if(key==='banned'){
         a.save();a.translate(259,270);a.rotate(-.24);a.strokeStyle='#8c3831';a.lineWidth=4;a.strokeRect(-132,-26,264,52);
         a.font='bold 30px monospace';a.fillStyle='#8c3831';a.fillText('VERWEIGERT',0,10);a.restore();
+      }else if(key==='dynasty'){
+        a.strokeStyle=gold;a.lineWidth=3;
+        for(const [j,x,y] of [[0,256,173],[1,128,282],[2,256,287],[3,384,282]]){
+          a.strokeRect(x-35,y-27,70,54);a.font='bold 18px Georgia';a.textAlign='center';a.fillStyle=gold;a.fillText(String(j+1),x,y+6);
+          if(j){a.beginPath();a.moveTo(x,y-28);a.lineTo(x,225);a.lineTo(256,225);a.lineTo(256,201);a.stroke();}
+        }
       }else{
         a.font='bold 41px Georgia';a.fillStyle=gold;a.textAlign='center';a.fillText(['','I','II','III','IV'][i]??'✦',256,245);
       }
@@ -54,7 +63,7 @@ export function chapterArt(T,root){
     for(let j=0;j<uv.count;j++){
       const u=uv.getX(j),v=uv.getY(j);
       if(fold)P.setXYZ(j,P.getX(j),P.getY(j)-.045*(1-v)*Math.sin(9*u),.019*Math.sin(75*u)+.04*(1-v)*Math.sin(29*u));
-      uv.setXY(j,(i%3+.006+.988*u)/3,1-(Math.floor(i/3)+.994-.988*v)/2);
+      uv.setXY(j,(i%3+.006+.988*u)/3,1-(Math.floor(i/3)+.994-.988*v)/3);
     }
     if(fold)g.computeVertexNormals();
     const m=new T.Mesh(g,material);m.name='Eiserne Krone · '+id;m.position.set(x,y,z);m.rotation.set(pitch,yaw,0,'YXZ');root.add(m);return m;

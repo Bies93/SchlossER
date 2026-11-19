@@ -9,7 +9,7 @@ import {planGeometry} from './perimeter.js';
 import {addParkArchitecture,parkFacadeClearance} from './park-architecture.js';
 import {addParkMonuments,monumentClear} from './park-monuments.js';
 import {WC_CUT} from './park-stair.js';
-import {CHAPTER_CUT,chapterContains} from './chapter-layout.js';
+import {CHAPTER_CUT,CHAPTER_BAY_PATH,chapterContains} from './chapter-layout.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
 export function addGarden(T, scene, world, oldGravel, finish) {
@@ -40,6 +40,8 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   ribbon([[-40,-63],[-47,-69],[-51,-79]],2.8);
   ribbon([[42,-63],[53,-66],[62,-79],[60,-82]],2.7);
   ribbon([[37.1,-40],[47.8,-42],[57.8,-45.3],[59.6,-51.8],[58,-60],[54,-66.5]],2.6,'compact');
+  // Bench bay runs parallel to the main path and blends into the verge.
+  ribbon(CHAPTER_BAY_PATH,1.66,'compact');
   ribbon([[41,-81],[31,-101],[21,-117],[6,-141],[-4,-157]],2.85);
   ribbon([[62,-143],[43,-145],[30,-146],[14,-155],[-.3,-161]],2.73);
   ribbon([[-55,-164],[-41,-160],[-29,-158],[-11,-159]],2.48);

@@ -1,12 +1,13 @@
 import {HALL,WINGS} from './palace-openings.js';
 import {labLower} from './lab-layout.js';
 import {FRIEDRICH} from './palace-detail.js';
+import {CHAPTER_BENCH} from './chapter-layout.js';
 
 // Y up; +Z toward Schlossplatz (west), +X toward Universitätsstraße (south).
 export const SPAWN = {x: 8, z: 43, yaw: .19, pitch: .12};
 // Centres and yaw; the visual bench, its contact footprint and plant mask agree.
 export const BENCH_SITES = [
-  [-36,-34,-1.57],[36,-34,1.57],[-39.7,-59,-1.42],[38.3,-59,1.40],
+  [-36,-34,-1.57],CHAPTER_BENCH,[-39.7,-59,-1.42],[38.3,-59,1.40],
   [-48.4,-99,-1.58],[46.3,-96,1.52],[67.6,-111,1.52],
   [-51.5,-135,-1.59],[40.1,-132,-1.60],[-31,-161.3,.19],
   [44.1,-170,1.58],[-53.1,-188,-1.55],[-29,-207.2,.34],

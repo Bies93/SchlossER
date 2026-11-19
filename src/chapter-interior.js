@@ -4,7 +4,7 @@ import {chapterArt} from './chapter-art.js';
 import {dressChapter} from './chapter-props.js';
 import {randomSource} from './surface-detail.js';
 
-const p=(x,y,z)=>[x,y,z],names={vestibule:'Pförtnerkammer',salle:'Fechtsaal',archive:'Archiv der Aufnahmen',chapter:'Kapitelsaal'};
+const p=(x,y,z)=>[x,y,z],names={vestibule:'Pförtnerkammer',salle:'Waffengalerie',archive:'Archiv der Aufnahmen',chapter:'Kapitelsaal',duel:'Fechtboden · Kronsaal'};
 const roofAt=(z,a,b)=>2.53+.88*Math.sqrt(Math.max(0,1-((2*z-a-b)/(b-a))**2));
 const node=(T,parent,name)=>{const n=new T.Group();n.name=name;parent.add(n);return n;};
 
@@ -28,16 +28,21 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
     }
     for(const v of [edge+(edge===S.z0?.063:-.063)]){
       const pose=(x,y,z)=>[x,grade-(S.top-x)*CHAPTER_DROP/(S.top-S.foot)+.84+y,z];
-      k.box('brass',pose,S.foot+.16,S.top-.16,-.019,.019,v-.023,v+.023);
-      for(let j=1;j<=7;j++){
-        const x=S.foot+j*.90,Y=-(S.top-x)*CHAPTER_DROP/(S.top-S.foot)+.82;
-        box('iron',x-.02,x+.02,Y-.071,Y-.035,Math.min(v,edge)-.018,Math.max(v,edge)+.018);
+      const start=S.foot+.18,end=S.top-1.23;
+      // Independent of the moving perimeter rail. Ends below grade so the
+      // stair grip never pierces the stone frame or the opening leaf.
+      k.box('iron',pose,start,end,-.025,.018,v-.027,v+.027);
+      k.box('brass',pose,start+.013,end-.014,.015,.024,v-.024,v+.024);
+      for(let x=start+.19;x<=end-.04;x+=.65){
+        const Y=-(S.top-x)*CHAPTER_DROP/(S.top-S.foot)+.84;
+        box('iron',x-.028,x+.028,Y-.061,Y+.012,Math.min(v,edge)-.018,Math.max(v,edge)+.018);
+        box('iron',x-.047,x+.047,Y-.088,Y+.028,edge-.011,edge+.011);
       }
     }
   }
   box('stone2',S.foot,S.cover,-.183,-.052,S.z0-.031,S.z1+.031);
-  for(let i=0;i<3;i++){
-    const x=S.foot+.66+i*.92,y=-CHAPTER_DROP+(x-S.foot)*CHAPTER_DROP/(S.top-S.foot)+1.31;
+  for(let i=0;i<4;i++){
+    const x=S.foot+.55+i*1.02,y=Math.min(-.22,-CHAPTER_DROP+(x-S.foot)*CHAPTER_DROP/(S.top-S.foot)+1.31);
     box('iron',x-.17,x+.17,y-.15,y+.15,S.z0+.010,S.z0+.074);
     box('filament',x-.117,x+.117,y-.10,y+.103,S.z0+.075,S.z0+.095);
     for(const a of [-.107,0,.107])box('iron',x+a-.009,x+a+.009,y-.12,y+.121,S.z0+.096,S.z0+.109);
