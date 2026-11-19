@@ -3,6 +3,7 @@ import {sharedSet,randomSource} from './surface-detail.js';
 import {LAB,LAB_CUT,LAB_LAYER,labLower} from './lab-layout.js';
 import {cellarWalls,makeLabDeck} from './lab-wing.js';
 import {addLabGraffiti} from './lab-graffiti.js';
+import {dressLab} from './lab-dressing.js';
 
 // Entirely fictional scenography: no real building connection or lab protocol.
 const {left,right,back,front}=LAB_CUT,{top,floor,ceiling,end,south,north}=LAB;
@@ -69,10 +70,12 @@ export function addPalaceLab(T,root,world,M){
   const darkWood=M.oak.clone();darkWood.color.setHex(0x604738);darkWood.vertexColors=false;
   const plaster=plain(0x747a71,.92,sharedSet(T,'plaster',256));
   plaster.normalScale.setScalar(.40);
+  const enamel=sharedSet(T,'enamel',256);
   const materials={
     plaster,concrete:plain(0x626462,.9,sharedSet(T,'plaster',256)),wood,darkWood,
-    green:plain(0x506c65,.70,{metalness:.24}),iron:plain(0x303939,.66,{metalness:.44}),
-    rust:plain(0x7f4c3c,.79,{metalness:.26}),gray:plain(0x8a958b,.66,{metalness:.43}),
+    green:plain(0x526f68,.88,{...enamel,metalness:.16}),iron:plain(0x303939,.66,{metalness:.44}),
+    rust:plain(0x82513f,.96,{...enamel,metalness:.20}),gray:plain(0x8a958b,.66,{metalness:.43}),
+    gunmetal:plain(0x495651,.92,{...enamel,metalness:.25}),edge:plain(0x869890,.54,{metalness:.41}),
     gasket:plain(0x252c2b),brass:plain(0xad8960,.59,{metalness:.51}),
     red:{material:glow(0xde5442,.66),cast:false},cold:{material:glow(0x86cfc1,.53),cast:false},
     ivory:{material:glow(0xe8dfb5,.31),cast:false},leather:plain(0x764a30),cloth:plain(0x5b715e),
@@ -92,6 +95,7 @@ export function addPalaceLab(T,root,world,M){
     const x=left+i*LAB.run,y=top-(i+1)*LAB.riser;
     stair('concrete',x,x+LAB.run,floor-.13,y,back,front);
     stair('gray',x-.017,x+.047,y-.026,y+.003,back+.05,front-.05);
+    if(i>9&&i%3===2)for(const z of [back+.11,front-.26])stair('ochre',x+.004,x+.049,y+.001,y+.007,z,z+.15);
   }
   // At reading-room height the stair is enclosed by a tall, plain cabinet run.
   // The only opening is at the end of the wall, behind the sliding shelf.
@@ -139,7 +143,7 @@ export function addPalaceLab(T,root,world,M){
   shaft.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
   cabinet.traverse(o=>{if(o.isMesh)o.castShadow=false});
   addLabGraffiti(T,shell);
-  const deck=makeLabDeck(T,root,world,materials,room=>buildChambers(T,room,world,materials));
+  const deck=makeLabDeck(T,root,world,materials,(room,graphics)=>buildChambers(T,room,world,materials,graphics));
   const usable=p=>d.target===0||Math.abs(p.x-gateX)>.60;
   return {
     target(p,look){
@@ -154,13 +158,15 @@ export function addPalaceLab(T,root,world,M){
         const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
         const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;
       }
-      return deck.update(p,d.target===1)||changed;
+      return deck.update(p,d.target===1,dt)||changed;
     }
   };
 }
 
-function buildChambers(T,room,world,materials){
+function buildChambers(T,room,world,materials,graphics){
   const k=architectureKit(T,room,materials),below=p=>labLower(p.y);
+  const dress=dressLab(T,k,room,graphics);
+  const {housing,rod,flag,plaque,dial,grill,stain,fastener,plane}=dress;
   const box=(m,x0,x1,y0,y1,z0,z1)=>k.box(m,coords,x0,x1,y0,y1,z0,z1);
   cellarWalls(k,world,'chambers');
   box('concrete',right,end,ceiling,ceiling+.17,south,north);
@@ -186,7 +192,7 @@ function buildChambers(T,room,world,materials){
     box(i%2?'iron':'brass',x,x+.38,floor,floor+.009,south+.73,south+.94);
     if(i%5===0)box('iron',x-.11,x+.23,floor,floor+.015,-.85,-.61);
   }
-  for(const [x,z,kind] of [[right+1.1,-5.60,'red'],[-16.3,-3.62,'ivory'],[-12.6,2.04,'cold'],[-8.3,-3.53,'ivory']]){
+  for(const [x,z,kind] of [[right+1.1,-5.60,'red'],[-17.35,-5.12,'ivory'],[-14.4,1.40,'cold'],[-8.3,-3.53,'ivory']]){
     box('iron',x-.39,x+.39,ceiling-.103,ceiling-.015,z-.135,z+.135);
     box(kind,x-.328,x+.328,ceiling-.115,ceiling-.100,z-.077,z+.077);
     for(const dx of [-.20,0,.20])box('iron',x+dx-.010,x+dx+.010,ceiling-.132,ceiling-.104,z-.101,z+.102);
@@ -198,30 +204,50 @@ function buildChambers(T,room,world,materials){
     const z=2.37,h=ceiling-floor;
     object('green',drum,x,floor+.19,z,[.91,.36,.91]);
     object('iron',drum,x,floor+h-.36,z,[.86,.37,.86]);
+    object('gunmetal',drum,x,floor+.244,z,[.914,.123,.914]);
+    object('edge',ring,x,floor+.287,z,[.87,.87,.42],-Math.PI*.5);
+    object('green',drum,x,floor+h-.246,z,[.81,.089,.81]);
+    object('edge',ring,x,floor+h-.434,z,[.813,.813,.35],-Math.PI*.5);
     object('gray',ring,x,floor+.365,z,[.78,.78,.72],-Math.PI*.5);
     object(i===2?'gasket':'cold',ring,x,floor+h-.599,z,[.76,.76,.65],-Math.PI*.5);
     object('iron',ring,x,floor+.085,z,[.89,.89,.67],-Math.PI*.5);
     box('green',x-.48,x+.48,floor+.35,ceiling-.51,z+.52,z+.81);
     box('gasket',x-.31,x+.31,floor+.46,ceiling-.74,z+.449,z+.536);
     for(const dx of [-.757,.757]){
-      box('gray',x+dx-.054,x+dx+.054,floor+.39,ceiling-.45,z+.025,z+.125);
-      box('rust',x+dx-.071,x+dx+.071,floor+.486,floor+.63,z-.025,z+.141);
+      housing('gunmetal',x+dx,floor+1.62,z+.042,.143,2.48,.15);
+      housing('edge',x+dx,floor+1.66,z-.024,.037,2.22,.035);
+      for(const y of [.56,1.20,2.14,2.63])housing('rust',x+dx,floor+y,z+.037,.167,.11,.19);
     }
     const g=new T.CylinderGeometry(.784,.784,h-1.02,36,1,true,Math.PI*.48,Math.PI*1.49);
     const shell=new T.Mesh(g,clear);shell.position.set(x,floor+.40+(h-1.02)/2,z);shell.rotation.y=Math.PI*.42;room.add(shell);
     box('iron',x-.33,x+.33,floor+.41,floor+.50,z-.90,z-.82);
     for(let j=0;j<3;j++)box(i===2?(j===0?'red':'gasket'):j<=i?'cold':'gasket',x-.25+j*.102,x-.196+j*.102,floor+.433,floor+.461,z-.911,z-.897);
     for(const dx of [-.43,.43]){
-      box('iron',x+dx-.16,x+dx+.16,floor+.098,floor+.26,z-.71,z-.55);
-      for(let n=0;n<4;n++)box('gray',x+dx-.11+n*.061,x+dx-.086+n*.061,floor+.115,floor+.219,z-.724,z-.707);
+      housing('iron',x+dx,floor+.182,z-.728,.31,.167,.129);
+      grill('edge',x+dx,.178,z-.795,.246,.114,Math.PI);
     }
-    world.box(x-.87,z-.87,x+.87,z+.87,below);
+    housing('gunmetal',x,floor+.562,z-.808,.46,.223,.146);
+    plaque('B–0'+(i+1),[i===2?'STROMLOS':'KAMMER LEER'],x,.572,z-.885,.337,.151,Math.PI,i===2?'red':'blue');
+    housing('green',x+.70,floor+1.36,z-.433,.24,.64,.22,.54);
+    dial(x+.72,1.53,z-.567,.084,Math.PI-.49,i);
+    for(const [j,dx] of [-.051,.006,.06].entries())housing(i===2?(j?'iron':'red'):(j===i?'cold':'gasket'),x+.705+dx,floor+1.31,z-.56,.036,.051,.031);
+    for(let j=0;j<10;j++){
+      const a=(j+.5)*Math.PI/5,bx=x+Math.sin(a)*.865,bz=z+Math.cos(a)*.865;
+      rod(j%4?'edge':'rust',[bx,floor+.303,bz],[bx,floor+.347,bz],.029);
+    }
+    for(const [j,dx] of [-.32,.32].entries()){
+      rod(j?'green':'rust',[x+dx,ceiling-.31,z+.47],[x+dx,ceiling-.31,z+1.17],.074);
+      rod('iron',[x+dx,ceiling-.31,z+1.17],[x+dx,ceiling-.11,z+1.17],.072);
+      rod('edge',[x+dx,ceiling-.31,z+.77],[x+dx,ceiling-.31,z+.87],.099);
+    }
+    stain(x+.14,.008,z-.98,.69,.58,0,i===2?1:2,-Math.PI*.5);
+    world.box(x-.915,z-.917,x+.915,z+.915,below);
   }
   // Control desk with paper dossier, mechanical dials and status lamps.
   const x=-12.45,z=-4.85;
-  box('green',x-1.23,x+1.23,floor+.083,floor+.91,z-.52,z+.56);
-  box('gray',x-1.28,x+1.28,floor+.896,floor+1.02,z-.58,z+.61);
-  box('iron',x-.97,x+.97,floor+1.02,floor+1.64,z-.46,z-.12);
+  housing('green',x,floor+.49,z+.02,2.46,.826,1.078);
+  housing('edge',x,floor+.958,z+.015,2.56,.125,1.19);
+  housing('gunmetal',x,floor+1.33,z-.29,1.94,.62,.34);
   box('gasket',x-.72,x+.72,floor+1.105,floor+1.565,z-.119,z-.104);
   const screen=new T.Mesh(new T.PlaneGeometry(1.37,.428),new T.MeshBasicMaterial({map:terminalDisplay(T)}));
   screen.position.set(x,floor+1.337,z-.102);room.add(screen);
@@ -229,6 +255,12 @@ function buildChambers(T,room,world,materials){
     object('brass',drum,x-.84+j*.337,floor+1.05,z+.385,[.055,.074,.055]);
     if(j<4)box(j===0?'red':'ivory',x-.77+j*.22,x-.69+j*.22,floor+.65,floor+.694,z+.558,z+.569);
   }
+  for(const dx of [-.81,.81])dial(x+dx,1.33,z-.109,.093,0,dx>0?2:1);
+  grill('iron',x+.60,.424,z+.57,.79,.295);
+  housing('gunmetal',x-.67,floor+.487,z+.577,.71,.47,.055);
+  const front=plane(x-.67,floor+.487,z+.608,0);
+  for(const u of [-.28,.28])for(const v of [-.17,.17])fastener(front,u,v,0,.024,true);
+  stain(x-.67,.49,z+.612,.45,.39,0,3);
   world.box(x-1.28,z-.58,x+1.28,z+.61,below);
   const blueprint=dressing(T,'board'),paper=dressing(T,'paper');
   const board=(tex,w,h,x,y,z,a,rx=0)=>{
@@ -239,10 +271,50 @@ function buildChambers(T,room,world,materials){
   box('gasket',end-.423,end-.398,floor+1.18,floor+2.84,-4.29,-1.24);
   board(blueprint,2.97,1.62,end-.428,floor+2.01,-2.76,-Math.PI*.5);
   // A second, readable paper copy lies flat on a side workbench.
-  box('green',-16.8,-14.47,floor+.20,floor+.94,-6.35,-5.32);
-  box('gray',-16.87,-14.41,floor+.91,floor+1.04,-6.40,-5.28);
-  board(paper,.91,.57,-15.58,floor+1.043,-5.80,0,-Math.PI*.5);
+  housing('green',-15.635,floor+.56,-5.835,2.33,.76,1.03);
+  housing('edge',-15.64,floor+.973,-5.84,2.46,.132,1.12);
+  housing('leather',-15.87,floor+1.051,-5.86,.97,.021,.63);
+  board(paper,.91,.57,-15.87,floor+1.064,-5.86,0,-Math.PI*.5);
+  housing('paper',-14.98,floor+1.06,-5.76,.37,.040,.47,-.10);
+  plaque('FREMDAKTE F',['FRANKEN · NICHT ABLEGEN'],-14.98,1.083,-5.74,.34,.42,0,'red',-Math.PI*.5,false);
+  for(const x of [-16.47,-15.66,-14.86]){
+    housing('gunmetal',x,floor+.716,-5.297,.64,.285,.073);
+    rod('brass',[x-.10,floor+.772,-5.24],[x+.10,floor+.772,-5.24],.018);
+    for(const dx of [-.10,.10])rod('brass',[x+dx,floor+.772,-5.295],[x+dx,floor+.772,-5.24],.016);
+  }
   world.box(-16.87,-6.40,-14.41,-5.28,below);
+  // A light wash makes the flag and the scratched-out rival program visible
+  // immediately when coming down the stairs; nothing protrudes into the route.
+  flag('bavaria',-18.40,2.00,south+.063,2.44,1.24);
+  plaque('PROJEKT BAYERN',['SEKTION B · UNTERDECK ERLANGEN','BAUREIHE B: 8 FREIGABEN / 9 MARKEN'],-15.81,2.057,south+.037,1.94,.68,0,'blue');
+  flag('franconia',-13.83,2.035,south+.036,1.43,.75);
+  plaque('VERGLEICHSREIHE',['B: TRACHTENAUSGABE GENEHMIGT','F: ERGEBNIS AUS DEM REGISTER ENTFERNT'],-11.975,2.015,south+.035,1.67,.61);
+  plaque('01 · SCHLEUSE',['WEITER ZUM ARCHIV UND ZUR TECHNIK'],-8.02,2.73,north-.207,1.39,.34,Math.PI);
+  stain(-17.13,1.21,south+.009,.65,1.77,0,0);
+  stain(-10.47,1.81,south+.009,.59,2.63,0,1);
+  stain(-18.51,.006,-6.00,.69,.94,0,2,-Math.PI*.5);
+
+  // Trolley parked in the bay, not in the route between stairs and doors.
+  const tx=-16.32,tz=-.05;
+  for(const dx of [-.52,.52])for(const dz of [-.25,.25]){
+    const x=tx+dx,z=tz+dz;
+    rod('gasket',[x-.035,floor+.071,z],[x+.035,floor+.071,z],.071);
+    housing('iron',x,floor+.134,z,.115,.085,.095);
+    housing('edge',x,floor+.52,z,.046,.76,.045);
+  }
+  housing('gunmetal',tx,floor+.270,tz,1.18,.072,.615);
+  housing('edge',tx,floor+.903,tz,1.21,.067,.644);
+  housing('green',tx,floor+.944,tz,1.16,.041,.593);
+  for(const dz of [-.302,.302])rod('iron',[tx-.58,floor+.978,tz+dz],[tx+.58,floor+.978,tz+dz],.022);
+  rod('edge',[tx-.626,floor+1.05,tz-.223],[tx-.626,floor+1.05,tz+.223],.023);
+  for(const dz of [-.223,.223])rod('edge',[tx-.626,floor+1.05,tz+dz],[tx-.54,floor+.91,tz+dz],.021);
+  housing('leather',tx-.16,floor+.986,tz,.61,.031,.404);
+  plaque('BELEG F–09',['TRACHTENMUSTER NICHT ÜBERNOMMEN','Fundort: Ablage B'],tx-.16,1.005,tz,.54,.33,Math.PI,'cream',-Math.PI*.5,false);
+  housing('iron',tx+.34,floor+1.018,tz+.02,.284,.112,.262);
+  for(const dz of [-.06,.063])housing('brass',tx+.35,floor+1.080,tz+dz,.08,.014,.068);
+  housing('paper',tx+.23,floor+.334,tz-.032,.538,.065,.39,.075);
+  housing('leather',tx-.28,floor+.345,tz+.046,.33,.092,.374,-.13);
+  world.box(tx-.65,tz-.33,tx+.61,tz+.33,below);
 
   // Empty costume rack: hanger and clothes only, no mannequin body.
   const rx=-7.54,rz=.44;
@@ -250,8 +322,8 @@ function buildChambers(T,room,world,materials){
   for(const z of [rz-.96,rz+.96])box('gray',rx-.58,rx+.13,floor+.17,floor+2.75,z-.038,z+.039);
   box('iron',rx-.56,rx+.15,floor+2.66,floor+2.755,rz-1,rz+1);
   box('brass',rx-.42,rx-.38,floor+2.53,floor+2.576,rz-.89,rz+.89);
-  function cloth(key,pts,offset,depth){
-    const world=([z,y])=>[rx-.43-depth,floor+y,rz+offset+z];
+  function cutCloth(key,pts,offset,depth){
+    const world=([z,y])=>[rx-.426-depth-.020*(Math.cos(z*43)-.45*Math.sin(y*13+z*11)),floor+y,rz+offset+z];
     const middle=pts.reduce(([x,y],[a,b])=>[x+a/pts.length,y+b/pts.length],[0,0]);
     for(let i=0;i<pts.length;i++){
       const a=world(pts[i]),b=world(pts[(i+1)%pts.length]),m=world(middle);
@@ -262,11 +334,20 @@ function buildChambers(T,room,world,materials){
     object('brass',ring,rx-.42,floor+2.40,rz+offset,[.095,.095,.095],0,Math.PI*.5);
     box('wood',rx-.452,rx-.402,floor+2.19,floor+2.248,rz+offset-.277,rz+offset+.277);
   }
-  cloth('leather',[[-.28,2.22],[.28,2.22],[.32,1.53],[.12,1.51],[0,1.86],[-.12,1.53],[-.32,1.53]],-.49,0);
-  cloth('brass',[[-.248,2.15],[.248,2.15],[.223,2.08],[-.223,2.08]],-.49,.013);
-  cloth('canvas',[[-.26,2.19],[.26,2.19],[.24,1.96],[-.24,1.96]],.48,0);
-  cloth('cloth',[[-.22,2.16],[.22,2.16],[.13,1.88],[.35,1.24],[-.35,1.24],[-.13,1.88]],.48,.023);
-  cloth('apron',[[-.13,1.91],[.13,1.91],[.22,1.32],[-.22,1.32]],.48,.03);
+  cutCloth('leather',[[-.28,2.22],[.28,2.22],[.31,1.87],[.32,1.54],[.23,1.50],[.11,1.51],[0,1.84],[-.12,1.53],[-.23,1.505],[-.32,1.53],[-.29,1.85]],-.49,0);
+  cutCloth('brass',[[-.248,2.15],[-.04,2.148],[.248,2.15],[.223,2.08],[.01,2.075],[-.223,2.08]],-.49,.024);
+  cutCloth('canvas',[[-.26,2.19],[-.12,2.16],[.12,2.16],[.26,2.19],[.28,2.05],[.24,1.96],[-.24,1.96],[-.28,2.05]],.48,0);
+  cutCloth('cloth',[[-.22,2.16],[-.11,2.12],[.10,2.12],[.22,2.16],[.13,1.88],[.28,1.52],[.35,1.24],[.22,1.25],[.11,1.227],[0,1.247],[-.13,1.23],[-.24,1.25],[-.35,1.24],[-.26,1.53],[-.13,1.88]],.48,.031);
+  cutCloth('apron',[[-.13,1.91],[.13,1.91],[.17,1.65],[.22,1.32],[.09,1.31],[0,1.34],[-.09,1.31],[-.22,1.32],[-.18,1.63]],.48,.069);
+  for(const delta of [-.164,.164]){
+    rod('canvas',[rx-.474,floor+2.03,rz-.49+delta],[rx-.481,floor+1.59,rz-.49+delta*1.32],.006);
+    rod('brass',[rx-.492,floor+2.12,rz-.49+delta],[rx-.497,floor+2.12,rz-.49+delta+.042],.018);
+  }
+  for(const oz of [-.49,.48]){
+    housing('iron',rx-.23,floor+.69,rz+oz,.19,.59,.74);
+    grill('gray',rx-.329,.63,rz+oz,.62,.21,-Math.PI*.5);
+  }
+  plaque('TRACHTENAUSGABE',['EINHEIT B · UNGETRAGEN'],rx-.568,2.716,rz,1.11,.215,-Math.PI*.5,'cream');
   world.box(rx-.62,rz-1.04,rx+.19,rz+1.04,below);
-  k.flush('Projekt Bayern · Beton, Technik und Kostüme');drum.dispose();ring.dispose();
+  dress.flush();k.flush('Projekt Bayern · Beton, Technik und Kostüme');drum.dispose();ring.dispose();
 }

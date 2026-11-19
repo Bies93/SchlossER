@@ -13,7 +13,7 @@ export function sharedSet(T,kind,size){
 }
 
 export function repeatSet(T,kind,size=512) {
-  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,tile:311}[kind]);
+  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,tile:311,enamel:404}[kind]);
   const field=n=>Float32Array.from({length:n*n},rng);
   const grids=[8,24,64].map(n=>[n,field(n)]);
   const noise=(i,x,y)=>{
@@ -45,6 +45,9 @@ export function repeatSet(T,kind,size=512) {
     } else if(kind==='plaster'){
       const v=a*11+b*8+c*5+f*2;
       write(x,y,225+v,223+v,218+v,a*.01+b*.035+c*.086+f*.037,221+b*21+c*12);
+    } else if(kind==='enamel'){
+      const pit=clamp((b*.36+c*.61+f*.06-.23)*5.7,0,.82),v=a*21+b*12+c*6-pit*49;
+      write(x,y,238+v+pit*7,237+v,231+v-pit*13,b*.021+c*.032+f*.014-pit*.061,179+b*22+pit*61);
     } else if(kind==='wood'){
       const wave=(Math.sin((y/size*48+a*.13+b*.065)*Math.PI)+1)*.5;
       const grain=Math.pow(wave,3),v=a*13+b*8+c*4-grain*24;
@@ -83,7 +86,7 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }
-  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,tile:1.4}[kind];
+  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,tile:1.4,enamel:1.45}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;
