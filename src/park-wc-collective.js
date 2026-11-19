@@ -189,11 +189,11 @@ export function furnishCollective(T,kit,id){
         if(r-l>.056)frame(['rockWarm','rock','cap','rockWarm'][(i+row*3)%4],l,r,y,y+.198,-4.178,-4.039+(i%3)*.009);
       }
     }
-    for(const [u,v] of [[11.35,-3.84],[19.95,-3.81],[11.35,2.52],[19.95,2.52]]){
+    for(const [u,v] of [[11.35,-4.055],[19.95,-4.055],[11.35,2.08],[19.95,2.08]]){
       frame('oxide',u-.136,u+.136,1.61,1.91,v-.115,v+.115);
     }
     const roof=(u,v)=>wcRoofAt('collective',u,v)-b;
-    for(const v of [-3.82,2.52]){
+    for(const v of [-4.055,2.08]){
       let prev;
       for(let i=0;i<=22;i++){
         const u=11.29+(20.00-11.29)*i/22,y=roof(u,v)-.106;
@@ -215,8 +215,8 @@ export function furnishCollective(T,kit,id){
     frame('wood',13.22,16.55,.97,2.035,-4.116,-4.037);
     print('map',14.885,1.52,-4.024,3.02,.894,-pi/2);
     for(const u of [13.54,14.83,16.21])pipe('brass',[u,1.00,-4.019],[u,1.00,-3.998],.018);
-    frame('darkWood',19.957,20.115,1.088,1.814,2.69,4.19);
-    print('poster',19.952,1.45,3.44,1.40,.658,pi);
+    frame('darkWood',17.25,18.80,1.093,1.816,-4.196,-4.032);
+    print('poster',18.025,1.455,-4.028,1.43,.652,-pi/2);
 
     // Radio bench and repair shelf; the receiver is a prop, not an interface.
     table(14.97,-3.54,3.43,.82,.948);

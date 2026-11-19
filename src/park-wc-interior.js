@@ -1,19 +1,23 @@
 import {architectureKit} from './architecture-kit.js';
 import {sharedSet,randomSource} from './surface-detail.js';
 import {utilityDoor} from './lab-cell-doors.js';
-import {ROOMS,LINKS,X,Z,p,b,ceiling,lower,wcRoomAt,wcRoofAt,wcCameraMode,isRock} from './park-wc-layout.js';
+import {ROOMS,LINKS,X,Z,p,b,ceiling,lower,wcRoomAt,wcRoofAt,wcCameraMode,isRock,isAnnex} from './park-wc-layout.js';
 import {furnishWashroom} from './park-wc-fixtures.js';
 import {furnishCollective,collectiveArt} from './park-wc-collective.js';
+import {moosfunkAnnexArt,annexMaterials} from './moosfunk-art.js';
+import {furnishPractice} from './moosfunk-practice.js';
+import {furnishGreenhouse} from './moosfunk-greenhouse.js';
 
 export const WC_LAYER=4;
-const halfPi=Math.PI/2;
 const lampSites=[
   [3.13,.27,0xf0e3cb,8.0,4.3],[3.18,3.55,0xffdcca,12,5.8],[3.18,6.49,0xe8e7cf,9,5.1],
   [5.54,1.59,0xe6eacb,15,5.8],[5.66,6.09,0xe6eaca,17,6.0],
   [8.35,2.30,0xe6e5d0,11,4.9],[8.35,5.36,0xedeee0,13,5.0],
   [10.56,6.79,0xfab477,7,4.5],[13.39,6.1,0xdd9b6a,7.6,4.3],
   [13.66,3.05,0xffd097,15,6.2],[16.58,.39,0xfb965c,23,7.8],
-  [18.32,-2.58,0xe8b976,19,6.9],[18.48,2.91,0x92beb4,14,5.3]
+  [18.32,-2.58,0xe8b976,19,6.9],[18.48,2.91,0x92beb4,14,5.3],
+  [22.18,-3.28,0xffc899,17,6.3],[26.15,-2.98,0xc0c7bf,19,6.9],[30.45,-2.98,0xeab781,19,7.4],[32.90,-2.90,0xefb985,15,6.4],
+  [22.05,3.69,0xebca9f,17,6.6],[24.42,3.45,0xd5e8ba,18,6.9],[27.20,4.12,0xcae6c3,18,7.0],[29.81,3.52,0xf7d3a5,18,6.6]
 ];
 const alongEdge=(u0,u1,v0,v1)=>[['u',u0,v0,v1,-1],['u',u1,v0,v1,1],['v',v0,u0,u1,-1],['v',v1,u0,u1,1]];
 
@@ -37,7 +41,8 @@ export function addWcInterior(T,scene,world){
     lamp:{material:plain(0xf7eac3,.69,{emissive:0xffd297,emissiveIntensity:.61}),cast:false},
     wood:plain(0xb29065,.78,wood),darkWood:plain(0x8a664e,.88,wood),ochre:plain(0xb68245,.86,painted),
     red:plain(0x88554a,.91,painted),linen:plain(0xb2a27c,.97,cloth),fabric:plain(0x5c6a54,.92,cloth),rug:plain(0x805745,1,cloth),
-    paper:plain(0xbcaa86),amber:plain(0x895a35,.42,{metalness:.18}),signal:{material:plain(0x9ec569,.73,{emissive:0x779742,emissiveIntensity:.61}),cast:false}
+    paper:plain(0xbcaa86),amber:plain(0x895a35,.42,{metalness:.18}),signal:{material:plain(0x9ec569,.73,{emissive:0x779742,emissiveIntensity:.61}),cast:false},
+    ...annexMaterials(T,{painted,plaster,cloth})
   };
   const cyl=new T.CylinderGeometry(1,1,1,12),identity=new T.Matrix4(),m=new T.Matrix4(),tmp=new T.Vector3(),len=new T.Vector3(),up=new T.Vector3(0,1,0),scale=new T.Vector3(),rot=new T.Quaternion();
   // Keep continuous normals across a rock panel; the triangulation should
@@ -57,6 +62,7 @@ export function addWcInterior(T,scene,world){
   }
   const toHit=(u,U,v,V)=>world.box(X-V,Z+u,X-v,Z+U,o=>lower(o.y));
   const partsArt=collectiveArt(T);
+  const annexArt=moosfunkAnnexArt(T);
   const hemi=new T.HemisphereLight(0xb2c4bd,0x5d503b,.66);group.add(hemi);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);group.add(l);return l;});
   for(const [id,bounds] of Object.entries(ROOMS)){
@@ -74,9 +80,10 @@ export function addWcInterior(T,scene,world){
         const L=len.length();if(L<.002)return;
         m.compose(tmp.addScaledVector(len,.5),rot.setFromUnitVectors(up,len.normalize()),scale.set(r,L,r));k.geometry(mat,cyl,m);
       },
-      print(tile,u,y,v,w,h,angle=0,options){partsArt.mount(room,tile,...p(u,b+y,v),w,h,angle,options);}
+      print(tile,u,y,v,w,h,angle=0,options){partsArt.mount(room,tile,...p(u,b+y,v),w,h,angle,options);},
+      artTile(tile,u,y,v,w,h,angle=0,pitch=0,roll=0){annexArt.mount(room,tile,p(u,b+y,v),w,h,angle,pitch,roll);}
     };
-    const [u0,u1,v0,v1]=bounds,rock=isRock(id),va=id==='landing'?v0+.0028:v0;
+    const [u0,u1,v0,v1]=bounds,rock=isRock(id),extra=isAnnex(id),va=id==='landing'?v0+.0028:v0;
     block('grout',u0,u1,-.094,-.024,va,v1);
     const pitch=rock?.67:.34,gap=rock?.006:.0065,rand=randomSource(1566+id.charCodeAt(0));
     for(let u=u0,i=0;u<u1-.020;u+=pitch,i++){
@@ -86,7 +93,7 @@ export function addWcInterior(T,scene,world){
       }
     }
     if(rock){
-      const nu=id==='tunnel'?3:24,nv=id==='tunnel'?20:Math.max(8,Math.ceil((v1-v0)*2.5));
+      const nu=id==='tunnel'?3:24,nv=id==='tunnel'||extra?22:Math.max(8,Math.ceil((v1-v0)*2.5));
       relief(k,'rockShade',nu,nv,(i,j)=>{
         const u=u0+(u1-u0)*i/nu,v=v0+(v1-v0)*j/nv;
         const seam=Math.sin(i/nu*Math.PI)*Math.sin(j/nv*Math.PI)*Math.sin(i*.71+j*.59)*.047;
@@ -116,9 +123,9 @@ export function addWcInterior(T,scene,world){
       if(id==='landing'&&axis==='v'&&at===0)continue;
       const wall=(l,r)=>{
         if(rock){
-          skin('rockShade',l,r,b-.027,-.12);
+          skin('rockShade',l,r,b-.027,extra?-.024:-.12);
           const steps=Math.max(1,Math.ceil((r-l)/.59));
-          const height=[b-.02,b+.41,b+.88,b+1.36,b+1.80,-.54,-.106];
+          const height=[b-.02,b+.41,b+.88,b+1.36,b+1.80,-.54,extra?-.018:-.106];
           relief(k,'rock',steps,height.length-1,(i,j)=>{
             const edge=i===0||i===steps,mid=j>0&&j<height.length-1;
             const u=l+(r-l)*i/steps+(edge?0:Math.sin(i*2.86+j*1.83)*.065);
@@ -143,7 +150,7 @@ export function addWcInterior(T,scene,world){
         const threshold=isRock(id)||isRock(next),top=b+(threshold?1.91:spec?.[0]?.endsWith('-a')||spec?.[0]?.endsWith('-b')?1.945:2.067);
         const areWeStalls=id==='men'||id==='women';
         const trim=threshold?'rockWarm':spec?'green':'trim';
-        solid(threshold?'rock':'tile',l,r,top+.043,threshold?-.128:ceiling+.048,-.066,.066);
+        solid(threshold?'rock':'tile',l,r,top+.043,isAnnex(next)?-.025:threshold?-.128:ceiling+.048,-.066,.066);
         for(const s of [l,r])solid(trim,s-.036,s+.036,b,top+.052,-.082,.082);
         solid(trim,l-.037,r+.037,top-.006,top+.056,-.082,.082);
         if(spec){
@@ -159,12 +166,12 @@ export function addWcInterior(T,scene,world){
       }
       if(start<max)wall(start,max);
     }
-    for(const [u,v] of [[3.13,.23],[3.18,3.55],[3.18,6.49],[5.54,1.59],[5.66,6.09],[8.35,2.3],[8.35,5.36],[10.56,6.79],[13.39,6.1],[13.66,3.05],[16.58,.39],[18.32,-2.58],[18.48,2.91]]){
+    for(const [u,v] of lampSites){
       if(wcRoomAt(u,v)!==id)continue;
       const top=wcRoofAt(id,u,v)-b-.018;
       block('iron',u-.25,u+.25,top-.099,top,v-.104,v+.104);
       block('edge',u-.224,u+.224,top-.116,top-.097,v-.081,v+.081);
-      for(const shift of [-.043,.043])method.pipe('lamp',[u-.195,top-.121,v+shift],[u+.195,top-.121,v+shift],.024);
+      for(const shift of [-.043,.043])method.pipe(id==='greenhouse'?'growLamp':'lamp',[u-.195,top-.121,v+shift],[u+.195,top-.121,v+shift],.024);
       for(const d of [-.204,0,.204])method.pipe('iron',[u+d,top-.152,v-.095],[u+d,top-.152,v+.095],.009);
     }
     if(id==='lobby'){
@@ -175,7 +182,14 @@ export function addWcInterior(T,scene,world){
       method.print('keep',2.273,1.49,5.79,.53,.335,0);
     }
     if(['women','men','womenA','womenB','menA','menB'].includes(id))furnishWashroom(T,method,id);
-    if(rock)furnishCollective(T,method,id);
+    if(id==='practice')furnishPractice(T,method);
+    else if(id==='greenhouse')furnishGreenhouse(T,method);
+    else if(rock)furnishCollective(T,method,id);
+    if(id==='collective')for(const [tile,v] of [['rangeSign',-3.145],['growSign',3.21]]){
+      // Hang labels over the portal, clear of the wood behind the banner.
+      method.block('darkWood',19.86,20.06,1.916,2.102,v-.52,v+.52);
+      method.artTile(tile,19.853,2.010,v,1,.161,Math.PI);
+    }
     k.flush('WC · '+id);
   }
   cyl.dispose();
@@ -204,13 +218,18 @@ export function addWcInterior(T,scene,world){
           if(leaf.peek)visible.add(l[0]===room?l[1]:l[0]);
           continue;
         }
-        const other=l[0]===room?l[1]:l[0];visible.add(other);
+        const other=l[0]===room?l[1]:l[0];
+        if(isAnnex(other)&&other!==id&&id!=='collective'&&!(id==='bend'&&v<5.56))continue;
+        visible.add(other);
         if(!traversed.has(other)){traversed.add(other);next.push(other);}
       }
       wave=next;
     }
     for(const [key,room] of layers){changed||=room.visible!==visible.has(key);room.visible=visible.has(key);}
-    const near=lampSites.filter(([u,v])=>visible.has(wcRoomAt(u,v))).map(l=>[l,Math.hypot(l[0]-u,l[1]-v)]).sort((a,b)=>a[1]-b[1]);
+    const near=lampSites.filter(([u,v])=>visible.has(wcRoomAt(u,v))).map(l=>{
+      const key=wcRoomAt(l[0],l[1]),bias=key!==id&&(isAnnex(key)||isAnnex(id))?2.6:0;
+      return [l,Math.hypot(l[0]-u,l[1]-v)+bias];
+    }).sort((a,b)=>a[1]-b[1]);
     for(let i=0;i<lights.length;i++){
       const l=lights[i],src=near[i]?.[0];if(!src){l.intensity=0;continue}
       const [u,v,color,watts,distance]=src,key=wcRoomAt(u,v);

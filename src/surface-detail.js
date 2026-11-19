@@ -13,7 +13,7 @@ export function sharedSet(T,kind,size){
 }
 
 export function repeatSet(T,kind,size=512) {
-  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318,bedrock:809,stairStone:567}[kind]);
+  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318,bedrock:809,stairStone:567,soilCrumb:833}[kind]);
   const field=n=>Float32Array.from({length:n*n},rng);
   const grids=[8,24,64].map(n=>[n,field(n)]);
   const noise=(i,x,y)=>{
@@ -50,6 +50,10 @@ export function repeatSet(T,kind,size=512) {
       const vein=Math.pow(Math.max(0,1-Math.abs(stratum)*5.4),4),mottle=clamp((a*.56+b*.58+.065)*1.07,0,.42);
       const v=172+a*45+b*23+c*14+f*11-vein*21;
       write(x,y,v+5-mottle*22,v+1+mottle*3,v-10-mottle*8,.24+a*.21+b*.16+c*.073-vein*.071,224+b*18+vein*18);
+    } else if(kind==='soilCrumb'){
+      const crumbs=clamp((c*.79+f*.34+.06)*1.83,0,.61),fibres=clamp((b*.67+f*.12-.22)*9,0,.55);
+      const v=128+a*25+b*24+c*22+f*21+crumbs*37-fibres*19;
+      write(x,y,v+7,v-3,v-13,.15+a*.09+b*.12+c*.13+crumbs*.17-fibres*.06,224+crumbs*23);
     } else if(kind==='stairStone'){
       const pore=clamp((c*.45+f*.48-.24)*7,0,.76),fine=a*18+b*17+c*11+f*21;
       const grain=Math.sin((y/size*17+2*b)*Math.PI)*1.9;
@@ -110,7 +114,7 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }
-  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01,stairStone:2.22}[kind];
+  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01,stairStone:2.22,soilCrumb:2.36}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;

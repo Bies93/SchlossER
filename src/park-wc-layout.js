@@ -12,7 +12,9 @@ export const ROOMS={
   womenA:[7.24,9.10,.405,1.79],womenB:[7.24,9.10,1.79,3.80],
   menA:[7.24,9.10,3.80,5.55],menB:[7.24,9.10,5.55,7.42],
   tunnel:[9.10,12.60,6.24,7.42],bend:[12.60,14.17,4.81,7.42],
-  collective:[11.18,20.12,-4.20,4.81]
+  collective:[11.18,20.12,-4.20,4.81],
+  practice:[20.12,33.65,-5.43,-.64],
+  greenhouse:[20.12,30.85,.69,6.65]
 };
 // [room A, room B, axis, wall, start, end, doorspec?]. Room A owns
 // each portal; neither neighbour builds a second frame over it.
@@ -26,18 +28,21 @@ export const LINKS=[
   ['men','menB','u',7.24,5.88,7.10,['wc-men-b','Herrenkabine 2']],
   ['menB','tunnel','u',9.10,6.24,7.42],
   ['tunnel','bend','u',12.60,6.24,7.42],
-  ['bend','collective','v',4.81,12.63,14.14]
+  ['bend','collective','v',4.81,12.63,14.14],
+  ['collective','practice','u',20.12,-3.94,-2.35],
+  ['collective','greenhouse','u',20.12,2.34,4.08]
 ];
 const ids=Object.keys(ROOMS);
-export const isRock=id=>['tunnel','bend','collective'].includes(id);
+export const isAnnex=id=>id==='practice'||id==='greenhouse';
+export const isRock=id=>id==='tunnel'||id==='bend'||id==='collective'||isAnnex(id);
 export function wcRoomAt(u,v,tolerance=.001){
   return ids.find(id=>{const [u0,u1,v0,v1]=ROOMS[id];return u>=u0-tolerance&&u<=u1+tolerance&&v>=v0-tolerance&&v<=v1+tolerance;})??null;
 }
 export const isWcInterior=pos=>lower(pos.y)&&wcRoomAt(pos.z-Z,X-pos.x)!==null;
 export function wcRoofAt(id,u,v){
   if(!isRock(id))return ceiling;
-  const [u0,u1,v0,v1]=ROOMS[id],across=id==='tunnel'?(v-v0)/(v1-v0):(u-u0)/(u1-u0);
-  return -.73+Math.sqrt(Math.max(0,1-(2*across-1)**2))*(id==='collective'?.56:.48);
+  const [u0,u1,v0,v1]=ROOMS[id],across=id==='tunnel'||isAnnex(id)?(v-v0)/(v1-v0):(u-u0)/(u1-u0);
+  return -.73+Math.sqrt(Math.max(0,1-(2*across-1)**2))*(isAnnex(id)?.63:id==='collective'?.56:.48);
 }
 export function wcHeightAt(x,z,referenceY=0){
   const u=z-Z,v=X-x;
@@ -62,7 +67,8 @@ export function wcCeilingAt(x,z,referenceY=0){
 }
 export function wcCameraMode(pos){
   const u=pos.z-Z,v=X-pos.x;
-  if(lower(pos.y)&&wcRoomAt(u,v))return v<.16?'threshold':'inside';
+  const room=lower(pos.y)&&wcRoomAt(u,v);
+  if(room)return room==='landing'&&v<.16?'threshold':'inside';
   // The throat is visible from the turning landing, even while the player
   // is still a whole flight above the threshold. Share both render layers.
   const onReturn=u>=roomLeft-.09||v<returnStart+.06;
