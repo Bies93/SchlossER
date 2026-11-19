@@ -1,11 +1,12 @@
 import {LAB,LAB_CELLS} from './lab-layout.js';
+import {wardEvidence} from './lab-ward-evidence.js';
 
 const {floor:Y,ceiling:C}=LAB,pi=Math.PI;
 export const INFIRMARY={name:'Behandlungsstation',palette:['labTileWall','green'],tiles:['concrete','labFloorPatch'],tile:.71};
 export const INFIRMARY_LIGHTS=[
-  [-18.96,41.93,0xe5bea1,18,7.2],[-23.44,45.25,0xa7cfbf,25,7.8],
-  [-16.79,46.30,0xccddd1,23,7.2],[-24.02,49.90,0xde8063,14,6.5],
-  [-18.44,51.3,0xf1dbba,21,7.1]
+  [-18.96,41.93,0xd2b69c,11,6.8],[-23.44,45.25,0xa2bfad,15.5,7.4],
+  [-16.79,46.30,0xc4d5cb,15,6.9],[-24.02,49.90,0xb95b49,11,5.9],
+  [-18.44,51.3,0xe3d8b9,17,6.8]
 ];
 
 // Fictional scene props. All devices are inert and exist only as silhouettes,
@@ -13,6 +14,7 @@ export const INFIRMARY_LIGHTS=[
 export function addInfirmary(T,kit){
   const {k,box,hit,cylinder,luminaire,grille,dress,props}=kit;
   const {housing,rod,plaque,plane,grill,dial,stain,fastener}=dress;
+  const evidence=wardEvidence(T,kit);
   const [x0,x1,z0,z1]=LAB_CELLS.infirmary;
   const put=(m,x,y,z,w,h,d,ang=0)=>housing(m,x,Y+y,z,w,h,d,ang);
   const line=(m,x,y,z,X,H,Z,r)=>rod(m,[x,Y+y,z],[X,Y+H,Z],r);
@@ -115,7 +117,11 @@ export function addInfirmary(T,kit){
       rod('edge',p(a,.826,-.27),p(a,.826,.47),.022);
       for(const z of [-.266,.072,.47])rod('edge',p(a,.64,z),p(a,.826,z),.018);
     }
-    if(variant===1)stain(x+.12,.778,z-.35,.44,.47,angle,1,-pi/2);
+    const cols=variant?9:7,rows=variant?8:5;
+    evidence.surface(variant?'cloth':'wipe',(u,v)=>{
+      const [x,y,z]=cloth(2+u*cols,(variant?11:9)-v*rows);
+      return [x,y+.0027,z];
+    },cols,rows);
     const corners=[p(-.406,0,-1.06),p(.406,0,-1.06),p(.406,0,1.06),p(-.406,0,1.06)];
     kit.world.polygon(corners.map(([x,,z])=>[x,z]),p=>p.y<-1.72);
   }
@@ -141,6 +147,8 @@ export function addInfirmary(T,kit){
     block(other?'rust':'green',-.346,.346,.59,1.68,-.46,-.347);
     block('infPad',-.29,.29,.707,1.60,-.356,-.274);
     block('infPad',-.19,.19,1.493,1.747,-.345,-.204);
+    evidence.surface(other?'cloth':'wipe',(u,v)=>p((u-.5)*.571,.655,-.035-(v-.5)*.655));
+    evidence.surface('spray',(u,v)=>p((u-.5)*.506,.75+v*.66,-.27));
     for(const a of [-.326,.326]){
       rod('edge',p(a,.52,.262),p(a,.914,.262),.027);
       rod('gunmetal',p(a,.914,-.27),p(a,.911,.304),.043);
@@ -177,6 +185,11 @@ export function addInfirmary(T,kit){
   stain(-24.86,.009,49.76,.70,1.0,.23,1,-pi*.5);
   stain(x0+.007,1.46,50.42,.77,2.22,pi/2,1);
   stain(x1-.007,1.58,48.57,.72,2.64,-pi/2,0);
+  for(const [x,z,w,h,a] of [[-24.19,49.27,.68,.57,.34],[-15.94,45.45,.57,.66,-.33],[-23.74,44.38,.47,.33,.92]])
+    evidence.mark('pool',x,.0048,z,w,h,a,-pi/2);
+  evidence.mark('spray',x0+.012,1.15,49.38,1.09,1.04,pi/2);
+  evidence.mark('spray',x1-.011,1.11,44.33,.77,.86,-pi/2);
+  evidence.mark('wipe',x1-.013,.84,49.77,.77,.66,-pi/2);
 
   stand(-23.34,41.61,2.16,.79,.962,'green');
   props.folio(-23.73,Y+.99,41.64,.37,.381,.23,1,{thickness:.029});
@@ -210,8 +223,10 @@ export function addInfirmary(T,kit){
   plaque('ANWENDUNGSRAUM',['STILLGELEGT / NICHT BENUTZEN'],x0+.039,1.91,49.42,1.34,.54,pi/2,'red');
   monitor(-26.41,50.31,{label:'STROM GETRENNT',green:false});
   stand(-23.42,50.15,.81,.66,.924,'gunmetal');
-  put('copperDark',-23.43,1.002,50.15,.47,.087,.43,.19);
-  props.folio(-23.44,Y+1.048,50.15,.28,.30,pi*.55,6,{loose:true,thickness:.012});
+  put('copperDark',-23.66,.974,50.19,.286,.044,.36,.19);
+  props.folio(-23.66,Y+.997,50.19,.238,.284,pi*.55,6,{loose:true,thickness:.012});
+  put('canvas',-23.23,.954,50.08,.267,.021,.263,.13);
+  evidence.skull(-23.23,.954,50.08,1.92);
 
   screenChair(-15.61,49.45,true);
   stand(-14.61,50.46,.62,.63,.930,'green');
@@ -220,6 +235,24 @@ export function addInfirmary(T,kit){
 
   for(const [i,x] of [-24.23,-22.91,-16.84,-15.51].entries()){
     const z=53.22;
+    if(i===1){
+      // An open file rack, using the same footprint as the old cupboard.
+      put('green',x,1.08,z+.286,1.10,2.067,.11);
+      for(const d of [-.51,.51])put('gunmetal',x+d,1.08,z,.074,2.067,.685);
+      for(const y of [.211,.716,1.205,1.697,2.08])put('edge',x,y,z,1.06,.057,.657);
+      for(const [row,y] of [.25,.75,1.24].entries())for(let j=0;j<6;j++){
+        if(row===1&&j===4)continue;
+        const h=.25+(j%3)*.032,u=x-.391+j*.149,v=z-.020+(j%2)*.06;
+        put(j%3===1?'leather':j%3===2?'rust':'darkWood',u,y+h*.5,v,.105,h,.408);
+        put('paper',u,y+.154,v-.207,.065,.074,.009);
+        put('gasket',u,y+.148,v-.214,.043,.006,.005);
+        put('gasket',u,y+.166,v-.214,.043,.006,.005);
+      }
+      put('gunmetal',x,1.911,z-.291,1.006,.313,.109);
+      plaque('STERBEAKTEN',['ABGESCHLOSSENE FÄLLE'],x,1.911,z-.371,.91,.253,pi,'red');
+      hit(x-.561,x+.561,z-.407,z+.354);
+      continue;
+    }
     put(i%2?'rust':'green',x,1.12,z,1.10,2.157,.682);
     for(const y of [.565,1.13,1.676]){
       put('gunmetal',x,y,z-.352,1.011,.473,.055);
@@ -231,6 +264,10 @@ export function addInfirmary(T,kit){
   stand(-19.74,52.82,2.53,.92,.967,'darkWood');
   props.folio(-20.41,Y+.993,52.74,.31,.38,pi-.21,4,{thickness:.028});
   for(let i=0;i<4;i++)bottle(-19.20+i*.135,.998,52.95,i);
-  plaque('NACH DIENSTSCHLUSS',['Hauptschalter außer Betrieb.','Meldung an die Nachtschicht.'],-19.75,2.06,z1-.039,2.1,.78,pi,'red');
+  dress.flag('wardRecords',-19.75,2.10,z1-.039,2.10,1.11,pi);
+  put('darkWood',-19.75,1.517,z1-.102,2.08,.050,.147);
+  for(const [x,angle] of [[-20.26,.11],[-20.16,-.23]])
+    put('wardBone',x,1.548,z1-.132,.085,.017,.018,angle);
   for(const [x,z] of [[-18.6,41.02],[-18.25,42.47],[-20.01,51.64]])stain(x,.006,z,.49,.83,0,3,-pi*.5);
+  evidence.finish();
 }

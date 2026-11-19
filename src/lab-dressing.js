@@ -71,6 +71,32 @@ export function labGraphics(T){
         c.beginPath();c.moveTo(0,-26);c.quadraticCurveTo(-25,-6,0,28);c.quadraticCurveTo(25,-6,0,-26);c.stroke();
         for(let j=0;j<5;j++){const y=-15+j*8;c.beginPath();c.moveTo(-12,y);c.quadraticCurveTo(0,y+14,12,y);c.stroke();}
         c.restore();
+      }else if(type==='wardRecords'){
+        fillBlock(c,0,0,wTile,hTile,'#222c26');
+        const dust=randomSource(4247);
+        for(let i=0;i<1150;i++){
+          c.fillStyle=i%2?'#c9c6aa13':'#090d0a24';
+          c.fillRect(dust()*256,dust()*144,1+dust()*3,1+dust()*1.6);
+        }
+        const chalk='#dbd3b6';
+        c.strokeStyle='#8c9077';c.strokeRect(7,7,242,130);
+        c.fillStyle=chalk;c.font='bold 18px Georgia';c.fillText('TODESFÄLLE',18,31,219);
+        c.font='10px monospace';c.fillStyle='#b7b49d';c.fillText('BEHANDLUNGSSTATION / NACHTSCHICHT',19,47,218);
+        c.strokeStyle='#9c9b84';c.beginPath();c.moveTo(19,53);c.lineTo(236,54);c.stroke();
+        function tally(left,y,n){
+          c.strokeStyle=chalk;c.lineWidth=1.5;
+          for(let i=0;i<n;i++){
+            const x=left+((i/5)|0)*39+(i%5)*6;
+            c.beginPath();
+            if(i%5===4){c.moveTo(x-25,y+2);c.lineTo(x-3,y-12);}
+            else{c.moveTo(x,y-13+(i%2));c.lineTo(x-1+(i%3),y+1);}
+            c.stroke();
+          }
+        }
+        for(const [i,[name,n]] of [['BEHANDLUNG A',6],['BEHANDLUNG B',4],['VERWAHRUNG',3]].entries()){
+          const y=73+i*20;c.fillStyle=chalk;c.fillText(name,19,y,99);tally(148,y,n);
+        }
+        c.fillStyle='#bd8778';c.fillText('NICHT INS HAUPTBUCH ÜBERTRAGEN',19,130,221);
       }else{
         fillBlock(c,0,0,wTile,hTile,'#bcb194');c.fillStyle='#413c2e';
         c.font='bold 16px Georgia,serif';c.fillText('UNTERDECK B / LEITUNG',13,26,225);

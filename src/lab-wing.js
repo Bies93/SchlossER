@@ -484,6 +484,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
       dim=strength;
       return changed;
     }
+    hemi.intensity=id==='infirmary'?.54:.86;
     last=id;pathX=p.x;pathZ=p.z;
     const render=labVisibility(id,p.x,p.z);
     for(const [cell,group] of rooms){const see=render.has(cell);if(group.visible!==see)changed=true;group.visible=see}

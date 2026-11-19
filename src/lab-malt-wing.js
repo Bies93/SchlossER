@@ -317,8 +317,15 @@ export function fitMaltWing(T,kit,id,doors){
         for(let q=0;q<3;q++)line('rust',wall-.060,1.58-q*.111,z-.175,wall-.060,1.13-q*.060,z-.094,.010);
       }
     }
-    box('concrete',wall,front+.028,Y,Y+3.35,39.81,40.12);
-    hit(wall,front+.028,39.81,40.12);
+    const endCell=39.81;
+    // The shared wall already supplies the finished skin at z1. Capping
+    // this return there would put concrete directly over the ward tiles.
+    for(const [x,sign] of [[wall,-1],[front+.028,1]]){
+      const side=[[x,Y,endCell],[x,Y,z1],[x,Y+3.35,z1],[x,Y+3.35,endCell]];
+      k.quad('concrete',...(sign>0?side.reverse():side));
+    }
+    k.quad('concrete',[front+.028,Y,endCell],[wall,Y,endCell],[wall,Y+3.35,endCell],[front+.028,Y+3.35,endCell]);
+    hit(wall,front+.028,endCell,z1);
     grille(-21.94,37.1,.58,2.20);
     bench(-17.04,37.32,1.08,1.29,.958,'green');
     tray(-17.06,1.00,37.59,.73,.43);mug(-17.17,1.02,37.55,1.1);

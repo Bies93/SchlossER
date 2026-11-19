@@ -81,6 +81,7 @@ export function addPalaceLab(T,root,world,M){
     labFloorPatch:plain(0x747b6f,.91,sharedSet(T,'plaster',256)),
     infCloth:plain(0x667b75,1,{...fabric,side:T.DoubleSide}),infClothPale:plain(0xa8ad91,1,{...fabric,side:T.DoubleSide}),
     infSheet:plain(0xb3b19a,.94,fabric),infPad:plain(0x4f6054,.77,fabric),
+    wardBone:plain(0xb4a789,.93,sharedSet(T,'plaster',256)),
     copper:plain(0xa86945,.78,{...enamel,metalness:.53}),copperDark:plain(0x694538,.91,{...enamel,metalness:.35}),
     porcelain:plain(0xbab4a2,.64),beerGlass:plain(0x784b22,.30,{metalness:.20}),
     gasket:plain(0x252c2b),brass:plain(0xad8960,.59,{metalness:.51}),
