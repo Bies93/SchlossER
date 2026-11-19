@@ -8,18 +8,18 @@ export function portalFrame(door){return (x,y,d)=>[door.side*x,y,door.z+door.sid
 export function palaceMaterials(T,finish){
   const copy=(name,color)=>{
     const base=finish(name),m=base.clone();
-    m.color.set(color);m.vertexColors=false;
+    m.color.set(color);m.vertexColors=false;m.envMapIntensity=base.envMapIntensity;
     m.onBeforeCompile=base.onBeforeCompile;m.customProgramCacheKey=base.customProgramCacheKey;
     return m;
   };
   return {
-    stone:copy('SANDSTONE',0xd7c9b9),cut:copy('SANDSTONE_CUT',0xddd0bf),
-    seam:copy('SANDSTONE_DARK',0x918375),wall:copy('SANDSTONE',0xdfd1c1),
-    floor:copy('SANDSTONE_CUT',0xc8bda8),oak:copy('WOOD',0xa47860),
+    stone:copy('SANDSTONE',0xf0ebe9),cut:copy('SANDSTONE_CUT',0xe8e5e4),
+    seam:copy('SANDSTONE_DARK',0x9b938b),wall:copy('SANDSTONE',0xe9e3dd),
+    floor:copy('SANDSTONE_CUT',0xc8c0b5),oak:copy('WOOD',0xa47860),
     woodEdge:copy('WOOD_RELIEF',0xa9826d),inset:copy('WOOD',0x825f4d),
     eastOak:copy('WOOD',0x777267),eastRail:copy('WOOD_RELIEF',0x868171),
     sash:copy('WOOD',0x845648),
-    glass:new T.MeshPhysicalMaterial({color:0x293841,roughness:.26,ior:1.46,envMapIntensity:.88}),
+    glass:copy('GLASS',0x394657),
     dark:new T.MeshStandardMaterial({color:0x24201d,roughness:.92}),
     metal:new T.MeshStandardMaterial({color:0x302d27,roughness:.61,metalness:.50}),
     bronze:new T.MeshStandardMaterial({color:0x9b8053,roughness:.41,metalness:.60})

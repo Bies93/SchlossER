@@ -143,7 +143,7 @@ export function sculptureMaterials(sculptures,finish){
     let m=prepared.get(src);
     if(!m){
       m=src.clone();m.roughness=bronze?.58:granite?.69:wet?.42:.82;m.metalness=bronze?.68:0;
-      if(bronze)m.color.setRGB(.152,.108,.073);
+      if(bronze)m.color.setRGB(.085,.125,.115);
       m.onBeforeCompile=shader=>{
         worldPatch(shader);
         shader.uniforms.erlStoneSurface={value:source};
@@ -151,8 +151,8 @@ export function sculptureMaterials(sculptures,finish){
         shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D erlStoneSurface,erlStoneRelief;')
           .replace('#include <color_fragment>',`#include <color_fragment>
             float pat=erlNoise(erlWorld.xz*3.7+vec2(erlWorld.y)*1.3);
-            ${bronze?`float oxide=smoothstep(.46,.81,pat*.73+erlNoise(erlWorld.xz*13.)*.27);
-              diffuseColor.rgb=mix(diffuseColor.rgb*vec3(1.10,1.01,.87),diffuseColor.rgb*vec3(.55,1.22,1.16),oxide);`:
+            ${bronze?`float oxide=smoothstep(.21,.72,pat*.67+erlNoise(erlWorld.xz*13.)*.20+erlNoise(erlWorld.xz*1.8+erlWorld.y)*.13);
+              diffuseColor.rgb=mix(diffuseColor.rgb*vec3(.79,.69,.60),vec3(.088,.243,.218),oxide);`:
               `vec3 w=pow(abs(normalize(cross(dFdx(erlWorld),dFdy(erlWorld)))),vec3(4.0));
               w/=max(w.x+w.y+w.z,.001);
               vec3 p=erlWorld/${granite?'.72':wet?'1.58':'2.20'};
@@ -175,7 +175,7 @@ export function sculptureMaterials(sculptures,finish){
           `).replace('#include <roughnessmap_fragment>',
             '#include <roughnessmap_fragment>\nroughnessFactor=clamp(roughnessFactor+(pat-.5)*'+(bronze?'.36':'.17')+(bronze?'':'-waterContact*.28')+',.27,.96);');
         if(bronze)shader.fragmentShader=shader.fragmentShader.replace('#include <metalnessmap_fragment>',
-          '#include <metalnessmap_fragment>\nmetalnessFactor=mix(.80,.27,oxide);');
+          '#include <metalnessmap_fragment>\nmetalnessFactor=mix(.67,.18,oxide);');
         else shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
           vec2 tx=texture2D(erlStoneRelief,p.zy).rg*2.-1.;
           vec2 ty=texture2D(erlStoneRelief,p.xz).rg*2.-1.;
@@ -185,7 +185,7 @@ export function sculptureMaterials(sculptures,finish){
           normal=normalize(normal+(grain-normal*dot(normal,grain))*${granite?'.13':'.22'}*(1.-waterContact*.35));
         `);
       };
-      m.customProgramCacheKey=()=> 'erl-carving-v3-'+bronze+'-'+wet+'-'+granite+'-'+rim+'-'+rock;
+      m.customProgramCacheKey=()=> 'erl-carving-v4-'+bronze+'-'+wet+'-'+granite+'-'+rim+'-'+rock;
       prepared.set(src,m);
     }
     o.material=m;

@@ -4,9 +4,9 @@ import {randomSource} from './surface-detail.js';
 export const DEFAULT_LIGHT='dusk';
 export const LIGHTING = {
   dusk:{sky:0x52739e,horizon:0xe6a67f,fog:0xb29d94,cloud:0xf2ceb3,fogDensity:.0027,
-    direction:[-.85,.19,.54],disc:0xffc278,angular:.006,aura:.39,stars:0,clouds:.39,
-    key:0xffc795,power:2.80,fill:0xbccdf2,bounce:0x8a7365,hemi:.94,
-    exposure:1.02,env:'dusk',reflection:.62,lamps:.42,window:.28,shadow:[89,64,.036]},
+    direction:[-.85,.29,.54],disc:0xffc278,angular:.006,aura:.39,stars:0,clouds:.39,
+    key:0xffdabd,power:2.62,fill:0xc1d2ed,bounce:0x847977,hemi:1.03,
+    exposure:1.02,env:'dusk',reflection:.64,lamps:.42,window:.28,shadow:[89,64,.049]},
   night:{sky:0x162640,horizon:0x485375,fog:0x3f4962,cloud:0x465574,fogDensity:.0026,
     direction:[-.46,.54,-.71],disc:0xecf1ff,angular:.0072,aura:.054,stars:1,clouds:.23,
     key:0xc4d7ff,power:.51,fill:0xadbdeb,bounce:0x5e5d68,hemi:.62,

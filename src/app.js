@@ -8,6 +8,7 @@ import {addBackdrop} from './backdrop.js';
 import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {surfaceLibrary} from './palace.js';
+import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
 import {addMonumentFooting} from './palace-detail.js';
 import {cutPalaceOpenings} from './palace-openings.js';
@@ -40,14 +41,16 @@ async function start(){
  const [model,mapPairs,sculptures]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
    decode('skulpturen.glb',payload.sculptures)]);
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
+ const exterior=palaceExterior(T,finish);
  const walkSurfaces=[], importedGravel=[];
- model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name??'';o.material=finish(key)??o.material;
+ model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name??'';o.material=exterior(key)??o.material;
  // The original broad lawn and plaza are replaced rather than overlaid.
  if(key==='GRAVEL')importedGravel.push(o);
  if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;return;}
  o.receiveShadow=true;o.castShadow=key!=='GLASS';});s.add(model);
+ renewPalaceRoof(T,model,finish);
  cutPalaceOpenings(T,model);
- const stonework=palaceMaterials(T,finish),leaves=addPortalFacade(T,model,stonework);
+ const stonework=palaceMaterials(T,exterior),leaves=addPortalFacade(T,model,stonework);
  if(sculptures){
    sculptureMaterials(sculptures,finish);
    sculptures.traverse(o=>{if(o.isMesh){o.castShadow=!/Fountain_water|Water_jets|Aerated_spray/i.test(o.name);o.receiveShadow=true}});
