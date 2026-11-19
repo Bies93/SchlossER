@@ -40,8 +40,10 @@ async function start(){
  };
  const decode=(name,url)=>need(name,()=>loader.loadAsync(url).then(g=>g.scene));
  const mapsP=Promise.all(Object.entries(payload.maps).map(async([name,layers])=>[name,Object.fromEntries(await Promise.all(Object.entries(layers).map(async([k,src])=>[k,await need(name+'_'+k+'.webp',()=>tl.loadAsync(src))])))]));
- const [model,mapPairs,sculptures]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
-   decode('skulpturen.glb',payload.sculptures)]);
+ const posterP=payload.galleryPoster?tl.loadAsync(payload.galleryPoster).catch(()=>null):null;
+ const [model,mapPairs,sculptures,poster]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
+   decode('skulpturen.glb',payload.sculptures),posterP]);
+ if(poster){poster.colorSpace=T.SRGBColorSpace;poster.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
  const exterior=palaceExterior(T,finish);
  const walkSurfaces=[], importedGravel=[];
@@ -63,7 +65,7 @@ async function start(){
  const fountain=makeFountain(T,s,sculptures);
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
- const hall=makeHall(T,model,stonework,world,leaves);
+ const hall=makeHall(T,model,stonework,world,leaves,poster);
  const perimeter=addPerimeter(T,s,world,finish);
  const wc=addParkStair(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
@@ -302,6 +304,7 @@ async function start(){
    c.updateProjectionMatrix();refresh();
  }
  $('loading-text').textContent='Die 3D-Szene wird vorbereitet …';
+ if(poster)r.initTexture(poster);
  await hall.prepareLab(r,s);
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;

@@ -23,7 +23,7 @@ export function hallFloor(x,z){
 
 // Freely interpreted public rooms; not a survey of the existing interior.
 // The exterior entrance thresholds remain shared with the façade assembly.
-export function makeHall(T,root,M,world,leaves){
+export function makeHall(T,root,M,world,leaves,poster){
   const limestone=new T.MeshStandardMaterial({color:0xc6beac,roughness:.81});
   const limewash=new T.MeshStandardMaterial({color:0xdacfc0,roughness:.96});
   const plaster=new T.MeshStandardMaterial({color:0xe1d7c6,roughness:.94,side:T.DoubleSide});
@@ -144,7 +144,7 @@ export function makeHall(T,root,M,world,leaves){
     light.position.set(0,2.41,d.z-d.side*1.85);room.add(light);bounces.push(light);
   }
   k.flush('Halle · Stein, Putz und Leuchten');
-  const wings=addPalaceWings(T,root,world,MAT);
+  const wings=addPalaceWings(T,root,world,MAT,poster);
   const lab=addPalaceLab(T,root,world,MAT);
 
   const doors=Object.values(PORTALS).map(d=>({...d,leaves:leaves[d.id],progress:0,target:0}));

@@ -2,6 +2,7 @@ import {architectureKit} from './architecture-kit.js';
 import {HALL,WINGS} from './palace-openings.js';
 import {randomSource} from './surface-detail.js';
 import {aroundLabOpening,labLower} from './lab-layout.js';
+import {furnishSouthGallery} from './south-gallery.js';
 
 const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
 
@@ -31,7 +32,7 @@ export function interiorArch(k,p,span,top,{half=portal,thickness=.25,brick=.17}=
   }
 }
 
-export function addPalaceWings(T,root,world,common){
+export function addPalaceWings(T,root,world,common,poster){
   const group=new T.Group();group.name='Schloss · Galerie und Lesesaal';root.add(group);
   const std=(color,roughness=.92,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   const copy=(mat,color)=>{const m=mat.clone();m.color.setHex(color);m.vertexColors=false;return m;};
@@ -215,20 +216,7 @@ export function addPalaceWings(T,root,world,common){
         put('flame',sphere,u+.92,1.331,d-.10,[.18,.111,.13]);
       }
     }else{
-      // Freely composed exhibition islands; printed ornament is an original
-      // drawing and not a photograph or an alleged historic floor plan.
-      for(const [u,d] of [[16.36,-2.75],[21.04,2.65],[25.24,-2.68]]){
-        box('darkWood',u-.83,u+.83,Y,.79,d-.52,d+.52);
-        box('cut',u-.88,u+.88,Y,Y+.125,d-.57,d+.57);
-        box('cut',u-.88,u+.88,.77,.883,d-.57,d+.57);
-        box('iron',u-.691,u+.691,.88,.934,d-.425,d+.425);
-        for(const [q,r,h] of [[-.383,.145,.14],[.243,.223,.24]]){
-          put('ivory',cylinder,u+q,.969,d,[r,.069,r]);
-          put('ivory',sphere,u+q,1.052,d,[r*.86,h,r*.72]);
-          put('ivory',cylinder,u+q,1.069+h,d,[r*.58,.083,r*.57]);
-        }
-        block(u-.88,u+.88,d-.57,d+.57);
-      }
+      furnishSouthGallery(T,rootWing,world,materials,poster);
       for(const [l,r] of [[5.7,10.72],[14.45,26.20]]){
         box('rug',l,r,Y+.001,Y+.013,-1.19,1.19);
         for(const d of [-1.13,1.065])box('rugStripe',l+.115,r-.12,Y+.012,Y+.016,d,d+.062);
