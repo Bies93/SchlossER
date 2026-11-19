@@ -22,7 +22,7 @@ export function addParkStair(T,scene,world,quest){
     metalEdge:new T.MeshStandardMaterial({...enamel,color:0x62635d,roughness:.85,metalness:.34}),
     vine:plain(0x554735,.97),...Object.fromEntries(ashlar.map((m,i)=>['stone'+i,m]))});
   const {box}=kit,block=(m,u0,u1,y0,y1,v0,v1)=>box(m,p,u0,u1,y0,y1,v0,v1);
-  const collision=(u0,u1,v0,v1,when)=>world.box(X-v1,Z+u0,X-v0,Z+u1,when);
+  const collision=(u0,u1,v0,v1,when)=>world.box(X-v1,Z+u0,X-v0,Z+u1,o=>o.y>b-.25&&(!when||when(o)));
   const below=o=>lower(o.y);
   const above=o=>!below(o);
   function retaining(u0,u1,v0,v1,y){
