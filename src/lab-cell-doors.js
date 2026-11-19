@@ -10,11 +10,27 @@ export function cellDoor(T,root,world,M,x,z,span,letter,open){
 export function wardDoor(T,root,world,M,x,z,span){
   return swingDoor(T,root,world,M,x,z,span,{id:'lab-ward-door',label:'Behandlungsstation',solid:true,heading:-turn,delta:turn,open:false});
 }
-function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,heading=0,delta=-turn}){
-  const leaf=new T.Group();leaf.name=(solid?'Stahltür · ':'Gittertür · ')+label;leaf.position.set(x,LAB.floor,z);root.add(leaf);
+export function utilityDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle=false}){
+  return swingDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle,open:false,solid:true,utility:true,heading:-turn,delta:turn});
+}
+function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=false,cubicle=false,heading=0,delta=-turn,floor=LAB.floor,lower=labLower}){
+  const leaf=new T.Group();leaf.name=(utility?'WC-Tür · ':solid?'Stahltür · ':'Gittertür · ')+label;leaf.position.set(x,floor,z);root.add(leaf);
   const k=architectureKit(T,leaf,M),p=(u,y,d)=>[-d,y,u];
   const box=(m,a,b,l,h,c,d)=>k.box(m,p,a,b,l,h,c,d);
-  if(solid){
+  if(utility){
+    const low=cubicle?.137:.022,top=cubicle?1.889:2.059;
+    box('iron',-.012,span+.011,low,top,-.026,.026);
+    for(const s of [-1,1]){
+      const t=s<0?[-.035,-.026]:[.026,.035],profile=s<0?[-.043,-.034]:[.034,.043];
+      box('green',.023,span-.022,low+.023,top-.022,...t);
+      for(const u of [.036,span-.037])box('edge',u-.009,u+.009,low+.021,top-.022,...profile);
+      for(const y of [low+.03,top-.034])box('edge',.032,span-.033,y-.009,y+.009,...profile);
+      const mount=s<0?[-.055,-.033]:[.033,.055];
+      box('gunmetal',span-.19,span-.086,.925,1.095,...mount);
+      box('brass',span-.221,span-.087,1.028,1.057,s<0?-.087:.070,s<0?-.066:.091);
+      box('edge',span-.134,span-.107,1.029,1.054,s<0?-.068:.051,s<0?-.051:.071);
+    }
+  }else if(solid){
     box('iron',-.024,span+.018,.025,2.258,-.076,.076);
     for(const s of [-1,1]){
       const sheet=s<0?[-.102,-.075]:[.075,.102];
@@ -30,16 +46,16 @@ function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,heading=0,
     for(const y of [.086,.928,2.374])box('edge',.006,span-.006,y-.025,y+.025,-.038,.038);
     for(let u=.124;u<span-.070;u+=.161)box('iron',u-.015,u+.015,.091,2.384,-.015,.015);
   }
-  for(const y of [.30,1.98])box('brass',-.042,.078,y-.063,y+.063,solid?-.118:-.052,solid?.118:.052);
+  for(const y of (utility?[.34,1.68]:[.30,1.98]))box('brass',-.042,.078,y-.063,y+.063,utility?-.043:solid?-.118:-.052,utility?.043:solid?.118:.052);
   const latch=span-.127;
-  box('gunmetal',latch-.083,latch+.082,1.017,1.207,-.058,.058);
-  for(const d of [-.089,.062]){
+  if(!utility)box('gunmetal',latch-.083,latch+.082,1.017,1.207,-.058,.058);
+  if(!utility)for(const d of [-.089,.062]){
     const pos=solid?d+Math.sign(d)*.062:d;
     box('brass',latch-.064,latch+.043,1.122,1.145,pos,pos+.027);
     box('iron',latch-.019,latch+.018,1.060,1.094,pos,pos+.030);
   }
   k.flush(leaf.name);
-  const pose={x,z,ux:0,uz:1,half:span*.5+.035,depth:solid?.122:.056};
+  const pose={x,z,ux:0,uz:1,half:span*.5+.035,depth:utility?.052:solid?.122:.056};
   const door={id,label,target:Number(open),progress:Number(open),rooms:solid?['cells','infirmary']:['cells']};
   const geometry=t=>{
     const a=heading+delta*t*t*(3-2*t),s=Math.sin(a),c=Math.cos(a);
@@ -51,11 +67,11 @@ function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,heading=0,
     return Math.hypot(Math.max(0,-.035-along,along-span-.035),Math.max(0,Math.abs(across)-pose.depth))<PLAYER.radius+.035;
   };
   geometry(door.progress);
-  world.movingBox(x-span-.16,z-span-.16,x+span+.16,z+span+.16,pose,p=>labLower(p.y));
+  world.movingBox(x-span-.16,z-span-.16,x+span+.16,z+span+.16,pose,p=>lower(p.y));
   door.usable=p=>door.target===0||![0,.25,.5,.75,1].some(t=>occupied(heading+delta*t,p));
   door.update=(dt,p)=>{
     if(dt<=0||door.progress===door.target)return false;
-    const next=Math.max(0,Math.min(1,door.progress+(door.target?1:-1)*dt/(solid?.82:.56)));
+    const next=Math.max(0,Math.min(1,door.progress+(door.target?1:-1)*dt/(utility?.47:solid?.82:.56)));
     if(occupied(heading+delta*next*next*(3-2*next),p)){
       if(!door.target){door.target=1;return true;}
       return false;
@@ -66,7 +82,7 @@ function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,heading=0,
     let best=-Infinity;
     for(const [cx,cz] of [[pose.x,pose.z],[x+Math.sin(heading)*span*.53,z+Math.cos(heading)*span*.53]]){
       const dx=cx-p.x,dz=cz-p.z,len=Math.hypot(dx,dz);
-      if(len>(solid?2.42:2.12)||len<.09)continue;
+      if(len>(utility?1.74:solid?2.42:2.12)||len<.09)continue;
       const focus=(dx*look.x+dz*look.z)/len;
       if(focus>=.55)best=Math.max(best,focus*1.42-len*.24);
     }

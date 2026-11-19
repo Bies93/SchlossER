@@ -18,7 +18,7 @@ import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
-import {addParkStair,wcHeightAt,wcCeilingAt} from './park-stair.js';
+import {addParkStair,wcHeightAt,wcCeilingAt,wcCameraMode,isWcInterior,WC_LAYER} from './park-stair.js';
 import {LAB_LAYER,labFloorAt,labCeilingAt} from './lab-layout.js';
 import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
@@ -63,7 +63,8 @@ async function start(){
    if(collar)walkSurfaces.push(collar);
  }
  const fountain=makeFountain(T,s,sculptures);
- const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
+ // Exterior gate posts and tree trunks never extend into the new rooms.
+ const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p));
  addFixedColliders(world);
  const hall=makeHall(T,model,stonework,world,leaves,poster,seal);
  const perimeter=addPerimeter(T,s,world,finish);
@@ -170,10 +171,12 @@ async function start(){
    e.preventDefault();startRound();
  });
  const portalAction=$('portal-action'),portalText=$('portal-text');
+ const interactionLook=new T.Vector3();
+ const wcTarget=()=>wc.target(player.body.position,c.getWorldDirection(interactionLook));
  const choirLabels={ready:'Chor erklingen lassen',loading:'Chor wird geladen …',playing:'Der Chor erklingt',
    muted:'Für den Chor den Ton einschalten',retry:'Chor erneut laden',unavailable:'Chor nicht verfügbar'};
  function doorPrompt(){
-   const target=active()?hall.targetFor(player,c):null;
+   const target=active()?(wcTarget()??hall.targetFor(player,c)):null;
    const status=target?.id==='gallery-choir'?audio.choirStatus():'';
    const usable=target&&hall.usable(target,player)&&(!status||status==='ready'||status==='retry');
    const uid=target?target.id+':'+target.target+':'+usable+':'+status:'';
@@ -188,7 +191,12 @@ async function start(){
  }
  function handleDoor(){
    if(!active())return;
-   const target=hall.commit(player,c);if(!target)return;
+   const local=wcTarget();
+   if(local){
+     if(!local.usable(player.body.position))return;
+     local.target=1-local.target;
+   }
+   const target=local??hall.commit(player,c);if(!target)return;
    if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});
    doorPrompt();refresh();
  }
@@ -200,16 +208,22 @@ async function start(){
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
  function draw(){
    const p=player.body.position,mode=labCameraMode(p);
-   const surface=mode!=='cellar',cellar=hall.labVisible();
+   const wcMode=wcCameraMode(p),surface=mode!=='cellar'&&wcMode!=='inside',cellar=hall.labVisible();
+   wc.update(0,p);
    if(surface){
      c.layers.set(0);
-     lighting.update(p);garden.update(p,performance.now());wc.update(p);fountain.syncView?.(c);
+     lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);
      r.render(s,c);
    }
    // At the doorway share depth, not lighting. A combined camera mask
    // would compile new palace shaders for a different number of lights.
-   if(cellar||!surface){
+   if(cellar||mode==='cellar'){
      c.layers.set(LAB_LAYER);const clear=r.autoClear;
+     try{if(surface)r.autoClear=false;r.render(s,c);}
+     finally{r.autoClear=clear;c.layers.set(0);}
+   }
+   if(wcMode!=='surface'){
+     c.layers.set(WC_LAYER);const clear=r.autoClear;
      try{if(surface)r.autoClear=false;r.render(s,c);}
      finally{r.autoClear=clear;c.layers.set(0);}
    }
@@ -230,6 +244,7 @@ async function start(){
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
      const state=hall.update(dt,player.body.position);
      if(state.changed)dirty=true;
+     if(wc.update(dt,player.body.position))dirty=true;
      if(state.shadow)r.shadowMap.needsUpdate=true;
      doorPrompt();
      roundPrompt();
@@ -311,6 +326,7 @@ async function start(){
  $('loading-text').textContent='Die 3D-Szene wird vorbereitet …';
  for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
+ await wc.prepare(r,s);
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  draw();dirty=false;

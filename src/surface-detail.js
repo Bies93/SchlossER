@@ -13,7 +13,7 @@ export function sharedSet(T,kind,size){
 }
 
 export function repeatSet(T,kind,size=512) {
-  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318}[kind]);
+  const rng=randomSource({lawn:41,grit:309,bark:88,setts:166,plaster:481,wood:803,fineOak:672,tile:311,enamel:404,labTile:461,canvas:318,bedrock:809}[kind]);
   const field=n=>Float32Array.from({length:n*n},rng);
   const grids=[8,24,64].map(n=>[n,field(n)]);
   const noise=(i,x,y)=>{
@@ -45,6 +45,11 @@ export function repeatSet(T,kind,size=512) {
     } else if(kind==='plaster'){
       const v=a*11+b*8+c*5+f*2;
       write(x,y,225+v,223+v,218+v,a*.01+b*.035+c*.086+f*.037,221+b*21+c*12);
+    } else if(kind==='bedrock'){
+      const stratum=Math.sin((y/size*14+a*.91+b*.36)*Math.PI);
+      const vein=Math.pow(Math.max(0,1-Math.abs(stratum)*5.4),4),mottle=clamp((a*.56+b*.58+.065)*1.07,0,.42);
+      const v=172+a*45+b*23+c*14+f*11-vein*21;
+      write(x,y,v+5-mottle*22,v+1+mottle*3,v-10-mottle*8,.24+a*.21+b*.16+c*.073-vein*.071,224+b*18+vein*18);
     } else if(kind==='labTile'){
       // Six by eight tile faces per shared 1.42 m repeat.
       const u=x/size*6,v=y/size*8,col=Math.floor(u),row=Math.floor(v),px=u-col,py=v-row;
@@ -100,7 +105,7 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }
-  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19}[kind];
+  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;

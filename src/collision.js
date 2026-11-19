@@ -1,6 +1,6 @@
 // X/Z plan collision for a standing player. Local underground obstacles may
 // opt into the movement layer supplied by the player; most are ground level.
-export function collisionWorld(bounds, radius, contains) {
+export function collisionWorld(bounds, radius, contains, staticEnabled=()=>true) {
   const cellSize = 8, grid = new Map();
   const cell = v => Math.floor(v / cellSize);
   const key = (x, z) => x + ':' + z;
@@ -13,7 +13,7 @@ export function collisionWorld(bounds, radius, contains) {
       }
     }
   }
-  const polygon = (vertices,enabled=()=>true) => {
+  const polygon = (vertices,enabled=staticEnabled) => {
     let v = vertices;
     const area = v.reduce((sum, a, i) => {
       const b = v[(i + 1) % v.length];
@@ -72,8 +72,9 @@ export function collisionWorld(bounds, radius, contains) {
         return true;
       });
     },
-    circle(x, z, r) {
+    circle(x, z, r,enabled=staticEnabled) {
       insert(x-r, z-r, x+r, z+r, p => {
+        if(!enabled(p))return false;
         const dx = p.x - x, dz = p.z - z, limit = r + radius, d2 = dx*dx + dz*dz;
         if (d2 >= limit * limit - 1e-10) return false;
         const d = Math.sqrt(d2);
