@@ -2,14 +2,13 @@ import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
 
 // Gameplay pulses affect only fictional creatures and authored light
 // markers. The architecture and other world meshes are never affected.
-export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,creatures=null,onPulse=()=>{}){
+export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,creatures=null,onPulse=()=>{},onContact=()=>{}){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xe6eaf0,0x839098,1.24),key=new T.DirectionalLight(0xf7dcac,1.38),
     rim=new T.DirectionalLight(0xb5c8dc,.62);
   key.position.set(-1,1.4,.45);rim.position.set(1.2,.65,-1);stage.add(h,key,rim);
   const hands=new T.Group(),held=new T.Group();hands.add(held);stage.add(hands);
-  const mat=(color,roughness=.66,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
-  const rig=egoAssets(T),{cap,shell}=rig.geometry,{edge,frame,sleeve,cuff,pant,knee}=rig.materials;
+  const rig=egoAssets(T),{cap,shell}=rig.geometry,{frame,sleeve,cuff,pant,knee}=rig.materials;
   const body=new T.Group();body.name='Ego-Körper · Bekleidung und Schritte';player.body.add(body);
   const V=(x,y,z)=>new T.Vector3(x,y,z),axis=V(0,1,0),linkDir=V(0,0,0);
   function shape(parent,geo,material,x,y,z,sx,sy,sz){
@@ -20,12 +19,10 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     linkDir.subVectors(b,a);const length=linkDir.length();
     node.scale.set(width,length*.53,depth);node.quaternion.setFromUnitVectors(axis,linkDir.normalize());
   }
-  const arms=[-1,1].map((side,i)=>{
+  const arms=[-1,1].map(side=>{
     const forearm=shape(hands,cap,sleeve,0,0,0,.14,.28,.12);
     const wrap=shape(hands,shell,cuff,0,0,0,.082,.072,.073);
-    const stitch=shape(hands,shell,edge,0,0,0,.058,.010,.015);
-    hands.add(rig.hands[i]);
-    return {side,forearm,wrap,stitch,hand:rig.hands[i],gripQ:new T.Quaternion(),
+    return {side,forearm,wrap,
       wrist:V(0,0,0),elbow:V(0,0,0),end:V(0,0,0)};
   });
   // Keep the upper body behind the eye instead of obscuring both boots
@@ -41,6 +38,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       hip:V(0,0,0),pivot:V(0,0,0),ankle:V(0,0,0)};
   });
   const modules=rig.devices;held.add(...modules);
+  const {poses,wrists}=rig.hands;held.add(...poses);
   const rangeObjects=new T.Group();rangeObjects.name='Ghoul-Modus · Übungsmarken und Impulse';scene.add(rangeObjects);
   // Three authored hard-surface markers in one side area of the square.
   const anchors=[[57.1,47.7],[62.5,49.2],[65.7,53.7]].map(([x,z])=>{
@@ -52,27 +50,54 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const face=shape(rangeObjects,new T.IcosahedronGeometry(.125,1),surface,x,center.y,z,1,1,1);
     return {center,face,timer:0,sphere:new T.Sphere(center,.19)};
   });
-  const trailMat=new T.MeshBasicMaterial({color:style[0].color,transparent:true,opacity:.79,depthWrite:false});
-  const bead=new T.SphereGeometry(.019,8,6),beam=new T.CylinderGeometry(.004,.008,1,5);
+  const luminous=(opacity=.8)=>new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity,
+    depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
+  const bead=new T.SphereGeometry(1,10,7),beam=new T.CylinderGeometry(1,.32,1,7);
+  const ring=new T.RingGeometry(.77,1,18);
+  const ball=new T.IcosahedronGeometry(1,0);
+  const zAxis=V(0,0,1);
+  const pixels=new Uint8Array(64*64*4);
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){
+    const r=Math.hypot(x-31.5,y-31.5)/31.5,a=(y*64+x)*4;
+    pixels.set([255,255,255,Math.round(255*Math.max(0,1-r)**2.55)],a);
+  }
+  const bloom=new T.DataTexture(pixels,64,64);
+  bloom.magFilter=bloom.minFilter=T.LinearFilter;bloom.needsUpdate=true;
+  function sprite(parent){
+    const mat=new T.SpriteMaterial({map:bloom,color:0xffffff,opacity:.8,transparent:true,
+      depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
+    const s=new T.Sprite(mat);parent.add(s);return s;
+  }
+  const fxProfiles=[
+    {core:.012,length:.056,tail:.49,halo:.116,flash:103,bloom:.185},
+    {core:.009,length:.109,tail:1.02,halo:.149,flash:89,bloom:.230},
+    {core:.007,length:.028,tail:.36,halo:.066,flash:123,bloom:.247}
+  ];
   const traces=Array.from({length:5},()=>{
-    const orb=shape(rangeObjects,bead,trailMat,0,0,0,1,1,1),ribbon=shape(rangeObjects,beam,trailMat,0,0,0,1,1,1);
-    orb.visible=ribbon.visible=false;orb.renderOrder=ribbon.renderOrder=4;
-    return {orb,ribbon,start:V(0,0,0),end:V(0,0,0),until:0};
+    const moving=new T.Group(),impact=new T.Group();rangeObjects.add(moving,impact);
+    const orb=shape(moving,bead,luminous(),0,0,0,1,1,1),ribbon=shape(moving,beam,luminous(.37),0,0,0,1,1,1),
+      glow=sprite(moving),shock=shape(impact,ring,luminous(.64),0,0,0,1,1,1);
+    const shards=Array.from({length:5},()=>shape(impact,ball,luminous(.75),0,0,0,1,1,1));
+    moving.visible=impact.visible=false;
+    shock.material.side=T.DoubleSide;
+    return {moving,impact,orb,ribbon,glow,shock,shards,start:V(0,0,0),end:V(0,0,0),axis:V(0,0,0),until:0,impactTime:0};
   });
-  const flashMat=new T.MeshBasicMaterial({color:style[0].color,transparent:true,opacity:0,depthWrite:false,
-    blending:T.AdditiveBlending,toneMapped:false});
-  const flash=shape(held,new T.IcosahedronGeometry(1,1),flashMat,0,0,0,1,1,1);
+  const flash=new T.Group();held.add(flash);
+  const flashBody=shape(flash,bead,luminous(),0,0,-.012,1,1,1),
+    flashDisc=shape(flash,ring,luminous(.7),0,0,-.008,1,1,1),flashHalo=sprite(flash);
+  flashDisc.material.side=T.DoubleSide;
   flash.visible=false;
+  let flashProfile=fxProfiles[0];
   let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,step=0,t0=null,pressed=-1000,recent=0;
   let arrivals=[];
   const previous=player.body.position.clone(),deltaPos=V(0,0,0),from=V(0,0,0),dir=V(0,0,0),hit=V(0,0,0);
   const headQ=new T.Quaternion(),projector=new T.Raycaster(),ray=projector.ray,old=V(0,0,0);
-  const ang=new T.Euler(),sightAnchor=V(0,0,0),projected=V(0,0,0),emit=V(0,0,0),
+  const sightAnchor=V(0,0,0),projected=V(0,0,0),emit=V(0,0,0),
     aimScreen=new T.Vector2(),screen=new T.Vector2();
   const smooth=t=>t*t*(3-2*t),relax=(v,d,k,dt)=>v+(d-v)*(1-Math.exp(-k*dt));
   let moving=0,running=0,strafe=0,inertia=0,previousYaw=player.body.rotation.y,wheel=0,wheelAt=0,wheelStepAt=-1000;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function display(n){selected=n;modules.forEach((m,i)=>m.visible=i===n)}
+  function display(n){selected=n;modules.forEach((m,i)=>{m.visible=poses[i].visible=i===n})}
   function select(n){
     if(!swap&&selected===n)return;
     if(n<0)aiming=false;
@@ -91,7 +116,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   function clearPulses(){
     arrivals.length=0;
-    for(const t of traces){t.until=0;t.orb.visible=t.ribbon.visible=false}
+    for(const t of traces){t.until=t.impactTime=0;t.moving.visible=t.impact.visible=false}
     flash.visible=false;
   }
   function pulse(){
@@ -113,16 +138,18 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     emit.x*=eye.projectionMatrix.elements[0]/camera.projectionMatrix.elements[0];
     emit.y*=eye.projectionMatrix.elements[5]/camera.projectionMatrix.elements[5];
     emit.applyQuaternion(headQ);
-    trailMat.color.setHex(n.color);flashMat.color.setHex(n.color);
+    flashProfile=fxProfiles[selected];
+    flashDisc.material.color.setHex(n.color);flashHalo.material.color.setHex(n.color);
     flash.position.fromArray(n.emit);flash.visible=true;
     const strike=new Map();
+    let audible=null;
     for(const [i,t] of traces.entries()){
-      t.until=0;t.orb.visible=t.ribbon.visible=false;
+      t.until=t.impactTime=0;t.moving.visible=t.impact.visible=false;
       if(i>=n.pattern)continue;
       const a=i*2.4+age*.008,fan=i===0?0:.021+i*.004;
       screen.set(aimScreen.x+Math.cos(a)*fan,aimScreen.y+Math.sin(a)*fan*camera.aspect);
       projector.setFromCamera(screen,camera);dir.copy(ray.direction);
-      let target=null,creature=null,distance=n.pattern===1?18.8:15.6;
+      let target=null,creature=null,solid=false,distance=n.pattern===1?18.8:15.6;
       for(const item of anchors){
         if(!ray.intersectSphere(item.sphere,hit))continue;
         const d=from.distanceTo(hit);if(d<distance){distance=d;target=item}
@@ -134,12 +161,20 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       for(let d=.24;d<distance;d+=.17){
         ray.at(d,hit);
         if(world.blocked(hit.x,hit.z)||(dir.y<-.12&&hit.y<floorHeight(hit.x,hit.z)+.035)){
-          distance=Math.max(.32,d-.06);creature=target=null;break;
+          distance=Math.max(.32,d-.06);creature=target=null;solid=true;break;
         }
       }
       t.end.copy(from).addScaledVector(dir,distance);
       t.start.copy(from).addScaledVector(emit,Math.min(1,distance*.72/Math.max(.1,emit.length())));
       t.at=age;t.until=distance<.46?0:age+108+distance*(n.pattern===1?8.4:7.3)+i*4;
+      t.axis.subVectors(t.end,t.start).normalize();
+      t.profile=flashProfile;t.impactTime=t.until&&(solid||target||creature)?t.until:0;
+      if(t.impactTime&&(!audible||t.impactTime<audible.impactTime))audible=t;
+      t.impact.position.copy(t.end).addScaledVector(t.axis,-.045);
+      t.impact.quaternion.setFromUnitVectors(zAxis,t.axis);
+      t.orb.material.color.set(0xffffff).lerp(new T.Color(n.color),.32);
+      for(const m of [t.glow.material,t.ribbon.material,t.shock.material])m.color.setHex(n.color);
+      for(const [j,shard] of t.shards.entries())shard.material.color.set(0xffffff).lerp(t.shock.material.color,j*.15);
       if(target)arrivals.push({target,at:t.until,color:n.color});
       if(creature){
         const gathered=strike.get(creature);
@@ -147,6 +182,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
         else strike.set(creature,{amount:n.impact,point:candidate.point});
       }
     }
+    if(audible)arrivals.push({point:audible.end.clone(),kind:selected,at:audible.impactTime});
     // Process one combined hit per creature per click. Tracer animation
     // can never deal damage on subsequent frames.
     for(const [creature,{amount,point}] of strike)creatures.damage(creature,amount,n.color,point);
@@ -212,18 +248,13 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     held.position.set((n.hold[0]+running*.052)*rest+sway*.015*comfort*rest-(inertia*.006*rest)-sightAnchor.x*ads,
       n.hold[1]*rest-sightAnchor.y*ads+(bob*.012*comfort-landing*.020*comfort-(grounded?0:.032))*rest-running*.039*rest-holster*.41-lookDown*.20,
       n.hold[2]+ads*.054+kick+holster*.020);
-    for(const a of arms){
+    for(const [i,a] of arms.entries()){
       const driver=a.side===1,p=a.side;
-      a.wrist.fromArray(driver?n.grip:n.support).applyQuaternion(held.quaternion).add(held.position);
+      a.wrist.fromArray(wrists[Math.max(0,selected)][i]).applyQuaternion(held.quaternion).add(held.position);
       a.elbow.set(p*(driver?.275:.25)+rest*.13,-.424+bob*.021*comfort-holster*.16,-.237);
-      a.end.copy(a.wrist).lerp(a.elbow,.13);
-      link(a.forearm,a.elbow,a.end,.139,.128);a.wrap.position.copy(a.wrist).lerp(a.elbow,.151);
+      a.end.copy(a.wrist).lerp(a.elbow,.049);
+      link(a.forearm,a.elbow,a.end,.139,.128);a.wrap.position.copy(a.wrist).lerp(a.elbow,.077);
       a.wrap.quaternion.copy(a.forearm.quaternion);
-      a.stitch.position.copy(a.wrap.position);a.stitch.position.y+=.035;
-      a.stitch.quaternion.copy(a.wrap.quaternion);
-      a.hand.position.copy(a.wrist);
-      ang.set(driver?.47:selected>0?.44:.24,driver?-.12:selected>0?.69:.49,driver?.37:selected>0?-1.02:-.61);
-      a.hand.quaternion.copy(held.quaternion).multiply(a.gripQ.setFromEuler(ang));
     }
     for(const leg of legs){
       const q=step+(leg.side<0?0:Math.PI),stride=Math.cos(q)*moving,lift=Math.max(0,Math.sin(q))*moving*(.103+running*.069),x=leg.side*.115;
@@ -235,23 +266,52 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       leg.boot.position.copy(leg.ankle).y-=.112;
       leg.boot.rotation.set(-Math.max(0,Math.sin(q))*moving*.195+stride*.081,leg.side*-.083+strafe*.11,0);
     }
-    let effect=recent>now, burst=1-(now-pressed)/74;
+    let effect=recent>now, burst=1-(now-pressed)/flashProfile.flash;
     if(flash.visible){
-      effect=true;flash.visible=burst>0;flashMat.opacity=Math.max(0,burst)*.64;
-      flash.scale.set(n.flash*.89,n.flash,n.flash*(.64+Math.max(0,burst)));
+      effect=true;flash.visible=burst>0;
+      if(burst>0){
+        const k=1-burst,s=flashProfile.bloom;
+        flashBody.scale.set(s*.17*burst,s*.17*burst,s*.33*burst);
+        flashDisc.scale.setScalar(s*(.19+k*.42));flashDisc.material.opacity=burst**2*.56;
+        flashHalo.scale.setScalar(s*(.55+k*.47));flashHalo.material.opacity=burst*.86;
+      }
     }
     for(const t of traces){
-      if(!t.until)continue;
-      effect=true;
-      const k=Math.min(1,Math.max(0,(now-t.at)/(t.until-t.at)));
-      t.orb.visible=t.ribbon.visible=k<1;
-      if(k>=1){t.until=0;continue}
-      t.orb.position.lerpVectors(t.start,t.end,k);
-      old.lerpVectors(t.start,t.end,Math.max(0,k-.14));
-      link(t.ribbon,old,t.orb.position,1,1);t.ribbon.scale.y*=2;
+      if(t.until){
+        effect=true;
+        const k=Math.min(1,Math.max(0,(now-t.at)/(t.until-t.at))),p=t.profile;
+        t.moving.visible=k<1;
+        if(k>=1)t.until=0;
+        else {
+          t.orb.position.lerpVectors(t.start,t.end,k);
+          t.orb.quaternion.setFromUnitVectors(zAxis,t.axis);
+          t.orb.scale.set(p.core,p.core,p.length);
+          t.glow.position.copy(t.orb.position);
+          t.glow.scale.setScalar(p.halo);
+          t.glow.material.opacity=.76;
+          old.copy(t.orb.position).addScaledVector(t.axis,-Math.min(t.start.distanceTo(t.orb.position),p.tail));
+          link(t.ribbon,old,t.orb.position,p.core*.66);
+          t.ribbon.visible=t.ribbon.scale.y>.001;
+        }
+      }
+      if(t.impactTime&&now>=t.impactTime){
+        effect=true;
+        const k=(now-t.impactTime)/165;t.impact.visible=k<1;
+        if(k>=1)t.impactTime=0;
+        else {
+          const r=(.02+k*.16)*(t.profile===fxProfiles[1]?1.3:1);
+          t.shock.scale.setScalar(r);t.shock.material.opacity=(1-k)*.60;
+          for(const [j,shard] of t.shards.entries()){
+            const a=j*2.39996+t.at*.016,travel=r*(.40+j*.18),size=(1-k)*(.010+j*.001);
+            shard.position.set(Math.cos(a)*travel,Math.sin(a)*travel,-k*(.07+j*.017));
+            shard.scale.set(size,size,size*1.6);shard.material.opacity=1-k;
+          }
+        }
+      }
     }
     if(arrivals.length)arrivals=arrivals.filter(e=>{
       if(e.at>now)return true;
+      if(e.point){onContact(e.point,e.kind);return false;}
       e.target.timer=now+440;e.target.face.material.emissive.setHex(e.color);recent=now+440;return false;
     });
     for(const a of anchors)a.face.material.emissiveIntensity=.10+Math.max(0,(a.timer-now)/420)*2.5;

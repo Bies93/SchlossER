@@ -118,7 +118,7 @@ async function start(){
  }
  const round=ghoulRound(T,s,world,floorHeight,announceGhoul,audio.creature);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
-   ()=>combat()&&desktopRound()&&hall.allowGear(player.body.position),round,audio.shot);
+   ()=>combat()&&desktopRound()&&hall.allowGear(player.body.position),round,audio.shot,audio.pulseContact);
  viewmodel.setCombat(false);
  const modeButtons=[...$('game-mode').querySelectorAll('[data-mode]')];
  function chooseMode(id){

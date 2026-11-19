@@ -80,12 +80,14 @@ export function makeEquipment(T,specs){
   const infill=finish(0x151b1d,.86,.12,powder,.18);
   const rubber=finish(0x333634,.97,.03,powder,.41);
   const brass=finish(0xb99b66,.61,.63,brushed,.22,.27);
-  const amber=finish(0x845d43,.67,.45,brushed,.20,.21);
   const walnut=finish(0xc59167,.89,.015,oak,.47,.16);
   const walnutShade=finish(0x996d51,.97,.015,oak,.53,.13);
   const phosphate=finish(0x66756a,.88,.31,powder,.35,.22);
-  const slate=finish(0x596970,.82,.34,powder,.36,.26);
   const mount=finish(0x505756,.79,.22,powder,.32,.13);
+  const enamel=finish(0xbeb293,.68,.35,powder,.30,.48);
+  const army=finish(0x605f44,.82,.38,powder,.43,.39);
+  const oxide=finish(0x924225,.73,.27,powder,.43,.48);
+  const ceramic=finish(0xaf9a74,.86,.08,powder,.36,.14);
   for(const m of [walnut,walnutShade])m.userData.wood=true;
   const clear=new T.MeshPhysicalMaterial({color:0x91bbbd,roughness:.24,metalness:.19,transparent:true,opacity:.22,depthWrite:false});
   const screw=new T.CylinderGeometry(.5,.5,1,12);
@@ -189,7 +191,7 @@ export function makeEquipment(T,specs){
   const devices=specs.map((s,i)=>{
     const A=assemble(s.label),{add,box,profile,cyl,collar,pin,boltTop,emitter,stamp}=A;
     const ink=new T.MeshStandardMaterial({color:s.color,emissive:s.color,emissiveIntensity:.39,roughness:.44});
-    const grip=s.grip[1],front=s.emit[2];
+    const grip=s.gripY,front=s.emit[2];
     if(i!==2){
       profile(dark,[[.060,-.043],[.079,grip-.059],[.050,grip-.070],[-.017,grip-.061],[-.039,-.071],[-.018,-.049]],.065,0,.005);
       for(const side of [-1,1]){
@@ -204,50 +206,39 @@ export function makeEquipment(T,specs){
         .057,0,.004,[[[-.033,-.061],[-.087,-.062],[-.088,-.082],[-.079,-.102],[-.045,-.102],[-.030,-.091]]]);
     }
     if(i===0){
-      profile(slate,[[.057,.022],[.043,-.039],[-.127,-.047],[-.230,-.027],[-.239,.019],[-.188,.040],[-.011,.043]],.094,0,.006);
-      // A faceted top plate, rear serrations and undercut side plates set
-      // the compact silhouette apart from the longer profiles.
-      profile(black,[[.044,.024],[.038,.044],[.011,.059],[-.185,.059],[-.213,.050],[-.233,.027]],.091,0,.005);
-      box(steel,[0,.056,-.085],[.063,.006,.162],.002);
-      box(infill,[0,.060,-.047],[.045,.003,.065],.001);
-      box(bare,[-.003,.062,-.048],[.031,.003,.050],.0008);
-      // This rear face is prominent at the hip, even at low resolutions.
-      box(infill,[0,-.005,.0548],[.075,.049,.008],.0026,[.224,0,0]);
-      box(black,[0,-.005,.0583],[.066,.041,.0072],.0021,[.224,0,0]);
-      box(steel,[0,.009,.064],[.046,.008,.0035],.0011,[.224,0,0]);
-      for(const x of [-.022,.022]){
-        cyl(steel,x,-.011,.061,.0044,.004);
-        box(infill,[x,-.011,.0632],[.0046,.0013,.0007],.00016,[0,0,x<0?.51:-.51]);
+      // Kestrel: exposed ceramic pulse stack, cast rear housing, and a
+      // bolted instrument panel. The parts are decorative and all bores capped.
+      profile(army,[[.055,.025],[.048,-.036],[.010,-.056],[-.088,-.051],[-.137,-.028],[-.126,.034],[-.066,.052],[.015,.053]],.091,0,.007);
+      profile(enamel,[[.048,.022],[.037,.044],[-.090,.044],[-.115,.028],[-.108,-.018],[-.050,-.033],[.019,-.035],[.046,-.020]],.102,0,.0047);
+      cyl(black,0,.010,-.173,.029,.141);
+      collar(steel,0,.010,-.140,.047,.026,.039,20);
+      collar(oxide,0,.010,-.149,.046,.037,.016,20);
+      cyl(ceramic,0,.010,-.188,.031,.069);
+      for(let k=0;k<5;k++){
+        const z=-.160-k*.0135;
+        collar(k%2?black:brass,0,.010,z,.038,.029,.007,20);
       }
-      box(bare,[0,-.020,.0586],[.027,.0027,.002],.0005,[.224,0,0]);
-      box(black,[0,-.017,-.185],[.076,.019,.088],.002);
-      for(let j=0;j<5;j++)box(steel,[0,-.027,-.145-j*.015],[.074,.007,.0028],.0006);
-      for(const d of [-1,1]){
-        const s=d*.0476;
-        profile(steel,[[.023,.018],[-.006,-.003],[-.157,-.005],[-.198,.006],[-.202,.021],[-.003,.027]],.009,s,.0017);
-        profile(infill,[[.023,.034],[.016,.014],[-.037,.008],[-.052,.019],[-.045,.040]],.008,d*.0455,.0013);
-        for(let k=0;k<7;k++){
-          const z=.018-k*.0086;
-          box(steel,[d*.051,.026,z],[.004,.022,.0030],.0005,[-.33,0,-d*.10]);
-        }
-        box(infill,[d*.049,.006,-.156],[.009,.015,.058],.0014);
-        box(amber,[d*.053,.001,-.156],[.004,.003,.049],.0005);
-        for(let j=0;j<3;j++)box(ink,[d*.054,.007,-.169+j*.011],[.0013,.004,.0045],.0003);
-        pin(d*.050,-.018,-.105,.005,black);
-        pin(d*.049,-.011,-.211,.004,steel);
-        stamp('KS·04',d*.053,.016,-.091,.070,.017);
-      }
-      emitter(0,s.emit[1],front,.038,ink);
-      box(black,[0,.059,.024],[.063,.010,.027],.0015);
+      emitter(0,s.emit[1],front,.043,ink);
+      box(black,[0,-.013,.050],[.073,.046,.018],.005,[.25,0,0]);
+      box(steel,[0,-.005,.060],[.058,.024,.006],.002,[.25,0,0]);
+      for(let j=0;j<5;j++)box(infill,[0,-.017+j*.006,.063+j*.0014],[.044,.0022,.0020],.0006);
       for(const side of [-1,1]){
-        box(steel,[side*.022,.070,.024],[.013,.022,.024],.0018);
-        box(infill,[side*.022,.072,.037],[.009,.009,.003],.0006);
+        const x=side*.052;
+        pin(x,-.022,-.046,.0061,brass);pin(x,.025,-.076,.0058,steel);
+        profile(oxide,[[-.001,-.014],[-.022,.017],[-.066,.018],[-.078,-.006],[-.050,-.019]],.011,x,.0018);
+        box(infill,[side*.059,.004,-.037],[.004,.016,.042],.0015);
+        for(let k=0;k<4;k++)box(k===3?brass:ink,[side*.061,.005,-.051+k*.009],[.0019,.006,.0045],.00055);
+        stamp('K-04',side*.054,.021,-.033,.040,.014);
+        cyl(black,side*.039,-.020,-.110,.005,.060);
+        collar(brass,side*.039,-.020,-.133,.009,.004,.008,12);
       }
-      box(black,[0,s.sight[1]-.007,s.sight[2]],[.024,.015,.031],.0015);
-      box(ink,s.sight,[.008,.007,.012],.0006);
+      box(army,[0,.052,.016],[.073,.012,.045],.0025);
+      for(const side of [-1,1])box(black,[side*.023,.065,.017],[.013,.029,.025],.002);
+      box(black,[0,.054,s.sight[2]],[.031,.029,.027],.002);
+      box(ink,s.sight,[.008,.008,.012],.0007);
     }else if(i===1){
       profile(black,[[.040,-.037],[.047,.039],[.005,.062],[-.228,.063],[-.277,.032],[-.255,-.049],[-.096,-.061]],.088,0,.005);
-      profile(phosphate,[[-.005,.029],[-.047,.051],[-.246,.049],[-.276,.018],[-.237,-.030],[-.049,-.035]],.100,0,.004);
+      profile(army,[[-.005,.029],[-.047,.051],[-.246,.049],[-.276,.018],[-.237,-.030],[-.049,-.035]],.100,0,.004);
       profile(black,[[-.092,-.056],[-.177,-.060],[-.192,-.147],[-.136,-.187],[-.097,-.168],[-.075,-.094]],.061,0,.0037);
       box(mount,[0,-.166,-.129],[.072,.019,.090],.003,[-.26,0,0]);
       profile(mount,[[.042,.042],[.216,.049],[.269,.018],[.286,-.073],[.259,-.093],[.150,-.068],[.062,-.010]],
@@ -261,7 +252,7 @@ export function makeEquipment(T,specs){
         box(mount,[d*.041,-.027,-.398],[.024,.022,.285],.0025);
         for(let j=0;j<7;j++){
           const z=-.281-j*.040;
-          box(phosphate,[d*.037,.005,z],[.029,.082,.028],.002,[.19,0,-d*.17]);
+          box(j===0||j===6?oxide:phosphate,[d*.037,.005,z],[.029,.082,.028],.002,[.19,0,-d*.17]);
           box(bare,[d*.040,.046,z-.003],[.020,.004,.017],.00075);
           box(infill,[d*.049,-.011,z],[.004,.027,.019],.0014);
         }
@@ -273,7 +264,8 @@ export function makeEquipment(T,specs){
         for(let k=0;k<4;k++)box(steel,[d*.033,-.085-k*.017,-.122-k*.008],[.005,.005,.051],.001,[-.27,0,0]);
         box(infill,[d*.054,.007,-.182],[.004,.018,.043],.0013);
         for(let k=0;k<4;k++)box(k===3?bare:ink,[d*.057,.007,-.195+k*.007],[.002,.005,.0034],.00035);
-        stamp('VS·17',d*.055,-.011,-.134,.083,.016,true);
+        box(enamel,[d*.052,-.019,-.124],[.004,.013,.085],.0013);
+        stamp('VS·17',d*.0546,-.019,-.124,.078,.015,true);
       }
       box(steel,[0,.071,-.181],[.059,.018,.228],.002);
       for(let k=0;k<11;k++)box(black,[0,.081,-.073-k*.0195],[.064,.008,.009],.0007);
@@ -307,11 +299,11 @@ export function makeEquipment(T,specs){
         collar(steel,d*.037,.032,-.501,.032,.025,.158,22);
         collar(black,d*.037,.033,front+.048,.034,.021,.029,18);
         emitter(d*.037,.033,front,.034,ink);
-        profile(amber,[[.010,-.003],[-.011,.040],[-.112,.049],[-.147,.027],[-.145,-.032],[-.082,-.051],[-.027,-.042]],.012,d*.058,.0027);
+        profile(brass,[[.010,-.003],[-.011,.040],[-.112,.049],[-.147,.027],[-.145,-.032],[-.082,-.051],[-.027,-.042]],.012,d*.058,.0027);
         profile(black,[[-.006,.002],[-.028,.031],[-.102,.036],[-.125,.022],[-.122,-.023],[-.085,-.040],[-.033,-.030]],
           .006,d*.065,.0017);
         pin(d*.070,.002,-.019,.0069,brass);pin(d*.070,.000,-.107,.0069,brass);
-        box(brass,[d*.069,.018,-.058],[.003,.005,.041],.00065,[-.08,0,0]);
+        box(oxide,[d*.069,.018,-.058],[.003,.008,.048],.00085,[-.08,0,0]);
         collet(d);
         stamp('AM·08',d*.069,-.009,-.067,.065,.015,true);
         for(let k=0;k<9;k++){

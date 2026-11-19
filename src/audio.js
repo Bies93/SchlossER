@@ -138,12 +138,38 @@ export function makeAudio(listener) {
   }
   function shot(which){
     if(!live())return;
-    const t=ctx.currentTime+.009;
-    const [hit,body,tail,pitch]=[[.44,.25,.31,133],[.48,.31,.39,113],[.59,.39,.48,90]][which]??[.42,.2,.31,110];
-    grit(sfx,t,.067,hit,700,6350,{attack:.003,wet:.10,rate:1.3-which*.15});
-    grit(sfx,t+.009,tail,body*.8,110,1260,{attack:.007,wet:.56});
-    tone(sfx,t,pitch,.139,body,{attack:.004,end:pitch*.43,wet:.39,type:'triangle'});
-    grit(sfx,t+.047,.076,.15,960,4370,{wet:.28,rate:.8+random()*.34});
+    const t=ctx.currentTime+.009, drift=.95+random()*.10;
+    const tap=(at,f,fall,vol,tail,wet=.14)=>tone(sfx,t+at,f*drift,tail,vol,
+      {attack:.003,end:fall*drift,wet,wave:ac});
+    if(which===0){
+      // A short dry relay snap followed by a compact, descending arc.
+      grit(sfx,t,.027,.27,1680,6500,{attack:.002,wet:.14,rate:1.17*drift});
+      tap(.004,436,183,.20,.074);
+      tone(sfx,t+.005,143,.072,.142,{attack:.004,end:60,wet:.15,type:'triangle'});
+      tap(.057,995,760,.045,.084,.22);
+    }else if(which===1){
+      // Narrower, sustained discharge with a bright driven overtone.
+      grit(sfx,t,.042,.28,815,5280,{attack:.002,wet:.20,rate:1.22*drift});
+      tap(.002,249,107,.23,.171,.23);
+      tap(.003,1190,548,.115,.115,.26);
+      grit(sfx,t+.029,.131,.108,184,1070,{attack:.013,wet:.36,rate:.91});
+      tap(.100,781,490,.043,.106,.30);
+    }else{
+      // A broader, lower burst with two slightly separated transients.
+      grit(sfx,t,.053,.34,487,4680,{attack:.003,wet:.22,rate:.78*drift});
+      grit(sfx,t+.016,.078,.19,940,6450,{attack:.003,wet:.27,rate:.92*drift});
+      tone(sfx,t+.007,108,.158,.27,{attack:.004,end:46,wet:.28,type:'triangle'});
+      grit(sfx,t+.023,.220,.138,85,747,{attack:.01,wet:.38,rate:.76});
+      tap(.084,271,136,.072,.140,.25);
+    }
+  }
+  function pulseContact(p,which){
+    if(!live())return;
+    const a=listener(),dx=p.x-a.x,dz=p.z-a.z,d=Math.hypot(dx,dz);
+    const vol=1/(1+(d/9)**1.45),pan=Math.max(-.85,Math.min(.85,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    const t=ctx.currentTime+.007,f=[620,890,385][which]??500;
+    grit(sfx,t,.054,.12*vol,830,4250,{attack:.003,pan,wet:.20,rate:.89+random()*.26});
+    tone(sfx,t+.008,f,.087,.074*vol,{end:f*.62,attack:.003,pan,wet:.24,wave:ac});
   }
   function foot(kind,power=1,impact=false,side=1){
     if(!live())return;
@@ -173,7 +199,7 @@ export function makeAudio(listener) {
       grit(sfx,t,.86,v,980,4400,{wet:.20,attack:.26,rate:.88+random()*.06});
     }
   }
-  return {play,pause,toggle,shot,foot,creature,ambience,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,mode:on=>{combat=on},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };
