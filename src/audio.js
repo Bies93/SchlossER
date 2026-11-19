@@ -1,18 +1,11 @@
-// Original, asset-free score and effects. Audio is initialized by a gesture.
-const note=m=>440*2**((m-69)/12);
-const phrase=[
-  [48,null,55,53],[51,48,null,null],[46,null,50,51],[43,null,null,null],
-  [48,51,55,null],[53,null,51,46],[50,43,null,46],[48,null,null,null],
-  [55,null,58,53],[51,null,46,48],[50,null,53,51],[43,null,null,null],
-  [46,48,51,null],[53,55,51,48],[46,null,43,41],[48,null,null,null]
-];
-const bass=[36,32,34,31,36,41,34,36,31,32,34,31,34,41,31,36];
+// User-provided music and procedural effects. Audio starts on a gesture.
 const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener) {
-  let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,step=0,next=0,timer=0,bedTime=0;
+export function makeAudio(listener,musicUrl) {
+  let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
+  let track,loading,source,voice,started=0,offset=0;
   let levels={music:.48,sfx:.72};
   try{
     const saved=JSON.parse(localStorage.getItem('schlosser.audio')||'null');
@@ -33,16 +26,12 @@ export function makeAudio(listener) {
     ctx=new AC();const compressor=ctx.createDynamicsCompressor();
     compressor.threshold.value=-14;compressor.ratio.value=5;compressor.attack.value=.006;
     compressor.connect(ctx.destination);master=gain(compressor,0);music=gain(master,levels.music);sfx=gain(master,levels.sfx);
-    verb=new Map();
     const impulse=ctx.createBuffer(2,Math.round(ctx.sampleRate*1.26),ctx.sampleRate);
     for(let c=0;c<2;c++){
       const d=impulse.getChannelData(c);
       for(let i=0;i<d.length;i++)d[i]=(random()*2-1)*(1-i/d.length)**3*.38;
     }
-    for(const out of [music,sfx]){
-      const convolver=ctx.createConvolver();convolver.buffer=impulse;convolver.connect(gain(out,.23));
-      verb.set(out,convolver);
-    }
+    verb=ctx.createConvolver();verb.buffer=impulse;verb.connect(gain(sfx,.23));
     const taps=ctx.createBuffer(1,Math.round(ctx.sampleRate*2),ctx.sampleRate),s=taps.getChannelData(0);
     for(let i=0;i<s.length;i++)s[i]=random()*2-1;
     noise=taps;
@@ -56,7 +45,7 @@ export function makeAudio(listener) {
     const node=stereo?ctx.createStereoPanner():ctx.createGain();
     if(stereo)node.pan.value=pan;
     node.connect(out);
-    const send=wet?gain(verb.get(out),wet):null;
+    const send=wet?gain(verb,wet):null;
     if(send)node.connect(send);
     return {node,close(){node.disconnect();send?.disconnect()}};
   }
@@ -87,30 +76,32 @@ export function makeAudio(listener) {
     source.start(t,random()*.76);source.stop(t+attack+tail+.016);
     source.onended=()=>{source.disconnect();hi.disconnect();lo.disconnect();g.disconnect();bus.close()};
   }
-  function clock(){
-    if(!live())return;
-    if(next<ctx.currentTime-.15)next=ctx.currentTime+.06;
-    while(next<ctx.currentTime+.26){
-      const bar=Math.floor(step/4)%phrase.length,b=step%4,t=next,f=note(bass[bar]);
-      const v=combat?1:.57,pan=(b%2?.12:-.12),beat=60/73;
-      if(b===0||b===2){
-        tone(music,t,f*(b===2&&bar%4===2?1.498:1),.51,.24*v,{type:'triangle',attack:.014,pan:-.17,wet:.18});
-        tone(music,t+.006,b===0?72:58,.21,.11*v,{end:35,attack:.012,wet:.12});
-        if(combat&&b===0)grit(music,t+.009,.137,.095,165,1320,{wet:.13});
-      }
-      if((b===1||b===3)&&bar%4!==3){
-        const j=note(bass[bar]+(b===1?19:12));
-        tone(music,t+.026,j,.34,.075*v,{type:'triangle',pan:.31,wet:.30});
-        tone(music,t+.033,j*2.013,.18,.036*v,{pan:.26,wet:.37});
-      }
-      const hum=phrase[bar][b];
-      if(hum!=null){
-        const n=note(hum-12),swell=phrase[bar][b+1]==null?1.02:.59;
-        tone(music,t+.033,n,swell,.125*v,{wave:ac,attack:.158,end:n*.996,pan,wet:.63,shiver:13});
-        tone(music,t+.089,n*.994,swell*.85,.040*v,{type:'triangle',attack:.172,pan:-pan*.9,wet:.61,shiver:9});
-      }
-      next+=beat;step++;
+  function startTrack(){
+    if(!live()||source||!musicUrl)return;
+    if(!track){
+      // Decode once, only when sound is requested. A single buffer source
+      // loops on a sample boundary without a media-element seek or timer.
+      loading??=fetch(musicUrl).then(r=>{if(!r.ok)throw Error('Musik nicht erreichbar');return r.arrayBuffer()})
+        .then(bytes=>{
+          const Offline=globalThis.OfflineAudioContext||globalThis.webkitOfflineAudioContext;
+          // 32 kHz preserves the useful bandwidth of this track and bounds stereo PCM memory.
+          let decoder=ctx;if(Offline)try{decoder=new Offline(2,1,32000)}catch{}
+          return decoder.decodeAudioData(bytes);
+        }).then(decoded=>{track=decoded;startTrack()}).catch(()=>{}).finally(()=>{loading=null});
+      return;
     }
+    const node=ctx.createBufferSource(),amp=gain(music,0),t=ctx.currentTime;
+    node.buffer=track;node.loop=true;node.connect(amp);
+    amp.gain.linearRampToValueAtTime(.72,t+.14);
+    node.onended=()=>{node.disconnect();amp.disconnect()};
+    node.start(t,offset);source=node;voice=amp;started=t;
+  }
+  function stopTrack(){
+    if(!source)return;
+    const t=ctx.currentTime;
+    offset=(offset+t-started)%track.duration;
+    voice.gain.cancelScheduledValues(t);voice.gain.setTargetAtTime(0,t,.013);
+    source.stop(t+.055);source=null;voice=null;
   }
   function mix(){
     if(!ctx)return;
@@ -123,17 +114,16 @@ export function makeAudio(listener) {
     playing=true;
     try{
       if(!enabled||(!ctx&&!setup()))return;
-      mix();ctx.resume().catch(()=>{});
-      if(!timer){next=ctx.currentTime+.09;timer=setInterval(clock,120)}
+      mix();ctx.resume().then(startTrack,()=>{});
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
   function pause(){
-    playing=false;clearInterval(timer);timer=0;mix();
+    playing=false;stopTrack();mix();
   }
   function toggle(){
     enabled=!enabled;store();mix();
     if(enabled&&playing)play();
-    else{clearInterval(timer);timer=0}
+    else stopTrack();
     return enabled;
   }
   function shot(which){

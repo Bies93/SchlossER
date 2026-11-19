@@ -6,15 +6,59 @@ export const LAB_OUTLINE=[[left,back],[right,back],[right,front],[left,front]];
 export const LAB={top:HALL.floor,count:22,riser:.176,run:(right-left)/22,ceiling:-.48,
   end:-6.34,south:-7.42,north:4.14};
 LAB.floor=LAB.top-LAB.count*LAB.riser;
-export const labLower=y=>y<-3.24;
+export const LAB_LAYER=3;
+// Above the highest possible jump under the cellar ceiling, below the palace floor.
+export const labLower=y=>y<-1.72;
+// Extents are interior dimensions. Shared edges and their clear spans define
+// movement, wall cuts and the render visibility graph in the same metre grid.
+export const LAB_CELLS={
+  stairs:[left,right,back,front],
+  chambers:[right,LAB.end,LAB.south,LAB.north],
+  lock:[-9.04,-7.00,LAB.north,7.25],
+  spine:[-20.72,-7.00,7.25,9.68],
+  archive:[-15.75,-9.45,9.68,15.24],
+  plant:[-25.95,-20.72,6.82,13.85],
+  return:[-24.97,-22.55,.24,6.82],
+  observation:[-24.97,right,-3.68,.24],
+  vault:[-25.95,-18.45,13.85,19.3]
+};
+// [room A, room B, fixed axis, edge, aperture centre MIN/MAX]
+export const LAB_LINKS=[
+  ['stairs','chambers','x',right,back,front],
+  ['chambers','lock','z',LAB.north,-8.98,-7.06],
+  ['lock','spine','z',7.25,-8.98,-7.06],
+  ['spine','archive','z',9.68,-12.91,-11.10],
+  ['spine','plant','x',-20.72,7.54,9.36],
+  ['plant','return','z',6.82,-24.73,-22.79],
+  ['return','observation','z',.24,-24.75,-22.77],
+  ['observation','chambers','x',right,-2.61,-.74],
+  ['plant','vault','z',13.85,-23.85,-21.74]
+];
+const cellEntries=Object.entries(LAB_CELLS);
+function contains([x0,x1,z0,z1],x,z,pad){return x>=x0-pad&&x<=x1+pad&&z>=z0-pad&&z<=z1+pad}
+export function labCellAt(x,z,pad=0){
+  for(const [key,bounds] of cellEntries)if(contains(bounds,x,z,pad))return key;
+  return null;
+}
+export function labEdges(id){
+  const [x0,x1,z0,z1]=LAB_CELLS[id];
+  return [['x',x0,z0,z1,-1],['x',x1,z0,z1,1],['z',z0,x0,x1,-1],['z',z1,x0,x1,1]].map(([axis,edge,min,max,sign])=>{
+    const openings=LAB_LINKS.filter(([a,b,k,p])=>(a===id||b===id)&&k===axis&&p===edge).map(s=>s.slice(4)).sort((a,b)=>a[0]-b[0]);
+    const solids=[];let start=min;
+    for(const [a,b] of openings){if(a>start)solids.push([start,a]);start=Math.max(start,b)}
+    if(start<max)solids.push([start,max]);
+    return {axis,edge,min,max,sign,openings,solids};
+  });
+}
 export function labFloorAt(x,z,referenceY=0){
   if(x>=left&&x<=right&&z>=back&&z<=front)
     return LAB.top-LAB.riser*Math.max(0,Math.min(LAB.count,(x-left)/LAB.run+.5));
-  if(labLower(referenceY)&&x>=right-.012&&x<=LAB.end&&z>=LAB.south&&z<=LAB.north)return LAB.floor;
+  if(labLower(referenceY)&&labCellAt(x,z,.012))return LAB.floor;
   return null;
 }
 export function labCeilingAt(x,z,referenceY=0){
-  return labLower(referenceY)&&x>=right&&x<=LAB.end&&z>=LAB.south&&z<=LAB.north?LAB.ceiling:Infinity;
+  const cell=labLower(referenceY)&&labCellAt(x,z,.012);
+  return cell&&cell!=='stairs'?LAB.ceiling:Infinity;
 }
 
 // Existing library boards are authored with u=-x, d=-z.

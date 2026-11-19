@@ -19,7 +19,8 @@ import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
 import {addParkStair,wcHeightAt,wcCeilingAt} from './park-stair.js';
-import {labFloorAt,labCeilingAt} from './lab-layout.js';
+import {LAB_LAYER,labFloorAt,labCeilingAt} from './lab-layout.js';
+import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
@@ -90,10 +91,10 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
- });
+ },payload.music);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
-   const surface=hallFloor(x,z)!==null||Number.isFinite(wcCeilingAt(x,z,y))?'hall':garden.surfaceAt(x,z)??'stone';
+   const surface=hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
  },(x,z,y)=>Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)));
  s.add(player.body);
@@ -189,7 +190,13 @@ async function start(){
    event.preventDefault();handleDoor();
  });
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
- function draw(){const p=player.body.position;lighting.update(p);garden.update(p,performance.now());wc.update(p);fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
+ function draw(){
+   const p=player.body.position,mode=labCameraMode(p);
+   c.layers.set(mode==='cellar'?LAB_LAYER:0);
+   if(mode==='threshold')c.layers.enable(LAB_LAYER);
+   if(mode!=='cellar'){lighting.update(p);garden.update(p,performance.now());wc.update(p);fountain.syncView?.(c);}
+   r.render(s,c);viewmodel.draw(r);
+ }
  function render(time){
    frame=0;
    if(active()){
@@ -208,7 +215,7 @@ async function start(){
      if(state.shadow)r.shadowMap.needsUpdate=true;
      doorPrompt();
      roundPrompt();
-     if(fountain.tick(time,c))dirty=true;
+     if(labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
    }
    if(dirty){draw();dirty=false}

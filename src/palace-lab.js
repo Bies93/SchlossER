@@ -1,6 +1,7 @@
 import {architectureKit} from './architecture-kit.js';
 import {sharedSet,randomSource} from './surface-detail.js';
-import {LAB,LAB_CUT,labLower} from './lab-layout.js';
+import {LAB,LAB_CUT,LAB_LAYER,labLower} from './lab-layout.js';
+import {cellarWalls,makeLabDeck} from './lab-wing.js';
 
 // Entirely fictional scenography: no real building connection or lab protocol.
 const {left,right,back,front}=LAB_CUT,{top,floor,ceiling,end,south,north}=LAB;
@@ -59,8 +60,8 @@ function terminalDisplay(T){
 }
 
 export function addPalaceLab(T,root,world,M){
-  const shell=new T.Group(),room=new T.Group(),cabinet=new T.Group();root.add(shell,room,cabinet);
-  shell.name='Lesesaal · verschiebbares Regal und Kellertreppe';room.name='Projekt Bayern · fiktives Kellerlabor';cabinet.name='Regal mit lockerem Buch';
+  const shell=new T.Group(),cabinet=new T.Group();root.add(shell,cabinet);
+  shell.name='Lesesaal · verschiebbares Regal und Kellertreppe';cabinet.name='Regal mit lockerem Buch';
   const plain=(color,roughness=.88,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   const glow=(color,power)=>plain(color,.62,{emissive:color,emissiveIntensity:power});
   const wood=M.oak.clone();wood.color.setHex(0x795c48);wood.vertexColors=false;
@@ -74,10 +75,12 @@ export function addPalaceLab(T,root,world,M){
     gasket:plain(0x252c2b),brass:plain(0xad8960,.59,{metalness:.51}),
     red:{material:glow(0xde5442,.66),cast:false},cold:{material:glow(0x86cfc1,.53),cast:false},
     ivory:{material:glow(0xe8dfb5,.31),cast:false},leather:plain(0x764a30),cloth:plain(0x5b715e),
-    apron:plain(0x914f49),canvas:plain(0xd6c6b2),bookA:plain(0x5d6555),bookB:plain(0x77483c),bookC:plain(0x4b5968)
+    apron:plain(0x914f49),canvas:plain(0xd6c6b2),bookA:plain(0x5d6555),bookB:plain(0x77483c),bookC:plain(0x4b5968),
+    ochre:plain(0xad8644),paper:plain(0xa79c7d),archiveWall:plain(0x77705b,.91,sharedSet(T,'plaster',256)),
+    vaultWall:plain(0x514742,.92,sharedSet(T,'plaster',256)),ceramic:plain(0x8b9083,.64),
+    glassDark:plain(0x253e3c,.27,{metalness:.37})
   };
-  const a=architectureKit(T,shell,materials),k=architectureKit(T,room,materials),r=architectureKit(T,cabinet,materials);
-  const box=(m,x0,x1,y0,y1,z0,z1)=>k.box(m,coords,x0,x1,y0,y1,z0,z1);
+  const a=architectureKit(T,shell,materials),r=architectureKit(T,cabinet,materials);
   const sb=(m,x0,x1,y0,y1,z0,z1)=>a.box(m,coords,x0,x1,y0,y1,z0,z1);
   const shelf=(m,x0,x1,y0,y1,z0,z1)=>r.box(m,coords,x0,x1,y0,y1,z0,z1);
   const below=p=>labLower(p.y),above=p=>!below(p);
@@ -131,14 +134,31 @@ export function addPalaceLab(T,root,world,M){
   world.box(gateX-.39,capZ,gateX+.06,capEnd,p=>above(p)&&d.progress<.95);
   world.box(gateX-.39,capZ+slide,gateX+.06,capEnd+slide,p=>above(p)&&d.progress>=.95);
   a.flush('Verblendung und verdeckte Treppe');r.flush('Bücherregal');
+  shell.traverse(o=>o.layers.enable(LAB_LAYER));
+  const updateDeck=makeLabDeck(T,root,world,materials,room=>buildChambers(T,room,world,materials));
+  const usable=p=>d.target===0||Math.abs(p.x-gateX)>.60;
+  return {
+    target(p,look){
+      const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
+      return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
+    },
+    usable,
+    update(dt,p){
+      let changed=false,shadow=false;
+      if(d.progress!==d.target){
+        if(!d.target&&Math.abs(p.x-gateX)<.72&&p.z>back-.16&&p.z<front+slide+.19)d.target=1;
+        const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
+        const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;shadow=changed&&(t===0||t===1);
+      }
+      return {changed:updateDeck(p,d.target===1)||changed,shadow};
+    }
+  };
+}
 
-  // Surface and collision are separate from the reading room above.
-  for(const [x0,x1,z0,z1] of [[right,end,south-.21,south],[right,end,north,north+.21],[end,end+.23,south,north],
-    [right-.12,right,south,back],[right-.12,right,front,north]]){
-    box('plaster',x0,x1,floor-.12,ceiling+.09,z0,z1);
-    box('green',x0-.018,x1+.018,floor+.15,floor+.88,z0-.018,z1+.018);
-    world.box(x0,z0,x1,z1,below);
-  }
+function buildChambers(T,room,world,materials){
+  const k=architectureKit(T,room,materials),below=p=>labLower(p.y);
+  const box=(m,x0,x1,y0,y1,z0,z1)=>k.box(m,coords,x0,x1,y0,y1,z0,z1);
+  cellarWalls(k,world,'chambers');
   box('concrete',right,end,ceiling,ceiling+.17,south,north);
   box('gasket',right,end,floor-.12,floor-.015,south,north);
   for(let x=right,i=0;x<end-.016;x+=.84,i++)for(let z=south,j=0;z<north-.016;z+=.84,j++){
@@ -245,27 +265,4 @@ export function addPalaceLab(T,root,world,M){
   cloth('apron',[[-.13,1.91],[.13,1.91],[.22,1.32],[-.22,1.32]],.48,.03);
   world.box(rx-.62,rz-1.04,rx+.19,rz+1.04,below);
   k.flush('Projekt Bayern · Beton, Technik und Kostüme');drum.dispose();ring.dispose();
-  const sources=[[-19.51,ceiling-.42,-5.53,0xe07459,12.6,5.8],[-14.43,ceiling-.48,1.23,0x9be3d3,19.0,9.2],
-    [-8.50,ceiling-.59,-3.28,0xffe0a0,22.0,8.8]];
-  const lights=sources.map(([x,y,z,c,,reach])=>{const l=new T.PointLight(c,0,reach,2);l.position.set(x,y,z);root.add(l);return l;});
-  const usable=p=>d.target===0||Math.abs(p.x-gateX)>.60;
-  return {
-    target(p,look){
-      const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
-      return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
-    },
-    usable,
-    update(dt,p){
-      let changed=false,shadow=false;
-      if(d.progress!==d.target){
-        if(!d.target&&Math.abs(p.x-gateX)<.72&&p.z>back-.16&&p.z<front+slide+.19)d.target=1;
-        const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
-        const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;shadow=changed&&(t===0||t===1);
-      }
-      const visible=p.x>=left-.6&&p.x<end+1&&p.z>=south-.65&&p.z<north+.70&&(p.y<-.37||d.progress>.94);
-      if(room.visible!==visible){room.visible=visible;changed=true;}
-      for(let i=0;i<lights.length;i++)lights[i].intensity=visible?sources[i][4]:0;
-      return {changed,shadow};
-    }
-  };
 }

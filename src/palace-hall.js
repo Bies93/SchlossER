@@ -3,6 +3,7 @@ import {PORTALS,HALL,WINGS,inPalaceWing} from './palace-openings.js';
 import {portalFrame} from './palace-facade.js';
 import {interiorArch,addPalaceWings} from './palace-wings.js';
 import {addPalaceLab} from './palace-lab.js';
+import {labCameraMode} from './lab-wing.js';
 
 const q=(x,y,z)=>[x,y,z],{floor:y,half,zMin,zMax}=HALL;
 const step=(t)=>Math.max(0,Math.min(1,t));
@@ -158,7 +159,7 @@ export function makeHall(T,root,M,world,leaves){
   }
   const look=new T.Vector3();
   let preset='dusk',lit=false,wasMoving=false;
-  function allowGear(p){return !inPalaceWing(p.x,p.z)&&!(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
+  function allowGear(p){return labCameraMode(p)==='surface'&&!inPalaceWing(p.x,p.z)&&!(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
   function targetFor(player,camera){
     camera.getWorldDirection(look);
     const p=player.body.position;

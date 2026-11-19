@@ -1,4 +1,5 @@
 import {HALL,WINGS} from './palace-openings.js';
+import {labLower} from './lab-layout.js';
 
 // Y up; +Z toward Schlossplatz (west), +X toward Universitätsstraße (south).
 export const SPAWN = {x: 8, z: 43, yaw: .19, pitch: .12};
@@ -101,11 +102,12 @@ export function distanceToPerimeter(x,z) {
 export function addFixedColliders(world) {
   // The center is reserved for the passage. Moving door thresholds are
   // installed with the same coordinates as their facade meshes.
+  const surface=p=>!labLower(p.y);
   for(const [width,z0,z1,inner] of [[33.9,-10.35,10.35,WINGS.outer],[7.35,10,13.02,HALL.half],[14.5,-12.53,-10,HALL.half]]){
-    world.box(-width,z0,-inner,z1);world.box(inner,z0,width,z1);
+    world.box(-width,z0,-inner,z1,surface);world.box(inner,z0,width,z1,surface);
   }
   for(const [a,b] of [[-10.35,-WINGS.z],[WINGS.z,10.35]]){
-    world.box(-WINGS.outer,a,-HALL.half,b);world.box(HALL.half,a,WINGS.outer,b);
+    world.box(-WINGS.outer,a,-HALL.half,b,surface);world.box(HALL.half,a,WINGS.outer,b,surface);
   }
   world.box(-1.8, 29.35, 1.8, 32.65);   // Friedrich monument granite base
 
