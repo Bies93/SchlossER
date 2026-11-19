@@ -1,5 +1,5 @@
-// X/Z plan collision for a standing player. All obstacles here meet the ground;
-// elevation comes from separate walk surfaces, not from decorative meshes.
+// X/Z plan collision for a standing player. Local underground obstacles may
+// opt into the movement layer supplied by the player; most are ground level.
 export function collisionWorld(bounds, radius, contains) {
   const cellSize = 8, grid = new Map();
   const cell = v => Math.floor(v / cellSize);
@@ -27,7 +27,7 @@ export function collisionWorld(bounds, radius, contains) {
     }).filter(e => e.len2 > 0);
     const xs = v.map(p => p[0]), zs = v.map(p => p[1]);
     insert(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), p => {
-      if(!enabled())return false;
+      if(!enabled(p))return false;
       let side = -Infinity, nearest, distance2 = Infinity, offX, offZ;
       for (const e of edges) {
         const dx = p.x - e.x, dz = p.z - e.z, d = dx * e.nx + dz * e.nz;
@@ -64,9 +64,9 @@ export function collisionWorld(bounds, radius, contains) {
         return true;
       });
     },
-    blocked(x,z) {
+    blocked(x,z,y=0) {
       if(x<bounds.minX||x>bounds.maxX||z<bounds.minZ||z>bounds.maxZ||(contains&&!contains(x,z)))return true;
-      const point={x,z};
+      const point={x,z,y};
       return (grid.get(key(cell(x),cell(z)))??[]).some(resolve=>resolve(point));
     },
     move(p, dx, dz) {

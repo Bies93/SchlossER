@@ -4,6 +4,8 @@ export const PORTALS={
   east:{id:'east',label:'Schlossgarten',side:-1,z:-12.04,half:1.33,spring:2.53,rise:1.27}
 };
 export const HALL={half:3.92,zMin:-11.12,zMax:11.30,floor:.071};
+export const WINGS={outer:29.1,z:7.70,portal:1.32,spring:2.44,rise:.59,ceiling:4.31,partition:12.45};
+export const inPalaceWing=(x,z)=>Math.abs(x)>=HALL.half-.03&&Math.abs(x)<=WINGS.outer&&Math.abs(z)<=WINGS.z;
 
 // Keep the bundled GLB as the base and subtract only the rebuilt masonry
 // bands. Untouched triangles retain their original indices and attributes.
@@ -17,6 +19,11 @@ export function cutPalaceOpenings(T,root){
     })))
   ];
   const innerOccluder={lo:[-4.07,-.08,-11.48],hi:[4.07,4.92,11.51]};
+  // Hollow only the added interpreted rooms, behind the façade envelope.
+  const wings=[1,-1].map(s=>{
+    const x=[s*(HALL.half-.19),s*(WINGS.outer+.34)].sort((a,b)=>a-b);
+    return {lo:[x[0],-.045,-WINGS.z-.32],hi:[x[1],WINGS.ceiling+.22,WINGS.z+.32]};
+  });
   const allowed=/^ERL_(SANDSTONE(?:_CUT|_DARK)?|WOOD|METAL|RECESS|GLASS|LINEN)$/;
   const meshes=[];root.updateMatrixWorld(true);root.traverse(o=>{if(o.isMesh&&allowed.test(o.name))meshes.push(o)});
   const v=new T.Vector3();
@@ -25,8 +32,8 @@ export function cutPalaceOpenings(T,root){
     const keys=['position','normal','uv','color'].filter(k=>g.attributes[k]);
     // The original GLB has dark proxy slabs behind its fake windows.
     // Leave them in the wings, but remove them from the new room.
-    const regions=o.name==='ERL_RECESS'?[...geometryRegions,innerOccluder]:geometryRegions;
-    const extent=o.name==='ERL_RECESS'?4.07:2.768;
+    const regions=o.name==='ERL_RECESS'?[...geometryRegions,innerOccluder,...wings]:[...geometryRegions,...wings];
+    const extent=WINGS.outer+.34;
     for(let i=0;i<p.count;i++)v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).toArray(pw,3*i);
     const index=[],slices=Object.fromEntries(keys.map(k=>[k,[]]));
     function vertex(i){return [[pw[3*i],pw[3*i+1],pw[3*i+2]],[i,i,i],[1,0,0]]}

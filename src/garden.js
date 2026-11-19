@@ -8,6 +8,7 @@ import {pathNetwork,gardenTerrain} from './garden-ground.js';
 import {planGeometry} from './perimeter.js';
 import {addParkArchitecture,parkFacadeClearance} from './park-architecture.js';
 import {addParkMonuments,monumentClear} from './park-monuments.js';
+import {WC_CUT} from './park-stair.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
 export function addGarden(T, scene, world, oldGravel, finish) {
@@ -61,6 +62,10 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     const apron=new T.Mesh(planGeometry(T,[[x-wide,front],[x+wide,front],[x+wide,-17.025],[x-wide,-17.025]],-.017,1),gravel);
     apron.name='Weganschluss • Tordurchgang';apron.receiveShadow=true;group.add(apron);floors.push(apron);
   }
+  const wcSide=WC_CUT.left,wcFront=WC_CUT.front,join=39.35+1.87;
+  const wcLink=new T.Mesh(planGeometry(T,[[join,wcFront-2.07],[wcSide,wcFront-2.07],
+    [wcSide,wcFront],[join,wcFront]],-.017,1),gravel);
+  wcLink.name='Seitlicher Weg zum WC';wcLink.receiveShadow=true;group.add(wcLink);floors.push(wcLink);
   const sites=[];
   function tree(x,z,h,species,hero,mapped=false){
     if(z>-18||(!mapped&&x<-21&&z>-88)||parkFacadeClearance(x,z,2)||monumentClear(x,z,1.3))return;

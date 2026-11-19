@@ -18,7 +18,7 @@ import {makeFountain} from './fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
-import {addParkStair,wcHeightAt} from './park-stair.js';
+import {addParkStair,wcHeightAt,wcCeilingAt} from './park-stair.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
@@ -62,15 +62,15 @@ async function start(){
  addFixedColliders(world);
  const hall=makeHall(T,model,stonework,world,leaves);
  const perimeter=addPerimeter(T,s,world,finish);
- addParkStair(T,s,world,finish);
+ const wc=addParkStair(T,s,world,finish);
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
  walkSurfaces.push(...garden.floors);
  const backdrop=addBackdrop(T,s),{ground}=backdrop;
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
- const floorHeight=(x,z)=>{
-   const stair=wcHeightAt(x,z);
+ const floorHeight=(x,z,referenceY=0)=>{
+   const stair=wcHeightAt(x,z,referenceY);
    if(stair!==null)return stair;
    const entry=hallFloor(x,z);
    if(entry!==null)return entry;
@@ -89,10 +89,10 @@ async function start(){
    return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
  });
  const player=createPlayer(T,c,world,floorHeight,event=>{
-   const {kind,x,z,foot,power}=event;
-   const surface=hallFloor(x,z)!==null?'hall':garden.surfaceAt(x,z)??'stone';
+   const {kind,x,y,z,foot,power}=event;
+   const surface=hallFloor(x,z)!==null||Number.isFinite(wcCeilingAt(x,z,y))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
- });
+ },wcCeilingAt);
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
@@ -121,7 +121,8 @@ async function start(){
  }
  const round=ghoulRound(T,s,world,floorHeight,announceGhoul,audio.creature);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
-   ()=>combat()&&desktopRound()&&hall.allowGear(player.body.position),round,audio.shot,audio.pulseContact);
+   ()=>{const p=player.body.position;return combat()&&desktopRound()&&hall.allowGear(p)
+     &&!(p.y<-.42&&wcHeightAt(p.x,p.z,p.y)!==null);},round,audio.shot,audio.pulseContact);
  viewmodel.setCombat(false);
  const modeButtons=[...$('game-mode').querySelectorAll('[data-mode]')];
  function chooseMode(id){
@@ -183,7 +184,7 @@ async function start(){
    event.preventDefault();handleDoor();
  });
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
- function draw(){const p=player.body.position;lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
+ function draw(){const p=player.body.position;lighting.update(p);garden.update(p,performance.now());wc.update(p);fountain.syncView?.(c);r.render(s,c);viewmodel.draw(r);}
  function render(time){
    frame=0;
    if(active()){

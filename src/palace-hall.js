@@ -1,12 +1,14 @@
 import {architectureKit} from './architecture-kit.js';
-import {PORTALS,HALL} from './palace-openings.js';
+import {PORTALS,HALL,WINGS,inPalaceWing} from './palace-openings.js';
 import {portalFrame} from './palace-facade.js';
+import {interiorArch,addPalaceWings} from './palace-wings.js';
 
 const q=(x,y,z)=>[x,y,z],{floor:y,half,zMin,zMax}=HALL;
 const step=(t)=>Math.max(0,Math.min(1,t));
 const mix=(a,b,t)=>a+(b-a)*t;
 
 export function hallFloor(x,z){
+  if(inPalaceWing(x,z))return y;
   if(Math.abs(x)>half||z<PORTALS.east.z-.98||z>PORTALS.west.z+.82)return null;
   if(z<zMin||z>zMax){
     const d=z<0?PORTALS.east:PORTALS.west,ext=(z-d.z)*d.side;
@@ -17,8 +19,8 @@ export function hallFloor(x,z){
   return y;
 }
 
-// One interpreted public room only; this plan is not the existing building's
-// interior. All threshold coordinates are shared with the exterior assembly.
+// Freely interpreted public rooms; not a survey of the existing interior.
+// The exterior entrance thresholds remain shared with the façade assembly.
 export function makeHall(T,root,M,world,leaves){
   const limestone=new T.MeshStandardMaterial({color:0xc6beac,roughness:.81});
   const limewash=new T.MeshStandardMaterial({color:0xdacfc0,roughness:.96});
@@ -46,10 +48,19 @@ export function makeHall(T,root,M,world,leaves){
   for(const side of [-1,1]){
     const wall=(z,a,d)=>[side*(half-d),a,side*z];
     const min=side>0?zMin:-zMax,max=side>0?zMax:-zMin;
-    k.box('limewash',wall,min,max,y,spring+.035,-.20,0);
-    k.box('limestone',wall,min,max,0,1.00,.006,.046);
-    k.box('cut',wall,min,max,.99,1.082,.022,.098);
-    k.box('seam',wall,min,max,y,.21,.04,.106);
+    const span=WINGS.portal+.48;
+    k.box('limewash',wall,min,-span,y,spring+.035,-.23,0);
+    k.box('limewash',wall,span,max,y,spring+.035,-.23,0);
+    interiorArch(k,wall,span,spring+.035);
+    for(const [a,b] of [[min,-WINGS.portal-.13],[WINGS.portal+.13,max]]){
+      k.box('limestone',wall,a,b,0,1.00,.006,.046);
+      k.box('cut',wall,a,b,.99,1.082,.022,.098);
+      k.box('seam',wall,a,b,y,.21,.04,.106);
+    }
+    for(const [a,b] of [[zMin,-WINGS.portal],[WINGS.portal,zMax]]){
+      const xs=[side*(half-.079),side*(half+.214)].sort((x,z)=>x-z);
+      world.box(xs[0],a,xs[1],b);
+    }
     for(const z of [-8.24,-3.44,3.44,8.24]){
       k.box('limestone',wall,z-.218,z+.218,.16,spring,-.006,.147);
       k.box('cut',wall,z-.295,z+.295,.17,.45,0,.211);
@@ -62,12 +73,6 @@ export function makeHall(T,root,M,world,leaves){
       k.box('inset',wall,a+.09,a+.21,.077,.43,.19,.47);
       k.box('inset',wall,b-.22,b-.088,.077,.43,.19,.47);
       world.box(side>0?half-.55:-half,z-.94,side>0?half:-half+.55,z+.94);
-    }
-    for(const z of [-.03]){
-      k.box('wall',wall,z-.86,z+.86,1.33,2.79,.002,.019);
-      for(const x of [z-.88,z+.88])k.box('cut',wall,x-.042,x+.042,1.26,2.84,0,.081);
-      for(const h of [1.26,2.83])k.box('cut',wall,z-.93,z+.93,h-.029,h+.034,0,.084);
-      k.box('seam',wall,z-.52,z+.52,1.43,1.50,.014,.043);
     }
   }
   // Smooth analytic normals on the barrel; the rest of the room retains
@@ -137,6 +142,7 @@ export function makeHall(T,root,M,world,leaves){
     light.position.set(0,2.41,d.z-d.side*1.85);room.add(light);bounces.push(light);
   }
   k.flush('Halle · Stein, Putz und Leuchten');
+  const wings=addPalaceWings(T,root,world,MAT);
 
   const doors=Object.values(PORTALS).map(d=>({...d,leaves:leaves[d.id],progress:0,target:0}));
   const closeEnough=(p,d,dist)=>Math.hypot(p.x,(p.z-d.z)*.91)<dist;
@@ -150,7 +156,7 @@ export function makeHall(T,root,M,world,leaves){
   }
   const look=new T.Vector3();
   let preset='dusk',lit=false,wasMoving=false;
-  function allowGear(p){return !(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
+  function allowGear(p){return !inPalaceWing(p.x,p.z)&&!(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
   function targetFor(player,camera){
     camera.getWorldDirection(look);
     const p=player.body.position;
@@ -166,6 +172,7 @@ export function makeHall(T,root,M,world,leaves){
   }
   function usable(d,player){return d.target===0||!closeEnough(player.body.position,d,1.40)}
   function update(dt,p){
+    wings.update(p,preset);
     let moving=false,changed=false;
     for(const d of doors){
       if(d.progress===d.target)continue;
@@ -185,6 +192,6 @@ export function makeHall(T,root,M,world,leaves){
     }else for(const light of [...lamps,...bounces])light.intensity=0;
     return {changed,shadow};
   }
-  function setPreset(id){preset=id;warm.emissiveIntensity=id==='night'?.76:.45}
+  function setPreset(id){preset=id;wings.setPreset(id);warm.emissiveIntensity=id==='night'?.76:.45}
   return {targetFor,commit,usable,update,setPreset,allowGear};
 }

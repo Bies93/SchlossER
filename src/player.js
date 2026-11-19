@@ -5,7 +5,7 @@ const STEP = 1 / 120, MAX_PITCH = Math.PI * 85 / 180;
 const GRAVITY=17.6, JUMP_SPEED=4.98, JUMP_BUFFER=.125, COYOTE=.075, DOWN_SNAP=.103;
 const clamp = (v, max) => Math.min(max, Math.max(-max, v));
 
-export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}) {
+export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceilingHeight=()=>Infinity) {
   const body = new T.Group();
   const look = new T.Group();
   look.position.y = PLAYER.eye;
@@ -48,18 +48,18 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}) {
         coyote=grounded?COYOTE:Math.max(0,coyote-STEP);
         if(buffer>0&&coyote>0){
           vy=JUMP_SPEED;grounded=false;buffer=coyote=0;stepDistance=0;
-          onStep({kind:'jump',x,z,power:.56,foot});
+          onStep({kind:'jump',x,y,z,power:.56,foot});
         }else buffer=Math.max(0,buffer-STEP);
         // Firm braking on the ground, momentum and limited steering in air.
         const blend=1-Math.exp(-(grounded?(intent?(tx*vx+tz*vz<-.1?27:23):30):(intent?4.35:.43))*STEP);
         vx+=(tx-vx)*blend;vz+=(tz-vz)*blend;
         if(Math.hypot(vx,vz)>.017){
-          next.x=x;next.z=z;
+          next.x=x;next.z=z;next.y=groundY;
           world.move(next, vx*STEP, vz*STEP);
           const dx=next.x-x,dz=next.z-z;
           if(Math.abs(dx)+Math.abs(dz)<1e-6){vx=vz=0}
           else{
-            const h=floorHeight(next.x,next.z);
+            const h=floorHeight(next.x,next.z,groundY);
             if(Number.isFinite(h)&&h<=y+(grounded?PLAYER.maxStep:.052)){
               x=next.x;z=next.z;groundY=h;
               // Contacts project out the blocked velocity instead of
@@ -74,10 +74,12 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}) {
         else{
           vy-=GRAVITY*STEP;
           y+=vy*STEP;
+          const headLimit=ceilingHeight(x,z,groundY)-PLAYER.eye-.11;
+          if(y>headLimit){y=Math.max(groundY,headLimit);vy=Math.min(0,vy);}
           if(y<=groundY&&vy<=0){
             const impact=Math.min(1.28,Math.abs(vy)/5);
             y=groundY;vy=0;grounded=true;stepDistance=0;motion.land=impact;
-            if(impact>.22)onStep({kind:'land',x,z,power:impact,foot});
+            if(impact>.22)onStep({kind:'land',x,y,z,power:impact,foot});
           }
         }
         if(!Number.isFinite(y)||y<groundY-3){
@@ -92,7 +94,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}) {
           const stride=pace===PLAYER.run?.93:.68;
           if(motion.speed>.42&&stepDistance>=stride){
             stepDistance-=stride;foot=-foot;
-            onStep({kind:'step',x,z,power:Math.min(1.18,.33+motion.speed*.118),foot});
+            onStep({kind:'step',x,y,z,power:Math.min(1.18,.33+motion.speed*.118),foot});
           }
         }else stepDistance=0;
         if(distance>1e-6||Math.abs(y-py)>1e-6||motion.land>.005)moved=true;
