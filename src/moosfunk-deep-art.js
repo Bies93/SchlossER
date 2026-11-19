@@ -1,4 +1,5 @@
 import {randomSource} from './surface-detail.js';
+import {liturgy} from './moosfunk-iconography.js';
 
 const pages={
   entry:['↓  UNTERDECK','MOOSFUNK · NACH FEIERABEND'],
@@ -10,7 +11,7 @@ const pages={
   bench:['GEMEINSAM GEBORGEN','MOOSFUNK · UNTERDECK',''],
   sun:[], moon:[], chalk:[], tide:[],
   poppy:[],nightbird:[], hills:[],dance:[],fern:[],moth:[],
-  eclipse:[],ears:[],vigil:[],stain:[]
+  eclipse:[],ears:[],vigil:[],stain:[],canticle:[],oracle:[],ashes:[],renewal:[],obit:[]
 };
 const keys=Object.keys(pages),colors=['#4e6653','#734c50','#665055','#4d6664','#334b4b','#505560','#78524d','#603f47','#354d56','#292837','#4c465e'];
 export function deepArt(T){
@@ -44,6 +45,8 @@ export function deepArt(T){
         c.fillRect(100+rand()*312,149+rand()*219,.7+rand()*4,.6+rand()*1.9);
       }
       c.globalCompositeOperation='source-over';
+    }else if(['eclipse','canticle','oracle','ashes','renewal','obit'].includes(id)){
+      liturgy(c,id);
     }else if(i>=11){
       const oval=(x,y,a,b,rot,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,a,b,rot,0,Math.PI*2);c.fill();};
       const poly=(pts,col)=>{c.fillStyle=col;c.beginPath();pts.forEach(([x,y],j)=>j?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();};

@@ -1,5 +1,8 @@
 import {b,DEEP_STAIR as stair,DEEP_RUN,DEEP_FLOOR,p,deepStairY,wcRoofAt} from './park-wc-layout.js';
 import {randomSource} from './surface-detail.js';
+import {quiltPrint} from './moosfunk-brocade.js';
+import {shrineCraft} from './moosfunk-reliquary.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const bays=[{u:.08,mat:'plum',quilt:'terracotta'},{u:-5.28,mat:'petrol',quilt:'olive'},{u:-10.77,mat:'wine',quilt:'plum'}];
 export const DEEP_LIGHTS=[
@@ -10,7 +13,7 @@ export const DEEP_LIGHTS=[
     [u,3.82,i===1?0xc0c7d1:0xfab49b,29,6.8,'deepLounge',2.04]]),
   [-13.64,.17,0xf7ae92,23,6.1,'deepLounge',2.34],
   // These two sources are hidden with the room, not attached to the scene.
-  [-19.64,.20,0x67e6c1,23,6.4,'deepOrb',1.65],
+  [-19.64,.20,0xa1d9ca,16,6.6,'deepOrb',1.76],
   [-21.30,2.57,0xa087dc,14,5.4,'deepOrb',2.08],
   [-16.07,-2.3,0xeeb380,11,4.8,'deepOrb',2.03],
   [-24.55,.18,0xffdca4,15,5.8,'deepOrb',2.37],
@@ -24,6 +27,7 @@ export function deepMaterials(T,{painted,stone,cloth,wood}){
   const textile=(color,side=T.FrontSide)=>m(color,.99,{...cloth,side,normalScale:new T.Vector2(.24,.24)});
   const lamp=(color,emissive,n=.85)=>({material:m(color,.54,{emissive,emissiveIntensity:n}),cast:false});
   return {
+    ...Object.fromEntries([0,1,2].map(i=>['quilt'+i,m(0xffffff,.96,{...cloth,map:quiltPrint(T,i),normalScale:new T.Vector2(.31,.31),side:T.DoubleSide})])),
     deepRock:grain(0x847164,.75),deepRockBase:grain(0x665b51,.36),
     deepSlate:grain(0x706961,.38,.86),deepSlateDark:grain(0x635b55,.40,.92),
     deepEdge:grain(0x938272,.54,.85),deepDamp:grain(0x615951,.58),
@@ -37,7 +41,8 @@ export function deepMaterials(T,{painted,stone,cloth,wood}){
     toySage:m(0x68837d,.56),deepGold:lamp(0xeec38f,0xffbd71,.98),
     deepRose:lamp(0xf09d97,0xee797d,.67),deepBlue:lamp(0xa9ccd2,0x81bbcb,.74),
     violetGlass:lamp(0xb1a0c9,0xa180e4,.60),orbStone:grain(0x414747,.65,.79),
-    oldGilt:m(0xc39c59,.49,{...painted,metalness:.43}),blackBasalt:grain(0x55464b,.83,.73)
+    oldGilt:m(0xc39c59,.49,{...painted,metalness:.43}),blackBasalt:grain(0x55464b,.83,.73),
+    relicBone:grain(0xbda781,.31,.88),boneShade:m(0x382c28,.95)
   };
 }
 
@@ -194,23 +199,66 @@ export function furnishDeep(T,m,id){
     pp.setXYZ(i,puff(x),puff(y)*(1-.13*Math.cos(5*x)*Math.cos(4*z)),puff(z));
   }
   pillow.computeVertexNormals();
+  const mattress=id==='deepLounge'?new RoundedBoxGeometry(2.38,.20,2.38,2,.055):null;
+  function cushion(mat,u,y,v,rx,ry,rz,a){
+    stamp(mat,pillow,u,y,v,[rx,ry,rz],a);
+    const seam=(j,dy)=>{
+      const t=j*Math.PI/16,x=1.003*rx*puff(Math.cos(t)),z=1.003*rz*puff(Math.sin(t));
+      return p(u+z*Math.cos(a)-x*Math.sin(a),DEEP_FLOOR+y+dy,v-x*Math.cos(a)-z*Math.sin(a));
+    };
+    // Narrow woven piping following the same superellipse as the cushion.
+    for(let j=0;j<32;j++)k.quad('deepSeam',seam(j,.0038),seam(j+1,.0038),seam(j+1,-.0038),seam(j,-.0038),.40);
+  }
   function toys(u,v,y,n){
     B('deepSoot',u-.207,u+.196,y,y+.023,v-.18,v+.18);
     for(const V of [v-.17,v+.17])line('deepCopper',u-.20,y+.035,V,u+.19,y+.035,V,.010);
-    if(n%3===0){
+    if(n===0){
       stamp('toySilicone',prop,u-.082,y+.023,v,[1,1,1]);
       for(const h of [.11,.14,.17])disk('toySage',u-.082,y+h,v,.050);
       disk('deepCopper',u+.095,y+.049,v-.04,.054);
-    }else if(n%3===1){
-      stamp('toySage',prop,u-.087,y+.081,v+.11,[.79,.92,.79],.28,-turn);
-      ball('wine',u+.074,y+.066,v-.066,.064,.049,.051);
-      line('deepCopper',u+.075,y+.060,v-.066,u+.14,y+.049,v-.12,.009);
-    }else{
+    }else if(n===1){
+      // Cordless wand in a felt-lined cradle, with a fluted neck, switch
+      // and charging shoe. Local U runs along the length of the tray.
+      for(const x of [-.12,.095])B('plum',u+x-.028,u+x+.028,y+.023,y+.068,v-.058,v+.058);
+      line('toySage',u-.163,y+.093,v,u+.035,y+.093,v,.043);
+      for(let i=0;i<4;i++)line('deepCopper',u+.029+i*.012,y+.093,v,u+.035+i*.012,y+.093,v,.032);
+      stamp('toySilicone',pillow,u+.112,y+.096,v,[.049,.052,.065]);
+      B('deepSoot',u-.113,u-.046,y+.131,y+.139,v-.014,v+.014);
+      ball('deepBlue',u-.071,y+.139,v,.009,.004,.009);
+    }else if(n===2){
       // Padded sleep mask with two cupped lobes, brass buckle and ribbon.
       for(const s of [-1,1])ball('plum',u+s*.058,y+.059,v,.052,.032,.084,s*.23);
       B('plum',u-.062,u+.062,y+.041,y+.069,v-.026,v+.020);
       stamp('deepSeam',hoop,u,y+.044,v+.053,[.095,.070,.035],0,-turn);
       B('oldGilt',u+.083,u+.101,y+.046,y+.058,v+.027,v+.059);
+    }else if(n===3){
+      // Two velvet-lined cuffs, stitched leather edges and an open clasp.
+      for(const s of [-1,1]){
+        const x=u+s*.096;
+        for(const [h,mat] of [[.048,'deepCopper'],[.061,'deepWalnut'],[.074,'wine'],[.087,'deepWalnut']])
+          stamp(mat,hoop,x,y+h,v,[.071,.083,.076],0,-turn);
+        B('oldGilt',x-.024,x+.024,y+.05,y+.085,v+.070,v+.091);
+      }
+      disk('deepCopper',u,y+.052,v,.024);
+    }else if(n===4){
+      // Hand-cranked massage roller: two independent ribbed drums and fork.
+      for(const s of [-1,1]){
+        const V=v+s*.052;
+        line('toySage',u-.018,y+.076,V,u+.109,y+.076,V,.042);
+        for(let j=0;j<5;j++)line('deepWalnut',u-.008+j*.023,y+.076,V,u-.001+j*.023,y+.076,V,.045);
+        line('deepCopper',u+.13,y+.076,V,u+.13,y+.076,v,.014);
+        line('oldGilt',u-.046,y+.076,V,u-.074,y+.076,v,.011);
+      }
+      line('deepWalnut',u-.165,y+.076,v,u-.069,y+.076,v,.023);
+    }else{
+      // Two weighted glass beads nested in a shallow fitted case.
+      B('deepWalnut',u-.162,u+.162,y+.023,y+.052,v-.074,v+.074);
+      for(const s of [-1,1]){
+        ball('deepBlueJar',u+s*.067,y+.097,v,.051,.050,.062);
+        disk('oldGilt',u+s*.067,y+.069,v,.047);
+      }
+      line('plum',u-.03,y+.095,v,u+.03,y+.095,v,.008);
+      stamp('plum',hoop,u+.133,y+.063,v+.015,[.039,.029,.028],0,-turn);
     }
   }
   function supplyShelf(u,v,side){
@@ -271,35 +319,64 @@ export function furnishDeep(T,m,id){
       B('deepWalnut',U-.055,U+.055,.018,.24,V-.060,V+.060);
       B('deepCopper',U-.058,U+.058,.017,.057,V-.063,V+.063);
     }
-    B('deepLinen',u-1.19,u+1.19,.454,.636,v-1.191,v+1.19);
+    stamp('deepLinen',mattress,u,.541,v,[1,1,1]);
     for(const [a,z] of [[u-1.18,u+1.18]])for(const V of [v-1.182,v+1.182])
       line('deepSeam',a,.610,V,z,.610,V,.012);
     B('deepWalnut',u-1.25,u+1.25,.30,1.215,head-.057,head+.057);
     const inner=head-side*.068;
     B(mat,u-1.13,u+1.13,.662,1.154,inner-.019,inner+.019);
+    // Turned finials and an arched, upholstered crest. Quilt and mattress
+    // fill the frame; the decorative posts stay inside its plan envelope.
+    for(const s of [-1,1]){
+      const U=u+s*1.168;
+      drum('deepWalnut',U,.82,head,.073,.98);
+      for(const H of [.414,1.157,1.291])drum('deepCopper',U,H,head,.084,.032);
+      ball('deepWalnut',U,1.369,head,.080,.086,.08);
+    }
+    const finish='quilt'+(n%3);
+    for(let j=0;j<24;j++){
+      const t=j/24,T=(j+1)/24,h=t=>1.135+.27*Math.sin(t*Math.PI)**1.55;
+      const x=u-1.125+t*2.25,X=u-1.125+T*2.25,z=inner-side*.024;
+      const coords=[[x,1.105,z],[X,1.105,z],[X,h(T),z],[x,h(t),z]];
+      const pts=coords.map(([U,H,V])=>p(U,DEEP_FLOOR+H,V));
+      k.quad(finish,...(side>0?pts.reverse():pts),.72);
+      line('deepWalnut',x,h(t),z,X,h(T),z,.033);
+    }
     for(let i=0;i<9;i++){
       const U=u-1.045+i*.261;
       ball('deepCopper',U,1.085,inner-side*.024,.018,.018,.014);
     }
     for(const [i,X] of [-.56,.54].entries()){
-      stamp(n%2===0?'deepLinen':'deepSeam',pillow,u+X,.721,head-side*.42,[.237,.103,.444],(i===0?.08:-.12)*side);
-      stamp(mat,pillow,u+X+(i===0?.27:-.29),.736,head-side*.72,[.179,.124,.221],side*(i===0?-.27:.11));
+      cushion(n%2===0?'deepLinen':'deepSeam',u+X,.721,head-side*.42,.237,.103,.444,(i===0?.08:-.12)*side);
+      cushion(mat,u+X+(i===0?.27:-.29),.736,head-side*.72,.179,.124,.221,side*(i===0?-.27:.11));
     }
     // One continuous pieced quilt, including its side drops. Colour blocks
     // and stitched valleys are the quilt surface itself, not stacked decals.
     const q=(i,j)=>{
       const a=i/24,t=j/16,edge=Math.min(a,1-a),drop=Math.max(0,1-edge*24);
-      const h=.675+.027*Math.abs(Math.sin(i*Math.PI/4)*Math.sin(j*Math.PI/4))+.006*Math.sin(j*.94+i*.55);
-      return p(u+(a-.5)*2.54,DEEP_FLOOR+h-drop*(.13+.025*Math.sin(j*.66)),v+side*(-1.13+1.49*t));
+      const h=.682+.042*Math.abs(Math.sin(i*Math.PI/4)*Math.sin(j*Math.PI/4))+.011*Math.sin(j*.94+i*.55);
+      return p(u+(a-.5)*2.55,DEEP_FLOOR+h-drop*(.215+.043*Math.sin(j*.66)),v+side*(-1.18+1.60*t));
     };
     for(let i=0;i<24;i++)for(let j=0;j<16;j++){
-      const cell=(Math.floor(i/4)+Math.floor(j/4)+n)%3;
-      const swatch=(i===0||i===23||j===0)?'deepSeam':cell===0?mat:quilt;
-      const pts=[q(i,j+1),q(i+1,j+1),q(i+1,j),q(i,j)];
-      k.quad(swatch,...(side<0?pts.reverse():pts),.42);
+      const swatch=i===0||i===23||j===0?'deepSeam':finish;
+      const cells=[[i,j+1],[i+1,j+1],[i+1,j],[i,j]];
+      if(side<0)cells.reverse();
+      for(const ids of [[0,1,2],[0,2,3]]){
+        const ij=ids.map(idx=>cells[idx]);
+        k.triangle(swatch,...ij.map(([a,b])=>q(a,b)),ij.flatMap(([a,b])=>[a/10,b/10]));
+      }
     }
-    rag(u+(n%2===0?.17:-.27),.741,foot+side*.32,1.74,.36,mat);
+    // Rolled throw: rests on the quilt and has bound ends, not a hovering sheet.
+    const roll=foot+side*.28;
+    line(mat,u-.83,.772,roll,u+.78,.772,roll,.086);
+    for(const d of [-.77,-.71,.66,.72])line('deepSeam',u+d,.772,roll,u+d+.014,.772,roll,.089);
     B('deepWalnut',u-1.219,u+1.219,.31,.483,foot-.034,foot+.034);
+    for(const s of [-1,1]){
+      const U=u+s*.576,V=foot-side*.049;
+      B('darkWood',U-.508,U+.508,.32,.461,V-.013,V+.013);
+      for(const x of [U-.083,U+.083])line('deepCopper',x,.404,V,x,.404,V-side*.042,.013);
+      line('deepCopper',U-.083,.404,V-side*.042,U+.083,.404,V-side*.042,.014);
+    }
     hit(u-1.24,u+1.24,v-1.25,v+1.25);
   }
 
@@ -321,14 +398,18 @@ export function furnishDeep(T,m,id){
     ball('deepCopper',U,1.32,V,.22,.30,.18);
     ball('deepSoot',U+.034,1.64,V,.232,.184,.157);
     for(const side of [-1,1]){
-      ball('oldGilt',U+.158,1.65,V+side*.108,.096,.089,.041);
-      ball('deepBlueJar',U+.196,1.651,V+side*.108,.054,.054,.026);
+      ball('oldGilt',U+.156,1.65,V+side*.102,.083,.071,.039);
+      ball('deepSoot',U+.188,1.651,V+side*.102,.046,.052,.023);
+      line('oldGilt',U+.185,1.683,V+side*.034,U+.134,1.746,V+side*.189,.022);
+      ball('deepWax',U+.21,1.662,V+side*.095,.014,.012,.01);
+      craft.pinion(U,V,side);
       line('deepCopper',U,1.74,V+side*.115,U-.041,1.85,V+side*.19,.034);
       for(let j=0;j<4;j++)ball(j%2?'oldGilt':'deepCopper',U-.03+j*.028,1.27+j*.041,V+side*(.156+j*.008),.057,.167,.083,.12*side);
     }
     stamp('oldGilt',taper,U+.193,1.56,V,[.036,.095,.043],0,Math.PI);
     hit(U-.34,U+.34,V-.34,V+.34);
   }
+  const craft=shrineCraft(T,m,{B,pipe,ball,drum,disk,line,hit,votive,stamp});
   let animate;
   if(id==='deepLanding'){
     framed('welcome',3.81,1.52,-2.548,1.49,.97,-turn);
@@ -355,12 +436,12 @@ export function furnishDeep(T,m,id){
       const v=side<0?-4.69:4.95,front=v-side*1.96,tagY=1.78,back=v+side*1.49;
       rug(u,v-side*.64,3.38,2.93,mat);
       bed(u,v,side,mat,quilt,i+(side>0?1:0));
-      const U=u+1.67,V=v+side*.65,y=cabinet(U,V,.66,-side);
+      const U=u+1.79,V=v+side*.65,y=cabinet(U,V,.66,-side);
       lanternDesk(U+.088,V+side*.07,y,.083,i===1&&side===1?'deepBlue':'deepRose');
       bottle(U-.16,V-side*.070,y,.75,i%2===0?'deepBlueJar':'amber');
-      const trayU=u-1.66,trayV=v+side*.63;
+      const trayU=u-1.79,trayV=v+side*.63;
       const Y=cabinet(trayU,trayV,.65,-side);
-      toys(trayU,trayV,Y+.003,i+(side>0?1:0));
+      toys(trayU,trayV,Y+.003,2*i+Number(side>0));
       const art=['poppy','nightbird','hills','dance','fern','moth'],idx=2*i+Number(side>0);
       const wall=side<0?-6.32:6.71;
       framed(art[idx],u,tagY,wall,1.22,1.08,side*turn);
@@ -379,15 +460,15 @@ export function furnishDeep(T,m,id){
       for(const x of hooks)line('deepIron',x,2.42,back-side*.25,x,wcRoofAt(id,x,back-side*.25)-DEEP_FLOOR+.05,back-side*.25,.014);
       lantern(u,2.12,front+.80*side,i===1&&side===1?'deepBlue':'deepGold',.109);
     }
-    for(const u of [1.70,-2.57,-8.03,-13.22]){
-      curtain(u,-1,u===-8.03?'petrol':'plum',u!==1.70);
-      curtain(u,1,u===-8.03?'petrol':'wine',u!==-13.22&&u!==1.70);
+    for(const u of [2.32,-2.57,-8.03,-13.22]){
+      curtain(u,-1,u===-8.03?'petrol':'plum',u!==2.32);
+      curtain(u,1,u===-8.03?'petrol':'wine',u!==-13.22&&u!==2.32);
     }
-    framed('cabinet',2.375,1.56,3.65,1.38,.97,Math.PI);
-    framed('rest',2.375,1.55,-3.78,1.43,.94,Math.PI);
-    supplyShelf(1.70,3.65,1);
-    supplyShelf(1.70,-3.78,-1);
-    for(const [u,v] of [[1.76,-5.2],[-13.77,4.97]]){
+    framed('cabinet',2.325,1.71,2.72,1.38,.97,Math.PI);
+    framed('rest',2.325,1.71,-2.68,1.43,.94,Math.PI);
+    supplyShelf(1.69,2.58,1);
+    supplyShelf(1.69,-2.49,-1);
+    for(const [u,v] of [[-13.91,-3.58],[-13.91,4.97]]){
       bench(u,v,1.12,'petrol');
       for(let i=0;i<3;i++)ball(i===1?'olive':'deepLinen',u+(i-1)*.27,.558,v,.133,.044,.129,i*.14);
     }
@@ -396,19 +477,7 @@ export function furnishDeep(T,m,id){
   }else if(id==='deepOrb'){
     const u=-19.64,v=.20;
     deepTile('chalk',u,.029,v,4.9,4.9,0,-turn,.10);
-    drum('deepSoot',u,.09,v,.91,.18);drum('orbStone',u,.276,v,.76,.19,taper);
-    drum('deepCopper',u,.398,v,.663,.062);drum('orbStone',u,.530,v,.605,.202,taper);
-    drum('deepIron',u,.654,v,.596,.049);disk('deepCopper',u,.690,v,.503);
-    for(let i=0;i<8;i++){
-      const a=i*Math.PI/4,U=u+Math.cos(a)*.517,V=v+Math.sin(a)*.517;
-      drum('deepCopper',U,.704,V,.055,.16,taper);
-      drum(i%2===0?'deepBlue':'violetGlass',U,.798,V,.034,.044);
-      const radial=(r,h)=>[u+Math.cos(a)*r,h,v+Math.sin(a)*r];
-      pipe('oldGilt',radial(.48,.45),radial(.66,.72),.030);
-      pipe('oldGilt',radial(.66,.72),radial(.49,.94),.022);
-      ball('oldGilt',...radial(.49,.94),.032,.049,.032);
-    }
-    disk('oldGilt',u,.115,v,.81);disk('oldGilt',u,.336,v,.66);
+    craft.crown(u,v);
     hit(u-.70,u+.70,v-.70,v+.70);
     for(let i=0;i<15;i++){
       const a=i*Math.PI*2/15,U=u+Math.cos(a)*2.19,V=v+Math.sin(a)*2.19;
@@ -417,15 +486,18 @@ export function furnishDeep(T,m,id){
       drum('deepWax',U,.082+y*.5,V,.039+rand()*.014,y);
       ball('deepGold',U,.087+y,V,.014,.039,.014);
     }
-    for(const [V,sign,tile] of [[-3.844,1,'moon'],[4.238,-1,'tide']]){
+    for(const [V,sign,tile] of [[-3.844,1,'oracle'],[4.238,-1,'canticle']]){
       const yaw=-sign*turn;
-      deepTile(tile,-19.73,1.54,V,1.63,1.52,yaw);
-      line('deepCopper',-20.64,2.33,V+sign*.03,-18.80,2.33,V+sign*.03,.022);
+      framed(tile,-19.73,1.54,V,1.47,1.78,yaw);
+      for(const U of [-20.63,-18.83]){
+        line('deepWalnut',U,.47,V+sign*.06,U,2.36,V+sign*.06,.049);
+        line('oldGilt',U,2.36,V+sign*.06,-19.73,2.61,V+sign*.06,.031);
+      }
       sconce(-17.33,1.84,V,'violetGlass',sign);
       sconce(-21.62,1.84,V,'deepBlue',sign);
     }
     framed('log',-25.47,1.56,-2.66,1.06,.83,0);
-    framed('ears',-25.47,1.55,2.97,1.05,1.34,0);
+    framed('canticle',-25.47,1.55,2.97,1.05,1.34,0);
     // The gilt reredos reads through the orb from the door. Its rays have
     // hammered tips and an actual backing and foot, not floating decals.
     const wallU=-25.17;
@@ -442,7 +514,7 @@ export function furnishDeep(T,m,id){
       watcher(-23.59,.20+side*1.65);
       for(let j=0;j<4;j++)votive(wallU+.09,.20+side*(.83+j*.14),.26,.13+j*.026);
     }
-    lantern(-24.55,2.45,.18,'deepGold');
+    for(const s of [-1,1])lantern(-24.55,2.18,.18+s*1.97,'deepGold',.084);
     framed('vigil',-22.18,1.56,-3.84,.69,.93,-turn);
     const Y=cabinet(-21.48,-2.88,1.06,1);
     for(let j=0;j<4;j++)bottle(-21.83+j*.216,-2.91,Y,.76+rand()*.55,j%2===0?'deepBlueJar':'amber');
@@ -479,7 +551,17 @@ export function furnishDeep(T,m,id){
     deepTile('stain',U+.23,1.027,V,1.10,1.61,.23,-turn);
     deepTile('stain',U+.06,.007,V+.97,1.67,2.34,-.42,-turn);
     deepTile('stain',U-1.02,.006,V+.78,.44,.76,.61,-turn);
-    framed('vigil',U,1.60,-8.89,1.24,1.59,-turn);
+    craft.charnel(U,V);
+    framed('ashes',-20.17,1.42,-7.78,1.12,1.48,Math.PI);
+    framed('renewal',-24.99,1.70,-5.54,.94,1.32,0);
+    framed('obit',U+.89,1.54,-4.12,1.15,1.36,turn);
+    // Oxidised runs hang down the front lip rather than hovering over it.
+    deepTile('stain',U+.24,.947,V+.573,.84,.14,-turn);
+    deepTile('stain',U+.47,.009,V+.68,.82,1.10,-.72,-turn);
+    for(let i=0;i<9;i++){
+      const n=i/8,x=U+.18+Math.sin(i*11)*.33;
+      deepTile('stain',x,.011,V+1.23+n*1.15,.15+.12*(1-n),.23-.08*n,i*.71,-turn);
+    }
     for(const side of [-1,1]){
       const x=U+side*1.24;
       line('deepIron',x,.11,-8.85,x,2.28,-8.85,.039);
@@ -496,6 +578,7 @@ export function furnishDeep(T,m,id){
     lantern(-24.58,1.63,-5.30,'deepRose',.075);
   }
   for(const g of [sphere,bead,pillow,cylinder,taper,hoop,prop])g.dispose();
+  mattress?.dispose();
   return animate;
 }
 
@@ -524,15 +607,20 @@ function makeOrb(T,room,u,v){
         vec3 q=normalize(origin);
         float c=cos(time*0.37),s=sin(time*0.37);
         q.xz=mat2(c,s,-s,c)*q.xz;
-        float ribbon=sin(11.0*q.y+6.0*sin(5.0*q.x+4.0*q.z-time*0.43)+sin(13.0*q.z-time));
-        float vein=pow(1.0-abs(ribbon),3.9);
-        float web=pow(abs(sin(12.0*q.x+4.0*q.y+sin(8.0*q.z)*2.7)),5.3);
+        // Different apparent depths for the cloudy body and the orbit of
+        // fine gold inclusions, instead of uniform white latitude stripes.
+        vec3 inner=q+0.20*normalize(sight)*(.3+.7*max(dot(normalize(n),normalize(sight)),0.0));
+        float ribbon=sin(8.0*inner.y+3.4*sin(4.0*inner.x+3.0*inner.z-time*0.30)+sin(8.0*inner.z-time*.56));
+        float vein=pow(1.0-abs(ribbon),5.9);
+        float web=.5+.5*sin(6.0*inner.x+3.0*inner.y+2.8*sin(4.0*inner.z+.4*time));
         float face=max(0.0,dot(normalize(n),normalize(sight)));
         vec3 coal=vec3(.027,.055,.089),violet=vec3(.29,.08,.63),jade=vec3(.16,.98,.65);
         vec3 col=mix(coal,mix(violet,jade,clamp(.50+.41*sin(6.0*q.y+time*.48)+.15*q.x,0.0,1.0)),.30+.51*web);
-        col+=vein*(jade*.71+vec3(.32,.35,.55)*web);
-        float latitude=sin(11.0*q.y+0.7*sin(3.0*atan(q.z,q.x)+time*.28));
-        float gilding=1.0-smoothstep(.018,.078,abs(latitude));
+        col+=vein*(jade*.46+vec3(.12,.19,.39)*web);
+        float latitude=sin(7.0*q.y+2.8*sin(3.0*atan(q.z,q.x)+time*.21));
+        float gilding=(1.0-smoothstep(.017,.079,abs(latitude)))*smoothstep(.24,.74,web);
+        float heart=pow(max(dot(q,normalize(vec3(.4*sin(time*.18),.49,.64))),0.0),9.0);
+        col+=vec3(1.0,.56,.22)*heart*(.63+.12*sin(time*1.4));
         col+=vec3(.92,.52,.16)*gilding*(.42+.35*face);
         col+=pow(1.0-face,3.0)*vec3(.28,.53,.49);
         gl_FragColor=vec4(col,1.0);
