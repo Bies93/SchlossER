@@ -3,6 +3,7 @@ import {HALL,WINGS} from './palace-openings.js';
 import {randomSource} from './surface-detail.js';
 import {aroundLabOpening,labLower} from './lab-layout.js';
 import {furnishSouthGallery} from './south-gallery.js';
+import {furnishNorthLibrary} from './north-library.js';
 
 const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
 
@@ -193,6 +194,7 @@ export function addPalaceWings(T,root,world,common,poster){
       block(l-.13,r+.13,d-.11,d+.60);
     }
     if(library){
+      furnishNorthLibrary(T,rootWing,world,materials);
       for(const [u,d] of [[8.38,-6.12],[14.45,-6.30],[17.13,-6.30],[19.81,-6.30],[22.50,-6.30],[25.18,-6.30]])rack(u,d);
       for(const [u,d] of [[18.18,1.55],[23.36,1.55]]){
         box('darkWood',u-1.56,u+1.56,.832,.932,d-.62,d+.62);
