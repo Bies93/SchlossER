@@ -193,10 +193,20 @@ async function start(){
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
  function draw(){
    const p=player.body.position,mode=labCameraMode(p);
-   c.layers.set(mode==='cellar'?LAB_LAYER:0);
-   if(mode==='threshold')c.layers.enable(LAB_LAYER);
-   if(mode!=='cellar'){lighting.update(p);garden.update(p,performance.now());wc.update(p);fountain.syncView?.(c);}
-   r.render(s,c);viewmodel.draw(r);
+   const surface=mode!=='cellar',cellar=hall.labVisible();
+   if(surface){
+     c.layers.set(0);
+     lighting.update(p);garden.update(p,performance.now());wc.update(p);fountain.syncView?.(c);
+     r.render(s,c);
+   }
+   // At the doorway share depth, not lighting. A combined camera mask
+   // would compile new palace shaders for a different number of lights.
+   if(cellar||!surface){
+     c.layers.set(LAB_LAYER);const clear=r.autoClear;
+     try{if(surface)r.autoClear=false;r.render(s,c);}
+     finally{r.autoClear=clear;c.layers.set(0);}
+   }
+   viewmodel.draw(r);
  }
  function render(time){
    frame=0;
@@ -291,6 +301,8 @@ async function start(){
    c.fov=T.MathUtils.clamp(T.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI*24/180)/c.aspect)),65,82);
    c.updateProjectionMatrix();refresh();
  }
+ $('loading-text').textContent='Die 3D-Szene wird vorbereitet …';
+ await hall.prepareLab(r,s);
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  draw();dirty=false;

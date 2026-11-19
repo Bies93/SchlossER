@@ -39,6 +39,7 @@ body[data-state=playing][data-input=touch] #stick{display:grid;place-items:cente
 body[data-state=playing][data-input=touch] #jump{display:block}
 main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+body[data-state=loading] #canvas{visibility:hidden}
 canvas{touch-action:none;outline:none}
 .panel{position:absolute;left:max(clamp(12px,4vw,60px),env(safe-area-inset-left));bottom:calc(clamp(12px,5vh,58px) + env(safe-area-inset-bottom));width:min(440px,calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))));
  max-height:calc(100% - 18px - env(safe-area-inset-bottom));overflow:auto;background:#141d1bf5;border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:8px;padding:clamp(15px,2.6vw,26px);box-shadow:0 16px 44px #0006}
@@ -119,7 +120,7 @@ THE SOFTWARE.
 </header>
 <main aria-label="Erlanger Schloss und Schlossgarten">
   <div id="canvas"></div>
-  <div class="panel" id="loading" role="status"><p class="eyebrow">Erlangen zu Fuß</p><p>Der Rundgang wird geladen …</p></div>
+  <div class="panel" id="loading" role="status"><p class="eyebrow">Erlangen zu Fuß</p><p id="loading-text">Der Rundgang wird geladen …</p></div>
   <section class="panel" id="overlay" aria-label="Rundgang">
     <p class="eyebrow">Erlangen zu Fuß</p>
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
@@ -171,6 +172,6 @@ THE SOFTWARE.
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert; der hintere Park ist für den Rundgang verkürzt. Maßkontrolle: Bayerische Vermessungsverwaltung. Parkwege und Lagepunkte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=c1ed0556e8fa"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}}}</script><script src="./viewer.js?v=de6dca7f4266"></script>
 </body>
 </html>

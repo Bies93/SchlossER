@@ -2,6 +2,7 @@ import {architectureKit} from './architecture-kit.js';
 import {sharedSet,randomSource} from './surface-detail.js';
 import {LAB,LAB_CUT,LAB_LAYER,labLower} from './lab-layout.js';
 import {cellarWalls,makeLabDeck} from './lab-wing.js';
+import {addLabGraffiti} from './lab-graffiti.js';
 
 // Entirely fictional scenography: no real building connection or lab protocol.
 const {left,right,back,front}=LAB_CUT,{top,floor,ceiling,end,south,north}=LAB;
@@ -60,8 +61,8 @@ function terminalDisplay(T){
 }
 
 export function addPalaceLab(T,root,world,M){
-  const shell=new T.Group(),cabinet=new T.Group();root.add(shell,cabinet);
-  shell.name='Lesesaal · verschiebbares Regal und Kellertreppe';cabinet.name='Regal mit lockerem Buch';
+  const shell=new T.Group(),shaft=new T.Group(),cabinet=new T.Group();root.add(shell,shaft,cabinet);
+  shell.name='Lesesaal · Verkleidung der Kellertreppe';shaft.name='Projekt Bayern · Treppenschacht';cabinet.name='Regal mit lockerem Buch';
   const plain=(color,roughness=.88,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   const glow=(color,power)=>plain(color,.62,{emissive:color,emissiveIntensity:power});
   const wood=M.oak.clone();wood.color.setHex(0x795c48);wood.vertexColors=false;
@@ -80,21 +81,22 @@ export function addPalaceLab(T,root,world,M){
     vaultWall:plain(0x514742,.92,sharedSet(T,'plaster',256)),ceramic:plain(0x8b9083,.64),
     glassDark:plain(0x253e3c,.27,{metalness:.37})
   };
-  const a=architectureKit(T,shell,materials),r=architectureKit(T,cabinet,materials);
+  const a=architectureKit(T,shell,materials),s=architectureKit(T,shaft,materials),r=architectureKit(T,cabinet,materials);
   const sb=(m,x0,x1,y0,y1,z0,z1)=>a.box(m,coords,x0,x1,y0,y1,z0,z1);
+  const stair=(m,x0,x1,y0,y1,z0,z1)=>s.box(m,coords,x0,x1,y0,y1,z0,z1);
   const shelf=(m,x0,x1,y0,y1,z0,z1)=>r.box(m,coords,x0,x1,y0,y1,z0,z1);
   const below=p=>labLower(p.y),above=p=>!below(p);
   const d={id:'lab-secret',label:'Lockeres Buch',target:0,progress:0};
 
   for(let i=0;i<LAB.count;i++){
     const x=left+i*LAB.run,y=top-(i+1)*LAB.riser;
-    sb('concrete',x,x+LAB.run,floor-.13,y,back,front);
-    sb('gray',x-.017,x+.047,y-.026,y+.003,back+.05,front-.05);
+    stair('concrete',x,x+LAB.run,floor-.13,y,back,front);
+    stair('gray',x-.017,x+.047,y-.026,y+.003,back+.05,front-.05);
   }
   // At reading-room height the stair is enclosed by a tall, plain cabinet run.
   // The only opening is at the end of the wall, behind the sliding shelf.
   for(const z of [back-.15,front]){
-    sb('plaster',left,right+.035,floor,top+.033,z,z+.15);
+    stair('plaster',left,right+.035,floor,top+.003,z,z+.15);
     sb('darkWood',left,right+.21,top+.003,2.78,z,z+.15);
     sb('wood',left-.038,right+.23,2.66,2.81,z-.023,z+.174);
     sb('wood',left-.033,right+.10,.25,.33,z-.022,z+.176);
@@ -111,10 +113,10 @@ export function addPalaceLab(T,root,world,M){
   // Visual railing on each side of the descent, following the exact slope.
   for(const z of [back+.075,front-.075]){
     const line=(u,y,w)=>[left+.11+u,y+.91+top-u*LAB.riser/LAB.run,z+w];
-    a.box('iron',line,0,right-left-.25,-.018,.035,-.024,.024);
+    s.box('iron',line,0,right-left-.25,-.018,.035,-.024,.024);
     for(let x=left+.40;x<right-.14;x+=.91){
       const y=top-(x-left)*LAB.riser/LAB.run;
-      sb('iron',x-.023,x+.023,y,y+.923,z-.018,z+.018);
+      stair('iron',x-.023,x+.023,y,y+.923,z-.018,z+.018);
     }
   }
   const capZ=back-.029,capEnd=front+.049,slide=2.48;
@@ -133,24 +135,26 @@ export function addPalaceLab(T,root,world,M){
   shelf('brass',gateX-.414,gateX-.369,1.363,1.380,centre-.11,centre+.09);
   world.box(gateX-.39,capZ,gateX+.06,capEnd,p=>above(p)&&d.progress<.95);
   world.box(gateX-.39,capZ+slide,gateX+.06,capEnd+slide,p=>above(p)&&d.progress>=.95);
-  a.flush('Verblendung und verdeckte Treppe');r.flush('Bücherregal');
-  shell.traverse(o=>o.layers.enable(LAB_LAYER));
-  const updateDeck=makeLabDeck(T,root,world,materials,room=>buildChambers(T,room,world,materials));
+  a.flush('Treppenverkleidung');s.flush('Kellertreppe');r.flush('Bücherregal');
+  shaft.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
+  cabinet.traverse(o=>{if(o.isMesh)o.castShadow=false});
+  addLabGraffiti(T,shell);
+  const deck=makeLabDeck(T,root,world,materials,room=>buildChambers(T,room,world,materials));
   const usable=p=>d.target===0||Math.abs(p.x-gateX)>.60;
   return {
     target(p,look){
       const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
-    usable,
+    usable,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
     update(dt,p){
-      let changed=false,shadow=false;
+      let changed=false;
       if(d.progress!==d.target){
         if(!d.target&&Math.abs(p.x-gateX)<.72&&p.z>back-.16&&p.z<front+slide+.19)d.target=1;
         const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
-        const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;shadow=changed&&(t===0||t===1);
+        const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;
       }
-      return {changed:updateDeck(p,d.target===1)||changed,shadow};
+      return deck.update(p,d.target===1)||changed;
     }
   };
 }

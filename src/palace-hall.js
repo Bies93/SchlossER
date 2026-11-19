@@ -158,7 +158,7 @@ export function makeHall(T,root,M,world,leaves){
     for(const side of [-1,1])world.circle(side*(d.side>0?2.27:2.16),d.z+d.side*(d.side>0?.83:.90),.287);
   }
   const look=new T.Vector3();
-  let preset='dusk',lit=false,wasMoving=false;
+  let preset='dusk',lit=false;
   function allowGear(p){return labCameraMode(p)==='surface'&&!inPalaceWing(p.x,p.z)&&!(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
   function targetFor(player,camera){
     camera.getWorldDirection(look);
@@ -176,17 +176,15 @@ export function makeHall(T,root,M,world,leaves){
   function usable(d,player){return d.id==='lab-secret'?lab.usable(player.body.position):d.target===0||!closeEnough(player.body.position,d,1.40)}
   function update(dt,p){
     wings.update(p,preset);
-    const secret=lab.update(dt,p);
-    let moving=false,changed=secret.changed;
+    let changed=lab.update(dt,p),shadow=false;
     for(const d of doors){
       if(d.progress===d.target)continue;
       if(d.target===0&&Math.abs(p.z-d.z)<.92&&Math.abs(p.x)<d.half+.36)d.target=1;
       d.progress= d.target===1 ? Math.min(1,d.progress+dt/.79) : Math.max(0,d.progress-dt/.86);
       const t=step(d.progress),a=(t*t*(3-2*t))*1.57;
       for(const l of d.leaves)l.mesh.rotation.y=l.closed-l.sign*a;
-      changed=true;moving||=d.progress!==d.target;
+      changed=true;shadow||=d.progress===d.target;
     }
-    const shadow=secret.shadow||wasMoving&&!moving||changed&&!moving;wasMoving=moving;
     const isNear=Math.abs(p.x)<15&&Math.abs(p.z)<25;
     if(lit!==isNear){lit=isNear;changed=true}
     const outdoor=preset==='night'?.45:7.8;
@@ -197,5 +195,5 @@ export function makeHall(T,root,M,world,leaves){
     return {changed,shadow};
   }
   function setPreset(id){preset=id;wings.setPreset(id);warm.emissiveIntensity=id==='night'?.76:.45}
-  return {targetFor,commit,usable,update,setPreset,allowGear};
+  return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible};
 }

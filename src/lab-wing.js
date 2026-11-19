@@ -319,15 +319,55 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
   const deck=new T.Group(),rooms=new Map();deck.name='Projekt Bayern · Zellendeck';deck.visible=false;parent.add(deck);
   const lights=Array.from({length:4},()=>{const l=new T.PointLight(0xffffff,0,0,2);l.layers.set(LAB_LAYER);deck.add(l);return l});
   const hemi=new T.HemisphereLight(0xa4b0a7,0x444038,.86);hemi.layers.set(LAB_LAYER);deck.add(hemi);
-  let last='',pathX=Infinity,pathZ=Infinity;
-  function ensure(id){
-    if(rooms.has(id)||id==='stairs')return;
+  let last='',pathX=Infinity,pathZ=Infinity,preparation;
+  function build(id){
     const node=new T.Group();node.name='Projekt Bayern · '+cellNames[id];deck.add(node);
     if(id==='chambers')buildChamber(node);else fitOut(T,node,world,id,materials);
     node.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
     rooms.set(id,node);
   }
-  return function update(p,opened){
+  async function prewarm(renderer,scene,shaft){
+    // CPU and collision preparation is part of boot, never part of revealing
+    // a doorway. Keep it in one batch so background-tab timers don't delay boot.
+    const cpu=performance.now();
+    for(const id of Object.keys(LAB_CELLS)){
+      if(id==='stairs')continue;
+      build(id);
+    }
+    performance.measure('schlosser-cellar: build',{start:cpu,end:performance.now()});
+
+    // Use the real fog/environment, the fixed cellar lights and the default
+    // framebuffer. A render target would pick a different tone-map program.
+    // The page hides the canvas during this tiny, single startup draw.
+    const warm=new T.Scene();
+    warm.environment=scene.environment;warm.fog=scene.fog;
+    warm.environmentIntensity=scene.environmentIntensity;
+    warm.environmentRotation.copy(scene.environmentRotation);
+    const camera=new T.PerspectiveCamera(65,1,.08,1250);
+    camera.layers.set(LAB_LAYER);
+    camera.position.set(LAB_CUT.right+1.4,LAB.floor+1.67,LAB_CUT.back+.9);
+    camera.lookAt(LAB_CUT.right+6,LAB.floor+1.51,LAB_CUT.front+.8);
+    const saved=[deck,shaft].map(node=>({node,parent:node.parent,visible:node.visible}));
+    const meshes=[],viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4());
+    const scissorTest=renderer.getScissorTest(),needsShadow=renderer.shadowMap.needsUpdate;
+    try{
+      for(const {node} of saved){node.visible=true;warm.add(node);}
+      warm.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false}});
+      const shaders=performance.now();
+      await renderer.compileAsync(warm,camera);
+      performance.measure('schlosser-cellar: shaders',{start:shaders,end:performance.now()});
+      renderer.setViewport(0,0,40,40);renderer.setScissor(0,0,40,40);renderer.setScissorTest(true);
+      const upload=performance.now();
+      renderer.render(warm,camera);
+      performance.measure('schlosser-cellar: first draw',{start:upload,end:performance.now()});
+    }finally{
+      for(const [mesh,cull] of meshes)mesh.frustumCulled=cull;
+      for(const {node,parent,visible} of saved){parent.add(node);node.visible=visible;}
+      renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);
+      renderer.shadowMap.needsUpdate=needsShadow;
+    }
+  }
+  function update(p,opened){
     const id=labCellAt(p.x,p.z,.015)||(opened&&p.x>=LAB_CUT.left-1.4&&p.x<LAB_CUT.left&&p.z>=LAB_CUT.back&&p.z<=LAB_CUT.front?'stairs':null);
     const active=!!id&&(labCameraMode(p)!=='surface'||opened&&id==='stairs');
     let changed=deck.visible!==active;deck.visible=active;
@@ -335,7 +375,6 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     if(id===last&&Math.hypot(pathX-p.x,pathZ-p.z)<.21)return changed;
     last=id;pathX=p.x;pathZ=p.z;
     const render=labVisibility(id,p.x,p.z);
-    for(const cell of render)ensure(cell);
     for(const [cell,group] of rooms){const see=render.has(cell);if(group.visible!==see)changed=true;group.visible=see}
     const choices=[...render].flatMap(cell=>(emitters[cell]??[]).map(src=>[src,Math.hypot(p.x-src[0],p.z-src[1])+(cell===id?-.9:2)]));
     choices.sort((a,b)=>a[1]-b[1]);
@@ -347,4 +386,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     }
     return changed;
   };
+  return {update,visible:()=>deck.visible,prepare(renderer,scene,shaft){
+    return preparation??=prewarm(renderer,scene,shaft);
+  }};
 }
