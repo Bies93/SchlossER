@@ -5,18 +5,19 @@ import {ageMasonry,sharedSet,randomSource} from './surface-detail.js';
 // Local u runs across the well; decreasing v travels away from the path.
 const X=42.60,Z=-13.52,W=4.35,S=2.16,back=-5.50,turn=-2.64,returnStart=-3.95;
 const base=-.046,rise=.162,n=8,tread=.30,upperStart=turn+n*tread,lowerEnd=returnStart+n*tread;
-const a=base-n*rise,b=a-n*rise,ceiling=-.39,roomEnd=4.74,splitRoom=2.20;
+const a=base-n*rise,b=a-n*rise,ceiling=-.39,roomEnd=3.08,roomLeft=S+.105,wallU=4.04,roomRight=5.66;
+const signs=[['Damen',1.02],['Herren',2.26]];
 const p=(u,y,v)=>[X-v,y,Z+u];
 export const WC_CUT={left:X,right:X-back,back:Z,front:Z+W};
 export const WC_OUTLINE=[[X,Z],[X-back,Z],[X-back,Z+W],[X,Z+W]];
 const lower=y=>y<-1.85;
-function under(u,v){return u>=0&&u<=W&&v>=-.04&&v<=roomEnd;}
+function under(u,v){return u>=roomLeft&&u<=roomRight&&v>=-.43&&v<=roomEnd;}
 export function wcHeightAt(x,z,referenceY=0){
   const u=z-Z,v=X-x;
   if(lower(referenceY)&&under(u,v))return b;
   if(u<0||u>W||v<back||v>0)return null;
   const down=t=>Math.max(0,Math.min(n,t/tread+.5))*rise;
-  if(u>S)return base-down(upperStart-v);
+  if(u<S)return base-down(upperStart-v);
   if(v<=returnStart)return a;
   return a-down(v-returnStart);
 }
@@ -51,20 +52,20 @@ export function addParkStair(T,scene,world,finish){
   retaining(-.24,W+.23,back-.23,back,.39);
   retaining(S-.105,S+.105,returnStart,0,.23);
   // Low wall above the return outlet. The opening below it remains open.
-  block('concrete',0,S-.105,ceiling,.24,-.065,.17);
-  block('step',-.026,S-.081,.24,.301,-.09,.20);
-  collision(0,S-.105,-.065,.17,above);
-  block('step',S+.105,W,b-.15,base,upperStart,.007);
-  block('step',S+.105,W,b-.16,a,back,turn);
-  block('step',0,S+.105,b-.16,a,back,returnStart);
+  block('concrete',roomLeft,W,ceiling,.24,-.065,.17);
+  block('step',roomLeft-.026,W+.024,.24,.301,-.09,.20);
+  collision(roomLeft,W,-.065,.17,above);
+  block('step',0,S-.105,b-.15,base,upperStart,.007);
+  block('step',0,S-.105,b-.16,a,back,turn);
+  block('step',S-.105,W,b-.16,a,back,returnStart);
   for(let i=0;i<n;i++){
     const u=upperStart-i*tread,d=returnStart+i*tread;
-    for(const [l,r,v0,v1,y] of [[S+.105,W,u-tread,u,base-(i+1)*rise],[0,S-.105,d,d+tread,a-(i+1)*rise]]){
+    for(const [l,r,v0,v1,y] of [[0,S-.105,u-tread,u,base-(i+1)*rise],[roomLeft,W,d,d+tread,a-(i+1)*rise]]){
       block('concrete',l,r,b-.16,y-.03,v0,v1);
-      block('step',l,r,y-.031,y,v0-(l===0?.015:0),v1+(l===0?0:.015));
+      block('step',l,r,y-.031,y,v0-(l>0?.015:0),v1+(l>0?0:.015));
     }
   }
-  block('step',0,S-.105,b-.16,b,lowerEnd,.025);
+  block('step',roomLeft,W,b-.16,b,lowerEnd,.002);
 
   function rail(u0,v0,y0,u1,v1,y1,height=.61,pickets=true){
     const dx=u1-u0,dz=v1-v0,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;
@@ -82,82 +83,85 @@ export function addParkStair(T,scene,world,finish){
   rail(W+.11,back,.345,W+.11,0,.345,.57);
   rail(-.11,back-.09,.445,W+.11,back-.09,.445,.47);
   rail(S,returnStart,.28,S,0,.28);
-  rail(0,.057,.28,S-.105,.057,.28);
-  rail(W-.071,upperStart,base,W-.071,turn,a,.80,false);
-  rail(.070,returnStart,a,.070,lowerEnd,b,.81,false);
+  rail(roomLeft,.057,.28,W,.057,.28);
+  rail(.071,upperStart,base,.071,turn,a,.80,false);
+  rail(W-.070,returnStart,a,W-.070,lowerEnd,b,.81,false);
   block('concrete',S-.145,S+.145,-.15,.71,-.05,.24);
   collision(S-.145,S+.145,-.05,.24);
 
-  // Compact, designed two-cabin interior. Its ceiling is below plaza
-  // grade, and only the lower movement layer sees its walls and fixtures.
-  const joint=.012, pitch=.312,doorV=2.13;
-  block('grout',0,W,b-.10,b-.014,0,roomEnd);
-  for(let v=0,j=0;v<roomEnd-.025;v+=pitch,j++){
-    for(let u=0,i=0;u<W-.025;u+=pitch,i++){
+  // Covered return corridor; both doors are on its left when walking
+  // towards the path at the bottom. Only the lower layer sees these walls.
+  const joint=.012,pitch=.312,d0=.405,d1=roomEnd,doorTop=b+1.94;
+  for(const [u0,u1,v0,v1] of [[roomLeft,W,0,d0],[roomLeft,roomRight,d0,d1]]){
+    block('grout',u0,u1,b-.10,b-.019,v0,v1);
+    for(let v=v0,j=0;v<v1-.026;v+=pitch,j++)for(let u=u0,i=0;u<u1-.026;u+=pitch,i++){
       const col=['tileA','tileB','tileC'][(i*7+j*13+i*j)%3];
-      block(col,u+joint,Math.min(W,u+pitch)-joint,b-.025,b,v+joint,Math.min(roomEnd,v+pitch)-joint);
+      block(col,u+joint,Math.min(u1,u+pitch)-joint,b-.027,b,v+joint,Math.min(v1,v+pitch)-joint);
     }
   }
-  block('paint',0,W,ceiling,ceiling+.11,.02,roomEnd);
+  block('paint',roomLeft,W,ceiling,ceiling+.17,-.43,d0);
+  block('paint',roomLeft,roomRight,ceiling,ceiling+.17,d0,d1);
   function roomWall(u0,u1,v0,v1,head=b,top=ceiling+.07,closed=true){
     block('paint',u0,u1,head,top,v0,v1);
     if(closed)collision(u0,u1,v0,v1,below);
   }
-  roomWall(-.17,0,0,roomEnd+.13);
-  roomWall(W,W+.17,0,roomEnd+.13);
-  roomWall(-.15,W+.15,roomEnd,roomEnd+.15);
-  roomWall(S-.105,W,-.062,.09);
-  roomWall(splitRoom-.055,splitRoom+.055,doorV,roomEnd);
-  // Washable wainscot, with recessed joints rather than a flat wall image.
-  for(const u of [0,W-.016])for(let v=.023,i=0;v<roomEnd-.12;v+=.32,i++){
-    for(let j=0;j<4;j++)block(i%9===j?'tileB':'tileA',u,u+.018,b+.10+j*.238,b+.326+j*.238,v,v+.306);
+  roomWall(roomLeft-.14,roomLeft,0,d1+.10);
+  roomWall(roomRight,roomRight+.13,d0,d1+.10);
+  roomWall(roomLeft,roomRight,d1,d1+.13);
+  roomWall(W,W+.11,0,d0);
+  roomWall(wallU+.04,roomRight,d0-.12,d0);
+  roomWall(wallU+.04,roomRight,1.60,1.70);
+  roomWall(0,roomLeft,-.062,.095);
+  // Tile on the corridor side and on the outside cubicle wall.
+  for(const [u,v0,v1] of [[roomLeft,.015,d1],[roomRight-.016,d0,d1]])for(let v=v0,i=0;v<v1-.02;v+=.28,i++){
+    for(let j=0;j<4;j++)block(i%9===j?'tileB':'tileA',u,u+.018,b+.10+j*.238,b+.326+j*.238,v,Math.min(v+.269,v1));
   }
-  for(const [l,r,c] of [[0,splitRoom-.055,1.02],[splitRoom+.055,W,3.30]]){
-    const clear=.60,top=b+1.94,front=doorV+.14;
-    roomWall(l,c-clear,doorV,front);roomWall(c+clear,r,doorV,front);
-    roomWall(c-clear,c+clear,doorV,front,top,ceiling+.03,false);
-    for(const u of [c-clear,c+clear])block('doorEdge',u-.038,u+.038,b,top+.035,doorV-.034,front+.039);
-    block('doorEdge',c-clear-.038,c+clear+.038,top-.031,top+.042,doorV-.034,front+.039);
-    // Door drawn propped inward so both cubicles can be explored, no mode prompt.
-    const hinge=c+clear-.064,w=.86;
-    block('door',hinge-.027,hinge+.027,b+.055,top-.080,front+.018,front+w);
-    block('doorEdge',hinge-.033,hinge+.033,b+.066,top-.091,front+w-.083,front+w);
-    block('steel',hinge-.053,hinge+.052,b+.99,b+1.018,front+w-.106,front+w-.038);
-    collision(hinge-.027,hinge+.027,front+.018,front+w,below);
+  let prior=d0;
+  for(const [,v] of signs){
+    const l=v-.47,r=v+.47;
+    roomWall(wallU,wallU+.135,prior,l);
+    roomWall(wallU,wallU+.135,l,r,doorTop,ceiling+.04,false);
+    for(const q of [l,r])block('doorEdge',wallU-.03,wallU+.166,b,doorTop+.036,q-.026,q+.026);
+    block('doorEdge',wallU-.034,wallU+.177,doorTop-.027,doorTop+.041,l-.026,r+.026);
+    block('door',wallU+.145,wallU+.89,b+.054,doorTop-.078,r-.082,r-.035);
+    block('doorEdge',wallU+.835,wallU+.899,b+.068,doorTop-.088,r-.095,r-.026);
+    block('steel',wallU+.79,wallU+.849,b+.97,b+1.012,r-.118,r+.005);
+    collision(wallU+.145,wallU+.89,r-.082,r-.035,below);
+    prior=r;
   }
-  const sphere=new T.SphereGeometry(1,18,10);
-  const saucer=new T.TorusGeometry(.271,.039,7,25);
-  const baseShape=new T.CylinderGeometry(.12,.19,.39,19),matrix=new T.Matrix4(),vec=new T.Vector3();
-  function ceramic(m,g,u,y,v,s,rot=0){
-    const mat=new T.Matrix4().makeRotationY(rot);mat.scale(vec.set(...s));mat.setPosition(...p(u,y,v));geometry(m,g,mat);
+  roomWall(wallU,wallU+.135,prior,d1);
+
+  const sphere=new T.SphereGeometry(1,18,10),saucer=new T.TorusGeometry(.271,.039,7,25),
+    baseShape=new T.CylinderGeometry(.12,.19,.38,19),matrix=new T.Matrix4(),vec=new T.Vector3();
+  function ceramic(m,g,u,y,v,scale){
+    const mat=new T.Matrix4().makeScale(...scale);mat.setPosition(...p(u,y,v));geometry(m,g,mat);
   }
-  // Two recognizable toilets, a shared wall basin and two matte mirrors.
-  for(const c of [1.02,3.30]){
-    const v=3.98;
-    ceramic('china',baseShape,c,b+.202,v,[.92,1,1]);
-    ceramic('china',sphere,c,b+.369,v,[.34,.19,.288]);
-    ceramic('grout',sphere,c,b+.542,v+.013,[.246,.022,.176]);
-    const M=matrix.makeRotationX(-Math.PI*.5).scale(vec.set(1.13,.83,.82));
-    M.setPosition(...p(c,b+.551,v));geometry('china',saucer,M);
-    block('china',c-.28,c+.28,b+.36,b+.83,4.28,4.61);
-    block('china',c-.30,c+.30,b+.818,b+.86,4.254,4.63);
-    block('steel',c-.055,c+.055,b+.858,b+.874,4.42,4.47);
-    collision(c-.29,c+.29,v-.36,4.62,below);
+  for(const [,v] of signs){
+    const u=5.135;
+    ceramic('china',baseShape,u,b+.196,v,[1,1,.92]);
+    ceramic('china',sphere,u,b+.361,v,[.258,.18,.285]);
+    ceramic('grout',sphere,u,b+.521,v,[.172,.024,.197]);
+    const M=matrix.makeRotationX(-Math.PI*.5).scale(vec.set(.87,1.0,.80));
+    M.setPosition(...p(u,b+.538,v));geometry('china',saucer,M);
+    block('china',5.36,5.58,b+.39,b+.815,v-.27,v+.27);
+    block('china',5.34,5.60,b+.814,b+.855,v-.28,v+.28);
+    block('steel',5.44,5.49,b+.853,b+.867,v-.057,v+.054);
+    collision(u-.24,5.60,v-.285,v+.285,below);
   }
-  ceramic('china',sphere,W-.28,b+.88,1.0,[.338,.126,.227]);
-  block('counter',W-.55,W-.04,b+.847,b+.908,.71,1.28);
-  block('steel',W-.15,W-.098,b+.91,b+1.071,.982,1.025);
-  block('steel',W-.24,W-.098,b+1.051,b+1.073,.982,1.025);
-  block('doorEdge',W-.035,W-.025,b+1.16,b+1.80,.69,1.31);
-  block('steel',W-.04,W-.033,b+1.194,b+1.766,.725,1.275);
-  collision(W-.49,W,.71,1.28,below);
-  for(const [u,v] of [[2.17,1.10],[1.04,3.53],[3.31,3.53]]){
-    block('iron',u-.27,u+.27,ceiling-.058,ceiling-.013,v-.105,v+.105);
-    block('lamp',u-.244,u+.244,ceiling-.069,ceiling-.056,v-.072,v+.072);
+  ceramic('china',sphere,roomLeft+.23,b+.88,2.53,[.233,.10,.266]);
+  block('counter',roomLeft+.01,roomLeft+.45,b+.828,b+.899,2.26,2.80);
+  block('steel',roomLeft+.099,roomLeft+.145,b+.90,b+1.07,2.50,2.55);
+  block('steel',roomLeft+.103,roomLeft+.218,b+1.051,b+1.075,2.50,2.55);
+  block('doorEdge',roomLeft+.014,roomLeft+.025,b+1.15,b+1.77,2.21,2.86);
+  block('steel',roomLeft+.025,roomLeft+.031,b+1.183,b+1.73,2.249,2.818);
+  collision(roomLeft,roomLeft+.39,2.26,2.80,below);
+  for(const [u,v] of [[3.17,.34],[3.17,2.16],...[1.02,2.26].map(v=>[4.93,v])]){
+    block('iron',u-.19,u+.19,ceiling-.058,ceiling-.013,v-.090,v+.090);
+    block('lamp',u-.17,u+.17,ceiling-.069,ceiling-.056,v-.072,v+.072);
   }
   sphere.dispose();saucer.dispose();baseShape.dispose();
   kit.flush('WC · Treppen, Fliesen, Kabinen');
-  const lights=[[1.80,.95,10.3,5.2],[2.60,3.33,7.8,4.65]].map(([u,v,power,distance])=>{
+  const lights=[[3.21,.26,8.3,4.6],[4.53,2.17,7.6,4.55]].map(([u,v,power,distance])=>{
     const l=new T.PointLight(0xffe3bc,0,distance,2);l.position.set(...p(u,ceiling-.25,v));root.add(l);
     return {l,power};
   });
@@ -172,8 +176,7 @@ export function addParkStair(T,scene,world,finish){
     m.position.set(...p(u,y,v));m.rotation.y=angle;root.add(m);
   };
   notice('WC',S,.463,.245,-Math.PI*.5,.255,.308,true);
-  notice('Damen',1.02,b+2.073,doorV-.016,Math.PI*.5,.52,.19);
-  notice('Herren',3.30,b+2.073,doorV-.016,Math.PI*.5,.52,.19);
+  for(const [label,v] of signs)notice(label,wallU-.013,b+2.073,v,Math.PI,.56,.19);
 
   // Efeu remains around the exposed outside edge of the turning landing.
   const leaf=new T.BufferGeometry();
@@ -191,7 +194,7 @@ export function addParkStair(T,scene,world,finish){
   }
   ivy.computeBoundingSphere();root.add(ivy);
   return {update(pos){
-    const active=pos.y<-.53&&pos.x>=X-roomEnd-1&&pos.x<X-back+1&&pos.z>Z-1&&pos.z<Z+W+1;
+    const active=pos.y<-.53&&pos.x>=X-roomEnd-1&&pos.x<X-back+1&&pos.z>Z-1&&pos.z<Z+roomRight+1;
     for(const {l,power} of lights)l.intensity=active?power:0;
   }};
 }

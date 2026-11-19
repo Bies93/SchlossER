@@ -19,6 +19,7 @@ import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
 import {addParkStair,wcHeightAt,wcCeilingAt} from './park-stair.js';
+import {labFloorAt,labCeilingAt} from './lab-layout.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 const $ = id => document.getElementById(id);
@@ -70,6 +71,8 @@ async function start(){
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z,referenceY=0)=>{
+   const cellar=labFloorAt(x,z,referenceY);
+   if(cellar!==null)return cellar;
    const stair=wcHeightAt(x,z,referenceY);
    if(stair!==null)return stair;
    const entry=hallFloor(x,z);
@@ -92,7 +95,7 @@ async function start(){
    const {kind,x,y,z,foot,power}=event;
    const surface=hallFloor(x,z)!==null||Number.isFinite(wcCeilingAt(x,z,y))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
- },wcCeilingAt);
+ },(x,z,y)=>Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)));
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
@@ -171,7 +174,9 @@ async function start(){
    activePortal=uid;portalAction.hidden=!target;
    if(target){
      portalAction.disabled=!usable;
-     portalText.textContent=!usable?'Tür offen':(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
+     portalText.textContent=target.id==='lab-secret'
+       ?(target.target===0?'Lockeres Buch untersuchen':usable?'Regal zurückschieben':'Regal offen')
+       :!usable?'Tür offen':(target.target===1?'Tür schließen':'Tür öffnen')+' · '+target.label;
    }
  }
  function handleDoor(){

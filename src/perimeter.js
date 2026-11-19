@@ -1,6 +1,7 @@
 import {CITY_FLOOR, CITY_FRONTAGES, PERIMETER, GATES} from './world-layout.js';
 import {ageMasonry, repeatSet, sharedSet} from './surface-detail.js';
 import {WC_OUTLINE} from './park-stair.js';
+import {LAB_OUTLINE} from './lab-layout.js';
 
 // Earcut accepts either orientation of the X/Z footprint. Explicitly face up
 // for lighting and the player's downward ray, regardless of node order.
@@ -407,7 +408,7 @@ export function addPerimeter(T,scene,world,finish) {
     if(f.len>6&&Math.abs(a[0])<57)pier(f,0,.62,2.03);
   }
 
-  const plaza=new T.Mesh(planGeometry(T,CITY_FLOOR,-.046,6,[WC_OUTLINE]),materials.paving.clone());
+  const plaza=new T.Mesh(planGeometry(T,CITY_FLOOR,-.046,6,[WC_OUTLINE,LAB_OUTLINE]),materials.paving.clone());
   plaza.material.vertexColors=false;plaza.receiveShadow=true;plaza.name='Schlossplatz • durchgehendes Pflaster';
   root.add(plaza);
   // One continuous paved street line and a paired drainage channel. Each join

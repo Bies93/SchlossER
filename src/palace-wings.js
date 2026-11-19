@@ -1,6 +1,7 @@
 import {architectureKit} from './architecture-kit.js';
 import {HALL,WINGS} from './palace-openings.js';
 import {randomSource} from './surface-detail.js';
+import {aroundLabOpening,labLower} from './lab-layout.js';
 
 const Y=HALL.floor,{z:Z,outer,portal,spring,rise,ceiling,partition}=WINGS;
 
@@ -81,21 +82,25 @@ export function addPalaceWings(T,root,world,common){
     const box=(m,a,b,y,t,d,f)=>k.box(m,p,a,b,y,t,d,f);
     const block=(u0,u1,d0,d1)=>{
       const [a,,b]=p(u0,0,d0),[c,,e]=p(u1,0,d1);
-      world.box(Math.min(a,c),Math.min(b,e),Math.max(a,c),Math.max(b,e));
+      world.box(Math.min(a,c),Math.min(b,e),Math.max(a,c),Math.max(b,e),p=>!labLower(p.y));
     };
     const put=(m,g,u,y,d,s)=>{
       const M=new T.Matrix4().makeScale(...s);M.setPosition(v.set(...p(u,y,d)));k.geometry(m,g,M);
     };
     const start=HALL.half,high=ceiling,accent=library?'blue':'red';
+    const floor=(m,l,r,b,t,d,f)=>{
+      const spans=library?aroundLabOpening(l,r,d,f):[[l,r,d,f]];
+      for(const [a,c,e,h] of spans)box(m,a,c,b,t,e,h);
+    };
     // Matte perimeter, laid flags in the gallery, darker timber in the reading room.
-    box('iron',start,outer,Y-.09,Y-.013,-Z,Z);
-    for(const d of [-Z,Z-.32])box('tile2',start,outer,Y-.036,Y,d,d+.32);
+    floor('iron',start,outer,Y-.09,Y-.013,-Z,Z);
+    for(const d of [-Z,Z-.32])floor('tile2',start,outer,Y-.036,Y,d,d+.32);
     for(let d=-Z+.32,row=0;d<Z-.34;d+=library?.30:.84,row++){
       const width=library?1.68:.84,lim=Math.min(Z-.32,d+(library?.30:.84));
       for(let u=start-(row%2)*width*.5,col=0;u<outer-.015;u+=width,col++){
         const l=Math.max(start,u)+.005,r=Math.min(outer,u+width)-.005;
         if(r-l<.018)continue;
-        box(library?(row%5===col%5?'wood':'panel'):((row+col)%2?'tile0':'tile1'),l,r,Y-.028,Y,d+.004,lim-.005);
+        floor(library?(row%5===col%5?'wood':'panel'):((row+col)%2?'tile0':'tile1'),l,r,Y-.028,Y,d+.004,lim-.005);
       }
     }
     box('limewash',outer,outer+.31,Y,high+.09,-Z-.01,Z+.01);

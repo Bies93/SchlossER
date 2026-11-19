@@ -7,3 +7,5 @@
 Die Fotos dienen der visuellen Kontrolle; sie wurden weder auf die Fassade projiziert noch in den Build kopiert. Die Szene zeigt das Schloss ohne Baustelleneinrichtung. Tonwerte, Steinverteilung und Dachanschlüsse sind fotografisch angenähert, kein farbkalibriertes Bauaufmaß. Das Schieferbild verwendet die vorhandenen Projekttexturen.
 
 Innenräume: [Paul Deckers Grundriss von 1711, Orangerie Digital / FAU](https://orangerie.wisski.data.fau.de/wisski/navigate/109/view) ist eine historische, seitenverkehrte Darstellung mit nicht ausgeführten Teilen, kein Bestandsplan. Das Thema des Lesesaals greift die [Nutzungsgeschichte der Universitätsbibliothek](https://ub.fau.de/bibliothek/ueber-uns/) auf. Halle, Seitenbögen, Galerie und Lesesaal sind eine freie, auf das Webmodell zugeschnittene Gestaltung. Der heutige Innenraum wurde nicht nachgebaut.
+
+Das Kellerlabor „Projekt Bayern“, sein Zugang, alle Kammern und die Kostümtafeln sind fiktive Spielkulisse ohne reales Vorbild.

@@ -62,9 +62,9 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     const apron=new T.Mesh(planGeometry(T,[[x-wide,front],[x+wide,front],[x+wide,-17.025],[x-wide,-17.025]],-.017,1),gravel);
     apron.name='Weganschluss • Tordurchgang';apron.receiveShadow=true;group.add(apron);floors.push(apron);
   }
-  const wcSide=WC_CUT.left,wcFront=WC_CUT.front,join=39.35+1.87;
-  const wcLink=new T.Mesh(planGeometry(T,[[join,wcFront-2.07],[wcSide,wcFront-2.07],
-    [wcSide,wcFront],[join,wcFront]],-.017,1),gravel);
+  const wcSide=WC_CUT.left,wcBack=WC_CUT.back,join=39.35+1.87;
+  const wcLink=new T.Mesh(planGeometry(T,[[join,wcBack],[wcSide,wcBack],
+    [wcSide,wcBack+2.055],[join,wcBack+2.055]],-.017,1),gravel);
   wcLink.name='Seitlicher Weg zum WC';wcLink.receiveShadow=true;group.add(wcLink);floors.push(wcLink);
   const sites=[];
   function tree(x,z,h,species,hero,mapped=false){

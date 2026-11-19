@@ -1,6 +1,7 @@
 import {PERIMETER,insidePerimeter} from './world-layout.js';
 import {randomSource,sharedSet} from './surface-detail.js';
 import {WC_CUT} from './park-stair.js';
+import {LAB_CUT} from './lab-layout.js';
 import {parkFacadeClearance} from './park-architecture.js';
 
 const tau=Math.PI*2;
@@ -263,9 +264,9 @@ export function addBackdrop(T,scene){
   // Split the original grid at the WC cutout, so its below-grade geometry
   // is genuinely visible. No clipping shader or extra render surface.
   const grid=Array.from({length:93},(_,i)=>1710*(i/92-.5));
-  const {left,right,back,front}=WC_CUT;
-  const coordinates=(a,b)=>[...grid.filter(v=>v<=a||v>=b),a,b].sort((x,y)=>x-y);
-  const xs=coordinates(left,right),zs=coordinates(back,front);
+  const cutouts=[WC_CUT,LAB_CUT];
+  const coordinates=(lo,hi)=>[...new Set([...grid,...cutouts.flatMap(c=>[c[lo],c[hi]])])].sort((a,b)=>a-b);
+  const xs=coordinates('left','right'),zs=coordinates('back','front');
   const land=new T.BufferGeometry(),points=[],index=[],tints=[];
   const mud=new T.Color(0x929178),field=new T.Color(0x656e56),woodland=new T.Color(0x49594b);
   for(const z of zs)for(const x of xs){
@@ -275,7 +276,7 @@ export function addBackdrop(T,scene){
     tints.push(tint.r,tint.g,tint.b);
   }
   for(let j=1;j<zs.length;j++)for(let i=1;i<xs.length;i++){
-    if(xs[i-1]===left&&zs[j-1]===back)continue;
+    if(cutouts.some(c=>xs[i-1]>=c.left&&xs[i]<=c.right&&zs[j-1]>=c.back&&zs[j]<=c.front))continue;
     const a=(j-1)*xs.length+i-1,b=a+xs.length;
     index.push(a,b,b+1,a,b+1,a+1);
   }

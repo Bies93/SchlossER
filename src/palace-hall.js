@@ -2,6 +2,7 @@ import {architectureKit} from './architecture-kit.js';
 import {PORTALS,HALL,WINGS,inPalaceWing} from './palace-openings.js';
 import {portalFrame} from './palace-facade.js';
 import {interiorArch,addPalaceWings} from './palace-wings.js';
+import {addPalaceLab} from './palace-lab.js';
 
 const q=(x,y,z)=>[x,y,z],{floor:y,half,zMin,zMax}=HALL;
 const step=(t)=>Math.max(0,Math.min(1,t));
@@ -143,6 +144,7 @@ export function makeHall(T,root,M,world,leaves){
   }
   k.flush('Halle · Stein, Putz und Leuchten');
   const wings=addPalaceWings(T,root,world,MAT);
+  const lab=addPalaceLab(T,root,world,MAT);
 
   const doors=Object.values(PORTALS).map(d=>({...d,leaves:leaves[d.id],progress:0,target:0}));
   const closeEnough=(p,d,dist)=>Math.hypot(p.x,(p.z-d.z)*.91)<dist;
@@ -160,7 +162,7 @@ export function makeHall(T,root,M,world,leaves){
   function targetFor(player,camera){
     camera.getWorldDirection(look);
     const p=player.body.position;
-    return doors.find(d=>{
+    return lab.target(p,look)??doors.find(d=>{
       const dx=-p.x,dz=d.z-p.z,distance=Math.hypot(dx,dz);
       return Math.abs(p.x)<2.05&&distance<3.2&&(distance<1.25||dx*look.x+dz*look.z>distance*.22);
     });
@@ -170,10 +172,11 @@ export function makeHall(T,root,M,world,leaves){
     if(!usable(d,player))return false;
     d.target=1-d.target;return true;
   }
-  function usable(d,player){return d.target===0||!closeEnough(player.body.position,d,1.40)}
+  function usable(d,player){return d.id==='lab-secret'?lab.usable(player.body.position):d.target===0||!closeEnough(player.body.position,d,1.40)}
   function update(dt,p){
     wings.update(p,preset);
-    let moving=false,changed=false;
+    const secret=lab.update(dt,p);
+    let moving=false,changed=secret.changed;
     for(const d of doors){
       if(d.progress===d.target)continue;
       if(d.target===0&&Math.abs(p.z-d.z)<.92&&Math.abs(p.x)<d.half+.36)d.target=1;
@@ -182,7 +185,7 @@ export function makeHall(T,root,M,world,leaves){
       for(const l of d.leaves)l.mesh.rotation.y=l.closed-l.sign*a;
       changed=true;moving||=d.progress!==d.target;
     }
-    const shadow=wasMoving&&!moving||changed&&!moving;wasMoving=moving;
+    const shadow=secret.shadow||wasMoving&&!moving||changed&&!moving;wasMoving=moving;
     const isNear=Math.abs(p.x)<15&&Math.abs(p.z)<25;
     if(lit!==isNear){lit=isNear;changed=true}
     const outdoor=preset==='night'?.45:7.8;
