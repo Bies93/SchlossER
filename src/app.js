@@ -23,6 +23,7 @@ import {LAB_LAYER,labFloorAt,labCeilingAt} from './lab-layout.js';
 import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {makeMoosfunk} from './moosfunk-quest.js';
+import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -174,7 +175,24 @@ async function start(){
  });
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
- let captionTimer=0;
+ let captionTimer=0,chapelTime=null,chapelTake=0;
+ function hideCaption(){clearTimeout(captionTimer);caption.hidden=true;}
+ function showCaption(text,duration){
+   hideCaption();caption.textContent=text;caption.hidden=false;
+   captionTimer=setTimeout(hideCaption,duration);
+ }
+ function leaveChapel(){
+   if(chapelTime===null)return;
+   chapelTime=null;chapelTake=0;audio.stopChapel();hideCaption();
+ }
+ function chapelCue(time,pos){
+   if(!inChapelHearing(pos,chapelTime===null?4.13:4.58)){leaveChapel();return;}
+   chapelTime??=time;
+   if(chapelTake>=CHAPEL_TRACK.length||time-chapelTime<chapelTake*6350)return;
+   const take=chapelTake++,line=CHAPEL_TRACK[take];
+   showCaption('Band 04 · Aufnahme '+(take+1)+' — „'+line+'“',6090);
+   audio.playChapel(CHAPEL_SOURCE,line,take);
+ }
  const interactionLook=new T.Vector3();
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
@@ -201,8 +219,7 @@ async function start(){
    const local=localTarget();
    if(local?.action){
      const notice=moosfunk.use(local);if(!notice)return;
-     clearTimeout(captionTimer);caption.textContent=notice.text;caption.hidden=false;
-     captionTimer=setTimeout(()=>{caption.hidden=true},notice.voice?9600:7800);
+     showCaption(notice.text,notice.voice?9600:7800);
      if(notice.voice)audio.playMoosfunk(notice.where,notice.voice);
      doorPrompt();refresh();return;
    }
@@ -248,6 +265,7 @@ async function start(){
    if(active()){
      if(input.tick(time))dirty=true;
      audio.ambience(player.body.position);
+     chapelCue(time,player.body.position);
      if(combat()&&desktopRound()){
        if(firstRound&&round.prompt(player.body.position)){
          firstRound=false;
@@ -271,6 +289,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
+   leaveChapel();hideCaption();
    input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();roundPrompt();
    if(focus) action.focus({preventScroll:true});
  }

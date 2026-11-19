@@ -41,8 +41,12 @@ export function furnishHQ(T,kit,id,quest){
   function chair(u,v,back=1,color='sage'){
     lowSeat(u,v,.457,.481,.466,color);
     for(const s of [-1,1])pipe('gunmetal',[u+s*.176,.399,v+back*.183],[u+s*.169,.84,v+back*.221],.014);
-    stamp(color,ball,u,.784,v+back*.228,[.187,.111,.047]);
-    pipe('linen',[u-.145,.822,v+back*.263],[u+.145,.822,v+back*.263],.004);
+    // The seat spans local u (+world Z); the pad's long world-X axis
+    // must turn with it so *both* uprights meet the padded back.
+    stamp(color,ball,u,.784,v+back*.223,[.197,.113,.055],pi/2);
+    pipe('gunmetal',[u-.173,.781,v+back*.255],[u+.173,.781,v+back*.255],.012);
+    const front=v+back*.174;
+    pipe('linen',[u-.144,.813,front],[u+.144,.813,front],.0036);
   }
   function crate(u,v,y=0,w=.65,d=.46,h=.32,label=false){
     box('darkWood',u,y+.014,v,w,.049,d);

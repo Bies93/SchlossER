@@ -91,7 +91,12 @@ export function addPalaceLab(T,root,world,M,moosfunk){
     apron:plain(0x914f49),canvas:plain(0xd6c6b2),bookA:plain(0x5d6555),bookB:plain(0x77483c),bookC:plain(0x4b5968),
     ochre:plain(0xad8644),paper:plain(0xa79c7d),archiveWall:plain(0x77705b,.91,sharedSet(T,'plaster',256)),
     vaultWall:plain(0x514742,.92,sharedSet(T,'plaster',256)),ceramic:plain(0x8b9083,.64),
-    glassDark:plain(0x253e3c,.27,{metalness:.37})
+    glassDark:plain(0x253e3c,.27,{metalness:.37}),
+    civicWall:plain(0x9eaa9e,.93,sharedSet(T,'plaster',256)),fineStone:plain(0x8e8170,.92,sharedSet(T,'bedrock',256)),
+    riteWall:plain(0x65574f,.93,sharedSet(T,'bedrock',256)),frost:plain(0xb9c4bd,.54,{...sharedSet(T,'plaster',256),metalness:.05,emissive:0x697e72,emissiveIntensity:.18}),
+    wetRite:plain(0x4f7271,.22,{metalness:.26,emissive:0x5b9793,emissiveIntensity:.22}),
+    riteGlow:{material:glow(0x80c4b5,.77),cast:false},barGlow:{material:glow(0xefbd75,.63),cast:false},
+    paleBeer:plain(0xcd932f,.34,{metalness:.08}),deepBeer:plain(0x8a4c23,.35),foam:plain(0xd1bc88,.77)
   };
   const a=architectureKit(T,shell,materials),s=architectureKit(T,shaft,materials),r=architectureKit(T,cabinet,materials);
   const sb=(m,x0,x1,y0,y1,z0,z1)=>a.box(m,coords,x0,x1,y0,y1,z0,z1);

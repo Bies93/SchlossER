@@ -26,7 +26,13 @@ export const LAB_CELLS={
   beerLab:[-16.24,-9.74,23.16,28.72],
   ward:[-20.38,-16.30,30.15,33.04],
   cells:[-24.55,-16.30,33.04,40.12],
-  infirmary:[-27.65,-13.60,40.12,53.75]
+  infirmary:[-27.65,-13.60,40.12,53.75],
+  ritesAccess:[-19.12,-15.86,53.75,59.62],
+  registry:[-15.86,-2.15,53.75,62.13],
+  nameFiles:[-15.86,-2.15,62.13,68.40],
+  chapel:[-12.80,-2.15,42.00,53.75],
+  ritesPass:[-11.15,-5.87,31.80,42.00],
+  tasting:[-9.74,-1.57,22.90,31.80]
 };
 // [room A, room B, fixed axis, edge, aperture centre MIN/MAX]
 export const LAB_LINKS=[
@@ -44,7 +50,14 @@ export const LAB_LINKS=[
   ['brewery','beerLab','x',-16.24,24.45,26.48],
   ['brewery','ward','z',30.15,-19.49,-17.20],
   ['ward','cells','z',33.04,-19.52,-17.23],
-  ['cells','infirmary','z',40.12,-19.42,-17.19]
+  ['cells','infirmary','z',40.12,-19.42,-17.19],
+  ['infirmary','ritesAccess','z',53.75,-18.32,-16.17],
+  ['ritesAccess','registry','x',-15.86,55.30,57.52],
+  ['registry','nameFiles','z',62.13,-7.92,-5.97],
+  ['chapel','registry','z',53.75,-9.34,-7.10],
+  ['ritesPass','chapel','z',42.00,-9.66,-7.41],
+  ['tasting','ritesPass','z',31.80,-9.01,-6.87],
+  ['beerLab','tasting','x',-9.74,24.46,26.63]
 ];
 const cellEntries=Object.entries(LAB_CELLS);
 function contains([x0,x1,z0,z1],x,z,pad){return x>=x0-pad&&x<=x1+pad&&z>=z0-pad&&z<=z1+pad}

@@ -209,14 +209,15 @@ export function fitMaltWing(T,kit,id,doors){
       solid('green',x,.600,28.0,.86,.78,.77);
       grill('edge',x,.536,27.592,.59,.206,pi);
     }
-    const shelf=-10.07,zs=26.32;
+    const shelf=-10.07,zs=27.64;
     solid('gunmetal',shelf,1.56,zs,.52,2.68,1.26);
     solid('gasket',shelf-.263,1.58,zs,.025,2.53,1.10);
     for(const [i,y] of [.37,1.13,1.80,2.46].entries()){
       solid('edge',shelf-.237,y,zs,.107,.062,1.20);
       for(let j=0;j<4;j++)if((i+j)%4!==1)bottle(shelf-.312,y+.045,zs-.45+j*.289,j%2?'beerGlass':'green');
     }
-    hit(-10.44,-9.78,25.66,26.98);
+    hit(-10.44,-9.78,zs-.66,zs+.66);
+    plaque('PRÜFSTUBE',['WEITER ZUR SENSORISCHEN ABNAHME'],-9.948,2.75,25.55,1.62,.334,-pi/2,'blue');
     plaque('NACHPRÜFUNG',['BIERVERTRÄGLICHKEIT · KLONREIHE B','Kontrollreihe F: dieselbe Charge 05.'],-13.1,2.11,z0+.039,1.93,.79,0,'blue');
     flag('schematic',-11.14,2.14,z0+.037,1.19,.67,0);
     plaque('PROBENABLAGE',['VERWERFUNG NUR AUF ANWEISUNG'],-11.33,2.15,z1-.037,1.00,.47,pi,'red');

@@ -233,7 +233,9 @@ export function addInfirmary(T,kit){
   for(let i=0;i<3;i++)bottle(-14.77+i*.147,.958,50.48,i);
   plaque('MATERIAL',['KONTROLLE / RESERVE'],x1-.039,1.82,49.39,1.11,.45,-pi/2);
 
-  for(const [i,x] of [-24.23,-22.91,-16.84,-15.51].entries()){
+  // The new staff passage owns the opening between the last cabinet run
+  // and the records table. Move the cabinet, not the clear route.
+  for(const [i,x] of [-24.23,-22.91,-26.02,-15.51].entries()){
     const z=53.22;
     if(i===1){
       // An open file rack, using the same footprint as the old cupboard.
@@ -265,6 +267,7 @@ export function addInfirmary(T,kit){
   props.folio(-20.41,Y+.993,52.74,.31,.38,pi-.21,4,{thickness:.028});
   for(let i=0;i<4;i++)bottle(-19.20+i*.135,.998,52.95,i);
   dress.flag('wardRecords',-19.75,2.10,z1-.039,2.10,1.11,pi);
+  plaque('PERSONALWEG',['HERKUNFTSSTELLE · INTERN'],-17.24,2.748,z1-.207,1.61,.329,pi,'blue');
   put('darkWood',-19.75,1.517,z1-.102,2.08,.050,.147);
   for(const [x,angle] of [[-20.26,.11],[-20.16,-.23]])
     put('wardBone',x,1.548,z1-.132,.085,.017,.018,angle);

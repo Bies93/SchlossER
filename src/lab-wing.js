@@ -2,12 +2,14 @@ import {architectureKit} from './architecture-kit.js';
 import {labGraphics,dressLab} from './lab-dressing.js';
 import {MALT_ROOMS,MALT_LIGHTS,fitMaltWing} from './lab-malt-wing.js';
 import {INFIRMARY,INFIRMARY_LIGHTS,addInfirmary} from './lab-infirmary.js';
+import {RITE_ROOMS,RITE_LIGHTS,fitRiteWing} from './lab-rites.js';
+import {ritesArt} from './lab-rites-art.js';
 import {cellDoorTarget} from './lab-cell-doors.js';
 import {stationery} from './interior-stationery.js';
 import {LAB,LAB_CUT,LAB_CELLS,LAB_LINKS,LAB_LAYER,labLower,labCellAt,labEdges} from './lab-layout.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y);
-const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY};
+const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS};
 const cellNames={chambers:'Klonkammern',lock:'Druckschleuse',spine:'Verteiler',archive:'Archiv',plant:'Maschinenraum',
   return:'Wartungsgang',observation:'Beobachtung',vault:'Saal der Rückgabe',
   ...Object.fromEntries(Object.entries(treatmentRooms).map(([id,{name}])=>[id,name]))};
@@ -16,7 +18,8 @@ const palettes={lock:['iron','green'],spine:['concrete','green'],archive:['archi
   ...Object.fromEntries(Object.entries(treatmentRooms).map(([id,{palette}])=>[id,palette]))};
 const ports=Object.fromEntries(Object.keys(LAB_CELLS).map(id=>[id,LAB_LINKS.filter(([a,b])=>a===id||b===id)]));
 const own=new Set(['lock:chambers','lock:spine','archive:spine','plant:spine','plant:return','observation:return','observation:chambers','vault:plant',
-  'vault:maltLock','maltLock:brewery','brewery:beerLab','brewery:ward','ward:cells','cells:infirmary']);
+  'vault:maltLock','maltLock:brewery','brewery:beerLab','brewery:ward','ward:cells','cells:infirmary',
+  ...LAB_LINKS.filter(([a,b])=>RITE_ROOMS[a]||RITE_ROOMS[b]).map(([a,b])=>a+':'+b)]);
 
 // Find at most two rooms beyond the current room; the second doorway must
 // overlap the sight wedge of the first one. Camera frustum culling is additional.
@@ -138,10 +141,11 @@ function cellarKit(T,root,world,id,materials,graphics){
     flush(){dress.flush();props.finish('Keller · Register und Papierobjekte');k.flush('Keller · '+cellNames[id]);drum.dispose();wheel.dispose()}};
 }
 
-function fitOut(T,root,world,id,materials,graphics,doors){
+function fitOut(T,root,world,id,materials,graphics,doors,rites){
   const kit=cellarKit(T,root,world,id,materials,graphics);
   if(id==='infirmary'){addInfirmary(T,kit);kit.flush();return;}
   if(MALT_ROOMS[id]){fitMaltWing(T,kit,id,doors);kit.flush();return;}
+  if(RITE_ROOMS[id]){fitRiteWing(T,kit,id,rites);kit.flush();return;}
   const {k,box,hit,obj,cylinder,pipe,luminaire,grille,wheel,dress,props,flush}=kit;
   const {housing,stain,grill,dial,flag,plane,fastener,rod,plaque:label}=dress;
   const plaque=(head,lines,x,y,z,w=1.03,h=.48,ry=0,style)=>label(head,lines,x,y,z,w,h,ry,style);
@@ -413,7 +417,7 @@ const emitters={
   archive:[[-12.40,13.24,0xffe1b5,30,8.0]],plant:[[-22.89,10.03,0xcbded6,20,8.3],[-24.15,12.03,0xed805e,13,5.2]],
   return:[[-23.73,2.28,0xd17d63,11.4,6.7],[-23.75,5.36,0xe6dfbc,14,5.7]],
   observation:[[-23.51,-1.91,0xafe5da,21,6.9]],vault:[[-22.30,17.38,0xf3e0c2,26,7.4],[-23.53,14.78,0xdf6650,11,5.9]],
-  ...MALT_LIGHTS,infirmary:INFIRMARY_LIGHTS
+  ...MALT_LIGHTS,infirmary:INFIRMARY_LIGHTS,...RITE_LIGHTS
 };
 const unstable=new Set(['return','plant','lock','ward','cells']);
 
@@ -422,19 +426,19 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
   const lights=Array.from({length:4},()=>{const l=new T.PointLight(0xffffff,0,0,2);l.layers.set(LAB_LAYER);deck.add(l);return l});
   const hemi=new T.HemisphereLight(0xa4b0a7,0x444038,.86);hemi.layers.set(LAB_LAYER);deck.add(hemi);
   let last='',pathX=Infinity,pathZ=Infinity,preparation,phase=0,dim=1,affected=-1,normalPower=0;
-  function build(id,graphics){
+  function build(id,graphics,rites){
     const node=new T.Group();node.name='Projekt Bayern · '+cellNames[id];deck.add(node);
-    if(id==='chambers')buildChamber(node,graphics);else fitOut(T,node,world,id,materials,graphics,doors);
+    if(id==='chambers')buildChamber(node,graphics);else fitOut(T,node,world,id,materials,graphics,doors,rites);
     node.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
     rooms.set(id,node);
   }
   async function prewarm(renderer,scene,shaft){
     // CPU and collision preparation is part of boot, never part of revealing
     // a doorway. Keep it in one batch so background-tab timers don't delay boot.
-    const cpu=performance.now(),graphics=labGraphics(T);
+    const cpu=performance.now(),graphics=labGraphics(T),rites=ritesArt(T);
     for(const id of Object.keys(LAB_CELLS)){
       if(id==='stairs')continue;
-      build(id,graphics);
+      build(id,graphics,rites);
     }
     performance.measure('schlosser-cellar: build',{start:cpu,end:performance.now()});
 
@@ -484,7 +488,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
       dim=strength;
       return changed;
     }
-    hemi.intensity=id==='infirmary'?.54:.86;
+    hemi.intensity=id==='chapel'?.40:id==='infirmary'?.54:.86;
     last=id;pathX=p.x;pathZ=p.z;
     const render=labVisibility(id,p.x,p.z);
     for(const [cell,group] of rooms){const see=render.has(cell);if(group.visible!==see)changed=true;group.visible=see}
@@ -495,8 +499,9 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     for(let i=0;i<lights.length;i++){
       const l=lights[i],src=choices[i]?.[0];
       if(!src){l.intensity=0;continue}
-      const [x,z,color,power,distance]=src;
-      l.position.set(x,ceiling-.56,z);l.color.setHex(color);l.intensity=power*(i===affected?dim:1);l.distance=distance;
+      const [x,z,color,power,distance,aboveFloor]=src;
+      l.position.set(x,aboveFloor===undefined?ceiling-.56:floor+aboveFloor,z);
+      l.color.setHex(color);l.intensity=power*(i===affected?dim:1);l.distance=distance;
       if(i===affected)normalPower=power;
     }
     return changed;

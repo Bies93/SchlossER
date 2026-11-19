@@ -245,15 +245,8 @@ export function makeAudio(listener,musicUrl,choirUrl) {
     if(!radioVoice)return;
     radioVoice=null;radioAt=null;globalThis.speechSynthesis?.cancel();
   }
-  function playMoosfunk(at,text){
-    if(!live())return;
+  function speakLocal(at,text,pitch,rate,volume){
     stopRadio();
-    const here=listener(),dx=at.x-here.x,dz=at.z-here.z,d=Math.hypot(dx,dz);
-    const pan=Math.max(-.67,Math.min(.67,(dx*here.rightX+dz*here.rightZ)/Math.max(d,.8)));
-    const t=ctx.currentTime+.016;
-    grit(sfx,t,.18,.093,860,2700,{pan,wet:.08,attack:.021});
-    tone(sfx,t+.082,680,.105,.088,{type:'triangle',end:599,pan,wet:.10});
-    tone(sfx,t+.188,510,.098,.061,{type:'triangle',end:425,pan,wet:.11});
     // No online speech dependency. The full caption is present even if the
     // device does not have a local German voice or the sound is switched off.
     try{
@@ -261,10 +254,35 @@ export function makeAudio(listener,musicUrl,choirUrl) {
       const local=synth?.getVoices().find(v=>v.localService&&v.lang.toLowerCase().startsWith('de'));
       if(!Voice||!local)return;
       radioAt=at;const message=new Voice(text);radioVoice=message;
-      message.voice=local;message.lang=local.lang;message.pitch=.84;message.rate=.91;message.volume=levels.sfx*.61;
+      message.voice=local;message.lang=local.lang;message.pitch=pitch;message.rate=rate;message.volume=levels.sfx*volume;
       message.onend=message.onerror=()=>{if(radioVoice===message){radioVoice=null;radioAt=null;}};
       synth.speak(message);
     }catch{radioVoice=null;radioAt=null;}
+  }
+  function tapePan(at){
+    const a=listener(),x=at.x-a.x,z=at.z-a.z;
+    return Math.max(-.67,Math.min(.67,(x*a.rightX+z*a.rightZ)/Math.max(Math.hypot(x,z),.8)));
+  }
+  function playMoosfunk(at,text){
+    if(!live())return;
+    const pan=tapePan(at),t=ctx.currentTime+.016;
+    grit(sfx,t,.18,.093,860,2700,{pan,wet:.08,attack:.021});
+    tone(sfx,t+.082,680,.105,.088,{type:'triangle',end:599,pan,wet:.10});
+    tone(sfx,t+.188,510,.098,.061,{type:'triangle',end:425,pan,wet:.11});
+    speakLocal(at,text,.84,.91,.61);
+  }
+  function playChapel(at,text,take){
+    if(!live())return;
+    const pan=tapePan(at),t=ctx.currentTime+.017;
+    grit(sfx,t,.41,.067,290,1800,{pan,wet:.24,attack:.022,rate:.87});
+    const tones=take===2?[109.9,147.25,207.7]:[110,146.83,220];
+    // Quiet, layered vowel-like voices with a short tape flutter. No
+    // downloaded choir asset, long-lived audio loop or extra audio graph.
+    for(const [i,f] of tones.entries()){
+      tone(sfx,t+i*.07,f,2.15+i*.19,.039,{wave:ac,end:f*.995,attack:.35,pan,wet:.37,shiver:14});
+      tone(sfx,t+.13+i*.056,f*2.006,1.72,.013,{type:'sine',end:f*1.993,attack:.55,pan,wet:.31,shiver:8});
+    }
+    speakLocal(at,text,.73,.90,.57);
   }
   function ambience(p){
     updateChoir();
@@ -277,7 +295,7 @@ export function makeAudio(listener,musicUrl,choirUrl) {
       grit(sfx,t,.86,v,980,4400,{wet:.20,attack:.26,rate:.88+random()*.06});
     }
   }
-  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,playChoir,choirStatus,playMoosfunk,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };
