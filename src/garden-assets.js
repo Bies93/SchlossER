@@ -1,6 +1,7 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {repeatSet} from './surface-detail.js';
 import {BENCH_SITES} from './world-layout.js';
+import {CHAPTER_BENCH} from './chapter-layout.js';
 
 export function addBenches(T,root,world,height){
   const wood=new T.MeshStandardMaterial({...repeatSet(T,'wood',512),roughness:1});
@@ -32,11 +33,12 @@ export function addBenches(T,root,world,height){
       const bolt=new T.CylinderGeometry(.012,.013,.013,6);bolt.translate(x,.06,z-.034);frame.push(bolt.toNonIndexed());bolt.dispose();
     }
   }
-  const count=BENCH_SITES.length, w=new T.InstancedMesh(mergeGeometries(boards),wood,count),
+  const sites=BENCH_SITES.filter(([x,z])=>x!==CHAPTER_BENCH[0]||z!==CHAPTER_BENCH[1]);
+  const count=sites.length, w=new T.InstancedMesh(mergeGeometries(boards),wood,count),
     f=new T.InstancedMesh(mergeGeometries(frame),iron,count);
   for(const g of [...boards,...frame])g.dispose();
   let i=0;const obj=new T.Object3D();
-  for(const [x,z,yaw] of BENCH_SITES){
+  for(const [x,z,yaw] of sites){
     obj.position.set(x,height(x,z),z);obj.rotation.y=yaw;obj.updateMatrix();
     w.setMatrixAt(i,obj.matrix);f.setMatrixAt(i++,obj.matrix);
     const c=Math.cos(yaw),s=Math.sin(yaw);
@@ -45,4 +47,11 @@ export function addBenches(T,root,world,height){
   }
   w.name='Parkbänke · Holzlatten';f.name='Parkbänke · Gussgestell';
   for(const m of [w,f]){m.receiveShadow=true;m.castShadow=true;m.computeBoundingSphere();root.add(m);}
+  const bench=new T.Group();
+  bench.name='Parkbank am Südweg';
+  const [x,z,yaw]=CHAPTER_BENCH;bench.position.set(x,height(x,z),z);bench.rotation.y=yaw;
+  for(const src of [w,f]){
+    const m=new T.Mesh(src.geometry,src.material);m.receiveShadow=m.castShadow=true;bench.add(m);
+  }
+  root.add(bench);return bench;
 }

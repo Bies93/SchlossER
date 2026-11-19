@@ -25,6 +25,8 @@ import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {makeMoosfunk} from './moosfunk-quest.js';
 import {ORB,X as wcX,Z as wcZ,wcZoneAt} from './park-wc-layout.js';
 import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
+import {addChapter} from './chapter.js';
+import {CHAPTER_LAYER} from './chapter-layout.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -67,7 +69,8 @@ async function start(){
  }
  const fountain=makeFountain(T,s,sculptures);
  // Exterior gate posts and tree trunks never extend into the new rooms.
- const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p));
+ let chapter;
+ const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p)&&!chapter?.isBelow(p));
  addFixedColliders(world);
  const moosfunk=makeMoosfunk();
  const hall=makeHall(T,model,stonework,world,leaves,poster,seal,moosfunk);
@@ -75,11 +78,16 @@ async function start(){
  const wc=addParkStair(T,s,world,moosfunk);
  walkSurfaces.push(...perimeter.floors);
  const garden=addGarden(T,s,world,importedGravel,finish);
+ chapter=addChapter(T,s,world,garden);
  walkSurfaces.push(...garden.floors);
  const backdrop=addBackdrop(T,s),{ground}=backdrop;
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
- const floorHeight=(x,z,referenceY=0)=>{
+ const floorHeight=(x,z,referenceY=0,allowChapter=true)=>{
+   if(allowChapter){
+     const hideout=chapter.floorAt(x,z,referenceY);
+     if(hideout!==null)return hideout;
+   }
    const cellar=labFloorAt(x,z,referenceY,hall.lodgeOpen());
    if(cellar!==null)return cellar;
    const stair=wcHeightAt(x,z,referenceY);
@@ -102,9 +110,9 @@ async function start(){
  },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
-   const surface=hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
+   const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
- },(x,z,y)=>Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)));
+ },(x,z,y)=>Math.min(chapter.ceilingAt(x,z,y),wcCeilingAt(x,z,y),labCeilingAt(x,z,y)));
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
@@ -131,7 +139,7 @@ async function start(){
    noticeTimer=setTimeout(()=>{ghoulNotice.hidden=true},kind==='hurt'?1050:kind==='progress'?1600:4100);
    refresh();
  }
- const round=ghoulRound(T,s,world,floorHeight,announceGhoul,audio.creature);
+ const round=ghoulRound(T,s,world,(x,z)=>floorHeight(x,z,0,false),announceGhoul,audio.creature);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
    ()=>{const p=player.body.position;return combat()&&desktopRound()&&hall.allowGear(p)
      &&!(p.y<-.42&&wcHeightAt(p.x,p.z,p.y)!==null);},round,audio.shot,audio.pulseContact);
@@ -212,7 +220,7 @@ async function start(){
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
-   return moosfunk.target(pos,look)??wc.target(pos,look);
+   return chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
  };
  const choirLabels={ready:'Chor erklingen lassen',loading:'Chor wird geladen …',playing:'Der Chor erklingt',
    muted:'Für den Chor den Ton einschalten',retry:'Chor erneut laden',unavailable:'Chor nicht verfügbar'};
@@ -245,7 +253,7 @@ async function start(){
    }
    const target=local??hall.commit(player,c);if(!target)return;
    if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});
-   if(target.id==='gallery-hatch')audio.hatch(target.target===1);
+   if(target.id==='gallery-hatch'||target.id==='chapter-bench')audio.hatch(target.target===1);
    doorPrompt();refresh();
  }
  window.addEventListener('keydown',event=>{
@@ -256,8 +264,9 @@ async function start(){
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
  function draw(){
    const p=player.body.position,mode=labCameraMode(p);
-   const wcMode=wcCameraMode(p),surface=mode!=='cellar'&&wcMode!=='inside',cellar=hall.labVisible();
+   const wcMode=wcCameraMode(p),chapterMode=chapter.mode(p),surface=mode!=='cellar'&&wcMode!=='inside'&&chapterMode!=='inside',cellar=hall.labVisible();
    wc.update(0,p);
+   chapter.update(0,p);
    if(surface){
      c.layers.set(0);
      lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);
@@ -265,13 +274,18 @@ async function start(){
    }
    // At the doorway share depth, not lighting. A combined camera mask
    // would compile new palace shaders for a different number of lights.
-   if(cellar||mode==='cellar'){
+   if(chapterMode!=='inside'&&(cellar||mode==='cellar')){
      c.layers.set(LAB_LAYER);const clear=r.autoClear;
      try{if(surface)r.autoClear=false;r.render(s,c);}
      finally{r.autoClear=clear;c.layers.set(0);}
    }
-   if(wcMode!=='surface'){
+   if(chapterMode!=='inside'&&wcMode!=='surface'){
      c.layers.set(WC_LAYER);const clear=r.autoClear;
+     try{if(surface)r.autoClear=false;r.render(s,c);}
+     finally{r.autoClear=clear;c.layers.set(0);}
+   }
+   if(chapter.visible()&&(surface||chapterMode==='inside')){
+     c.layers.set(CHAPTER_LAYER);const clear=r.autoClear;
      try{if(surface)r.autoClear=false;r.render(s,c);}
      finally{r.autoClear=clear;c.layers.set(0);}
    }
@@ -295,10 +309,11 @@ async function start(){
      const state=hall.update(dt,player.body.position);
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
+     if(chapter.update(dt,player.body.position)){dirty=true;r.shadowMap.needsUpdate=true;}
      if(state.shadow)r.shadowMap.needsUpdate=true;
      doorPrompt();
      roundPrompt();
-     if(labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
+     if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
    }
    if(dirty){draw();dirty=false}
@@ -378,6 +393,7 @@ async function start(){
  for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
  await wc.prepare(r,s);
+ await chapter.prepare(r);
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  draw();dirty=false;

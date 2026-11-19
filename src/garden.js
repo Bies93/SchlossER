@@ -9,6 +9,7 @@ import {planGeometry} from './perimeter.js';
 import {addParkArchitecture,parkFacadeClearance} from './park-architecture.js';
 import {addParkMonuments,monumentClear} from './park-monuments.js';
 import {WC_CUT} from './park-stair.js';
+import {CHAPTER_CUT,chapterContains} from './chapter-layout.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
 export function addGarden(T, scene, world, oldGravel, finish) {
@@ -55,7 +56,9 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   const {ground,gravel}=gardenMaterials(T,network.texture({
     legacy:oldGravel,walls:PERIMETER.filter(e=>e.type==='wall'),beds:BED_ARCS
   }),network.rect);
-  const terrain=gardenTerrain(T,PARK_FLOOR,ground);
+  const [xa,xb,za,zb]=CHAPTER_CUT,opening=[[xa,za],[xb,za],[xb,zb],[xa,zb]];
+  const terrain=gardenTerrain(T,PARK_FLOOR,ground,1.78,[opening]);
+  const benchCover=gardenTerrain(T,opening,ground).meshes;
   group.add(...terrain.meshes);floors.push(...terrain.meshes);
   // Paved-to-gravel transition at both Schlossplatz gates and the side entry.
   for(const [x,front,wide] of [[39.35,1,1.87],[-39,1,1.75],[-46.25,-4,1.18]]){
@@ -128,7 +131,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   const plants=plantGarden(T,group,world,sites,(x,z)=>{
     if(z>-17.35||!insidePerimeter(x,z)||x<-43&&z>-83||parkFacadeClearance(x,z,.5))return 0;
     if(Math.abs(x)<23&&z>-72||atBed(x,z,.25)||monumentClear(x,z,.28))return 0;
-    if(BENCH_SITES.some(([a,b])=>Math.abs(x-a)<1.14&&Math.abs(z-b)<1.14))return 0;
+    if(chapterContains(CHAPTER_CUT,x,z,.48)||BENCH_SITES.some(([a,b])=>Math.abs(x-a)<1.14&&Math.abs(z-b)<1.14))return 0;
     const {edge,style}=network.sample(x,z);
     if(edge<(style==='trim'?.12:.25))return 0;
     const patch=.5+.5*Math.sin(x*.53+Math.cos(z*.37)*1.5)*Math.cos(z*.39);
@@ -138,12 +141,12 @@ export function addGarden(T, scene, world, oldGravel, finish) {
        *(wall<1.4?.65:1)*(sheltered?1.22:1);
   },terrain.height,shrubs);
   const beds=addBeds(T,group,terrain.height);
-  addBenches(T,group,world,terrain.height);
+  const bench=addBenches(T,group,world,terrain.height);
   addOrangery(T,group,world,finish);
   addParkArchitecture(T,group,world,finish);
   addParkMonuments(T,group,world,terrain.height,finish);
   return {
-    floors, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
+    floors,bench,benchCover, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
     surfaceAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?(network.edge(x,z)<.17?'gravel':'lawn'):null,
     update:(position,time)=>{plants(position,time);beds(position)}
   };

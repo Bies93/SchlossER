@@ -98,7 +98,7 @@ export function pathNetwork(T){
 
 // The triangle evaluator is shared by mesh generation, planting and walking.
 // Each clipped render triangle stays in a single plane of the height grid.
-export function gardenTerrain(T,outline,material,tile=1.78){
+export function gardenTerrain(T,outline,material,tile=1.78,holes=[]){
   const step=3,size=48,tiles=new Map();
   const micro=(x,z)=>{
     const far=T.MathUtils.smoothstep(-z,20,72);
@@ -122,8 +122,9 @@ export function gardenTerrain(T,outline,material,tile=1.78){
     }
     return out;
   }
-  for(const [a,b,c] of T.ShapeUtils.triangulateShape(outline.map(([x,z])=>new T.Vector2(x,z)),[])){
-    const tri=[outline[a],outline[b],outline[c]];
+  const points=ring=>ring.map(([x,z])=>new T.Vector2(x,z)),vertices=[...outline,...holes.flat()];
+  for(const [a,b,c] of T.ShapeUtils.triangulateShape(points(outline),holes.map(points))){
+    const tri=[vertices[a],vertices[b],vertices[c]];
     const xs=tri.map(p=>p[0]),zs=tri.map(p=>p[1]);
     for(let x=Math.floor(Math.min(...xs)/step)*step;x<Math.max(...xs);x+=step)
       for(let z=Math.floor(Math.min(...zs)/step)*step;z<Math.max(...zs);z+=step){
