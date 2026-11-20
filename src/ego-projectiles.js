@@ -32,14 +32,16 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
     return Infinity;
   }
   function pick(r,limit,mask){
-    const obstruction=wall(r,limit,mask);
-    let nearest=Math.min(limit,obstruction),marker=null;
+    let nearest=limit,marker=null;
     if(mask&1)for(const a of anchors){
       if(!r.intersectSphere(a.sphere,point))continue;
       const d=point.distanceTo(r.origin);
       if(d<nearest-.006){marker=a;nearest=d;}
     }
     const hit=creatures?.nearest(r,Math.max(0,nearest-.006),mask);
+    const obstruction=wall(r,hit?.distance??nearest,mask);
+    if(obstruction!==Infinity&&obstruction<(hit?.distance??nearest)-.002)
+      return {distance:obstruction,marker:null,solid:true};
     return hit?{...hit,marker:null,solid:false}:{distance:nearest,marker,solid:!marker&&obstruction!==Infinity};
   }
   function dustAt(p,d,layer){
@@ -54,15 +56,15 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
     if(contact.actor){
       const close=spec.kind==='shotgun'?1-.52*(contact.distance/spec.range)**1.35:1;
       const amount=spec.impact*close,old=strike.get(contact.actor);
-      if(old)old.amount+=amount;
-      else strike.set(contact.actor,{amount,point:contact.point});
+      if(old){old.amount+=amount;if(contact.head){old.head+=amount;old.point=contact.point;}}
+      else strike.set(contact.actor,{amount,head:contact.head?amount:0,point:contact.point});
     }
     if(!contact.solid&&!contact.actor&&!contact.marker)return null;
     sampleHit.distance=contact.distance;sampleHit.material=contact.actor?'soft':contact.marker?'metal':'surface';
     return sampleHit;
   }
   function endVolley(spec){
-    for(const [actor,hit] of strike)creatures.damage(actor,Math.round(hit.amount),spec.color,hit.point,spec);
+    for(const [actor,hit] of strike)creatures.damage(actor,Math.round(hit.amount),spec.color,hit.point,spec,hit.head/hit.amount);
     strike.clear();
   }
   function launch(eye,muzzle,sight,spec){
@@ -108,7 +110,7 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
         if(hit.actor){
           // Leaving state 1 here prevents a second hit from this same bolt.
           b.state=0;b.mesh.visible=false;
-          creatures.damage(hit.actor,b.spec.impact,b.spec.color,hit.point,b.spec);
+          creatures.damage(hit.actor,b.spec.impact,b.spec.color,hit.point,b.spec,hit.head?1:0);
         }else{
           b.state=2;b.age=0;
           if(hit.marker)mark(hit.marker);else dustAt(b.position,ray.direction,b.layer);
@@ -142,5 +144,12 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
     for(const a of anchors){a.timer=0;a.face.material.emissiveIntensity=.095;}
     for(const q of puffs)q.age=1;dust.count=0;
   }
-  return {launch,tick,clear,beginVolley,pellet,endVolley};
+  function showPrewarm(){
+    const bolt=bolts[0].mesh,parts=[];
+    bolt.visible=true;bolt.traverse(o=>{if(o.isMesh){parts.push([o,o.frustumCulled]);o.frustumCulled=false;}});
+    dummy.position.set(0,0,0);dummy.scale.setScalar(1);dummy.rotation.set(0,0,0);dummy.updateMatrix();
+    dust.setMatrixAt(0,dummy.matrix);dust.count=1;dust.instanceMatrix.needsUpdate=true;
+    return ()=>{bolt.visible=false;for(const [o,cull] of parts)o.frustumCulled=cull;dust.count=0;};
+  }
+  return {launch,tick,clear,beginVolley,pellet,endVolley,showPrewarm};
 }

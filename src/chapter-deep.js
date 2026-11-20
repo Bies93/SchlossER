@@ -5,7 +5,7 @@ import {CHAPTER_CELL} from './chapter-layout.js';
 import {gateLeft as gl,gateRight as gr} from './chapter-cell-gate.js';
 import {labelGeometry,labels} from './chapter-labels.js';
 
-export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print,rect:bounds}){
+export function deepChapterDressing(T,{room,k,box:B,hit,platform,F,id,print,rect:bounds}){
   const pi=Math.PI,rnd=randomSource(937+id.length),pad=new RoundedBoxGeometry(1,1,1,2,.113),
     disk=new T.CylinderGeometry(1,1,1,18),orb=new T.SphereGeometry(1,14,9),
     ring=new T.TorusGeometry(1,.078,8,20),p=new T.Vector3(),s=new T.Vector3(),Y=new T.Vector3(0,1,0),
@@ -81,7 +81,7 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print,rect:bounds})
     if(style)shape('wine',pad,x,.458,z,.316,.046,.313);
     for(const a of [-1,1])for(const f of [-1,1])
       rod('walnut',x+a*.132,.025,z+f*.133,x+a*.118,.387,z+f*.109,.027);
-    foot(x,z,.36,.36);
+    platform(x-.18,x+.18,z-.18,z+.18,style?.48:.452);
   }
   const ware=new T.LatheGeometry([[0,0],[.65,0],[.78,.08],[1,.53],[.955,.57],[.911,.535],[.705,.222],[.55,.135],[0,.119]]
     .map(([r,y])=>new T.Vector2(r,y)),19);
@@ -172,7 +172,10 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print,rect:bounds})
       }
     }
     rod('piping',base+.022*orient,.477,z-.32,base+.022*orient,.477,z+.32,.008);
-    if(!noFoot)foot(x,z,1.99,.84);
+    if(!noFoot){
+      platform(x-.93,x+.93,z-.40,z+.40,.53);
+      hit(tip-.031,tip+.031,z-.42,z+.42);
+    }
   }
   if(id==='lowerHall'){
     sign('dorm',19.79,1.76,-67.85,1.48,.56,pi/2);

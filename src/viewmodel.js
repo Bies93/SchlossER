@@ -238,5 +238,5 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
   }
   update(performance.now());
-  return {update,draw,preset,stop,collect,pickupModel,prepare,clearShots:fx.clear,bodyLayer:body.layer};
+  return {update,draw,preset,stop,collect,pickupModel,prepare,clearShots:fx.clear,showPrewarmShots:fx.showPrewarm,bodyLayer:body.layer};
 }

@@ -399,7 +399,7 @@ export function createHuman(T,id='base'){
   const add=(bone,child,t,r)=>{
     const b=bones.get(bone);if(!b)return;
     const p=child?rest.get(child).p.clone().multiplyScalar(t):V(0,t,0);
-    shapes.push({b,p,base:r,sphere:new T.Sphere()});
+    shapes.push({b,p,base:r,head:bone==='head',sphere:new T.Sphere()});
   };
   add('head',null,.078,.116);add('head',null,.128,.079);add('spine_03',null,.04,.205);add('spine_02',null,.02,.158);add('pelvis',null,0,.15);
   for(const s of ['l','r']){
@@ -408,9 +408,8 @@ export function createHuman(T,id='base'){
     add('hand_'+s,null,-.04,.047);add('foot_'+s,'ball_'+s,.56,.070);
   }
   function hitShapes(){
-    actor.updateMatrixWorld(true);
     const scale=(proto.userData.size??1)*actor.scale.x;
-    for(const {b,p,base,sphere} of shapes){sphere.center.copy(p).applyMatrix4(b.matrixWorld);sphere.radius=base*scale;}
+    for(const {b,p,base,sphere} of shapes){b.updateWorldMatrix(true,false);sphere.center.copy(p).applyMatrix4(b.matrixWorld);sphere.radius=base*scale;}
     return shapes;
   }
   const flinchBones=['spine_02','spine_03','neck_01'].map(name=>[bones.get(name),Q()]);

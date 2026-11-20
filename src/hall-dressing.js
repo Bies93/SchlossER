@@ -142,7 +142,9 @@ export function hallDressing(T,k,room,world){
       obj('hallBronze',shaft,p(x,Y+.811,.094),[.042,.014,.042]);
     }
     k.box('hallSeat',p,u-.809,u+.809,Y+.664,Y+.807,.085,.141);
-    world.box(side>0?half-.574:-half,side*z-.931,side>0?half:-half+.574,side*z+.931);
+    const a=side*z-.901,b=side*z+.901;
+    world.platform(side>0?half-.554:-half+.131,a,side>0?half-.131:-half+.554,b,Y+.444);
+    world.box(side>0?half-.131:-half,a,side>0?half:-half+.131,b);
   }
   // Framework and glass are batched; the existing three central PointLights
   // supply the room. Diffusers are opaque, avoiding transparent overdraw.

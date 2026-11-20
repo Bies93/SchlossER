@@ -120,7 +120,7 @@ export function collectiveArt(T){
 }
 
 export function furnishCollective(T,kit,id){
-  const {block,hit,stamp,pipe,print,hqTile}=kit;
+  const {block,hit,stamp,pipe,print,hqTile,platform}=kit;
   const cylinder=new T.CylinderGeometry(1,1,1,18),ball=new T.SphereGeometry(1,15,10);
   const ring=new T.TorusGeometry(1,.104,8,19).rotateX(pi/2);
   const turn=new T.LatheGeometry([[0,0],[.58,0],[.80,.14],[.82,.41],[.52,.61],
@@ -143,7 +143,7 @@ export function furnishCollective(T,kit,id){
       const v0=v+(i-1.5)*d*.25;
       soft(i===1?'pine':'wood',u,h-.034,v0,w,.068,d*.25-.0026,.008);
     }
-    hit(u-w*.5,u+w*.5,v-d*.5,v+d*.5);
+    platform(u-w*.5,u+w*.5,v-d*.5,v+d*.5,h);
   }
   function crate(u,v,w=.61,d=.47,base=0){
     frame('darkWood',u-w*.5,u+w*.5,base+.012,base+.374,v-d*.5,v+d*.5);
@@ -300,7 +300,8 @@ export function furnishCollective(T,kit,id){
       soft('darkWood',19.38,.387,v,.707,.291,.150,.029);
       soft('rug',19.36,.562,v,.648,.122,.172,.048);
     }
-    hit(18.99,19.79,-1.56,1.73);
+    platform(19.02,19.545,-1.39,1.49,.506);
+    hit(19.545,19.79,-1.56,1.73);
     table(17.61,.31,.89,1.38,.496);
     const ceramic=new T.LatheGeometry([[0,0],[.64,0],[.73,.056],[.78,.14],[.95,.72],[1,.963],[.97,1],
       [.86,1],[.87,.92],[.81,.72],[.67,.18],[.56,.12],[0,.12]].map(q=>new T.Vector2(...q)),20);

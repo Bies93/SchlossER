@@ -1,15 +1,15 @@
 // X/Z plan collision for a standing player. Local underground obstacles may
 // opt into the movement layer supplied by the player; most are ground level.
 export function collisionWorld(bounds, radius, contains, staticEnabled=()=>true) {
-  const cellSize = 8, grid = new Map();
+  const cellSize = 8, grid = new Map(), decks=new Map();
   const cell = v => Math.floor(v / cellSize);
   const key = (x, z) => x + ':' + z;
-  function insert(minX, minZ, maxX, maxZ, contact) {
+  function insert(minX, minZ, maxX, maxZ, contact, into=grid) {
     for (let ix = cell(minX - radius); ix <= cell(maxX + radius); ix++) {
       for (let iz = cell(minZ - radius); iz <= cell(maxZ + radius); iz++) {
         const id = key(ix, iz);
-        if (!grid.has(id)) grid.set(id, []);
-        grid.get(id).push(contact);
+        if (!into.has(id)) into.set(id, []);
+        into.get(id).push(contact);
       }
     }
   }
@@ -54,6 +54,33 @@ export function collisionWorld(bounds, radius, contains, staticEnabled=()=>true)
   return {
     polygon,
     box: (x0, z0, x1, z1,enabled) => polygon([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],enabled),
+    support(vertices,top,enabled=staticEnabled,collider=vertices){
+      const xs=vertices.map(v=>v[0]),zs=vertices.map(v=>v[1]);
+      const edges=vertices.map(([x,z],i)=>{
+        const q=vertices[(i+1)%vertices.length],dx=q[0]-x,dz=q[1]-z;
+        return {x,z,dx,dz,fuzz:.052*Math.hypot(dx,dz)};
+      });
+      insert(Math.min(...xs),Math.min(...zs),Math.max(...xs),Math.max(...zs),{top,enabled,edges},decks);
+      const solid=p=>enabled(p)&&(p.feet===undefined||p.feet<top-.029);
+      if(collider)polygon(collider,solid);
+    },
+    platform(x0,z0,x1,z1,top,enabled){
+      this.support([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],top,enabled);
+    },
+    standingHeight(p,ground,max){
+      let top=ground;
+      for(const d of decks.get(key(cell(p.x),cell(p.z)))??[]){
+        if(d.top<=top||d.top>max||!d.enabled(p))continue;
+        let positive=false,negative=false;
+        for(const e of d.edges){
+          const side=e.dx*(p.z-e.z)-e.dz*(p.x-e.x);
+          positive||=side>e.fuzz;negative||=side<-e.fuzz;
+          if(positive&&negative)break;
+        }
+        if(!(positive&&negative))top=d.top;
+      }
+      return top;
+    },
     // The broad phase covers the full sweep; the narrow phase uses the
     // current rigid rectangle instead of leaving an invisible closed gate.
     movingBox(x0,z0,x1,z1,pose,enabled=()=>true){

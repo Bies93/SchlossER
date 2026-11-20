@@ -12,17 +12,19 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath){
       broad.center.copy(actor.position);broad.center.y+=.77;
       if(!ray.intersectsSphere(broad)||ray.origin.distanceToSquared(broad.center)>(best+1.62)**2)continue;
       if(n.hitEpoch!==epoch){n.hitEpoch=epoch;n.hitCache=n.rig.hitShapes();}
-      for(const {sphere} of n.hitCache){
+      for(const {sphere,head} of n.hitCache){
         if(!ray.intersectSphere(sphere,point))continue;
         const d=ray.origin.distanceTo(point);
-        if(d<best){best=d;hit={actor:n,distance:d,point:point.clone()};}
+        if(d<best){best=d;hit={actor:n,distance:d,point:point.clone(),head};}
       }
     }
     return hit;
   }
-  function damage(n,value,color,at,spec){
+  function damage(n,value,color,at,spec,headShare=0){
     if(!Number.isFinite(value)||value<=0)return false;
-    const kind=spec.kind,amount=kind==='bow'?50:kind==='rifle'?35:Math.min(55,Math.max(34,Math.round(value*.61)));
+    const kind=spec.kind,body=kind==='bow'?50:kind==='rifle'?35:Math.min(55,Math.max(34,Math.round(value*.61)));
+    const factor=kind==='bow'?2.75:kind==='rifle'?2.6:2.35;
+    const amount=Math.round(body*(1+(factor-1)*headShare));
     if(!n.rig?.npcInfo)return ghouls.damage(n,amount,color,at);
     if(!n.alive)return false;
     n.hp=Math.max(0,n.hp-amount);

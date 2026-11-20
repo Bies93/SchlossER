@@ -1,9 +1,12 @@
+import {triangleQuery,triangleIntersection} from './triangle-query.js';
+
 // Shared 3D visibility/impact queries. Index the existing opaque surfaces
 // once; rotating leaves stay separate and are tested in their current pose.
 export function sceneQuery(T,scene,player){
   const solid=new T.MeshBasicMaterial({side:T.DoubleSide}),probe=new T.Mesh(undefined,solid);
   const caster=new T.Raycaster(),intersection=new T.Vector3(),hits=[],stack=[],fixed=[],moving=[];
   let tree=null,revision=0;
+  const byGeometry=new WeakMap(),intersect=triangleIntersection(T);
   const seen=o=>{for(let a=o;a;a=a.parent){if(!a.visible)return false;if(a===scene)return true;}return false;};
   function build(){
     fixed.length=moving.length=0;scene.updateMatrixWorld(true);
@@ -17,7 +20,10 @@ export function sceneQuery(T,scene,player){
         const local=g.boundingBox;
         if(local&&!local.isEmpty()&&(dynamic||local.getSize(intersection).lengthSq()>.0784)){
           const bounds=local.clone().applyMatrix4(o.matrixWorld);
-          if(Number.isFinite(bounds.min.x)) (dynamic?moving:fixed).push({o,bounds,local});
+          if(Number.isFinite(bounds.min.x)){
+            if(!byGeometry.has(g))byGeometry.set(g,triangleQuery(T,g));
+            (dynamic?moving:fixed).push({o,bounds,local,triangles:byGeometry.get(g)});
+          }
         }
       }
       for(const c of o.children)visit(c,dynamic);
@@ -47,6 +53,11 @@ export function sceneQuery(T,scene,player){
         o.updateWorldMatrix(true,false);bounds.copy(local).applyMatrix4(o.matrixWorld);entry.revision=revision;
       }
       if(!touches(bounds))return false;
+      if(entry.triangles){
+        const d=intersect(entry.triangles,ray,o.matrixWorld,near,caster.far,any);
+        if(d!==Infinity){caster.far=nearest=d;return true;}
+        return false;
+      }
       probe.geometry=o.geometry;probe.matrixWorld.copy(o.matrixWorld);
       hits.length=0;probe.raycast(caster,hits);
       for(const h of hits)if(h.distance<nearest)caster.far=nearest=h.distance;

@@ -5,7 +5,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 
 const pi=Math.PI;
 export function furnishHQ(T,kit,id){
-  const {block,hit,pipe,stamp,hqTile}=kit;
+  const {block,hit,pipe,stamp,hqTile,platform}=kit;
   const rnd=randomSource(33163),ball=new T.SphereGeometry(1,12,8),dial=new T.CylinderGeometry(1,1,1,13),
     hoop=new T.TorusGeometry(1,.085,7,22),flat=hoop.clone().rotateX(-pi/2);
   const vessel=new T.LatheGeometry([[.47,0],[.53,.04],[.71,.21],[.92,.80],[1,.946],[.99,1],
@@ -31,7 +31,8 @@ export function furnishHQ(T,kit,id){
       box('edge',u,h-.048,v+s*(d*.5+.003),w*.985,.022,.011);
       box('brass',u+s*(w*.5-.022),h-.022,v,.030,.020,.026);
     }
-    hit(u-w/2,u+w/2,v-d/2,v+d/2);
+    if(top)platform(u-w/2,u+w/2,v-d/2,v+d/2,h);
+    else hit(u-w/2,u+w/2,v-d/2,v+d/2);
   };
   function lowSeat(u,v,y=.443,w=.48,d=.46,m='sage'){
     for(const s of [-1,1])for(const t of [-1,1]){
@@ -41,7 +42,7 @@ export function furnishHQ(T,kit,id){
     box('iron',u,y-.062,v,w*.97,.055,d*.94);
     stamp(m,ball,u,y,v,[w*.525,.055,d*.523]);
     pipe('linen',[u-w*.39,y+.017,v-d*.46],[u+w*.39,y+.017,v-d*.46],.004);
-    hit(u-w/2,u+w/2,v-d/2,v+d/2);
+    platform(u-w/2,u+w/2,v-d/2,v+d/2,y+.049);
   }
   function chair(u,v,back=1,color='sage'){
     lowSeat(u,v,.457,.481,.466,color);
@@ -52,6 +53,9 @@ export function furnishHQ(T,kit,id){
     pipe('gunmetal',[u-.173,.781,v+back*.255],[u+.173,.781,v+back*.255],.012);
     const front=v+back*.174;
     pipe('linen',[u-.144,.813,front],[u+.144,.813,front],.0036);
+    // The high-backed frame stays solid independently of its seat.
+    const edge=v+.226*back;
+    hit(u-.179,u+.179,edge-.034,edge+.034);
   }
   function crate(u,v,y=0,w=.65,d=.46,h=.32,label=false){
     box('darkWood',u,y+.014,v,w,.049,d);
@@ -376,7 +380,7 @@ export function furnishHQ(T,kit,id){
       cloth(u-.21,v,.496,1.36,.613,i%2?'wool':'tartan');
       stamp('tote',ball,u+.649,.524,v,[.244,.085,.260]);
       pipe('linen',[u+.55,.538,v-.209],[u+.855,.526,v-.21],.006);
-      hit(u-.94,u+.94,v-.35,v+.35);
+      platform(u-.94,u+.94,v-.35,v+.35,.503);
     }
     for(const u of [22.47,24.89]){
       crate(u,12.58,0,.383,.463,.353);

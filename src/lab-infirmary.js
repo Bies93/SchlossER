@@ -123,7 +123,7 @@ export function addInfirmary(T,kit){
       return [x,y+.0027,z];
     },cols,rows);
     const corners=[p(-.406,0,-1.06),p(.406,0,-1.06),p(.406,0,1.06),p(-.406,0,1.06)];
-    kit.world.polygon(corners.map(([x,,z])=>[x,z]),p=>p.y<-1.72);
+    kit.world.support(corners.map(([x,,z])=>[x,z]),Y+.758,q=>q.y<-1.72&&Math.abs(q.y-Y)<.8);
   }
   function monitor(x,z,{label='ÜBERWACHUNG',green=true}={}){
     const a=x<-20?-pi/2:pi/2,p=point(x,z,a);

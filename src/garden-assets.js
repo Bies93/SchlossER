@@ -42,8 +42,9 @@ export function addBenches(T,root,world,height){
     obj.position.set(x,height(x,z),z);obj.rotation.y=yaw;obj.updateMatrix();
     w.setMatrixAt(i,obj.matrix);f.setMatrixAt(i++,obj.matrix);
     const c=Math.cos(yaw),s=Math.sin(yaw);
-    world.polygon([[-L/2,-.29],[L/2,-.29],[L/2,.37],[-L/2,.37]]
-      .map(([u,v])=>[x+c*u+s*v,z-s*u+c*v]));
+    const rect=(a,b)=>[[-L/2,a],[L/2,a],[L/2,b],[-L/2,b]].map(([u,v])=>[x+c*u+s*v,z-s*u+c*v]);
+    world.support(rect(-.276,.225),obj.position.y+.482,undefined,rect(-.29,.259));
+    world.polygon(rect(.259,.37));
   }
   w.name='Parkbänke · Holzlatten';f.name='Parkbänke · Gussgestell';
   for(const m of [w,f]){m.receiveShadow=true;m.castShadow=true;m.computeBoundingSphere();root.add(m);}

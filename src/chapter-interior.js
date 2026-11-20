@@ -164,7 +164,8 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
         if(r>l&&v>y+.004)B0(deep?(rnd()<.25?'deepStone':'deepRock'):rnd()<.23?'stone2':'sole',l,r,-.037,0,y+.004,v);
       }
     }
-    const kit={room,k:m,box:B0,hit,F,rect,id,cloth,print:(key,...args)=>{
+    const platform=(x,X,z,Z,h)=>world.platform(x,z,X,Z,F+h,q=>isBelow(q)&&Math.abs(q.y-F)<.9);
+    const kit={room,k:m,box:B0,hit,platform,F,rect,id,cloth,print:(key,...args)=>{
       room.add(atlas(key,args[0],F+args[1],...args.slice(2)));
     }};
     if(deep)deepChapterDressing(T,kit);

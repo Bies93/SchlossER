@@ -143,7 +143,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
         if(!ray.intersectSphere(s.sphere,point))continue;
         const distance=ray.origin.distanceTo(point);
         if(distance<best){
-          best=distance;candidate={actor:g,distance,point:point.clone()};
+          best=distance;candidate={actor:g,distance,point:point.clone(),head:s.head};
         }
       }
     }

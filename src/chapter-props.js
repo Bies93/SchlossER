@@ -2,7 +2,7 @@ import {stationery} from './interior-stationery.js';
 import {randomSource} from './surface-detail.js';
 import {chapterCraft} from './chapter-craft.js';
 
-export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
+export function dressChapter(T,{room,k,box:B,hit,platform,F,id,print,cloth}){
   const pi=Math.PI,rnd=randomSource(9318+id.charCodeAt(0)),ball=new T.SphereGeometry(1,14,9),pin=new T.CylinderGeometry(1,1,1,12),
     ring=new T.TorusGeometry(1,.085,7,20),pos=new T.Vector3(),scale=new T.Vector3(),quat=new T.Quaternion(),rot=new T.Euler(),
     up=new T.Vector3(0,1,0),end=new T.Vector3(),dir=new T.Vector3(),mat=new T.Matrix4();
@@ -18,7 +18,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
     if(L>.001)k.geometry(m,pin,mat.compose(pos.addScaledVector(dir,.5),quat.setFromUnitVectors(up,dir.normalize()),scale.set(r,L,r)));
   };
   const line=(m,pts,r)=>{for(let j=1;j<pts.length;j++)rod(m,...pts[j-1],...pts[j],r);};
-  const craft=chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ring},cloth);
+  const craft=chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ring,platform,hit},cloth);
   function frame(key,x,y,z,w,h,yaw=0,recessed=false){
     const X=(s,d=0)=>x+Math.cos(yaw)*s+Math.sin(yaw)*d,Z=(s,d=0)=>z-Math.sin(yaw)*s+Math.cos(yaw)*d;
     if(recessed){

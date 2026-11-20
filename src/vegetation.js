@@ -1,9 +1,9 @@
 import {randomSource, repeatSet} from './surface-detail.js';
 
 const TAU=Math.PI*2,CELL=32;
-function put(bins,x,z,record){
-  const i=Math.floor(x/CELL),j=Math.floor(z/CELL),key=i+':'+j;
-  if(!bins.has(key))bins.set(key,{x:(i+.5)*CELL,z:(j+.5)*CELL,records:[]});
+function put(bins,x,z,record,size=CELL){
+  const i=Math.floor(x/size),j=Math.floor(z/size),key=i+':'+j;
+  if(!bins.has(key))bins.set(key,{x:(i+.5)*size,z:(j+.5)*size,records:[]});
   bins.get(key).records.push(record);
 }
 
@@ -273,27 +273,28 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
       batch(T,group,bin.records,g,leaf,'Parkrand · lockeres Unterholz')
     ]});
   }
-  const colors=['#717d46','#788743','#879752','#8f985d','#718843'].map(v=>new T.Color(v));
-  for(let z=-255;z<=-17;z+=.64)for(let x=-75;x<=75;x+=.64){
-    const a=x+(rng()-.5)*.63,b=z+(rng()-.5)*.63,rate=rng(),density=coverage(a,b);
+  const colors=['#6b7b41','#75874c','#859250','#687b3a','#89975a','#9a965c','#778145'].map(v=>new T.Color(v));
+  for(let z=-255;z<=-17;z+=.54)for(let x=-75;x<=75;x+=.54){
+    const a=x+(rng()-.5)*.65,b=z+(rng()-.5)*.65,rate=rng(),density=coverage(a,b);
     if(!density||rate>density||roots.some(t=>Math.abs(t.x-a)<t.r&&Math.hypot(t.x-a,t.z-b)<t.r))continue;
-    const s=.60+rng()*.83;
-    put(grassBins,a,b,{x:a,y:height(a,b)+.001,z:b,sx:s,sy:.57+rng()*.83,sz:s,yaw:rng()*TAU,tint:colors[colors.length*rng()|0]});
-    if(density>.28&&rng()<.022)put(herbBins,a,b,{x:a,y:height(a,b),z:b,sx:s,sy:s,sz:s,yaw:rng()*TAU});
+    const s=.77+rng()*.86,cut=Math.abs(a)<23&&b>-72;
+    put(grassBins,a,b,{x:a,y:height(a,b)-.005,z:b,sx:s,sy:(cut?.66:.79)+rng()*(cut?.58:.78),sz:s,yaw:rng()*TAU,tint:colors[colors.length*rng()|0]},16);
+    if(!cut&&density>.31&&rng()<.015)put(herbBins,a,b,{x:a,y:height(a,b),z:b,sx:s,sy:s,sz:s,yaw:rng()*TAU},16);
   }
   const blade=buffers();
-  for(let i=0;i<8;i++){
-    const a=rng()*TAU,stem=rng()*.098,x=Math.cos(a)*stem,z=Math.sin(a)*stem,h=.032+.052*rng(),w=.0018+.0043*rng();
+  for(let i=0;i<7;i++){
+    const a=i*2.39996+rng()*.57,stem=.026+rng()*.115,x=Math.cos(a)*stem,z=Math.sin(a)*stem,h=.046+.072*rng(),w=.0030+.0036*rng();
     const dx=Math.cos(a)*w,dz=Math.sin(a)*w,bx=Math.sin(a)*(.017+rng()*.024),bz=-Math.cos(a)*(.017+rng()*.024);
     const p=[[x-dx,0,z-dz],[x+dx,0,z+dz],[x+dx*.63+bx*.31,h*.65,z+dz*.63+bz*.31],
       [x-dx*.63+bx*.31,h*.65,z-dz*.63+bz*.31],[x+bx,h,z+bz]];
     for(const j of [0,1,2,0,2,3,3,2,4]){
-      blade.p.push(...p[j]);const v=[.72,.72,.95,.95,1.13][j];blade.c.push(v,v,v);
+      blade.p.push(...p[j]);const v=[.68,.72,.90,1.02,1.10][j];blade.c.push(v,v,v*.97);
+      blade.n.push(-bx*.6,.98,-bz*.6);
     }
   }
   const grass=new T.MeshLambertMaterial({side:T.DoubleSide,vertexColors:true});
-  fade(grass,16,32,true);const g=geometry(T,blade);
-  for(const bin of grassBins.values())parts.push({x:bin.x,z:bin.z,dist:58,meshes:[
+  fade(grass,12,23,true);const g=geometry(T,blade);
+  for(const bin of grassBins.values())parts.push({x:bin.x,z:bin.z,dist:36,meshes:[
     batch(T,group,bin.records,g,grass,'Rasen · Halmbüschel')
   ]});
   const herbs=buffers();
@@ -304,11 +305,14 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
     for(const j of [0,1,2,0,2,3]){herbs.p.push(...points[j]);herbs.c.push(.15,.21,.084)}
   }
   const herbMesh=geometry(T,herbs);
-  for(const bin of herbBins.values())parts.push({x:bin.x,z:bin.z,dist:58,meshes:[
+  for(const bin of herbBins.values())parts.push({x:bin.x,z:bin.z,dist:36,meshes:[
     batch(T,group,bin.records,herbMesh,grass,'Saum · vereinzelte Kräuter')
   ]});
+  let lastX=Infinity,lastZ=Infinity;
   return (position,time)=>{
     sway.value=time*.001;
+    if(Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
+    lastX=position.x;lastZ=position.z;
     for(const p of parts){
       const visible=(p.x-position.x)**2+(p.z-position.z)**2<p.dist**2;
       for(const m of p.meshes)m.visible=visible;

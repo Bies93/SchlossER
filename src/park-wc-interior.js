@@ -45,15 +45,19 @@ export function addWcInterior(T,scene,world,quest){
     cloth=sharedSet(T,'canvas',128),wood=sharedSet(T,'fineOak',256);
   const materials={
     paint:plain(0xb6b3a2,.93,{...plaster,normalScale:new T.Vector2(.28,.28)}),
-    tile:plain(0xd2d2bd,.74,{...sharedSet(T,'labTile',256),normalScale:new T.Vector2(.28,.28)}),
-    grout:plain(0x575a52),dark:plain(0x242923),gasket:plain(0x30342b,.98),sea:plain(0x566758),trim:plain(0xa4a995,.78),
-    floorA:plain(0x85887a,.88,plaster),floorB:plain(0x979789,.85,plaster),floorC:plain(0x757c70,.92,plaster),
+    tile:plain(0xe1ddcb,.69,{...sharedSet(T,'labTile',512),normalScale:new T.Vector2(.36,.36)}),
+    grout:plain(0x606159),dark:plain(0x242923),gasket:plain(0x30342b,.98),sea:plain(0x566758,.77,painted),trim:plain(0xa4a995,.78),
+    floorA:plain(0x838a81,.82,{...stone,normalScale:new T.Vector2(.33,.33)}),
+    floorB:plain(0x989589,.80,{...stone,normalScale:new T.Vector2(.30,.30)}),
+    floorC:plain(0x78837c,.86,{...stone,normalScale:new T.Vector2(.32,.32)}),
     rock:plain(0x807968,.98,stone),rockShade:plain(0x6e695c,.97,stone),rockWarm:plain(0x948471,.96,stone),cap:plain(0x736956,.93,stone),
     iron:plain(0x303935,.77,{metalness:.25}),gunmetal:plain(0x495550,.75,painted),
     tunnelMetal:plain(0x645c50,.86,{...painted,metalness:.31}),oxide:plain(0x785244,.89,painted),
     green:plain(0x62776a,.91,painted),edge:plain(0x889788,.65,painted),brass:plain(0xa89968,.57,{metalness:.51}),
     steel:plain(0x87908e,.36,{metalness:.63}),glass:plain(0x566e6b,.26,{metalness:.5,envMapIntensity:.46}),
-    china:plain(0xdadbd1,.32),chinaPocket:plain(0xbfc3b6,.34),water:plain(0x667975,.32,{metalness:.15}),
+    china:plain(0xe6e2d4,.29),chinaPocket:plain(0xd2d1c1,.31),seatIvory:plain(0xdad6c5,.66),
+    chromeWc:plain(0xb1b5af,.39,{metalness:.71}),mirrorWc:plain(0x899da1,.25,{metalness:.63,envMapIntensity:.48}),
+    water:plain(0x768888,.21,{metalness:.10}),
     lamp:{material:plain(0xf7eac3,.69,{emissive:0xffd297,emissiveIntensity:.61}),cast:false},
     wood:plain(0xb29065,.78,wood),darkWood:plain(0x8a664e,.88,wood),ochre:plain(0xb68245,.86,painted),
     red:plain(0x88554a,.91,painted),linen:plain(0xb2a27c,.97,cloth),fabric:plain(0x5c6a54,.92,cloth),rug:plain(0x805745,1,cloth),
@@ -93,6 +97,7 @@ export function addWcInterior(T,scene,world,quest){
     const hit=(u,U,v,V,when=walk)=>world.box(X-V,Z+u,X-v,Z+U,when);
     const method={
       block,hit,k,room,art:partsArt,
+      platform(u,U,v,V,top){world.platform(X-V,Z+u,X-v,Z+U,level+top,walk);},
       stamp(mat,g,u,y,v,dimensions,angle=0,pitch=0){
         if(pitch)m.makeRotationFromEuler(new T.Euler(pitch,angle,0,'YXZ'));else m.makeRotationY(angle);
         m.scale(scale.set(...dimensions));m.setPosition(...p(u,level+y,v));k.geometry(mat,g,m);
@@ -165,7 +170,7 @@ export function addWcInterior(T,scene,world,quest){
           },orient>0);
         }else{
           skin('tile',l,r,b-.025,b+1.402);
-          skin(id==='lobby'||id==='landing'?'paint':'tile',l,r,b+1.449,ceiling+.023);
+          skin('paint',l,r,b+1.449,ceiling+.023);
           skin('sea',l,r,b+1.402,b+1.449,-.004);
           skin('trim',l,r,b+.021,b+.087,-.007);
         }

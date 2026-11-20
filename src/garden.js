@@ -132,14 +132,15 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   }
   const plants=plantGarden(T,group,world,sites,(x,z)=>{
     if(z>-17.35||!insidePerimeter(x,z)||x<-43&&z>-83||parkFacadeClearance(x,z,.5))return 0;
-    if(Math.abs(x)<23&&z>-72||atBed(x,z,.25)||monumentClear(x,z,.28))return 0;
+    if(atBed(x,z,.20)||monumentClear(x,z,.28)||Math.hypot(Math.max(0,Math.abs(x)-4.75),z+47)<10.05)return 0;
     if(chapterContains(CHAPTER_CUT,x,z,.48)||BENCH_SITES.some(([a,b])=>Math.abs(x-a)<1.14&&Math.abs(z-b)<1.14))return 0;
     const {edge,style}=network.sample(x,z);
     if(edge<(style==='trim'?.12:.25))return 0;
     const patch=.5+.5*Math.sin(x*.53+Math.cos(z*.37)*1.5)*Math.cos(z*.39);
     const wall=z<-247||Math.abs(x)>68?distanceToPerimeter(x,z):8;
     const sheltered=sites.some(p=>!p.backdrop&&Math.abs(x-p.x)<4.8&&Math.abs(z-p.z)<4.8);
-    return (edge<1.17?(style==='compact'?.09:style==='trim'?.35:.26)+patch*.25:.038+patch*.105)
+    const formal=Math.abs(x)<23&&z>-72,verge=edge<1.65;
+    return (verge?(style==='compact'?.23:style==='trim'?.62:.45)+patch*.19:formal?.18+patch*.28:.10+patch*.24)
        *(wall<1.4?.65:1)*(sheltered?1.22:1);
   },terrain.height,shrubs);
   const beds=addBeds(T,group,terrain.height);

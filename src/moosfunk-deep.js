@@ -133,7 +133,7 @@ export function furnishDeep(T,m,id){
       for(const V of [v-.174,v+.174])B('deepIron',U-.037,U+.037,.025,.399,V-.038,V+.038);
       line('deepCopper',U,.20,v-.191,U,.20,v+.191,.022);
     }
-    hit(u-len/2,u+len/2,v-.25,v+.25);
+    m.platform(u-len/2,u+len/2,v-.25,v+.25,.517);
   }
   function rag(u,y,v,w,d,mat){
     const prev=[];
@@ -378,7 +378,9 @@ export function furnishDeep(T,m,id){
       for(const x of [U-.083,U+.083])line('deepCopper',x,.404,V,x,.404,V-side*.042,.013);
       line('deepCopper',U-.083,.404,V-side*.042,U+.083,.404,V-side*.042,.014);
     }
-    hit(u-1.24,u+1.24,v-1.25,v+1.25);
+    const lip=head-side*.105;
+    m.platform(u-1.20,u+1.20,Math.min(foot,lip),Math.max(foot,lip),.706);
+    hit(u-1.24,u+1.24,head-.078,head+.078);
   }
 
   function votive(U,V,y,h,shade='deepGold'){

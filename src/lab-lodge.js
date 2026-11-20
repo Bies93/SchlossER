@@ -72,7 +72,8 @@ export function lodgeStair(T,root,world,M,mount){
 }
 
 export function lodgeDressing(T,kit,id,mount){
-  const {k,box,hit,pipe,cylinder,obj,wheel,dress,props,root}=kit;
+  const {k,box,hit,pipe,cylinder,obj,wheel,dress,props,root,world}=kit;
+  const sameLevel=p=>Math.abs(p.y-Y)<.8;
   const [x0,x1,z0,z1]=LAB_CELLS[id],{housing,plane,fastener,stain,grill,dial}=dress,rng=randomSource(1931+id.length);
   const P=(x,y,z)=>[x,Y+y,z];
   const frame=(o,x,y,z,w,h,d,angle=0)=>housing(o,x,Y+y,z,w,h,d,angle);
@@ -128,7 +129,11 @@ export function lodgeDressing(T,kit,id,mount){
       for(const s of [-1,1])fastener(p,s*.175,.821,.269,.008,true);
     }
     function barSeat(s,d){pipe('gunmetal',p(s*.207,.022,d*.194),p(s*.174,.461,d*.178),.018);}
-    footing(x,z,.49,.49);
+    const rect=(min,max)=>[[-.224,min],[.224,min],[.224,max],[-.224,max]].map(([u,v])=>{
+      const [X,,Z]=p(u,0,v);return [X,Z];
+    });
+    world.support(rect(-.212,.208),Y+.535,sameLevel);
+    if(back)world.polygon(rect(.208,.274),sameLevel);
   }
   function rug(x,z,w,d,m='logeCloth'){
     const A=x-w/2,B=x+w/2,E=z-d/2,F=z+d/2;
@@ -371,7 +376,8 @@ export function lodgeDressing(T,kit,id,mount){
       const Z=z-.731;
       frame('plum',x+s*.918,.744,Z,.376,.11,.23,s*.31);
     }
-    footing(x,z,2.37,2.48);
+    world.platform(x-1.09,z-1.066,x+1.09,z+1.13,Y+.680,sameLevel);
+    hit(x-1.196,x+1.196,z-1.289,z-1.066);
     for(const [t,w] of [[16.17,.54],[19.44,.53]])cupboard(t,-24.77,w,.56,.706,0,2,'rust');
     lantern(16.17,1.091,-24.77,2);lantern(19.44,1.091,-24.77,1);
     for(const u of [16.17,19.44])bar('brass',u,.706,-24.77,u,.861,-24.77,.018);

@@ -62,7 +62,7 @@ async function start(){
  model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name??'';o.material=exterior(key)??o.material;
  // The original broad lawn and plaza are replaced rather than overlaid.
  if(key==='GRAVEL')importedGravel.push(o);
- if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;return;}
+ if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;o.userData.noSceneQuery=true;return;}
  o.receiveShadow=true;o.castShadow=key!=='GLASS';});s.add(model);
  renewPalaceRoof(T,model,finish);
  cutPalaceOpenings(T,model);
@@ -311,7 +311,12 @@ async function start(){
    }
    // One transform update across all passes. At a hatch share depth, not
    // lights, so the existing lighting and material permutations stay intact.
-   s.updateMatrixWorld();
+   s.traverseVisible(o=>{
+     // Invisible room trees were still updating all their local transforms.
+     // Skins retain their bind-matrix update; all other parents precede children.
+     if(o.isSkinnedMesh)o.updateMatrixWorld();
+     else o.updateWorldMatrix(false,false);
+   });
    const clear=r.autoClear;
    try{
      for(const pass of layerPasses)if(mask&(1<<pass)){
@@ -429,7 +434,8 @@ async function start(){
  await wc.prepare(r,s);
  await chapter.prepare(r);
  await viewmodel.prepare(r);
- await round.prepare(r,c);
+ const hideFirstShot=viewmodel.showPrewarmShots();
+ try{await round.prepare(r,c);}finally{hideFirstShot();}
  await weaponAudioReady;
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
  geometryQuery.build();s.matrixWorldAutoUpdate=false;

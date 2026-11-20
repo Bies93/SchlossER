@@ -1,7 +1,7 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Local display geometry only. Stylised replicas, not functional models.
-export function chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ring},cloth){
+export function chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ring,platform,hit},cloth){
   const pi=Math.PI;
   const lathe=(p,n=24)=>new T.LatheGeometry(p.map(([r,y])=>new T.Vector2(r,y)),n);
   const leg=lathe([[0,0],[.73,0],[1,.04],[.98,.10],[.65,.136],[.55,.27],[.60,.53],[.88,.69],[.89,.74],[.61,.80],[.74,.88],[1,.90],[1,1],[0,1]]);
@@ -200,7 +200,9 @@ export function chapterCraft(T,{k,F,room,mesh,box,rod,line,bead,cylinder,foot,ri
       for(const t of [-1,1])mesh('walnut',leg,x+s*.199,.025,z+t*1.20,.067,.342,.067);
       bead('inlayGold',x0,1.173,z+s*1.37,.029);
     }
-    foot(x,z,.66,2.92);
+    const front=x-side*.31,edge=x+side*.17;
+    platform(Math.min(front,edge),Math.max(front,edge),z-1.35,z+1.35,.528);
+    hit(Math.min(edge,x0+side*.07),Math.max(edge,x0+side*.07),z-1.44,z+1.44);
   }
   return {helmet,armorial,rapier,sideTable,throne,bench,dispose(){for(const g of [base,leg,cushion,helmetA,helmetB])g.dispose();}};
 }

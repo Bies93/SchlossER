@@ -2,7 +2,7 @@ import {PLAYER, SPAWN} from './world-layout.js';
 
 const WALK_KEYS = new Set(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
 const STEP = 1 / 120, MAX_PITCH = Math.PI * 85 / 180;
-const GRAVITY=17.6, JUMP_SPEED=4.98, JUMP_BUFFER=.125, COYOTE=.075, DOWN_SNAP=.103;
+const GRAVITY=18.5, JUMP_SPEED=6.74, JUMP_BUFFER=.145, COYOTE=.088, DOWN_SNAP=.103;
 const clamp = (v, max) => Math.min(max, Math.max(-max, v));
 
 export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceilingHeight=()=>Infinity) {
@@ -12,11 +12,11 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
   body.add(look); look.add(camera);
   let x = SPAWN.x, z = SPAWN.z, y = floorHeight(x, z);
   if (!Number.isFinite(y)) throw new Error('Spawn has no walk surface');
-  const safe = {x, y, z};
+  const safe = {x, y, z,base:y};
   const next = {x, z};
   let yaw = SPAWN.yaw, pitch = SPAWN.pitch;
   let lastTime=null,accumulator=0,vx=0,vz=0,vy=0,buffer=0,coyote=COYOTE,stepDistance=.29,foot=1,grounded=true;
-  let groundY=y,px=x,py=y,pz=z;
+  let groundY=y,baseY=y,px=x,py=y,pz=z;
   const motion={grounded:true,speed:0,land:0};
   body.position.set(x, y, z);
   function aim(dx, dy) {
@@ -54,14 +54,16 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         const blend=1-Math.exp(-(grounded?(intent?(tx*vx+tz*vz<-.1?27:23):30):(intent?4.35:.43))*STEP);
         vx+=(tx-vx)*blend;vz+=(tz-vz)*blend;
         if(Math.hypot(vx,vz)>.017){
-          next.x=x;next.z=z;next.y=groundY;
+          next.x=x;next.z=z;next.y=baseY;next.feet=y;
           world.move(next, vx*STEP, vz*STEP);
           const dx=next.x-x,dz=next.z-z;
           if(Math.abs(dx)+Math.abs(dz)<1e-6){vx=vz=0}
           else{
-            const h=floorHeight(next.x,next.z,groundY);
-            if(Number.isFinite(h)&&h<=y+(grounded?PLAYER.maxStep:.052)){
-              x=next.x;z=next.z;groundY=h;
+            const h=floorHeight(next.x,next.z,baseY);
+            const headLimit=(y>baseY+.14||!grounded)?ceilingHeight(next.x,next.z,h)-PLAYER.eye-.105:Infinity;
+            const floor=world.standingHeight?.(next,h,Math.min(headLimit,y+(grounded?PLAYER.maxStep:.03)))??h;
+            if(Number.isFinite(floor)&&floor<=y+(grounded?PLAYER.maxStep:.052)&&y<=headLimit+.04){
+              x=next.x;z=next.z;baseY=h;groundY=floor;
               // Contacts project out the blocked velocity instead of
               // storing it against a wall between ticks.
               const a=dx/STEP,b=dz/STEP;
@@ -74,8 +76,12 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         else{
           vy-=GRAVITY*STEP;
           y+=vy*STEP;
-          const headLimit=ceilingHeight(x,z,groundY)-PLAYER.eye-.11;
+          const headLimit=ceilingHeight(x,z,baseY)-PLAYER.eye-.11;
           if(y>headLimit){y=Math.max(groundY,headLimit);vy=Math.min(0,vy);}
+          if(vy<=0){
+            next.x=x;next.z=z;next.y=baseY;
+            groundY=world.standingHeight?.(next,baseY,Math.min(py+.028,headLimit))??baseY;
+          }
           if(y<=groundY&&vy<=0){
             const impact=Math.min(1.28,Math.abs(vy)/5);
             y=groundY;vy=0;grounded=true;stepDistance=0;motion.land=impact;
@@ -83,13 +89,13 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
           }
         }
         if(!Number.isFinite(y)||y<groundY-3){
-          ({x,y,z}=safe);groundY=y;vx=vz=vy=0;grounded=true;
+          ({x,y,z}=safe);baseY=safe.base;groundY=y;vx=vz=vy=0;grounded=true;
         }
         const distance=Math.hypot(x-px,z-pz);
         motion.speed=distance/STEP;motion.grounded=grounded;
         motion.land*=Math.exp(-STEP*13);
         if(grounded){
-          Object.assign(safe,{x,y,z});
+          Object.assign(safe,{x,y,z,base:baseY});
           stepDistance+=distance;
           const stride=pace===PLAYER.run?.93:.68;
           if(motion.speed>.42&&stepDistance>=stride){
