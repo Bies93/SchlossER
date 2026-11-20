@@ -15,6 +15,7 @@ import {cutPalaceOpenings} from './palace-openings.js';
 import {addPortalFacade,palaceMaterials} from './palace-facade.js';
 import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
+import {addPauli} from './pauli-fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
@@ -72,6 +73,7 @@ async function start(){
  let chapter;
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p)&&!chapter?.isBelow(p));
  addFixedColliders(world);
+ const pauli=addPauli(T,s,world);
  const moosfunk=makeMoosfunk();
  const hall=makeHall(T,model,stonework,world,leaves,poster,seal,moosfunk);
  const perimeter=addPerimeter(T,s,world,finish);
@@ -96,6 +98,8 @@ async function start(){
    if(entry!==null)return entry;
    const terrain=garden.heightAt(x,z);
    if(terrain!==null)return terrain;
+   const marketStep=pauli.step(x,z,referenceY);
+   if(marketStep!==null)return marketStep;
    ray.ray.origin.set(x,2,z);
    ray.intersectObjects(walkSurfaces,false,hits);
    const y=hits[0]?.point.y ?? ground.position.y;
@@ -338,6 +342,7 @@ async function start(){
      doorPrompt();
      roundPrompt();
      if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
+     if(wcCameraMode(player.body.position)==='surface'&&chapter.mode(player.body.position)==='surface'&&labCameraMode(player.body.position)!=='cellar'&&pauli.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
    }
    if(dirty){draw();dirty=false}
@@ -394,6 +399,7 @@ async function start(){
    if(!lighting.applyLighting(id))return false;
    backdrop.setPreset(id);
    fountain.setPreset(id);
+   pauli.setPreset(id);
    hall.setPreset(id);hall.update(0,player.body.position);
    viewmodel.preset(id);
    for(const b of choices)b.setAttribute('aria-pressed',String(b.dataset.light===id));
