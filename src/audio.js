@@ -1,7 +1,8 @@
 import {weaponBank} from './weapon-audio.js';
 // Audio starts on a gesture.
 const sound={
-  stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
+  stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12],
+  wood:[156,724,2450,.105]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
 export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={},weaponUrls={}) {
@@ -336,6 +337,15 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     grit(sfx,t+.048,.28,.056,220,1210,{wet:.12,attack:.07,rate:.72});
     tone(sfx,t+delay+.21,180,.125,.028,{type:'triangle',end:83,wet:.16});
   }
+  function upperReveal(){
+    if(!live())return;
+    const t=ctx.currentTime+.008;
+    grit(sfx,t,.41,.062,320,2470,{wet:.29,attack:.12,rate:.73});
+    tone(sfx,t+.012,114,.39,.065,{type:'triangle',end:196,wet:.28,attack:.075});
+    for(const [delay,f,amp] of [[.10,392,.076],[.18,587.3,.051],[.24,783.99,.033]])
+      tone(sfx,t+delay,f,.57,amp,{wet:.51,attack:.019});
+    tone(sfx,t+.45,132,.17,.034,{type:'triangle',end:91,wet:.23});
+  }
   function grate(){
     if(!live())return;
     const t=ctx.currentTime+.012;
@@ -416,7 +426,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
-  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,
+  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
     playNpc,npcTalking,stopNpc,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),

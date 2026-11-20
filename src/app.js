@@ -33,6 +33,7 @@ import {npcFocus} from './npc-focus.js';
 import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
 import {weaponPickups} from './weapon-pickups.js';
+import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -76,8 +77,9 @@ async function start(){
  }
  const fountain=makeFountain(T,s,sculptures);
  // Exterior gate posts and tree trunks never extend into the new rooms.
- let chapter;
+ let chapter,upper;
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p)&&!chapter?.isBelow(p));
+ const upperWorld=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  addFixedColliders(world);
  const pauli=addPauli(T,s,world);
  const moosfunk=makeMoosfunk();
@@ -92,6 +94,8 @@ async function start(){
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z,referenceY=0,allowChapter=true)=>{
+   const upstairs=upper?.floorAt(x,z,referenceY);
+   if(upstairs!=null)return upstairs;
    if(allowChapter){
      const hideout=chapter.floorAt(x,z,referenceY);
      if(hideout!==null)return hideout;
@@ -112,6 +116,7 @@ async function start(){
    hits.length=0;
    return y;
  };
+ upper=addPalaceUpper(T,s,model,upperWorld,stonework,(x,z)=>floorHeight(x,z));
  const lighting=makeLighting(T,r,s,world,floorHeight);
  lighting.registerWindows(perimeter.windows);
  const audio=makeAudio(()=>{
@@ -121,16 +126,18 @@ async function start(){
  const weaponAudioReady=audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
+   if(kind==='climb'||upper.inside(event)){audio.foot('wood',power,kind==='land',foot);return;}
    const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
- },(x,z,y)=>Math.min(chapter.ceilingAt(x,z,y),wcCeilingAt(x,z,y),labCeilingAt(x,z,y)));
+ },(x,z,y)=>Math.min(chapter.ceilingAt(x,z,y),wcCeilingAt(x,z,y),labCeilingAt(x,z,y),upper.ceilingAt(x,z,y)),
+   {moveWorld:p=>upper.inside(p)?upperWorld:world,traverse:upper.step});
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
- const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER];
+ const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER];
  const coarse=matchMedia('(pointer: coarse)'),ghoulOption=$('with-ghouls');
  let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0;
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
@@ -148,12 +155,17 @@ async function start(){
  const geometryQuery=sceneQuery(T,s,player.body),layerContext={mask:1,layer:0};
  function activeLayers(){
    const p=player.body.position;
+   if(upper.inside(p)){
+     layerContext.layer=UPPER_LAYER;layerContext.mask=(1<<UPPER_LAYER)|(upper.seeGarden(p)?1:0);
+     return layerContext;
+   }
    const cm=chapter.mode(p),wm=wcCameraMode(p),lm=labCameraMode(p);
    const surface=cm!=='inside'&&wm!=='inside'&&lm!=='cellar';
    layerContext.mask=surface?1:0;
    if(lm==='cellar'||surface&&hall.labVisible())layerContext.mask|=1<<LAB_LAYER;
    if(wm!=='surface'&&(surface||wm==='inside'))layerContext.mask|=1<<WC_LAYER;
    if(chapter.visible()&&(surface||cm==='inside'))layerContext.mask|=1<<CHAPTER_LAYER;
+   if(surface&&upper.visible())layerContext.mask|=1<<UPPER_LAYER;
    layerContext.layer=cm==='inside'||cm==='threshold'&&p.y<-.38?CHAPTER_LAYER:
      wm==='inside'||wm!=='surface'&&p.y<-.38?WC_LAYER:lm==='cellar'||lm==='threshold'&&p.y<-.38?LAB_LAYER:0;
    return layerContext;
@@ -233,12 +245,15 @@ async function start(){
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
+   const access=upper.target(pos,look);
+   if(access||upper.inside(pos)||player.motion.climbing)return access??null;
    const target=pickups.target(c,activeLayers().mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
    // Edda takes priority, without making the tape deck itself unavailable.
    return target?.id==='mf-radio'&&names.target()?.id==='guestEdda'?null:target;
  };
  function hallOrPerson(){
+   if(upper.inside(player.body.position)||player.motion.climbing)return null;
    const hallTarget=hall.targetFor(player,c);
    return hallTarget&&hallTarget.id!=='gallery-choir'?hallTarget:names.target()??hallTarget;
  }
@@ -262,6 +277,20 @@ async function start(){
    if(!active())return;
    const now=performance.now();names.sample(now,true);
    const local=localTarget();
+   if(local?.action==='upper-unlock'){
+     if(upper.unlock(now)){
+       audio.upperReveal();
+       const softened=matchMedia('(prefers-reduced-motion: reduce)').matches,peak=softened?.48:1;
+       $('upper-flash').animate([{opacity:0},{opacity:peak,offset:.22},{opacity:peak,offset:.275},{opacity:0}],
+         {duration:645,easing:'linear'});
+       showCaption('Ein Fenster über dem Gartenportal hat sich geöffnet.',3900);
+     }
+     doorPrompt();refresh();return;
+   }
+   if(local?.action==='upper-up'||local?.action==='upper-down'){
+     upper.request(local.action==='upper-up'?1:-1);doorPrompt();refresh();return;
+   }
+   if(upper.inside(player.body.position)||player.motion.climbing)return;
    if(local?.action==='gear-pickup'){
      const notice=pickups.collect(local);
      if(notice)showCaption(notice,4200);
@@ -342,6 +371,7 @@ async function start(){
      const state=hall.update(dt,player.body.position,audio.clubPhase());
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
+     if(upper.update(time,player.body.position))dirty=true;
      if(chapter.update(dt,player.body.position)){
        dirty=true;if(chapter.mode(player.body.position)!=='inside')r.shadowMap.needsUpdate=true;
      }
@@ -433,6 +463,7 @@ async function start(){
  await hall.prepareLab(r,s);
  await wc.prepare(r,s);
  await chapter.prepare(r);
+ await upper.prepare(r);
  await viewmodel.prepare(r);
  const hideFirstShot=viewmodel.showPrewarmShots();
  try{await round.prepare(r,c);}finally{hideFirstShot();}

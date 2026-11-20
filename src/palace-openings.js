@@ -8,6 +8,10 @@ export const PORTALS={
 export const GARDEN_REVEAL={back:-.478,front:.156,span:2.768,top:4.315};
 export const HALL={half:3.92,zMin:-11.12,zMax:11.30,floor:.071,wallDepth:.252};
 export const WINGS={outer:29.1,z:7.70,portal:1.32,spring:2.44,rise:.59,ceiling:4.31,partition:12.45};
+// The first single window beside the coupled central lights, on the tree side.
+// Bounds are taken from the first upper window of the garden risalit in the GLB.
+export const UPPER_ENTRY={x:4.994,left:4.236,right:5.752,sill:5.929,head:8.840,z:-12.205,
+  treeX:10.4,treeZ:-22.2};
 // +X is south, -Z is east (left when facing the gallery poster).
 export const SOUTH_HATCH={x0:24.72,x1:28.91,z0:-7.27,z1:-5.70,end:30.88};
 export const SOUTH_HATCH_CUT={left:SOUTH_HATCH.x0,right:SOUTH_HATCH.x1,back:SOUTH_HATCH.z0,front:SOUTH_HATCH.z1};
@@ -22,6 +26,7 @@ export function cutPalaceOpenings(T,root){
     {lo:[-1.356,-.10,8.34],hi:[1.356,2.929,13.21]},
     {lo:[-GARDEN_REVEAL.span,-.10,-13.16],hi:[GARDEN_REVEAL.span,GARDEN_REVEAL.top,-8.34]},
     {lo:[SOUTH_HATCH.x0,-3.90,SOUTH_HATCH.z0],hi:[SOUTH_HATCH.x1,.080,SOUTH_HATCH.z1]},
+    {lo:[UPPER_ENTRY.left,UPPER_ENTRY.sill,-12.48],hi:[UPPER_ENTRY.right,UPPER_ENTRY.head,-8.92]},
     ...[-1,1].flatMap(s=>[[4.94,9.99],[10.45,14.48]].map(([y,top])=>({
       lo:[s===1?-2.32:-2.73,y,s===1?10.43:-13.18],
       hi:[s===1?2.32:2.73,top,s===1?13.19:-10.42]

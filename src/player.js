@@ -5,7 +5,8 @@ const STEP = 1 / 120, MAX_PITCH = Math.PI * 85 / 180;
 const GRAVITY=18.5, JUMP_SPEED=6.74, JUMP_BUFFER=.145, COYOTE=.088, DOWN_SNAP=.103;
 const clamp = (v, max) => Math.min(max, Math.max(-max, v));
 
-export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceilingHeight=()=>Infinity) {
+export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceilingHeight=()=>Infinity,
+  {moveWorld=()=>world,traverse}= {}) {
   const body = new T.Group();
   const look = new T.Group();
   look.position.y = PLAYER.eye;
@@ -17,7 +18,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
   let yaw = SPAWN.yaw, pitch = SPAWN.pitch;
   let lastTime=null,accumulator=0,vx=0,vz=0,vy=0,buffer=0,coyote=COYOTE,stepDistance=.29,foot=1,grounded=true;
   let groundY=y,baseY=y,px=x,py=y,pz=z;
-  const motion={grounded:true,speed:0,land:0};
+  const motion={grounded:true,speed:0,land:0,climbing:false};
   body.position.set(x, y, z);
   function aim(dx, dy) {
     yaw = (yaw - dx) % (2 * Math.PI);
@@ -45,6 +46,20 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         const intent=Math.hypot(east, forward), pace=keys.has('ShiftLeft') || keys.has('ShiftRight') || stick.run ? PLAYER.run : PLAYER.speed;
         const sin=Math.sin(yaw),cos=Math.cos(yaw),scale=pace/Math.max(1,intent);
         const tx=(east*cos-forward*sin)*scale,tz=(-east*sin-forward*cos)*scale;
+        if(traverse){
+          next.x=x;next.y=y;next.z=z;next.tread=false;
+          const state=traverse(next,forward,tz,STEP);
+          motion.climbing=state===1;
+          if(state){
+            x=next.x;y=baseY=groundY=next.y;z=next.z;
+            vx=vz=vy=buffer=coyote=stepDistance=0;grounded=state===2;
+            motion.grounded=grounded;motion.speed=0;motion.land=0;
+            if(state===2)Object.assign(safe,{x,y,z,base:baseY});
+            if(next.tread)onStep({kind:'climb',x,y,z,power:.49,foot:(foot=-foot)});
+            if(Math.abs(x-px)+Math.abs(y-py)+Math.abs(z-pz)>1e-6)moved=true;
+            continue;
+          }
+        }
         coyote=grounded?COYOTE:Math.max(0,coyote-STEP);
         if(buffer>0&&coyote>0){
           vy=JUMP_SPEED;grounded=false;buffer=coyote=0;stepDistance=0;
@@ -55,13 +70,14 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         vx+=(tx-vx)*blend;vz+=(tz-vz)*blend;
         if(Math.hypot(vx,vz)>.017){
           next.x=x;next.z=z;next.y=baseY;next.feet=y;
-          world.move(next, vx*STEP, vz*STEP);
+          const collision=moveWorld(next);
+          collision.move(next, vx*STEP, vz*STEP);
           const dx=next.x-x,dz=next.z-z;
           if(Math.abs(dx)+Math.abs(dz)<1e-6){vx=vz=0}
           else{
             const h=floorHeight(next.x,next.z,baseY);
             const headLimit=(y>baseY+.14||!grounded)?ceilingHeight(next.x,next.z,h)-PLAYER.eye-.105:Infinity;
-            const floor=world.standingHeight?.(next,h,Math.min(headLimit,y+(grounded?PLAYER.maxStep:.03)))??h;
+            const floor=collision.standingHeight?.(next,h,Math.min(headLimit,y+(grounded?PLAYER.maxStep:.03)))??h;
             if(Number.isFinite(floor)&&floor<=y+(grounded?PLAYER.maxStep:.052)&&y<=headLimit+.04){
               x=next.x;z=next.z;baseY=h;groundY=floor;
               // Contacts project out the blocked velocity instead of
@@ -80,7 +96,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
           if(y>headLimit){y=Math.max(groundY,headLimit);vy=Math.min(0,vy);}
           if(vy<=0){
             next.x=x;next.z=z;next.y=baseY;
-            groundY=world.standingHeight?.(next,baseY,Math.min(py+.028,headLimit))??baseY;
+            groundY=moveWorld(next).standingHeight?.(next,baseY,Math.min(py+.028,headLimit))??baseY;
           }
           if(y<=groundY&&vy<=0){
             const impact=Math.min(1.28,Math.abs(vy)/5);

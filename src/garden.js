@@ -10,6 +10,7 @@ import {addParkArchitecture,parkFacadeClearance} from './park-architecture.js';
 import {addParkMonuments,monumentClear} from './park-monuments.js';
 import {WC_CUT} from './park-stair.js';
 import {CHAPTER_CUT,CHAPTER_BAY_PATH,chapterContains} from './chapter-layout.js';
+import {UPPER_ENTRY} from './palace-openings.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
 export function addGarden(T, scene, world, oldGravel, finish) {
@@ -88,7 +89,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   tree(-16,-20.4,10.9,'lime','court',true);
   // Selected OSM tree anchors on the near parterre, fit to the compressed
   // plan. Heights/species are illustrative; keep the axis itself clear.
-  for(const [x,z,h] of [[-16,-20.4,8.2],[10.4,-22.2,8.5],[-32.1,-30,11.4],
+  for(const [x,z,h] of [[-16,-20.4,8.2],[UPPER_ENTRY.treeX,UPPER_ENTRY.treeZ,8.5],[-32.1,-30,11.4],
     [27.9,-57.8,10.0],[-31.4,-55.1,9.6],[-46.3,-54.8,12.8],[-61.2,-46.1,11.7],[-13.6,-73,10.1]])
     tree(x,z,h,'lime',null,true);
   // Uneven, view-framing groves. Important gaps stay in front of the
