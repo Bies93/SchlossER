@@ -6,6 +6,7 @@ import {armorialCloth} from './chapter-finishes.js';
 import {randomSource} from './surface-detail.js';
 import {deepChapterDressing} from './chapter-deep.js';
 import {makeChapterPrisoner} from './chapter-prisoner.js';
+import {makeCellGate} from './chapter-cell-gate.js';
 
 const p=(x,y,z)=>[x,y,z],names={vestibule:'Pförtnerkammer',salle:'Waffengalerie',archive:'Archiv der Aufnahmen',chapter:'Kapitelsaal',duel:'Fechtboden · Kronsaal',
   lowerHall:'Unterer Wachgang',dormitory:'Schlafkammer',kitchen:'Bundküche',prison:'Verlies · Kammer 07'};
@@ -85,7 +86,7 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
     for(const a of [-.083,0,.083])sb('iron',x-.059,x-.035,y-.118,y+.123,z+a-.009,z+a+.009);
   }
   ds.flush('Eiserne Krone · Treppe zur Nachtwache');objects.set('lowerStair',descent);
-  let prisoner;
+  let prisoner,gate;
   for(const [id,rect] of Object.entries(CHAPTER_ROOMS)){
     const room=node(T,root,'Eiserne Krone · '+names[id]),[a,A,b,B]=rect;
     const deep=isChapterDeep(id),F=deep?F1:F0;
@@ -168,8 +169,8 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
     }};
     if(deep)deepChapterDressing(T,kit);
     else dressChapter(T,kit);
-    if(id==='prison')prisoner=makeChapterPrisoner(T,room,F);
+    if(id==='prison'){prisoner=makeChapterPrisoner(T,room,F);gate=makeCellGate(T,room,world,material,F);}
     m.flush('Eiserne Krone · '+names[id]);
   }
-  return {objects,prisoner};
+  return {objects,prisoner,gate};
 }

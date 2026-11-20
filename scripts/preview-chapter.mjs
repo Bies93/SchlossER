@@ -53,6 +53,15 @@ if(!target.usable(start)||chapter.floorAt(21,-36,F)!==F)throw Error('Stockwerk n
 if(chapter.floorAt(21.5,-67.6,D)!==D||chapter.floorAt(21.5,-67.6,grade)!==null)throw Error('Kellerboden leckt in den Park');
 const [L,R,Z0,Z1]=CHAPTER_CELL;
 if(!w.blocked((L+R)/2,Z1-.06,D)||!w.blocked(L+.01,Z0+.16,D))throw Error('Zelle hat einen offenen Durchgang');
+const gateX=L+4.4,gateUser={x:gateX-.55,y:D,z:Z1+1.32};
+const latch=chapter.target(gateUser,{x:0,z:-1});
+if(latch?.id!=='hubert-cell'||!latch.usable(gateUser)||!w.blocked(gateX,Z1+.18,D))throw Error('Riegel fehlt');
+latch.target=1;for(let i=0;i<36;i++)chapter.update(.04,gateUser);
+for(let z=Z1+.80;z>Z1-1.22;z-=.075)if(w.blocked(gateX,z,D))throw Error('Zellentür blockiert');
+const inn={x:gateX+1.02,y:D,z:Z1-.84};
+if(chapter.target(inn,{x:0,z:1})!==latch||!latch.usable(inn))throw Error('Innengriff fehlt');
+latch.target=0;for(let i=0;i<36;i++)chapter.update(.04,inn);
+if(!w.blocked(gateX,Z1+.18,D))throw Error('Zellentür schließt nicht');
 let old,inside=true;
 for(let i=0;i<410;i++){
  const viewer={x:23.8,y:D,z:-73.6};chapter.update(.05,viewer);
@@ -67,11 +76,21 @@ const c=new T.PerspectiveCamera(64,540/400,.065,140);
 for(const [x,y,z,X,Y,Z] of [[21.53,F,-54.50,21.54,F+.75,-58.46],
  [21.51,D,-64.16,21.48,D+1.52,-70.86],[17.74,D,-65.79,12.87,D+.98,-67.88],
  [24.21,D,-67.25,29.53,D+1.30,-68.53],[22.63,D,-72.62,24.91,D+1.49,-76.67],
- [25.73,D,-74.08,25.77,D+1.39,-76.50]]){
+ [29.74,D,-65.02,29.99,D+1.14,-62.96]]){
  const at=new T.Vector3(x,y,z);chapter.update(0,at);c.position.set(x,y+PLAYER.eye,z);c.lookAt(X,Y,Z);
  if(x===25.73){c.fov=45;c.updateProjectionMatrix();}
  if(y===grade){c.layers.set(0);r.render(s,c);}
  c.layers.set(CHAPTER_LAYER);r.autoClear=y!==grade;r.render(s,c);r.autoClear=true;
+ const p=document.createElement('canvas');p.width=540;p.height=400;p.getContext('2d').drawImage(r.domElement,0,0);document.body.append(p);
+}
+// Two eye-level portraits at conversational distance, with the visitor
+// actually in the cell rather than pushing the camera through the bars.
+const h=chapter.prisonerAt({x:24,y:D,z:-76}).clone();
+for(const offset of [.29,-.49]){
+ const at={x:h.x+offset,y:D,z:h.z+.74};
+ for(let j=0;j<68;j++)chapter.update(.04,at);
+ c.fov=57;c.updateProjectionMatrix();c.position.set(at.x,D+1.63,at.z);
+ c.lookAt(h.x,D+1.55,h.z+.12);r.render(s,c);
  const p=document.createElement('canvas');p.width=540;p.height=400;p.getContext('2d').drawImage(r.domElement,0,0);document.body.append(p);
 }
 target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);

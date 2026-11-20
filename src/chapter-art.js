@@ -1,5 +1,6 @@
 import {randomSource,sharedSet} from './surface-detail.js';
 import {chapterFinishes} from './chapter-finishes.js';
+import {labelMaterial} from './chapter-labels.js';
 
 const art={
   crest:['BUND DER EISERNEN KRONE','SIEGEL DES INNEREN KREISES','KEIN EINTRITT OHNE PFAND'],
@@ -14,7 +15,7 @@ const art={
   descent:['ZWEITES UNTERGESCHOSS','RUHE · VORRAT · WACHE','NACHTWACHE MELDET SICH UNTEN'],
   dorm:['SCHLAFKAMMER','RUHE NACH DEM LETZTEN LÄUTEN','DER DIENSTPLAN HÄNGT NEBEN DER TÜR'],
   kitchen:['BUNDKÜCHE','EINTOPF · BROT · MALZKAFFEE','DIE NACHTWACHE ISST ZULETZT'],
-  prison:['KAMMER 07','ZUGANG GESPERRT · NICHT ÖFFNEN','AUFNAHME: 1945  /  AUSGANG: —'],
+  prison:['KAMMER 07','NACHTWACHE · BESUCH VERZEICHNEN','AUFNAHME: 1945  /  AUSGANG: —'],
   guard:['WACHBUCH · NACHTDIENST','ER SPRICHT IMMER NUR DASSELBE.','ÜBERGABE OHNE BESONDERHEITEN.'],
   stores:['VORRATSBUCH','BROTE: 6   /   DOSEN: 17','FÜR DIE UNTERKUNFT EINGETEILT']
 };
@@ -93,5 +94,9 @@ export function chapterMaterials(T){
     enamel:std(0xb3b9af,.41),verdigris:std(0x48564f,.84,{...plate,metalness:.22}),
     pewter:std(0x8e9693,.43,{...plate,metalness:.48}),orange:std(0x9d603b,.75),
     bread:std(0xa76b3c,.92,plaster),crumb:std(0xcba272,.95,plaster),
+    linen:std(0xb7aa93,.97,cloth),ticking:std(0x8a9487,.96,cloth),leaf:std(0x6c754c,.96),leafDry:std(0x93915e,.92),
+    bottleGreen:std(0x455c40,.19,{metalness:.12}),bottleAmber:std(0x96572e,.23,{metalness:.10}),
+    preserveGlass:std(0x96aa92,.17,{transparent:true,opacity:.29,depthWrite:false,metalness:.13}),
+    leatherTrim:std(0x594438,.77,cloth),inkLabels:labelMaterial(T),
     ...chapterFinishes(T)};
 }

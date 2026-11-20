@@ -1,5 +1,6 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {randomSource} from './surface-detail.js';
+import {sculptHubert} from './hubert-model.js';
 
 // Erlanger Gartenwärter: one original mesh and shared material palette,
 // five independent skeletons. Forward is local +Z; all positions in metres.
@@ -19,13 +20,13 @@ export function ghoulTemplate(T,variant='garden'){
   const V=(x,y,z)=>new T.Vector3(x,y,z),v=arr=>V(...arr),rng=randomSource(819573);
   const keys=['skin','dry','coat','liner','canvas','leather','metal','eyeBed','eye','teeth'];
   const colors=(prisoner?
-    [0x8c8780,0xa79a83,0x5b6059,0x454b46,0x676958,0x493d33,0x595c59,0x292523,0x9da69d,0xb6a28a]:
+    [0x83786a,0x968575,0x50584e,0x484b40,0x606153,0x493d33,0x434a42,0x392d29,0x9da69d,0xb6a28a]:
     [skinTone,0x9e927e,clothTone,0x606757,0x706b51,0x44372c,gunmetal,0x342c25,0xc4ae65,0xa69d77]).map(c=>new T.Color(c));
   const solid=(name,rough=.82)=>new T.MeshStandardMaterial({name,vertexColors:true,roughness:rough});
   const materials=keys.map(k=>solid(k,k==='metal'?.57:.88));
   materials[6].metalness=.45;materials[8].roughness=.43;
   materials[8].emissive.set(prisoner?0x839189:0xc0994c);materials[8].emissiveIntensity=prisoner?.13:.37;
-  for(const [i,mat] of materials.entries())if(i<6){
+  for(const [i,mat] of materials.entries())if(i<6||(prisoner&&i===6)){
     mat.onBeforeCompile=shader=>{
       shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 erlGhoulBind;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\nerlGhoulBind=position;');
@@ -43,9 +44,17 @@ export function ghoulTemplate(T,variant='garden'){
         float fleck=sin(erlGhoulBind.y*625.+sin(erlGhoulBind.x*464.)*.74)*sin(erlGhoulBind.z*483.);
         diffuseColor.rgb*=mix(vec3(.67,.68,.59),vec3(1.19,1.13,1.05),oldSkinNoise)
           * (1.+fleck*.046);
+        ${prisoner&&i===0?`vec3 p=erlGhoulBind;
+          float beard=(1.-smoothstep(1.601,1.65,p.y))*smoothstep(1.53,1.57,p.y)*smoothstep(.15,.22,p.z);
+          float pores=smoothstep(.48,.72,flecks(p*530.));
+          float age=smoothstep(.52,.75,flecks(p*223.))*smoothstep(.40,.74,flecks(p*80.));
+          diffuseColor.rgb*=mix(vec3(1.),vec3(.60,.57,.48),age*.81);
+          diffuseColor.rgb*=1.-beard*(.12+.37*pores);`:
+          prisoner&&i===6?`float chip=smoothstep(.53,.74,flecks(erlGhoulBind*260.))*smoothstep(.45,.73,flecks(erlGhoulBind*47.));
+          diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.135,.086,.046),chip*.76);`:''}
       `);
     };
-    mat.customProgramCacheKey=()=> 'erl-ghoul-grain-'+i;
+    mat.customProgramCacheKey=()=> 'erl-ghoul-grain-'+variant+i;
   }
   const bins=keys.map(()=>({p:[],n:[],c:[],j:[],w:[]}));
   const sphere=new T.SphereGeometry(1,16,11),limb=new T.SphereGeometry(1,12,8),
@@ -55,8 +64,14 @@ export function ghoulTemplate(T,variant='garden'){
   function vertex(dst,P,N,base,skin,shade){
     const [a,b=a,blend=0]=typeof skin==='number'?[skin]:skin;
     dst.p.push(...P);dst.n.push(...N);dst.j.push(a,b,0,0);dst.w.push(1-blend,blend,0,0);
-    const f=shade*(.93+rng()*.14);
-    dst.c.push(base.r*f,base.g*f,base.b*f);
+    const f=shade*(prisoner?.978+rng()*.044:.93+rng()*.14);
+    if(prisoner&&dst===bins[0]&&P.y>1.55){
+      const stain=(x,y,rx,ry)=>Math.exp(-(((P.x-x)/rx)**2+((P.y-y)/ry)**2))*clamp((P.z-.177)*19);
+      const bruise=.8*stain(-.025,1.687,.022,.012)+.51*stain(.055,1.682,.024,.018),
+        cheek=stain(-.046,1.644,.021,.023),beard=clamp((1.624-P.y)*21)*clamp((P.z-.158)*17);
+      dst.c.push(base.r*f*(1-.31*bruise-.15*beard+.09*cheek),base.g*f*(1-.51*bruise-.22*beard-.27*cheek),
+        base.b*f*(1-.34*bruise-.22*beard-.20*cheek));
+    }else dst.c.push(base.r*f,base.g*f,base.b*f);
   }
   function geom(g,m,skin,matrix=new T.Matrix4(),dark=1){
     const j=keys.indexOf(m),dst=bins[j],p=g.getAttribute('position'),n=g.getAttribute('normal'),idx=g.index;
@@ -99,6 +114,8 @@ export function ghoulTemplate(T,variant='garden'){
     }
     g.dispose();
   }
+  if(prisoner)sculptHubert({T,surface,oval,line,panel,geom});
+  else {
   surface('coat',[
     [.936,.154,.098,0,.007,0],[.995,.170,.111,-.004,.016,0],
     [1.075,.163,.109,-.001,.046,[0,1,.72]],[1.179,.171,.111,.009,.071,[1,2,.49]],
@@ -165,34 +182,6 @@ export function ghoulTemplate(T,variant='garden'){
   }
   line('skin',5,[-.023,1.620,.265],[.048,1.617,.255],.006,.005,.92);
   line('skin',4,[-.034,1.778,.222],[-.050,1.756,.226],.0035,.0028,.74);
-  if(prisoner){
-    // A worn field uniform and dented helmet, without weapons or insignia.
-    surface('metal',[
-      [1.730,.090,.099,.011,.136,4],[1.756,.102,.109,.010,.143,4],
-      [1.791,.106,.113,.010,.150,4],[1.833,.102,.109,.010,.148,4],
-      [1.865,.088,.095,.009,.146,4],[1.894,.062,.074,.008,.145,4],
-      [1.912,.032,.043,.009,.146,4],[1.917,.001,.001,.010,.146,4]
-    ],36,.063);
-    for(const side of [-1,1]){
-      line('metal',4,[.01+side*.089,1.741,.102],[.01+side*.105,1.767,.179],.009,.010,1.20);
-      line('leather',4,[.01+side*.090,1.760,.164],[.01+side*.078,1.622,.199],.008,.007,.81);
-      oval('metal',4,[.01+side*.105,1.775,.173],[.005,.009,.010],undefined,.83);
-      const X=side*.119;
-      panel('liner',2,[X,1.287,.193],[.102,.137,.021],[.17,side*.09,side*.043],.93);
-      panel('canvas',2,[X,1.355,.195],[.096,.037,.022],[.16,side*.09,side*.043],1.04);
-      oval('metal',2,[X,1.342,.207],[.008,.008,.006],undefined,.97);
-      line('liner',2,[side*.102,1.434,.106],[side*.207,1.412,.106],.024,.043,.88);
-      for(let j=0;j<5;j++){
-        line('canvas',2,[X-.041,1.247+j*.019,.207],[X-.038,1.258+j*.019,.208],.0017,.0015,1.23);
-      }
-    }
-    line('metal',4,[-.047,1.858,.221],[-.019,1.883,.213],.003,.003,1.29);
-    line('dry',4,[-.070,1.682,.224],[-.034,1.645,.256],.009,.005,.77);
-    line('skin',5,[-.024,1.597,.227],[.042,1.587,.227],.009,.004,.81);
-    panel('canvas',0,[-.123,.928,.106],[.061,.105,.037],[.12,-.16,.11],.83);
-    panel('leather',0,[.130,.898,.091],[.069,.126,.051],[.15,.13,-.07],.87);
-    line('canvas',2,[-.016,1.387,.204],[-.025,1.120,.185],.006,.008,.94);
-  }
 
   for(const side of [-1,1]){
     const l=side<0,s=l?6:9,e=s+1,h=s+2,c=origin(s),joint=origin(e),w=origin(h);
@@ -229,11 +218,12 @@ export function ghoulTemplate(T,variant='garden'){
     oval('metal',b,[x,.061,.169],[.048,.023,.040],[-.2,0,side*.021],.63);
     for(let j=0;j<3;j++)line('canvas',b,[x-.031,.145-j*.008,.041+j*.021],[x+.034,.140-j*.007,.052+j*.021],.0045,.0044,1.08);
   }
+  }
   const geometry=new T.BufferGeometry(),p=[],n=[],c=[],idx=[],weights=[];
   for(const [i,s] of bins.entries()){
     if(!s.p.length)continue;
     const first=p.length/3;
-    p.push(...s.p);n.push(...s.n);c.push(...s.c);idx.push(...s.j);weights.push(...s.w);
+    for(const [dst,src] of [[p,s.p],[n,s.n],[c,s.c],[idx,s.j],[weights,s.w]])for(const value of src)dst.push(value);
     geometry.addGroup(first,s.p.length/3,i);
   }
   const attr=(key,a,size)=>geometry.setAttribute(key,new T.Float32BufferAttribute(a,size));
@@ -277,7 +267,7 @@ export function ghoulTemplate(T,variant='garden'){
       rig[2].rotation.y=.040+Math.sin(cycle)*.083*motion;
       rig[3].rotation.x=-.129-.23*brace+.055*Math.sin(time*1.61+offset);
       rig[4].position.y=.080-.009*brace;
-      rig[4].rotation.set(-.13-.081*hit,.075*Math.sin(time*1.81+offset),-.08+.046*shake);
+      rig[4].rotation.set(-.13-.081*hit,.075*Math.sin(time*1.81+offset),-.08+(prisoner?.012:.046)*shake);
       rig[5].rotation.x=.034+.193*brace+.23*speech;
       for(const [t,sign] of [[12,-1],[15,1]]){
         const s=t===12?6:9,f=phase+(sign>0?.5:0),q=f-Math.floor(f),stance=.61,air=clamp((q-stance)/(1-stance));
@@ -292,6 +282,11 @@ export function ghoulTemplate(T,variant='garden'){
         rig[s].rotation.z=sign*(.16-.06*motion)+hit*.20*sign;
         rig[s+1].rotation.x=-.275-sign*.099-.48*brace+.18*Math.cos(cycle+.3)*motion;
         rig[s+2].rotation.x=.19-.28*brace+.11*shake*motion;
+        if(prisoner){
+          rig[s].rotation.x=.032+sign*.053-.26*Math.sin(cycle)*sign*motion;
+          rig[s].rotation.z=sign*.038;
+          rig[s+1].rotation.x=-.19-sign*.083+.12*Math.cos(cycle+.3)*motion;
+        }
       }
       rig[18].rotation.x=.12+.23*Math.sin(cycle+.5)*motion;
       rig[19].rotation.x=-.08-.19*Math.sin(cycle+.1)*motion;

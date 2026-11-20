@@ -79,7 +79,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   }
   world.box(xa-.034,za,xa+.03,zb,p=>passable()&&p.y>=grade-.43&&p.y<grade+.90);
   world.box(xb-.020,za,xb+.023,zb,p=>progress>.05&&!passable()&&p.y>grade-.15&&p.y<grade+1.12);
-  const {objects,prisoner}=chapterInterior(T,room,world,material,grade,isBelow);
+  const {objects,prisoner,gate}=chapterInterior(T,room,world,material,grade,isBelow);
   const ambient=new T.HemisphereLight(0xcad3de,0x886655,.70);room.add(ambient);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);room.add(l);return l;});
   const sources={
@@ -118,7 +118,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     }
     const cell=mode(p)==='surface'?
       (progress>.06&&p.x>xa-4&&p.x<xb+8&&p.z>za-6&&p.z<zb+6?'stair':null):chapterCell(p.x,p.z,.035);
-    const changed=from!==progress||cell!==active;active=cell;
+    const gateMoved=gate.update(dt,p),changed=from!==progress||cell!==active||gateMoved;active=cell;
     room.visible=Boolean(cell);
     if(!cell)return changed;
     const visible=new Set([cell]),adjacent=new Set();
@@ -136,7 +136,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     if(cell==='dormitory'||cell==='kitchen'||cell==='prison')visible.add('lowerHall');
     for(const [id,group] of objects)group.visible=visible.has(id);
     const animated=dt>0&&visible.has('prison')&&(cell==='lowerHall'||cell==='prison');
-    if(animated)prisoner.turn(dt);
+    if(animated)prisoner.turn(dt,p);
     const pool=[...visible].flatMap(id=>(sources[id]??[]).map(a=>[a,Math.hypot(p.x-a[0],p.z-a[2])+(id===cell?-3:0)])).sort((a,b)=>a[1]-b[1]);
     if(cell==='duel'){
       const rear=pool.findIndex(([src])=>src===(p.z<-53.3?sources.lowerStair[2]:sources.duel[2]));
@@ -161,6 +161,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     },
     prisonerSpeaks(){prisoner.speak();},
     target(p,look){
+      const grate=gate.target(p,look);if(grate)return grate;
       if(p.y<grade-.28)return null;
       const dx=bench.position.x-p.x,dz=bench.position.z-p.z;
       // The closing control is on the inside edge of the original bench bay.

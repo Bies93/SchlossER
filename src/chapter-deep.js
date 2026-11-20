@@ -2,8 +2,10 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {stationery} from './interior-stationery.js';
 import {randomSource} from './surface-detail.js';
 import {CHAPTER_CELL} from './chapter-layout.js';
+import {gateLeft as gl,gateRight as gr} from './chapter-cell-gate.js';
+import {labelGeometry,labels} from './chapter-labels.js';
 
-export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
+export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print,rect:bounds}){
   const pi=Math.PI,rnd=randomSource(937+id.length),pad=new RoundedBoxGeometry(1,1,1,2,.113),
     disk=new T.CylinderGeometry(1,1,1,18),orb=new T.SphereGeometry(1,14,9),
     ring=new T.TorusGeometry(1,.078,8,20),p=new T.Vector3(),s=new T.Vector3(),Y=new T.Vector3(0,1,0),
@@ -18,7 +20,15 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
     if(n>.001)k.geometry(t,disk,m.compose(p.addScaledVector(d,.5),q.setFromUnitVectors(Y,d.normalize()),s.set(r,n,r)));
   };
   const props=stationery(T,k,room);
+  const cards=labels.map((_,i)=>labelGeometry(T,i));
+  const label=(i,x,y,z,w,h,ang=0,tilt=0)=>shape('inkLabels',cards[i],x,y,z,w,h,1,tilt,ang);
   function sign(key,x,y,z,w,h,ang=0){
+    // Wall-mounted frames project 9 cm; the rear cleat bites into the stone.
+    if(z!==CHAPTER_CELL[3]+.188){
+      const [l,r,m,n]=bounds;
+      if(Math.abs(Math.sin(ang))>.5)x=Math.sin(ang)>0?l+.116:r-.116;
+      else if(!(id==='lowerHall'&&key==='prison'))z=Math.cos(ang)>0?m+.116:n-.116;
+    }
     const x0=Math.cos(ang),z0=-Math.sin(ang),tr=(u,Y,v)=>[x+x0*u+Math.sin(ang)*v,F+Y,z+z0*u+Math.cos(ang)*v];
     k.box('walnut',tr,-w/2-.032,w/2+.032,y-h/2-.029,y+h/2+.029,-.091,-.008);
     for(const [a,l] of [[-w*.5-.028,-w*.5+.004],[w*.5-.004,w*.5+.028]])k.box('wood',tr,a,l,y-h*.5-.026,y+h*.5+.027,-.008,.012);
@@ -29,6 +39,10 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
     print(key,x,y,z,w,h,ang);
   }
   function lamp(x,z,ang=0,y=1.91){
+    // Seat the backplate on the exposed masonry rather than a nominal room offset.
+    const [L,R,M,N]=bounds;
+    if(Math.abs(Math.sin(ang))>.5)x=Math.sin(ang)>0?L+.051:R-.051;
+    else z=Math.cos(ang)>0?M+.051:N-.051;
     const X=x+Math.sin(ang)*.11,Z=z+Math.cos(ang)*.11;
     shape('verdigris',pad,x,y+.083,z,.198,.343,.064,0,ang);
     rod('brass',x,y-.012,z,X,y-.042,Z,.024);
@@ -75,6 +89,42 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
     shape(t,ware,x,y,z,r,r,r);
     shape('pewter',ring,x,y+r*.53,z,r*.966,r*.966,r*.27,pi/2);
   }
+  const turned=profile=>new T.LatheGeometry(profile.map(([a,b])=>new T.Vector2(a,b)),20);
+  const jar=turned([[.12,0],[.81,0],[.97,.04],[1,.15],[1,.72],[.97,.79],[.76,.86],[.76,.96],[.83,.97],[.83,1],[.70,1]]),
+    jug=turned([[.11,0],[.69,0],[.89,.065],[1,.38],[.93,.64],[.55,.76],[.48,.91],[.57,.95],[.59,1],[.48,1],[.44,.90]]),
+    crock=turned([[.06,0],[.73,0],[.86,.08],[.98,.58],[.96,.83],[1,.91],[1,1],[.88,1],[.86,.89],[.82,.22],[.12,.15]]);
+  function herbs(x,y,z,flip=1){
+    for(let i=0;i<5;i++){
+      const a=i*2.4,dx=Math.cos(a)*.054,dz=Math.sin(a)*.042,h=(.15+rnd()*.093)*flip;
+      rod('piping',x,y,z,x+dx,y+h,z+dz,.0028);
+      for(let n=1;n<5;n++)for(const side of [-1,1]){
+        const u=n/5;shape(n%2?'leaf':'leafDry',orb,x+dx*u+side*.012,y+h*u,z+dz*u,.012,.026,.004,side*.34,a,side*.77);
+      }
+    }
+  }
+  function preserves(x,y,z,i){
+    const r=.063+rnd()*.024,h=.157+rnd()*.093;
+    shape('preserveGlass',jar,x,y,z,r,h,r);
+    const fill=i===2?'wine':i===3?'leaf':'bread';
+    cy(fill,x,y+h*.34,z,r*.88,h*.62);
+    for(let n=0;n<7;n++){
+      const a=n*2.4;
+      bead(n%3===0?'leafDry':fill,x+Math.cos(a)*r*.53,y+h*(.55+n%3*.05),z+Math.sin(a)*r*.53,r*.30,r*.22,r*.26);
+    }
+    cy('pewter',x,y+h*.985,z,r*.88,.021);
+    for(const s of [.926,1.015])shape('steel',ring,x,y+h*s,z,r*.85,r*.85,.024,pi/2);
+    for(const s of [-1,1])rod('pewter',x+s*r*.88,y+h*.76,z,x+s*r*.86,y+h*.98,z,.0036);
+    const tag=cards[i].clone(),v=tag.attributes.position;
+    for(let n=0;n<v.count;n++){
+      const a=v.getX(n)*1.61;v.setXYZ(n,Math.sin(a)*(r+.0016),v.getY(n)*.064,Math.cos(a)*(r+.0016));
+    }
+    shape('inkLabels',tag,x,y+h*.45,z,1,1,1,0,pi);tag.dispose();
+  }
+  function mug(x,y,z,r=.045){
+    shape('enamel',crock,x,y,z,r,r*1.76,r);
+    shape('blue',ring,x,y+r*1.72,z,r*.98,r*.98,r*.44,pi/2);
+    shape('pewter',ring,x+r*1.11,y+r,z,r*.47,r*.62,r*.54);
+  }
   function pot(x,y,z,r=.128){
     cy('iron',x,y+.153,z,r,.285);
     cy('pewter',x,y+.031,z,r*.97,.035);cy('pewter',x,y+.294,z,r*1.02,.037);
@@ -94,18 +144,33 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
       for(let i=0;i<5;i++)rod('iron',X,.38,z-.29+.147*i,X,H-.014,z-.29+.147*i,.009);
     }
     for(const j of [-1,1])rod('iron',base,.33,z+j*.392,tip,.33,z+j*.392,.023);
-    shape('damaskGold',pad,x,.406,z,1.86,.176,.778);
-    shape('enamel',pad,x+orient*.633,.525,z,.403,.092,.552,0,.077);
+    shape('ticking',pad,x,.398,z,1.86,.160,.756);
+    // Stuffed ticking with pinched corners instead of a hard enamel block.
+    const pillow=new T.SphereGeometry(1,24,14),pv=pillow.attributes.position;
+    for(let j=0;j<pv.count;j++){
+      const u=pv.getX(j),v=pv.getY(j),w=pv.getZ(j),sq=n=>Math.sign(n)*Math.pow(Math.abs(n),.59);
+      pv.setXYZ(j,sq(u),sq(v)*(1-.13*Math.cos(7*w+3*u)),sq(w));
+    }
+    pillow.computeVertexNormals();shape('linen',pillow,x+orient*.622,.543,z,.222,.066,.314,0,.04*orient);pillow.dispose();
+    for(const side of [-1,1])rod('ticking',x+orient*.60-.14,.546,z+side*.306,x+orient*.60+.14,.546,z+side*.306,.0038);
     // Sculpted folds and tucked edge. Pillow and wool cover are separate.
     const g=new T.PlaneGeometry(1.22,.827,27,20),v=g.attributes.position;
     for(let i=0;i<v.count;i++){
       const dx=v.getX(i),t=v.getY(i),edge=Math.max(0,(Math.abs(t)-.29)*2.1);
-      v.setXYZ(i,dx,.502+.013*Math.sin(dx*15+t*13)+.010*Math.sin(t*32+dx*18)-edge*.21,t);
+      v.setXYZ(i,dx,.529+.011*Math.sin(dx*15+t*13)+.010*Math.sin(t*32+dx*18)-edge*.20,t);
     }
     g.computeVertexNormals();
     // Plane winding faces downward after repositioning, flip it for a top surface.
     const ix=g.index;for(let i=0;i<ix.count;i+=3){const b=ix.getX(i+1);ix.setX(i+1,ix.getX(i+2));ix.setX(i+2,b);}g.computeVertexNormals();
-    shape(orient>0?'velvetBlue':'velvetRed',g,x-orient*.239,0,z,1,1,1);g.dispose();
+    shape(orient>0?'blue':'bookB',g,x-orient*.239,0,z,1,1,1);g.dispose();
+    for(let j=0;j<3;j++){
+      const xx=orient*(-.44+j*.040);
+      for(let n=0;n<16;n++){
+        const height=t=>.530+.011*Math.sin(xx*15+t*13)+.010*Math.sin(t*32+xx*18)-Math.max(0,(Math.abs(t)-.29)*2.1)*.20;
+        const t=-.402+n*.050,T=t+.050;
+        rod('linen',x-orient*.239+xx,height(t),z+t,x-orient*.239+xx,height(T),z+T,.0048);
+      }
+    }
     rod('piping',base+.022*orient,.477,z-.32,base+.022*orient,.477,z+.32,.008);
     if(!noFoot)foot(x,z,1.99,.84);
   }
@@ -115,10 +180,14 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
     sign('prison',21.41,2.392,-70.83,1.58,.238);
     for(const z of [-64.05,-69.62])lamp(19.80,z,pi/2);
     for(const z of [-63.70,-69.67])lamp(23.22,z,-pi/2);
-    for(const x of [19.91,23.11])rod('verdigris',x,2.061,-70.72,x,2.061,-62.84,.033);
+    for(const x of [19.91,23.11])rod('verdigris',x,2.281,-70.72,x,2.281,-62.84,.033);
     for(let j=0;j<6;j++){
       const z=-63.29-1.22*j;
-      for(const x of [19.91,23.11])rod('iron',x,2.061,z-.027,x,2.061,z+.027,.048);
+      for(const x of [19.91,23.11]){
+        rod('iron',x,2.281,z-.027,x,2.281,z+.027,.048);
+        const wall=x<21?19.715:23.316;
+        rod('iron',wall,2.281,z,x,2.281,z,.014);b('verdigris',wall,2.23,z,.029,.099,.075);
+      }
     }
     b('velvetBlue',21.47,.004,-66.86,1.02,.010,6.53);
     for(const x of [21.014,21.935])b('piping',x,.015,-66.86,.013,.004,6.49);
@@ -138,8 +207,12 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
       b('walnut',x,.042,z,.79,1.87,.53);foot(x,z,.79,.53);
       for(const j of [-1,1]){
         b('bookC',x+j*.187,.177,z-.276,.357,1.617,.037);
+        b('walnut',x+j*.187,.278,z-.301,.269,1.08,.021);
+        b('wood',x+j*.187,.306,z-.311,.225,1.026,.010);
+        label(8,x+j*.187,1.436,z-.306,.131,.071,pi);
         for(let n=0;n<5;n++)b('soot',x+j*.187,1.545-n*.037,z-.306,.227,.013,.011);
-        cy('brass',x+j*.110,.946,z-.317,.020,.041);
+        for(const h of [.89,1.00])rod('brass',x+j*.071,h,z-.305,x+j*.071,h,z-.353,.010);
+        rod('brass',x+j*.071,.89,z-.353,x+j*.071,1,z-.353,.012);
         for(const h of [.371,1.60])b('iron',x+j*.322,h,z-.307,.035,.101,.020);
       }
     }
@@ -150,7 +223,16 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
       for(const s of [-1,1])rod('iron',x+s*.36,1.09,-70.903,x+s*.36,1.239,-70.64,.014);
       for(let j=0;j<4;j++)shape(j%2?'velvetBlue':'velvetRed',pad,x-.267+j*.168,1.390,-70.746,.152,.095,.243,0,.09*j);
     }
-    lamp(16.87,-70.86,0,1.94);lamp(18.22,-67.95,pi/2,1.92);
+    lamp(16.87,-70.86,0,1.94);lamp(19.63,-68.35,-pi/2,1.92);
+    for(const [j,[x,z]] of [[13.98,-63.88],[13.98,-66.71],[16.57,-69.62],[16.57,-63.88]].entries()){
+      for(const a of [-1,1]){
+        b('leatherTrim',x+a*.192,.485,z,.052,.009,.54);
+        for(const v of [-.22,.22])bead('brass',x+a*.192,.498,z+v,.009,.004,.009);
+      }
+      if(j%2===0){mug(x-.12,.488,z);props.folio(x+.092,F+.491,z,.17,.117,.13,4,{thickness:.013});}
+      else {shape('linen',pad,x,.517,z,.26,.056,.19,0,-.15);shape('ticking',pad,x,.558,z,.24,.034,.18,0,-.14);}
+      label(8,x,.30,z+.283,.143,.073);
+    }
     b('velvetRed',15.69,.008,-66.77,1.15,.012,4.28);
   }else if(id==='kitchen'){
     // Cast-iron range with two ovens, enamel counter and a brick back splash.
@@ -203,21 +285,34 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
       stool(x,z,z>-66);
       bowl(x,.825,tz+Math.sign(z-tz)*.225,.117);
       rod('pewter',x+.20,.847,tz+Math.sign(z-tz)*.112,x+.22,.847,tz+Math.sign(z-tz)*.328,.009);
+      bead('pewter',x+.22,.846,tz+Math.sign(z-tz)*.32,.021,.006,.033);
     }
     shape('wood',pad,26.81,.837,-66.32,.57,.028,.302);
     for(const [i,X] of [26.62,26.84,27.00].entries()){
       bead('bread',X,.88,-66.34,.120,.067,.093);
       for(let j=0;j<3;j++)rod('crumb',X-.048+j*.042,.932,-66.397,X-.033+j*.042,.935,-66.29,.0043);
     }
-    for(const X of [29.23,30.82])for(const y of [.248,.738,1.30,1.808]){
-      b('wood',X,y,-62.96,1.44,.054,.439);
-      for(let n=0;n<6;n++){
-        const U=X-.55+n*.216,V=-62.97+rnd()*.075;
-        if(n%3===1)bowl(U,y+.057,V,.101,'pewter');
-        else {const r=.055+rnd()*.028,h=.13+rnd()*.12;cy(n%2?'orange':'verdigris',U,y+.055+h*.5,V,r,h);
-          cy('pewter',U,y+.054+h,V,r*1.02,.026);b('paper',U,y+.09,V-r*.98,.082,.058,.008);}
+    for(const [bay,X] of [29.23,30.82].entries())for(const [row,y] of [.248,.738,1.30,1.808].entries()){
+      const Z=-62.96,H=y+.055;
+      for(const dz of [-.116,.106])b('wood',X,y,Z+dz,1.44,.054,.218);
+      for(const s of [-1,1]){
+        b('walnut',X+s*.654,y-.039,Z,.097,.051,.397);
+        bead('iron',X+s*.66,y+.025,Z-.229,.014,.015,.006);
+      }
+      for(let n=0;n<5;n++){
+        const U=X-.535+n*.267+(rnd()-.5)*.033,V=Z+(rnd()-.5)*.09,v=(row*3+bay*4+n)%9;
+        if(v===0||v===6){for(let j=0;j<2+(row%2);j++)bowl(U,H+.018*j,V,.103,j%2?'pewter':'enamel');}
+        else if(v===1){shape('orange',jug,U,H,V,.083,.241,.083);shape('brass',ring,U+.075,H+.157,V,.042,.060,.032);}
+        else if(v===5){shape('enamel',crock,U,H,V,.087,.119,.087);herbs(U,H+.09,V);}
+        else if(v===7)mug(U,H,V,.061);
+        else preserves(U,H,V,(row+bay+n)%6);
       }
     }
+    // A drying rail fixed into the rear wall, sprigs tied with linen twine.
+    for(const X of [26.94,28.15])rod('iron',X,1.81,-62.55,X,1.81,-62.78,.016);
+    rod('wood',26.91,1.81,-62.78,28.18,1.81,-62.78,.023);
+    for(let n=0;n<5;n++){const X=27.02+n*.235;rod('linen',X,1.82,-62.78,X,1.67,-62.78,.0045);herbs(X,1.67,-62.78,-1);}
+    mug(tx-.36,.822,tz+.08);mug(tx+.47,.822,tz-.10);
     for(const X of [28.47,29.97,30.06,31.58]){
       b('darkWood',X,.035,-62.96,.065,1.93,.491);
       foot(X,-62.96,.09,.53);
@@ -225,13 +320,26 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
     foot(30.02,-62.96,3.10,.48);
     sign('stores',25.89,1.68,-62.647,1.32,.734,pi);
     sign('kitchen',25.88,1.68,-70.86,1.52,.760);
-    lamp(25.01,-70.84,0);lamp(27.58,-62.67,pi);lamp(31.78,-68.14,-pi/2);
+    lamp(24.49,-70.84,0);lamp(26.72,-62.67,pi,2.04);lamp(31.78,-68.48,-pi/2);
   }else{
     const [a,A,z0,z1]=CHAPTER_CELL;
-    // Three infill sections and one unmistakably closed gate. The collider
-    // covers the entire cell, including both side returns.
-    hit(a-.12,A+.12,z0-.04,z1+.105);
-    b('deepStone',(a+A)*.5,.006,z1,(A-a)+.15,.095,.181);
+    // Fixed ironwork stops at both jambs; only the rolling leaf spans the opening.
+    for(const [l,r] of [[a-.08,gl],[gr,A+.08]]){
+      hit(l,r,z1-.082,z1+.089);
+      b('deepStone',(l+r)/2,.006,z1,r-l,.095,.181);
+      for(const y of [.663,1.830])b('verdigris',(l+r)/2,y,z1,r-l,.045,.087);
+    }
+    for(const x of [a,A])hit(x-.115,x+.115,z0,z1);
+    hit(a,A,z0-.052,z0+.052);
+    b('mortar',(a+A)*.5,0,z0-.019,A-a,3.03,.080);
+    for(let j=0;j<10;j++)for(let n=-1;n<12;n++){
+      const x=Math.max(a,a+.78*n+(j%2)*.39),end=Math.min(A,a+.78*(n+1)+(j%2)*.39);
+      if(end-x>.02)b((n+j)%4?'deepStone':'deepRock',(x+end)/2,j*.302+.003,z0+.026,end-x-.009,.293,.047);
+    }
+    // Recessed threshold, overhead runner and its stone-mounted hangers.
+    b('pewter',(gl+gr)/2,.001,z1+.19,gr-gl,.009,.123);
+    b('iron',gr,2.318,z1+.19,2*(gr-gl)+.24,.039,.106);
+    for(const X of [gl+.12,gr,gr+(gr-gl)-.12])b('verdigris',X,2.337,z1+.09,.069,.069,.299);
     b('verdigris',(a+A)*.5,2.38,z1,A-a,.135,.139);
     for(const x of [a,a+1.32,a+3.44,a+5.36,A]){
       b('iron',x,.075,z1,.137,2.36,.157);
@@ -242,36 +350,43 @@ export function deepChapterDressing(T,{room,k,box:B,hit,F,id,print}){
     }
     for(let x=a+.155;x<A-.07;x+=.184){
       const n=Math.round((x-a)/.184);
-      if(n===17||n===30)continue;
+      if(x>gl-.025&&x<gr+.025)continue;
       b(n%4===0?'displayBlack':'iron',x,.084,z1,.031,2.30,.034);
       if(n%3===0)for(const h of [.68,1.853])bead('pewter',x,h,z1+.054,.010);
     }
-    for(const y of [.663,1.830])b('verdigris',(a+A)*.5,y,z1,A-a,.045,.087);
-    for(const x of [a+3.53,a+5.26])b('displayBlack',x,.139,z1+.069,.058,2.195,.083);
-    for(const y of [.138,2.277])b('displayBlack',a+4.397,y,z1+.070,1.783,.061,.075);
-    for(const y of [.442,1.991]){
-      b('pewter',a+5.29,y,z1+.126,.067,.181,.062);
-      cy('iron',a+5.29,y+.088,z1+.173,.041,.191);
-    }
-    b('displayBlack',a+3.79,1.058,z1+.117,.38,.187,.097);
-    b('brass',a+3.79,1.009,z1+.185,.118,.212,.064);
-    shape('iron',ring,a+3.79,1.219,z1+.187,.048,.052,.026);
-    b('soot',a+3.789,1.062,z1+.220,.020,.044,.006);
     for(const x of [a,A]){
       b('deepStone',x,.018,(z0+z1)/2,.228,2.52,z1-z0-.134);
       b('verdigris',x,.045,(z0+z1)/2,.274,.099,z1-z0-.15);
     }
-    cot(25.88,-79.00,1,true);
+    cot(25.88,-79.00,1);
     bowl(22.10,.013,-78.89,.141,'pewter');
-    b('paper',25.95,.502,-79.11,.30,.006,.224);
-    lamp(23.92,-80.18,0,1.85);lamp(29.07,-73.13,-pi/2,1.84);lamp(19.02,-73.16,pi/2,1.79);
+    // Personal letter on a solid footlocker (never embedded in the warped quilt).
+    chest(27.20,-79.18,.53,.54,.405);
+    props.folio(27.20,F+.433,-79.18,.19,.12,.15,2,{loose:true,thickness:.010});
+    // Remnants of an occupied cell: scratched calendar, mess ware and an
+    // unanswered envelope. All fastenings meet the actual iron backing.
+    b('wood',22.53,1.03,z0+.068,1.02,.61,.057);
+    for(let j=0;j<21;j++){
+      const x=22.11+Math.floor(j/5)*.176+(j%5)*.027;
+      rod('crumb',x,1.22,z0+.100,x+(j%5===4?-.105:.013),1.37,z0+.101,.004);
+    }
+    b('walnut',21.88,.85,z0+.195,1.05,.066,.29);
+    for(const x of [21.53,22.22])rod('iron',x,.64,z0+.06,x,.853,z0+.28,.016);
+    mug(21.58,.917,z0+.21);bowl(22.10,.917,z0+.20,.108);
+    props.folio(21.84,F+.921,z0+.21,.147,.102,.05,1,{loose:true,thickness:.01});
+    lamp(29.07,-77.18,-pi/2,1.84);lamp(19.02,-73.16,pi/2,1.79);
     table(27.70,-72.53,1.56,.63,.82,'darkWood');
     props.folio(27.76,F+.824,-72.44,.337,.243,.25,6,{loose:true,thickness:.012});
     bowl(28.21,.821,-72.56,.074);
+    mug(27.17,.822,-72.52);label(7,27.46,.824,-72.56,.18,.11,0,-pi/2);
+    const bx=23.12;
+    b('verdigris',bx,1.25,z1+.069,.63,.32,.08);
+    label(6,bx,1.41,z1+.111,.594,.284);
+    for(const h of [1.28,1.54])for(const s of [-1,1])bead('brass',bx+s*.299,h,z1+.116,.009);
     chest(19.57,-72.83,.73,.59,.48);
     sign('guard',29.04,1.77,-72.85,1.32,.69,-pi/2);
     sign('prison',21.39,1.376,z1+.188,1.30,.531);
   }
   props.finish('Eiserne Krone · Spuren der Nachtwache');
-  for(const g of [pad,disk,orb,ring,ware])g.dispose();
+  for(const g of [pad,disk,orb,ring,ware,jar,jug,crock,...cards])g.dispose();
 }

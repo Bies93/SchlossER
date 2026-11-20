@@ -230,8 +230,8 @@ async function start(){
    prisonerNext??=time+1850;
    if(time<prisonerNext)return;
    prisonerNext=time+22600;
-   prisonerCaptionUntil=time+5000;
-   showCaption('Gefangener, Kammer 07: „Deutschland … Deutschland … aaah …“',5000);
+   prisonerCaptionUntil=time+5350;
+   showCaption('Hubert: „Deutschland … Deutschland … aaah …“',5350);
    chapter.prisonerSpeaks();audio.playPrisoner(at);
  }
  const localTarget=()=>{
@@ -270,6 +270,7 @@ async function start(){
    const target=local??hall.commit(player,c);if(!target)return;
    if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});
    if(target.id==='gallery-hatch'||target.id==='chapter-bench')audio.hatch(target.target===1);
+   if(target.id==='hubert-cell')audio.grate();
    doorPrompt();refresh();
  }
  window.addEventListener('keydown',event=>{

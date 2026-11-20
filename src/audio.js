@@ -272,6 +272,13 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
     grit(sfx,t+.048,.28,.056,220,1210,{wet:.12,attack:.07,rate:.72});
     tone(sfx,t+delay+.21,180,.125,.028,{type:'triangle',end:83,wet:.16});
   }
+  function grate(){
+    if(!live())return;
+    const t=ctx.currentTime+.012;
+    grit(sfx,t,.09,.042,530,2380,{attack:.004,wet:.15});
+    grit(sfx,t+.08,.88,.041,125,1050,{attack:.14,rate:.64,wet:.17});
+    tone(sfx,t+.96,148,.11,.028,{type:'triangle',end:72,wet:.13});
+  }
   function playMoosfunk(at,text){
     if(!live())return;
     const pan=tapePan(at),t=ctx.currentTime+.016;
@@ -333,7 +340,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
   }
   return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,club,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
-    playPrisoner:at=>playChoir(at,prisonerUrl),
+    grate,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
