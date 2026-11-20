@@ -8,7 +8,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xe6eaf0,0x839098,1.24),key=new T.DirectionalLight(0xf7dcac,1.38),
     rim=new T.DirectionalLight(0xb5c8dc,.62);
-  key.position.set(-1,1.4,.45);rim.position.set(1.2,.65,-1);stage.add(h,key,rim);
+  key.position.set(-1.3,1.18,.39);rim.position.set(1.0,.47,-1.0);stage.add(h,key,rim);
   const hands=new T.Group(),held=new T.Group();hands.add(held);stage.add(hands);
   const rig=egoAssets(T),{cap,shell}=rig.geometry,{frame,sleeve,cuff}=rig.materials;
   const body=makeEgoBody(T,player.body),V=(...a)=>new T.Vector3(...a),axis=V(0,1,0),linkDir=V();
@@ -211,9 +211,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   function preset(id){
     const night=id==='night';
-    h.intensity=night?.76:1.26;key.intensity=night?.76:1.83;rim.intensity=night?.52:.74;
-    key.color.setHex(night?0xb9c9df:0xffddc1);
-    stage.environment=scene.environment;stage.environmentIntensity=night?.67:.94;
+    h.intensity=night?.78:1.13;key.intensity=night?.87:1.99;rim.intensity=night?.65:.89;
+    key.color.setHex(night?0xb9c9df:0xffe6ce);rim.color.setHex(night?0x8da7c0:0xbac7d1);
+    stage.environment=scene.environment;stage.environmentIntensity=night?.72:1.05;
   }
   function stop(){
     aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);

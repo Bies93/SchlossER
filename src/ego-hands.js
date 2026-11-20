@@ -1,13 +1,13 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {sharedSet} from './surface-detail.js';
+import {weaponSwatch} from './weapon-finishes.js';
 
 // Each palm is local to its own contact, also used by the forearm rig.
 export function gripHands(T,specs){
   const v=(...p)=>new T.Vector3(...p);
-  const fabric=sharedSet(T,'canvas',128);
-  const leather=new T.MeshStandardMaterial({color:0x4e4438,map:fabric.map,normalMap:fabric.normalMap,roughness:.94});
-  leather.normalScale.setScalar(.55);
-  const pads=new T.MeshStandardMaterial({color:0x68604d,map:fabric.map,roughness:.96});
+  const leather=new T.MeshStandardMaterial({color:0x675849,roughness:.92,...weaponSwatch(T,'leather')});
+  leather.normalScale.setScalar(.98);
+  const pads=new T.MeshStandardMaterial({color:0x7b735d,roughness:.99,...weaponSwatch(T,'twill')});
+  pads.normalScale.setScalar(.78);
   const stitching=new T.MeshStandardMaterial({color:0x92846a,roughness:.95});
   const ellipsoid=new T.SphereGeometry(1,14,10);
   const poses=specs.map(spec=>{
@@ -67,7 +67,7 @@ export function gripHands(T,specs){
           form([[-.032,-.018,z+.008],[-w,-.002,z+.005],[-w-.008,.020,z],[-w+.003,.041+(k%2)*.004,z-.005]], [.012,.010,.0042]);
         }
         form([[.006,-.019,.050],[w*.63,-.007,.044],[w+.009,.010,.030],[w+.002,.032,.018]], [.016,.012,.0045]);
-        for(let k=0;k<5;k++)oval(stitching,[-.050,-.027,.042-k*.010],[.002,.0016,.0013]);
+        for(let k=0;k<7;k++)oval(stitching,[-.054+k*.0013,-.020,.044-k*.0085],[.0017,.00155,.00125]);
       }
       for(const [material,list] of bins){
         node.add(new T.Mesh(mergeGeometries(list),material));list.forEach(g=>g.dispose());

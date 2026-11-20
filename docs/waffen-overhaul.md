@@ -25,3 +25,9 @@ Reichweiten, Bewegung und Streuung sind Spielwerte. Es gibt keine nachbildbare I
 - Ausgeführt: `npm run build`, `npm run offline`, `git diff --check`, Render der Atelieransicht in Edge. Kein kompletter Spieldurchlauf und keine Endabnahme.
 - Feste Budgets der neuen Welteffekte: drei wiederverwendete Bolzen, ein Instanzmesh für bis zu 24 kurze Staubpartikel, keine Schusslichter. Keine Vorher-/Nachher-FPS gemessen.
 - Die Kollision folgt den Spiel-Collidern und ist an Bänken, Toren und anderen vereinfachten Objekten konservativer als ein Test gegen einzelne Renderdreiecke. Es gibt kein zusätzliches manuelles Nachladen, keinen Hülsenauswurf und keine Waffen-Munitionsanzeige.
+
+## Material- und Formpolitur nach den Ego-Screenshots
+
+- `src/weapon-finishes.js` erzeugt gekachelte Albedo-, Normal- und Rauheitsmaps. Holz nutzt 512 px mit längs gewarpten Jahresringen und Poren; Stahl, Polymer, Verbundstoff, Gummi und Textilien nutzen geteilte 128-/256-px-Maps. Nur Fertigungsspuren und gezielt maskierte Kanten verändern den Glanz; Kontaktabdunklung aus der Geometrie greift vor allem an Fugen. Die Texturen entstehen lokal, es gibt keine neuen Downloads.
+- Windbruch und Amber haben jetzt modellierte, aus Querschnitten aufgebaute Holzschäfte mit durchlaufenden UVs. Bei Vesper schärfen räumliche Nähte, Einlagen und die konturierte Wangenauflage den oberen Gehäuseumriss. Ärmel und Handschuhe haben eigene Stoff-/Lederoberflächen.
+- Amber: Die ursprüngliche, koplanare Holz-Griffauflage ist entfernt. Griffstruktur sitzt nun im einen Schaftmaterial. Der Vorderschaft hat Freiraum zum Gehäuse auch am Ende der Animation; Dauer, Schadenswerte und Zielanker bleiben gleich. Das Atelier enthält dafür zwei zusätzliche Unterseitenansichten.

@@ -1,7 +1,7 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {makeEquipment} from './ego-gear.js';
 import {gripHands} from './ego-hands.js';
-import {sharedSet} from './surface-detail.js';
+import {coatSleeve,weaponSwatch} from './weapon-finishes.js';
 
 // Viewmodel coordinates and timings are authored for the screen/game only.
 export const EQUIPMENT=[
@@ -18,9 +18,9 @@ export const EQUIPMENT=[
 
 export function egoAssets(T){
   const m=(color,roughness=.70,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
-  const cloth=sharedSet(T,'canvas',128),sleeve=new T.MeshStandardMaterial({color:0x475153,roughness:.95,...cloth}),
-    cuff=new T.MeshStandardMaterial({color:0x373b36,roughness:.94,...cloth});
-  sleeve.normalScale.setScalar(.43);cuff.normalScale.setScalar(.37);
-  const shell=new RoundedBoxGeometry(1,1,1,2,.16),cap=new T.CapsuleGeometry(.5,1,6,13);
+  const cloth=weaponSwatch(T,'twill'),sleeve=new T.MeshStandardMaterial({color:0x5a5f54,roughness:.99,...cloth}),
+    cuff=new T.MeshStandardMaterial({color:0x585749,roughness:.97,...cloth});
+  sleeve.normalScale.setScalar(.87);cuff.normalScale.setScalar(.71);
+  const shell=new RoundedBoxGeometry(1,1,1,3,.21),cap=coatSleeve(T);
   return {...makeEquipment(T,EQUIPMENT),hands:gripHands(T,EQUIPMENT),materials:{frame:m(0x272f33,.73,.19),sleeve,cuff},geometry:{shell,cap}};
 }

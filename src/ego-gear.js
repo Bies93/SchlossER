@@ -1,33 +1,7 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {randomSource,sharedSet} from './surface-detail.js';
+import {handledFinish,weaponSwatch} from './weapon-finishes.js';
 import {buildWeapon} from './ego-weapon-models.js';
-
-// Shared PBR finishes; no external assets, extra lights or mechanics under the shells.
-function finishMaps(T,kind){
-  const N=128,hash=randomSource(kind==='metal'?8927:7387);
-  const noise=Float32Array.from({length:N*N},hash),row=Float32Array.from({length:N},hash);
-  const height=new Float32Array(N*N),color=new Uint8Array(N*N*4),
-    normal=new Uint8Array(color.length),rough=new Uint8Array(color.length);
-  const at=(a,x,y)=>a[((y+N)%N)*N+(x+N)%N],metal=kind==='metal';
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
-    const i=y*N+x,b=metal?(row[y]-.5)*.54:0,n=noise[i]-.5;
-    const fine=.62*n+b,trace=Math.max(0,b-.221)*Math.max(0,Math.sin(x*.145+y*1.93))*2;
-    height[i]=fine*.093+trace*.12;
-    const a=metal?227+fine*19+trace*38:236+n*12,r=224+fine*36-trace*100;
-    color.set([a,a,a,255],i*4);rough.set([r,r,r,255],i*4);
-  }
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
-    const nx=at(height,x-1,y)-at(height,x+1,y),ny=at(height,x,y-1)-at(height,x,y+1),s=127/Math.hypot(nx,ny,1);
-    normal.set([128+nx*s,128+ny*s,128+s,255],4*(y*N+x));
-  }
-  const tex=(bytes,srgb=false)=>{
-    const t=new T.DataTexture(bytes,N,N);t.colorSpace=srgb?T.SRGBColorSpace:T.NoColorSpace;
-    t.wrapS=t.wrapT=T.RepeatWrapping;t.generateMipmaps=true;t.anisotropy=4;
-    t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.needsUpdate=true;return t;
-  };
-  return {map:tex(color,true),normalMap:tex(normal),roughnessMap:tex(rough)};
-}
 
 function finish(T,color,roughness,metalness,maps={},strength=.33){
   const m=new T.MeshStandardMaterial({color,roughness,metalness,...maps});
@@ -35,29 +9,37 @@ function finish(T,color,roughness,metalness,maps={},strength=.33){
 }
 
 export function makeEquipment(T,specs){
-  const metal=finishMaps(T,'metal'),powder=finishMaps(T,'polymer'),grain=sharedSet(T,'fineOak',256),textile=sharedSet(T,'canvas',128);
-  const F=(...a)=>finish(T,...a);
-  const m={
-    coat:F(0x444849,.68,.66,metal,.37), blue:F(0x30383d,.56,.70,metal,.29),
-    raw:F(0x939591,.49,.67,metal,.39), recess:F(0x212423,.89,.14,powder,.22),
-    polymer:F(0x515745,.86,.01,powder,.57), carbon:F(0x34383b,.80,.035,powder,.47),
-    rubber:F(0x232629,.98,0,powder,.67), wood:F(0x926849,.76,0,grain,.62),
-    darkWood:F(0x635044,.82,0,grain,.63), weave:F(0x777668,.96,0,textile,.50),
-    brass:F(0xa4865a,.68,.52,metal,.27), enamel:F(0x9a8854,.86,0,powder,.16),
-    string:F(0x908680,.92,0,textile,.17), vane:F(0x6f3930,.76,0,powder,.31),
-    glass:F(0x182a2b,.29,.23)
+  const F=(color,rough,metal,kind,normal,wear=0,occlusion=0)=>{
+    const m=finish(T,color,rough,metal,kind?weaponSwatch(T,kind):{},normal);
+    if(wear||occlusion){handledFinish(m,kind==='walnut'?'wood':kind,wear);m.userData.occlusion=occlusion;}
+    m.userData.longGrain=kind==='walnut';
+    return m;
   };
-  m.wood.userData.longGrain=m.darkWood.userData.longGrain=true;
+  const m={
+    coat:F(0x4c5351,.83,.55,'phosphate',1.14,.72,.08),
+    blue:F(0x434d53,.77,.73,'blue',.97,.68,.07),
+    raw:F(0x9b9e97,.76,.83,'machine',1.04,.26,.04),
+    recess:F(0x2f3231,.91,.11,'polymer',.93,.12,.63),
+    polymer:F(0x61624f,.93,.035,'polymer',1.24,.24,.10),
+    carbon:F(0x44474a,.87,.047,'composite',1.02,.22,.14),
+    rubber:F(0x323433,.99,0,'rubber',1.09,.08,.12),
+    wood:F(0xc6b8a9,.94,0,'walnut',1.08,.70,.10),
+    darkWood:F(0xae9f8e,.96,0,'walnut',.94,.62,.16),
+    brass:F(0xae925e,.72,.68,'machine',.88,.29,.06),
+    enamel:F(0xb0a36d,.93,0,'polymer',.69),
+    string:F(0xa0978b,.99,0,'twill',.54),vane:F(0x934d37,.89,0,'rubber',.63),
+    glass:F(0x223736,.34,.38,null,0)
+  };
   const profileMatrix=new T.Matrix4().makeRotationY(Math.PI*.5),mx=new T.Matrix4(),
     q=new T.Quaternion(),e=new T.Euler(),v=new T.Vector3(),s=new T.Vector3();
   const boxes=new Map(),round=new T.CylinderGeometry(1,1,1,14);
   function assembly(name){
     const root=new T.Group(),bins=new Map();root.name=name;
-    function add(base,material,at=[0,0,0],scale=[1,1,1],rotation=[0,0,0]){
+    function add(base,material,at=[0,0,0],scale=[1,1,1],rotation=[0,0,0],attrs={}){
       const g=base.index?base.toNonIndexed():base.clone();g.clearGroups();
       q.setFromEuler(e.set(...rotation));g.applyMatrix4(mx.compose(v.fromArray(at),q,s.fromArray(scale)));
       const p=g.attributes.position,n=g.attributes.normal;
-      const uv=g.attributes.uv??new T.BufferAttribute(new Float32Array(p.count*2),2);
+      const uv=g.attributes.uv??new T.BufferAttribute(new Float32Array(p.count*2),2),mask=new Float32Array(p.count*2);
       g.setAttribute('uv',uv);
       for(let i=0;i<p.count;i+=3){
         const x=Math.abs(n.getX(i)+n.getX(i+1)+n.getX(i+2)),
@@ -65,10 +47,17 @@ export function makeEquipment(T,specs){
         const face=x>=y&&x>=z?0:y>=z?1:2;
         for(let k=i;k<i+3;k++){
           const a=p.getX(k),b=p.getY(k),d=p.getZ(k);
-          if(material.userData.longGrain)uv.setXY(k,(face===2?a:d)/.38,(face===0?b:face===1?a:b)/.24);
-          else uv.setXY(k,(face===2?a:d)/.094,(face===1?a:b)/.082);
+          if(!attrs.uv){
+            if(material.userData.longGrain)uv.setXY(k,(face===2?a:d)/.71,(face===0?b:face===1?a:b)/.18);
+            else uv.setXY(k,(face===2?a:d)/.131,(face===1?a:b)/.107);
+          }
+          const ax=Math.abs(n.getX(k)),ay=Math.abs(n.getY(k)),az=Math.abs(n.getZ(k)),
+            ratio=1-Math.max(ax,ay,az),diagonal=Math.max(0,Math.min(1,(ratio-.034)*4.72));
+          mask[2*k]=attrs.wear===undefined?diagonal:diagonal*attrs.wear;
+          mask[2*k+1]=Math.min(1,(material.userData.occlusion??0)+(attrs.contact??0)+(.13*diagonal*(b<-.038?1:0)));
         }
       }
+      g.setAttribute('propFinish',new T.BufferAttribute(mask,2));
       if(!bins.has(material))bins.set(material,[]);bins.get(material).push(g);
     }
     function use(g,...args){add(g,...args);g.dispose();}
@@ -81,11 +70,11 @@ export function makeEquipment(T,specs){
       const shape=new T.Shape();
       for(const [i,p] of points.entries())shape[i?'lineTo':'moveTo'](...f(...p));shape.closePath();return shape;
     }
-    function profile(mat,points,width,x=0,b=.003,holes=[]){
+    function profile(mat,points,width,x=0,b=.003,holes=[],attrs={}){
       const shape=poly(points);for(const outline of holes)shape.holes.push(poly(outline));
       const g=new T.ExtrudeGeometry(shape,{depth:width-2*b,bevelEnabled:b>0,bevelSegments:b>.003?2:1,
         bevelThickness:b,bevelSize:b,steps:1,curveSegments:6});
-      g.translate(0,0,-(width-2*b)*.5);g.applyMatrix4(profileMatrix);use(g,mat,[x,0,0]);
+      g.translate(0,0,-(width-2*b)*.5);g.applyMatrix4(profileMatrix);use(g,mat,[x,0,0],[1,1,1],[0,0,0],attrs);
     }
     function plan(mat,points,width,y,b=.002){
       const shape=poly(points,(a,z)=>[a,-z]);
@@ -94,6 +83,51 @@ export function makeEquipment(T,specs){
     }
     function cyl(mat,p,r,length,axis='z'){
       add(round,mat,p,[r,length,r],axis==='x'?[0,0,-Math.PI*.5]:axis==='y'?[0,0,0]:[Math.PI*.5,0,0]);
+    }
+    function sculpt(mat,slices,{power=.66,side=.0,chamfer=.02,openStart=false,openEnd=false}={}){
+      // A smooth single volume, with independent stock shoulders along Z.
+      // Longitudinal UVs wrap continuously over the visible side and comb.
+      const step=32,p=[],u=[],f=[];
+      function ring(z,hi,lo,w){
+        for(let i=0;i<=step;i++){
+          const a=(i/step-.25)*Math.PI*2,cs=Math.cos(a),sn=Math.sin(a),t=(1+Math.sign(sn)*Math.abs(sn)**power)*.5;
+          const x=Math.sign(cs)*Math.abs(cs)**power*w*(1-side*(1-t));
+          p.push(x,lo+(hi-lo)*t,z);u.push(z/.71,i/step*(2*w+hi-lo)/.15);
+        }
+      }
+      slices.forEach(s=>ring(...s));
+      for(let j=0;j<slices.length-1;j++)for(let i=0;i<step;i++){
+        const a=j*(step+1)+i,b=a+step+1;f.push(a,a+1,b,a+1,b+1,b);
+      }
+      // Weld the side normals across its UV seam, then cap separately.
+      const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(p,3));
+      geo.setAttribute('uv',new T.Float32BufferAttribute(u,2));geo.setIndex(f);geo.computeVertexNormals();
+      const n=geo.attributes.normal;
+      for(let j=0;j<slices.length;j++){
+        const a=j*(step+1),b=a+step;
+        v.set(n.getX(a)+n.getX(b),n.getY(a)+n.getY(b),n.getZ(a)+n.getZ(b)).normalize();
+        n.setXYZ(a,v.x,v.y,v.z);n.setXYZ(b,v.x,v.y,v.z);
+      }
+      use(geo,mat,[0,0,0],[1,1,1],[0,0,0],{uv:true,wear:.54});
+      const caps=[],capUvs=[],ix=[];
+      for(const [j,s] of [[0,slices[0]],[1,slices.at(-1)]]){
+        if(j?openEnd:openStart)continue;
+        const start=caps.length/3,i0=(j?(slices.length-1)*(step+1):0)*3;
+        for(let i=0;i<step;i++){
+          const a=i0+i*3,x=p[a],y=p[a+1];caps.push(x,y,p[a+2]);
+          capUvs.push(x/.18,y/.18);
+        }
+        caps.push(0,(s[1]+s[2])*.5,s[0]);capUvs.push(0,0);
+        for(let i=0;i<step;i++){
+          const a=start+i,b=start+(i+1)%step;
+          ix.push(...(j?[start+step,a,b]:[start+step,b,a]));
+        }
+      }
+      if(!ix.length)return;
+      const ends=new T.BufferGeometry();
+      ends.setAttribute('position',new T.Float32BufferAttribute(caps,3));ends.setAttribute('uv',new T.Float32BufferAttribute(capUvs,2));
+      ends.setIndex(ix);ends.computeVertexNormals();
+      use(ends,mat,[0,0,0],[1,1,1],[0,0,0],{uv:true,contact:chamfer});
     }
     function turned(mat,outline,p,axis='z',scale=[1,1,1],segments=22){
       use(new T.LatheGeometry(outline.map(([r,z])=>new T.Vector2(r,z)),segments),mat,p,scale,
@@ -133,7 +167,7 @@ export function makeEquipment(T,specs){
       }
       bins.clear();return root;
     }
-    return {root,add,box,profile,plan,cyl,turned,bezel,bolt,stamp,build};
+    return {root,add,box,profile,plan,cyl,sculpt,turned,bezel,bolt,stamp,build};
   }
   const bolt=assembly('Windbruch · Spielbolzen');
   bolt.turned(m.carbon,[[0,-.151],[.0052,-.151],[.0054,.115],[0,.115]],[0,0,0],'z',[1,1,1],12);

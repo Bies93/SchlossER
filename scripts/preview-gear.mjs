@@ -8,6 +8,8 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {egoAssets,EQUIPMENT} from './src/ego-assets.js';
 import {makeViewmodel} from './src/viewmodel.js';
 const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+r.debug.onShaderError=(gl,program,vs,fs)=>{throw Error([gl.getProgramInfoLog(program),
+  gl.getShaderInfoLog(vs),gl.getShaderInfoLog(fs)].join(' '));};
 r.setSize(530,280);r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.14;
 const world=new T.Scene(),studio=new T.Scene();
 const generator=new T.PMREMGenerator(r),room=new RoomEnvironment(),target=generator.fromScene(room);
@@ -49,6 +51,13 @@ for(let i=0;i<EQUIPMENT.length;i++){
   r.domElement.dispatchEvent(new MouseEvent('mousedown',{button:2,bubbles:true,cancelable:true}));settle();
   snap(spec.label+' · ADS',render);
   window.dispatchEvent(new MouseEvent('mouseup',{button:2,bubbles:true}));settle();
+  if(spec.kind==='shotgun'){
+    close.position.set(-1.52,-.82,.64);close.lookAt(0,-.077,-.154);close.updateMatrixWorld();
+    const device=rig.devices[i];studio.add(model);
+    snap('Amber · Unterseite in Ruhe',()=>r.render(studio,close));
+    device.animate(.382);snap('Amber · Unterseite am Ende des Pumpwegs',()=>r.render(studio,close));
+    device.animate(10);studio.remove(model);
+  }
 }
 document.body.dataset.finished='true';
 `;
