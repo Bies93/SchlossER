@@ -1,24 +1,26 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {makeEquipment} from './ego-gear.js';
 import {gripHands} from './ego-hands.js';
+import {sharedSet} from './surface-detail.js';
 
-// Three original, purely decorative hard-surface silhouettes.
+// Viewmodel coordinates and timings are authored for the screen/game only.
 export const EQUIPMENT=[
-  {label:'Kestrel · Impulspistole',color:0x6fe2e6,
-    sight:[0,.074,-.191],emit:[0,.009,-.244],gripY:-.121,
-    hold:[.226,-.169,-.61],yaw:.255,pattern:1,impact:36},
-  {label:'Vesper · Impulsgewehr',color:0x8baeff,
-    sight:[0,.124,-.132],emit:[0,.024,-.697],gripY:-.124,
-    hold:[.239,-.216,-.53],yaw:.276,pattern:1,impact:54},
-  {label:'Amber · Streuflinte',color:0xffb266,
-    sight:[0,.091,-.619],emit:[0,.033,-.682],gripY:-.137,
-    hold:[.253,-.244,-.55],yaw:.289,pattern:5,impact:25}
+  {kind:'bow',label:'Windbruch · Armbrust',color:0x9b5041,
+    sight:[0,.119,-.287],emit:[0,.055,-.429],hold:[.169,-.177,-.555],yaw:.230,
+    fore:[0,-.083,-.287],grip:[0,-.132,.020],recovery:1.30,recoil:.013,pattern:1,impact:64,range:24,spread:0,weight:1.05},
+  {kind:'rifle',label:'Vesper 17 · Sturmgewehr',color:0xa36b47,
+    sight:[0,.124,-.264],emit:[0,.024,-.684],hold:[.199,-.161,-.505],yaw:.248,
+    fore:[0,-.066,-.369],grip:[0,-.139,.023],recovery:.243,recoil:.027,pattern:1,impact:54,range:22,spread:.004,weight:.91},
+  {kind:'shotgun',label:'Amber 08 · Pumpflinte',color:0x92563d,
+    sight:[0,.069,-.631],emit:[0,.024,-.743],hold:[.199,-.165,-.519],yaw:.274,
+    fore:[0,-.077,-.397],grip:[0,-.119,.049],recovery:.752,recoil:.061,pattern:5,impact:25,range:17,spread:.047,weight:1.13}
 ];
 
 export function egoAssets(T){
   const m=(color,roughness=.70,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
-  const shell=new RoundedBoxGeometry(1,1,1,2,.12),cap=new T.CapsuleGeometry(.5,1,5,10);
-  return {devices:makeEquipment(T,EQUIPMENT),hands:gripHands(T),materials:{
-    frame:m(0x272f33,.73,.19),sleeve:m(0x47545a,.94),cuff:m(0x343d42,.88)
-  },geometry:{shell,cap}};
+  const cloth=sharedSet(T,'canvas',128),sleeve=new T.MeshStandardMaterial({color:0x475153,roughness:.95,...cloth}),
+    cuff=new T.MeshStandardMaterial({color:0x373b36,roughness:.94,...cloth});
+  sleeve.normalScale.setScalar(.43);cuff.normalScale.setScalar(.37);
+  const shell=new RoundedBoxGeometry(1,1,1,2,.16),cap=new T.CapsuleGeometry(.5,1,6,13);
+  return {...makeEquipment(T,EQUIPMENT),hands:gripHands(T,EQUIPMENT),materials:{frame:m(0x272f33,.73,.19),sleeve,cuff},geometry:{shell,cap}};
 }

@@ -127,7 +127,7 @@ async function start(){
  const active=()=>document.body.dataset.state==='playing';
  const gameModes={
    walk:{start:'Rundgang starten',description:'Schloss und Garten frei erkunden, ohne Waffen und Gegner.'},
-   ghouls:{start:'Ghoul-Modus starten',description:'Mit Impulsgeräten. Fünf Ghoule warten im Schlossgarten.'}
+   ghouls:{start:'Ghoul-Modus starten',description:'Mit Armbrust, Sturmgewehr und Pumpflinte. Fünf Ghoule warten im Schlossgarten.'}
  };
  let chosenMode='walk',gameMode='walk',firstRound=false;
  const combat=()=>gameMode==='ghouls';
@@ -148,7 +148,7 @@ async function start(){
  const round=ghoulRound(T,s,world,(x,z)=>floorHeight(x,z,0,false),announceGhoul,audio.creature);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
    ()=>{const p=player.body.position;return combat()&&desktopRound()&&hall.allowGear(p)
-     &&!(p.y<-.42&&wcHeightAt(p.x,p.z,p.y)!==null);},round,audio.shot,audio.pulseContact);
+     &&!(p.y<-.42&&wcHeightAt(p.x,p.z,p.y)!==null);},round,audio.shot,audio.shotContact,audio.weaponAction);
  viewmodel.setCombat(false);
  const modeButtons=[...$('game-mode').querySelectorAll('[data-mode]')];
  function chooseMode(id){
@@ -181,7 +181,7 @@ async function start(){
  }
  function startRound(){
    if(!active()||!combat()||!desktopRound())return;
-   if(round.begin(player.body.position)){roundPrompt();refresh()}
+   if(round.begin(player.body.position)){viewmodel.clearShots();roundPrompt();refresh()}
  }
  ghoulAction.addEventListener('click',()=>{startRound();canvas.focus({preventScroll:true})});
  window.addEventListener('keydown',e=>{
@@ -338,7 +338,7 @@ async function start(){
      if(combat()&&desktopRound()){
        if(firstRound&&round.prompt(player.body.position)){
          firstRound=false;
-         if(round.begin(player.body.position))dirty=true;
+         if(round.begin(player.body.position)){viewmodel.clearShots();dirty=true;}
        }
        if(round.tick(time,player.body.position))dirty=true;
      }

@@ -189,40 +189,43 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
     else{club(0);stopTrack();stopChoir();stopRadio();}
     return enabled;
   }
-  function shot(which){
+  function shot(kind){
     if(!live())return;
-    const t=ctx.currentTime+.009, drift=.95+random()*.10;
-    const tap=(at,f,fall,vol,tail,wet=.14)=>tone(sfx,t+at,f*drift,tail,vol,
-      {attack:.003,end:fall*drift,wet,wave:ac});
-    if(which===0){
-      // A short dry relay snap followed by a compact, descending arc.
-      grit(sfx,t,.027,.27,1680,6500,{attack:.002,wet:.14,rate:1.17*drift});
-      tap(.004,436,183,.20,.074);
-      tone(sfx,t+.005,143,.072,.142,{attack:.004,end:60,wet:.15,type:'triangle'});
-      tap(.057,995,760,.045,.084,.22);
-    }else if(which===1){
-      // Narrower, sustained discharge with a bright driven overtone.
-      grit(sfx,t,.042,.28,815,5280,{attack:.002,wet:.20,rate:1.22*drift});
-      tap(.002,249,107,.23,.171,.23);
-      tap(.003,1190,548,.115,.115,.26);
-      grit(sfx,t+.029,.131,.108,184,1070,{attack:.013,wet:.36,rate:.91});
-      tap(.100,781,490,.043,.106,.30);
-    }else{
-      // A broader, lower burst with two slightly separated transients.
-      grit(sfx,t,.053,.34,487,4680,{attack:.003,wet:.22,rate:.78*drift});
-      grit(sfx,t+.016,.078,.19,940,6450,{attack:.003,wet:.27,rate:.92*drift});
-      tone(sfx,t+.007,108,.158,.27,{attack:.004,end:46,wet:.28,type:'triangle'});
-      grit(sfx,t+.023,.220,.138,85,747,{attack:.01,wet:.38,rate:.76});
-      tap(.084,271,136,.072,.140,.25);
+    const t=ctx.currentTime+.005,v=.95+random()*.10;
+    const knock=(at,hz,len,vol,pan=0)=>tone(sfx,t+at,hz*v,len,vol,{attack:.0015,end:hz*.93*v,wet:.09,pan});
+    if(kind==='bow'){
+      grit(sfx,t,.018,.25,920,4880,{attack:.0012,wet:.075,rate:v});
+      grit(sfx,t+.012,.064,.19,224,1980,{attack:.003,wet:.11,rate:.92*v});
+      knock(.006,197,.051,.086);knock(.008,293,.038,.052);knock(.007,571,.027,.026);
+    }else if(kind==='rifle'){
+      grit(sfx,t,.024,.46,369,6580,{attack:.001,wet:.18,rate:1.22*v});
+      grit(sfx,t+.004,.068,.42,82,1210,{attack:.002,wet:.25,rate:v});
+      grit(sfx,t+.027,.031,.10,1270,3450,{attack:.003,wet:.07,rate:1.15*v});
+      grit(sfx,t+.019,.121,.076,170,1330,{attack:.012,wet:.30,rate:.89*v});
+      knock(.001,113,.042,.087);
+    }else if(kind==='shotgun'){
+      grit(sfx,t,.047,.44,230,4890,{attack:.0014,wet:.29,rate:.93*v});
+      grit(sfx,t+.002,.094,.48,48,825,{attack:.002,wet:.31,rate:.81*v});
+      grit(sfx,t+.021,.158,.17,110,1350,{attack:.011,wet:.32,rate:.77*v});
+      knock(.001,78,.075,.124);
     }
   }
-  function pulseContact(p,which){
+  function weaponAction(kind,phase){
+    if(!live())return;
+    const t=ctx.currentTime+.007,open=phase==='open',bow=kind==='bow',v=.93+.14*random();
+    grit(sfx,t,open?.083:.030,bow?.11:.18,open?480:880,bow?2520:4500,
+      {attack:open?.008:.0015,wet:.12,rate:v});
+    grit(sfx,t+(open?.075:.023),.031,bow?.085:.12,740,4100,{attack:.002,wet:.12,rate:v});
+    tone(sfx,t+(open?.083:.006),(bow?333:216)*v,.037,bow?.030:.077,{attack:.002,wet:.12});
+  }
+  function shotContact(p,kind,material){
     if(!live())return;
     const a=listener(),dx=p.x-a.x,dz=p.z-a.z,d=Math.hypot(dx,dz);
     const vol=1/(1+(d/9)**1.45),pan=Math.max(-.85,Math.min(.85,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
-    const t=ctx.currentTime+.007,f=[620,890,385][which]??500;
-    grit(sfx,t,.054,.12*vol,830,4250,{attack:.003,pan,wet:.20,rate:.89+random()*.26});
-    tone(sfx,t+.008,f,.087,.074*vol,{end:f*.62,attack:.003,pan,wet:.24,wave:ac});
+    const t=ctx.currentTime+.006,soft=material==='soft',metal=material==='metal',
+      f=metal?1110:soft?107:kind==='bow'?218:415;
+    grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft?156:575,soft?1230:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
+    tone(sfx,t+.003,f,metal?.121:.052,(metal?.069:.061)*vol,{end:f*.93,attack:.002,pan,wet:.18});
   }
   function foot(kind,power=1,impact=false,side=1){
     if(!live())return;
@@ -350,7 +353,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
-  return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},

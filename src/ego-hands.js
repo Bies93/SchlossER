@@ -1,24 +1,22 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {sharedSet} from './surface-detail.js';
 
-// Poses live in equipment space. The same wrist points drive the arms.
-const wrists=[
-  [[-.100,-.156,.021],[.064,-.157,.090]],
-  [[-.112,-.135,-.264],[.065,-.155,.098]],
-  [[-.127,-.138,-.257],[.071,-.159,.100]]
-];
-
-export function gripHands(T){
+// Each palm is local to its own contact, also used by the forearm rig.
+export function gripHands(T,specs){
   const v=(...p)=>new T.Vector3(...p);
-  const fabric=sharedSet(T,'plaster',128);
+  const fabric=sharedSet(T,'canvas',128);
   const leather=new T.MeshStandardMaterial({color:0x4e4438,map:fabric.map,normalMap:fabric.normalMap,roughness:.94});
   leather.normalScale.setScalar(.55);
   const pads=new T.MeshStandardMaterial({color:0x68604d,map:fabric.map,roughness:.96});
   const stitching=new T.MeshStandardMaterial({color:0x92846a,roughness:.95});
   const ellipsoid=new T.SphereGeometry(1,14,10);
-  const poses=wrists.map((pair,model)=>{
-    const group=new T.Group();group.name='Griffpose · '+model;
-    for(const [hand,wrist] of pair.entries()){
+  const poses=specs.map(spec=>{
+    const group=new T.Group(),nodes=[],wrists=[v(-.107,-.035,.083),v(.055,-.043,.094)];
+    group.name='Griffpose · '+spec.kind;
+    for(const [hand,w] of wrists.entries()){
+      const node=new T.Group();node.position.fromArray(hand===0?spec.fore:spec.grip);
+      group.add(node);nodes.push(node);
+      const wrist=w.toArray();
       const bins=new Map();
       function add(material,geo){
         if(!bins.has(material))bins.set(material,[]);
@@ -47,45 +45,36 @@ export function gripHands(T){
         const smooth=g.toNonIndexed();add(material,smooth);g.dispose();
       }
       if(hand===1){
-        const drop=model===2?.013:0,yp=-.110-drop;
-        form([wrist,[.057,yp-.032,.060],[.047,yp+.006,.040]], [.032,.033,.010]);
-        oval(leather,[.047,yp,.042],[.023,.039,.034],-.40);
-        oval(pads,[.068,yp,.044],[.007,.028,.025],-.33);
+        form([wrist,[.051,-.032,.072],[.043,.005,.027]], [.028,.030,.010]);
+        oval(leather,[.041,-.005,.023],[.017,.043,.032],-.39);
+        oval(pads,[.054,-.007,.027],[.006,.031,.026],-.31);
         for(let k=0;k<4;k++){
-          const y=yp+.025-k*.0195;
+          const y=.040-k*.023;
           const points=k===0
-            ? [[.054,y,.036],[.055,y+.010,-.008],[.047,y+.008,-.053],[.043,y+.003,-.076]]
-            : [[.054,y,.023],[.044,y+.001,-.011],[.027,y+.003,-.029],[.001,y+.005,-.031],[-.015,y+.006,-.025]];
-          form(points,[.012,.0105,.0019]);
+            ? [[.047,y,.019],[.045,y+.011,-.012],[.035,y+.012,-.059],[.032,y+.007,-.080]]
+            : [[.047,y,.016],[.044,y,-.018],[.027,y+.002,-.035],[.003,y+.004,-.038],[-.020,y+.003,-.033]];
+          form(points,[.012,.0105,.0045]);
         }
-        form([[.046,yp+.014,.059],[.029,yp+.035,.071],[.002,yp+.048,.061],[-.022,yp+.048,.041]], [.016,.013,.002]);
-        for(let k=0;k<6;k++)oval(stitching,[.068,yp-.022+k*.007,.061+k*.0014],[.0014,.0022,.0017]);
-      } else if(model===0){
-        form([wrist,[-.077,-.150,.009],[-.055,-.136,-.006]], [.030,.028,.011]);
-        oval(leather,[-.053,-.136,-.005],[.024,.037,.025],-.22);
-        oval(pads,[-.072,-.141,-.005],[.008,.025,.018],-.24);
-        for(let k=0;k<4;k++){
-          const y=-.106-k*.018;
-          form([[-.057,y,.001],[-.052,y-.005,-.025],[-.026,y-.003,-.045],[-.004,y+.002,-.043]], [.011,.0092,.0017]);
-        }
-        form([[-.075,-.134,.030],[-.059,-.113,.016],[-.050,-.087,-.005],[-.051,-.079,-.033]], [.015,.012,.002]);
+        form([[.042,.015,.057],[.023,.042,.066],[-.001,.049,.064],[-.023,.046,.057]], [.016,.013,.0045]);
+        for(let k=0;k<6;k++)oval(stitching,[.057,-.022+k*.007,.045+k*.0014],[.0014,.0022,.0017]);
       } else {
-        const wide=model===2,z=wide?-.332:-.347,x=wide?-.071:-.050;
-        form([wrist,[x-.018,-.111,z+.042],[x+.026,-.075,z+.012]], [.031,.032,.014]);
-        oval(leather,[x+.007,-.083,z+.012],[.041,.022,.044],-.17);
-        oval(pads,[x-.017,-.101,z+.020],[.028,.007,.022]);
+        const wide=spec.kind==='shotgun',w=wide?.052:.039;
+        form([wrist,[-.066,-.028,.042],[-.029,-.018,.012]], [.030,.030,.012]);
+        oval(leather,[-.023,-.014,.011],[.039,.017,.044],-.14);
+        oval(pads,[-.030,-.030,.020],[.029,.006,.023]);
         for(let k=0;k<4;k++){
-          const p=z-.024+k*.021;
-          form([[x-.017,-.089,p+.013],[x-.019,-.069,p+.006],[x-.012,-.041,p],[x-.002,-.027+(k%2)*.005,p-.005]], [.011,.010,.0018]);
+          const z=-.030+k*.023;
+          form([[-.032,-.018,z+.008],[-w,-.002,z+.005],[-w-.008,.020,z],[-w+.003,.041+(k%2)*.004,z-.005]], [.012,.010,.0042]);
         }
-        form([[x+.033,-.086,z+.043],[x+.060,-.074,z+.038],[x+.068,-.049,z+.022],[x+.055,-.038,z+.003]], [.015,.012,.002]);
+        form([[.006,-.019,.050],[w*.63,-.007,.044],[w+.009,.010,.030],[w+.002,.032,.018]], [.016,.012,.0045]);
+        for(let k=0;k<5;k++)oval(stitching,[-.050,-.027,.042-k*.010],[.002,.0016,.0013]);
       }
       for(const [material,list] of bins){
-        group.add(new T.Mesh(mergeGeometries(list),material));list.forEach(g=>g.dispose());
+        node.add(new T.Mesh(mergeGeometries(list),material));list.forEach(g=>g.dispose());
       }
     }
-    return group;
+    return {group,nodes,wrists};
   });
   ellipsoid.dispose();
-  return {poses,wrists};
+  return poses;
 }
