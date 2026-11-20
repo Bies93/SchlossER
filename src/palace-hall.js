@@ -216,10 +216,10 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
     if(d.usable)return d.usable(p);
     return d.id==='gallery-choir'||(d.id==='lab-secret'?lab.usable(p):d.target===0||!closeEnough(p,d,1.40));
   }
-  function update(dt,p){
+  function update(dt,p,beat=null){
     wings.update(p,preset);
     const hatchMoved=wings.hatch.update(dt,p);
-    let changed=lab.update(dt,p,wings.hatch.shown())||hatchMoved,shadow=hatchMoved&&wings.hatch.settled();
+    let changed=lab.update(dt,p,wings.hatch.shown(),beat)||hatchMoved,shadow=hatchMoved&&wings.hatch.settled();
     for(const d of doors){
       if(d.progress===d.target)continue;
       if(d.target===0&&Math.abs(p.z-d.z)<.92&&Math.abs(p.x)<d.half+.36)d.target=1;

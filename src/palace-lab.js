@@ -175,14 +175,14 @@ export function addPalaceLab(T,root,world,M,moosfunk){
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
     usable,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
-    update(dt,p,lodgeShown=false){
+    update(dt,p,lodgeShown=false,beat=null){
       let changed=false;
       if(d.progress!==d.target){
         if(!d.target&&Math.abs(p.x-gateX)<.72&&p.z>back-.16&&p.z<front+slide+.19)d.target=1;
         const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
         const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;
       }
-      return deck.update(p,d.target===1,dt,lodgeShown)||changed;
+      return deck.update(p,d.target===1,dt,lodgeShown,beat)||changed;
     }
   };
 }

@@ -1,10 +1,10 @@
-import {ghoulTemplate} from './ghoul-model.js';
+import {createHuman} from './human-character.js';
 import {CHAPTER_PRISONER} from './chapter-layout.js';
 
 // A scenic actor, not part of the hostile Ghoul system. Its authored route
 // is always behind the bars, with no navmesh or target/attack behaviour.
 export function makeChapterPrisoner(T,room,F){
-  const rig=ghoulTemplate(T,'prison').instantiate(),{actor}=rig;
+  const rig=createHuman(T,'hubert'),{actor}=rig;
   actor.name='Hubert · Kammer 07';
   rig.shadow(false);room.add(actor);
   const g=new T.PlaneGeometry(1,1);g.rotateX(-Math.PI/2);
@@ -32,7 +32,9 @@ export function makeChapterPrisoner(T,room,F){
     const mouth=speech>0?(.39*pulse(.59,1.5)+.45*pulse(2.03,3.14))*(.54+.46*Math.abs(Math.sin(ago*10)))+.70*pulse(3.32,5.02):0;
     actor.position.set(x,F+.018,z);actor.rotation.y=yaw;
     shadow.position.set(x,F+.006,z+.031);
-    rig.pose(breath,step,motion,0,0,0,.46,mouth);
+    const look=visitor?Math.atan2(Math.sin(Math.atan2(visitor.x-x,visitor.z-z)-yaw),Math.cos(Math.atan2(visitor.x-x,visitor.z-z)-yaw)):0;
+    rig.pose(breath,step,motion,0,0,0,.46,mouth*.89,Math.max(-.45,Math.min(.45,look))*.67,
+      speech>0&&mouth<.21?.18:0);
   }
   turn(0);
   return {turn,position:actor.position,speak(){speech=5.35;}};

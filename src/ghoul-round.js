@@ -1,4 +1,4 @@
-import {ghoulTemplate} from './ghoul-model.js';
+import {createHuman} from './human-character.js';
 import {randomSource} from './surface-detail.js';
 import {insidePerimeter} from './world-layout.js';
 
@@ -83,12 +83,12 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     vertexShader:'varying vec2 q;void main(){q=uv-.5;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader:'varying vec2 q;void main(){float v=1.-smoothstep(.02,.49,length(q));gl_FragColor=vec4(.025,.026,.024,v*.30);}'
   });
-  let template,pool=[],state='idle',clock=0,last=null,standing=GHOUL_COUNT,cooldown=0,health=100,pulseSerial=0;
+  let pool=[],state='idle',clock=0,last=null,standing=GHOUL_COUNT,cooldown=0,health=100,pulseSerial=0;
   const inside=(p)=>here(p.x,p.z)&&insidePerimeter(p.x,p.z);
   function allocate(){
-    template??=ghoulTemplate(T);
     for(let i=0;i<GHOUL_COUNT;i++){
-      const rig=template.instantiate(),shadow=new T.Mesh(groundGeometry,shadowMat);
+      const variant=['ghoulA','ghoulB','ghoulC','ghoulB','ghoulA'][i];
+      const rig=createHuman(T,variant),shadow=new T.Mesh(groundGeometry,shadowMat);
       shadow.name='Ghoul · Bodenkontakt';shadow.scale.set(1.04,1,1.03);shadow.renderOrder=1;
       rig.shadow(false);root.add(rig.actor,shadow);
       const sparks=new T.InstancedMesh(dust,new T.MeshBasicMaterial({color:0x9bad5b,transparent:true,

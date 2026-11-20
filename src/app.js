@@ -28,6 +28,7 @@ import {ORB,X as wcX,Z as wcZ,wcZoneAt} from './park-wc-layout.js';
 import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
 import {addChapter} from './chapter.js';
 import {CHAPTER_LAYER} from './chapter-layout.js';
+import {installHumans} from './human-character.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -47,8 +48,9 @@ async function start(){
  const decode=(name,url)=>need(name,()=>loader.loadAsync(url).then(g=>g.scene));
  const mapsP=Promise.all(Object.entries(payload.maps).map(async([name,layers])=>[name,Object.fromEntries(await Promise.all(Object.entries(layers).map(async([k,src])=>[k,await need(name+'_'+k+'.webp',()=>tl.loadAsync(src))])))]));
  const image=url=>url?tl.loadAsync(url).catch(()=>null):null;
- const [model,mapPairs,sculptures,poster,seal]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
-   decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal)]);
+ const [model,mapPairs,sculptures,poster,seal,humans]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
+   decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal),decode('human-cast.glb',payload.humans)]);
+ installHumans(T,humans);
  for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
  const exterior=palaceExterior(T,finish);
@@ -331,7 +333,7 @@ async function start(){
        if(round.tick(time,player.body.position))dirty=true;
      }
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
-     const state=hall.update(dt,player.body.position);
+     const state=hall.update(dt,player.body.position,audio.clubPhase());
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
      if(chapter.update(dt,player.body.position)){

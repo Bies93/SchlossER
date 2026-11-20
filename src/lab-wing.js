@@ -486,7 +486,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
       renderer.shadowMap.needsUpdate=needsShadow;
     }
   }
-  function update(p,opened,dt=0,lodgeShown=false){
+  function update(p,opened,dt=0,lodgeShown=false,beat=null){
     const seesHatch=lodgeShown&&!labLower(p.y)&&nearLodgeHatch(p);
     const id=seesHatch?'southStair':labCellAt(p.x,p.z,.015,p.y)||(opened&&p.x>=LAB_CUT.left-1.4&&p.x<LAB_CUT.left&&p.z>=LAB_CUT.back&&p.z<=LAB_CUT.front?'stairs':null);
     const active=!!id&&(labCameraMode(p)!=='surface'||opened&&id==='stairs'||seesHatch);
@@ -494,7 +494,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     if(!active){last='';phase=0;dim=1;return changed;}
     for(const door of doors)changed=door.update(dt,p)||changed;
     phase=(phase+dt)%7.2;
-    if(id==='hopClub'&&dt>0){rooms.get(id).userData.turn?.(dt);changed=true;}
+    if(id==='hopClub'&&dt>0){rooms.get(id).userData.turn?.(dt,p,beat);changed=true;}
     // One slow brownout on a nearby fixture; no strobe, particles or new lights.
     const strength=unstable.has(id)&&phase>5.55&&phase<6.16
       ?1-.16*Math.sin((phase-5.55)/.61*Math.PI)**2:1;

@@ -1,8 +1,12 @@
 import {build} from 'esbuild';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
 const dir=new URL('../dist/krone-nachtwache/',import.meta.url);await mkdir(dir,{recursive:true});
+const cast=(await readFile(new URL('../assets/human-cast.glb',import.meta.url))).toString('base64');
 const code=await build({stdin:{contents:`
 import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+import {installHumans} from './src/human-character.js';
 import {CHAPTER_BENCH,CHAPTER_BAY_PATH,CHAPTER_CUT,CHAPTER_LAYER,CHAPTER_DROP,CHAPTER_DEEP_DROP,CHAPTER_CELL} from './src/chapter-layout.js';
 import {gardenTerrain,pathNetwork} from './src/garden-ground.js';
 import {gardenMaterials} from './src/surface-detail.js';
@@ -12,6 +16,7 @@ import {addBackdrop} from './src/backdrop.js';
 import {collisionWorld} from './src/collision.js';
 import {BOUNDS,PLAYER,PARK_FLOOR} from './src/world-layout.js';
 try{
+installHumans(T,(await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(document.getElementById('cast').textContent)).scene);
 const s=new T.Scene(),w=collisionWorld(BOUNDS,PLAYER.radius),r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
 r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.03;r.setSize(540,400);
 const net=pathNetwork(T);
@@ -97,5 +102,5 @@ target.target=0;for(let j=0;j<50;j++)chapter.update(.03,start);
 if(chapter.floorAt(A-.20,-34,grade)!==null||Math.abs(bench.position.z-CHAPTER_BENCH[1])>.001)throw Error('Luke schließt nicht sauber');
 document.title='Nachtwache, Tiefgeschoss und Käfig geprüft';
 }catch(e){document.body.textContent=e.stack;document.title=e.message}
-`,resolveDir:process.cwd()},bundle:true,minify:true,write:false});
-await writeFile(new URL('preview.html',dir),'<!doctype html><meta charset=utf-8><style>*{margin:0}body{display:grid;grid-template-columns:repeat(3,540px);background:#101011;color:white}</style><body><script>'+code.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'</script>');
+`,resolveDir:process.cwd()},bundle:true,format:'esm',minify:true,write:false});
+await writeFile(new URL('preview.html',dir),'<!doctype html><meta charset=utf-8><style>*{margin:0}body{display:grid;grid-template-columns:repeat(3,540px);background:#101011;color:white}</style><script id="cast" type="application/octet-stream">data:application/octet-stream;base64,'+cast+'</script><body><script type="module">'+code.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'</script>');

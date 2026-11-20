@@ -4,6 +4,7 @@ import {randomSource} from './surface-detail.js';
 import {hopFinishes,nightMarquee} from './hopfenamt-finishes.js';
 import {schankCraft} from './hopfenamt-schank.js';
 import {danceLights,mirrorSilver} from './hopfenamt-licht.js';
+import {clubGuests} from './club-guests.js';
 
 const pi=Math.PI, coord=(x,y,z)=>[x,y,z],drop=F-LAB.floor,rand=randomSource;
 // Only the nearest four emitters occupy real light slots, shared with the rest of the cellar.
@@ -285,7 +286,11 @@ export function hopClub(T,kit){
     scatter.setMatrixAt(i,dummy.matrix);scatter.setColorAt(i,new T.Color(i%3?0xb8e8ff:0xffaac2));
   }
   const animate=danceLights(T,root,{bar,bx,cyl}),still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  root.add(scatter);root.userData.turn=dt=>{if(!still){globe.rotation.y+=dt*.28;scatter.rotation.y-=dt*.14;animate(dt);}};
+  const guests=clubGuests(T,root,hit,F,still);
+  root.add(scatter);root.userData.turn=(dt,visitor,beat)=>{
+    if(!still){globe.rotation.y+=dt*.28;scatter.rotation.y-=dt*.14;animate(dt);}
+    guests(dt,visitor,beat);
+  };
   bar('iron',16.60,3.44,-11,16.60,C-F,-11,.022);
   cyl('gunmetal',16.60,3.70,-11,.076,.19);
   for(const h of [2.615,3.425])tor('gray',16.60,h,-11,.158,0,pi/2);

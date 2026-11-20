@@ -1,12 +1,17 @@
 // Build a local, self-contained contact sheet from the normal cellar, lights and collision world.
 import {build} from 'esbuild';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
 const dir=new URL('../dist/hopfenamt-nacht/',import.meta.url);await mkdir(dir,{recursive:true});
+const cast=(await readFile(new URL('../assets/human-cast.glb',import.meta.url))).toString('base64');
 const app=await build({stdin:{resolveDir:process.cwd(),contents:`
 import * as T from 'three';import {addPalaceLab} from './src/palace-lab.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+import {installHumans} from './src/human-character.js';
 import {collisionWorld} from './src/collision.js';import {BOUNDS,PLAYER} from './src/world-layout.js';
 import {LAB,CLUB_FLOOR as F,labFloorAt,labCeilingAt,labCellAt,clubMix} from './src/lab-layout.js';
 (async()=>{
+installHumans(T,(await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(document.getElementById('cast').textContent)).scene);
 const w=collisionWorld(BOUNDS,PLAYER.radius),s=new T.Scene(),root=new T.Group();s.add(root);
 const lab=addPalaceLab(T,root,w,{oak:new T.MeshStandardMaterial()});
 const r=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});r.setSize(680,464);
@@ -24,6 +29,7 @@ for(const [i,a] of [...route,...route.slice(0,-1).reverse()].entries()){
   }window.last=a;
 }
 if(Math.abs(floor-LAB.floor)>.01||labFloorAt(21,-11,F)!==F||labFloorAt(21,-11,LAB.floor)!==LAB.floor)throw Error('Stockwerke nicht getrennt');
+if(s.getObjectByName('Hopfenamt · Fünf Stammgäste')?.children.length!==10)throw Error('Fünf Clubgäste erwartet');
 const camera=new T.PerspectiveCamera(67,680/464,.05,100);camera.layers.set(3);
 for(const [x,z,X,Z,h] of [[13.52,-7.20,10.93,-9.91,1.38],[20.34,-6.35,15.90,-14.29,1.91],[11.01,-8.82,11.62,-9.57,1.45],[20.27,-11.46,23.85,-10.81,1.81]]){
   const y=x>32?LAB.floor:F;lab.update(.03,{x,y,z});camera.position.set(x,y+1.64,z);camera.lookAt(X,y+h,Z);
@@ -32,4 +38,4 @@ for(const [x,z,X,Z,h] of [[13.52,-7.20,10.93,-9.91,1.38],[20.34,-6.35,15.90,-14.
 document.title='Treppenumkehr, beide Etagen und Tanzfläche geprüft';
 })().catch(e=>{document.body.textContent=e.stack;document.title='Fehler: '+e.message});
  `},bundle:true,write:false,minify:true});
-await writeFile(new URL('preview.html',dir),'<!doctype html><meta charset=utf-8><style>*{margin:0}body{display:grid;grid-template-columns:680px 680px;background:#14161b;color:white}</style><body><script>'+app.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'</script>');
+await writeFile(new URL('preview.html',dir),'<!doctype html><meta charset=utf-8><style>*{margin:0}body{display:grid;grid-template-columns:680px 680px;background:#14161b;color:white}</style><script id="cast" type="application/octet-stream">data:application/octet-stream;base64,'+cast+'</script><body><script>'+app.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'</script>');
