@@ -12,36 +12,49 @@ export function contactShadow(T,room,x,y,z,w=.80,d=.67){
 export function palaceButler(T,room,world){
   const npc=createHuman(T,'niklas'),{actor}=npc;
   actor.name='Niklas · Schlossbutler';room.add(actor);
-  const shadow=contactShadow(T,room,0,HALL.floor+.008,0),track=a=>[1.21+.65*Math.cos(a),8.11*Math.sin(a)];
-  let phase=.34,t=0,gait=.34,motion=0,look=0,heading=0,acc=0;
-  const [x,z]=track(phase);
-  const collision={x,z,ux:1,uz:0,half:.192,depth:.145};
+  const shadow=contactShadow(T,room,0,HALL.floor+.008,0),R=.58,L=7.44,X=1.31,
+    length=4*L+2*Math.PI*R,arc=Math.PI*R,point={},ahead={};
+  function track(s,out){
+    let d=((s%length)+length)%length;
+    out.curve=false;
+    if(d<2*L){out.x=X+R;out.z=d-L;out.yaw=0;}
+    else if((d-=2*L)<arc){
+      const a=d/R;out.x=X+R*Math.cos(a);out.z=L+R*Math.sin(a);out.yaw=-a;out.curve=true;
+    }else if((d-=arc)<2*L){out.x=X-R;out.z=L-d;out.yaw=-Math.PI;}
+    else{
+      const a=(d-2*L)/R;out.x=X-R*Math.cos(a);out.z=-L-R*Math.sin(a);out.yaw=-Math.PI-a;out.curve=true;
+    }
+    return out;
+  }
+  let distance=10.1,t=0,speed=1.10,look=0,acc=0,standing=0;
+  track(distance,point);
+  const collision={x:point.x,z:point.z,ux:1,uz:0,half:.192,depth:.145};
   const here=p=>p.y>-.33&&p.y<1.6&&Math.abs(p.x)<HALL.half&&p.z>=HALL.zMin&&p.z<=HALL.zMax;
-  world.movingBox(.27,-8.43,2.15,8.44,collision,here);
-  actor.position.set(x,HALL.floor+.011,z);shadow.position.x=x;shadow.position.z=z;
-  npc.pose(0,gait,0,0,0,0,2.34);
+  world.movingBox(.32,-8.44,2.27,8.44,collision,here);
+  const floor=npc.groundedY(HALL.floor);
+  actor.position.set(point.x,floor,point.z);shadow.position.x=point.x;shadow.position.z=point.z;
+  npc.walk(0,distance,track,HALL.floor,0,0);
   const angle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   return (dt,p)=>{
     if(!dt||p.y<-.85||Math.abs(p.x)>15||Math.abs(p.z)>22)return false;
     acc+=dt;if(acc<1/30)return false;
     const s=acc;acc=0;t+=s;
-    // Room-owned route and pause; the main lane remains clear even when stopped.
-    const next=phase+s*.071,q=track(next);
-    const near=here(p)&&Math.hypot(p.x-q[0],p.z-q[1])<.86;
-    const moved=near?0:Math.hypot(q[0]-collision.x,q[1]-collision.z);
-    if(!near){
-      if(moved>.0001)heading+=angle(heading,Math.atan2(q[0]-collision.x,q[1]-collision.z))*(1-Math.exp(-s*4));
-      phase=next;collision.x=q[0];collision.z=q[1];
-    }
-    gait=(gait+moved/.79)%1;
-    motion+=(Math.min(.73,moved/s/.87)-motion)*(1-Math.exp(-s*7));
+    track(distance+.57,ahead);
+    const gap=here(p)?Math.min(Math.hypot(p.x-ahead.x,p.z-ahead.z),Math.hypot(p.x-point.x,p.z-point.z)):2;
+    const clearance=Math.max(0,Math.min(1,(gap-.56)/.49));
+    const wanted=(point.curve||ahead.curve?.83:1.16)*clearance;
+    speed+=(wanted-speed)*(1-Math.exp(-s*(wanted<speed?10:5)));
+    distance+=speed*s;track(distance,point);
+    standing+=((1-Math.min(speed/.45,1))-standing)*(1-Math.exp(-s*6));
+    const heading=point.yaw;
+    collision.x=point.x;collision.z=point.z;
     const glance=here(p)&&Math.hypot(p.x-collision.x,p.z-collision.z)<2.8?
       Math.max(-.66,Math.min(.66,angle(heading,Math.atan2(p.x-collision.x,p.z-collision.z)))):0;
     look+=(glance-look)*(1-Math.exp(-s*4.6));
     collision.ux=Math.cos(heading);collision.uz=-Math.sin(heading);
-    actor.position.set(collision.x,HALL.floor+.011,collision.z);actor.rotation.y=heading;
+    actor.position.set(collision.x,floor,collision.z);actor.rotation.y=heading;
     shadow.position.x=collision.x;shadow.position.z=collision.z;shadow.rotation.y=heading;
-    npc.pose(t,gait,motion,0,0,0,2.34,0,look);
+    npc.walk(t,distance,track,HALL.floor,look,standing);
     return true;
   };
 }

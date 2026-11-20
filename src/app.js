@@ -279,6 +279,11 @@ async function start(){
      local.target=1-local.target;
    }
    const target=local??hall.commit(player,c);if(!target)return;
+   if(target.action==='lab-talk'){
+     const speech=hall.staffTalk(player,c);
+     if(speech)showCaption(speech.name+': „'+speech.line+'“',5400);
+     doorPrompt();refresh();return;
+   }
    if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});
    if(target.id==='gallery-hatch'||target.id==='chapter-bench')audio.hatch(target.target===1);
    if(target.id==='hubert-cell')audio.grate();

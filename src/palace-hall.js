@@ -202,6 +202,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   }
   function commit(player,camera){
     const d=targetFor(player,camera);if(!d)return false;
+    if(d.action)return d;
     if(!usable(d,player))return false;
     if(d.id!=='gallery-choir')d.target=1-d.target;
     return d;
@@ -237,5 +238,6 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
     return {changed,shadow};
   }
   function setPreset(id){preset=id;wings.setPreset(id);hallShade.emissiveIntensity=id==='night'?.86:.58}
-  return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible,lodgeOpen:wings.hatch.open};
+  return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible,lodgeOpen:wings.hatch.open,
+    staffTalk(player,camera){return lab.staffTalk(player.body.position,camera.getWorldDirection(look));}};
 }

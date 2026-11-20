@@ -5,7 +5,7 @@ import {clone} from 'three/addons/utils/SkeletonUtils.js';
 const libraries=new WeakMap();
 export function installHumans(T,asset){
   const models=new Map(asset.children.map(o=>[o.userData.name??o.name,o]));
-  for(const id of ['base','hubert','ghoulA','ghoulB','ghoulC','clubAda','clubMira','clubNiko','clubSami','clubVeit','orbPriest','niklas'])
+  for(const id of ['base','hubert','ghoulA','ghoulB','ghoulC','clubAda','clubMira','clubNiko','clubSami','clubVeit','orbPriest','niklas','labAuer','labHedwig','labSepp'])
     if(!models.has(id))throw Error('Human template missing: '+id);
   libraries.set(T,{models,materials:new Map()});
 }
@@ -23,13 +23,16 @@ const wear={
   clubSami:{skin:0xffe6d3,cloth:0xe1b199},
   clubVeit:{cloth:0xe2c697,hair:0xb1a398},
   orbPriest:{skin:0xc3b6a1,hair:0xb8adb0,weather:.59},
-  niklas:{skin:0xf0e8df,hair:0x55433b}
+  niklas:{skin:0xf7ece3},
+  labAuer:{weather:.12},labHedwig:{weather:.08},labSepp:{weather:.27}
 };
 function personalize(T,lib,id,base,eyeY){
   const key=id+':'+base.uuid;if(lib.materials.has(key))return lib.materials.get(key);
   const m=base.clone(),p=wear[id]??{},skin=/^Skin/.test(m.name),hair=/^Hair/.test(m.name),brow=/^Brow/.test(m.name),cloth=/^Cloth/.test(m.name),
     field=id==='hubert'&&/^(?:Cloth|Shoes|Pocket|Field|LinenBand|Helmet)/.test(m.name),
-    formal=cloth&&(id==='niklas'||id==='orbPriest'),ritual=/^Ritual/.test(m.name);
+    formal=cloth&&(id==='niklas'||id==='orbPriest'),staff=cloth&&id.startsWith('lab'),
+    copperHair=id==='niklas'&&(hair||brow),freckles=id==='niklas'&&skin,
+    ritual=/^(?:Ritual|LabCoat|Apron)/.test(m.name);
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
   if(p.cloth&&cloth)m.color.multiply(new T.Color(p.cloth));
   if(p.hair&&(hair||brow))m.color.multiply(new T.Color(p.hair));
@@ -38,10 +41,10 @@ function personalize(T,lib,id,base,eyeY){
     m.alphaTest=m.map?.isTexture?(brow?.36:.43):0;m.transparent=false;m.depthWrite=true;m.side=T.DoubleSide;
     if(!m.map)m.color.setHex(0x3c2c27);
   }
-  if(/Helm|Cap|RitualCloth/.test(m.name))m.side=T.DoubleSide;
-  if(skin||cloth||field||ritual){
-    m.customProgramCacheKey=()=> 'schlosser-humans-3-'+(skin?'skin':'cloth')+
-      (field||formal||ritual?'-'+id+m.name:(skin&&p.decay)?'-'+id:'-'+(p.weather??0));
+  if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
+  if(skin||cloth||field||ritual||copperHair){
+    m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
+      (field||formal||ritual||staff||copperHair?'-'+id+m.name:(skin&&p.decay)||freckles?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -57,14 +60,33 @@ function personalize(T,lib,id,base,eyeY){
         float castDirt=smoothstep(.38,.75,castNoise(castP*vec3(21.,17.,24.))*.63+castNoise(castP*vec3(72.,52.,89.))*.37)*${(p.weather??0).toFixed(3)};
         ${cloth&&id==='hubert'?`
           float l=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
-          float tunic=smoothstep(.94,1.04,castP.y);
-          diffuseColor.rgb=mix(vec3(.085,.089,.075),vec3(.154,.171,.125),tunic)*(.56+l*1.56);
+          float tunic=smoothstep(.83,1.04,castP.y);
+          diffuseColor.rgb=mix(vec3(.050,.057,.051),vec3(.113,.139,.100),tunic)*(.54+l*1.23);
         `:''}
         ${formal?`
           float shade=dot(diffuseColor.rgb,vec3(.213,.715,.072));
           float bib=smoothstep(.39,.73,shade)*(1.-smoothstep(.020,.123,abs(castP.x)))*smoothstep(1.26,1.39,castP.y)*step(.08,castP.z);
-          diffuseColor.rgb=mix(vec3(${id==='niklas'?'.024,.029,.036':'.093,.039,.054'})*(.55+2.6*shade),
-                            vec3(${id==='niklas'?'.58,.55,.45':'.33,.22,.19'})*(.65+shade*.25),bib);
+          diffuseColor.rgb=mix(vec3(${id==='niklas'?'.122,.142,.160':'.019,.016,.022'})*(.57+1.80*shade),
+                            vec3(${id==='niklas'?'.64,.61,.53':'.041,.034,.045'})*(.65+shade*.25),bib);
+        `:''}
+        ${staff?`
+          float labShade=dot(diffuseColor.rgb,vec3(.213,.715,.072));
+          float labTop=smoothstep(.86,1.04,castP.y);
+          diffuseColor.rgb=mix(vec3(${id==='labHedwig'?'.077,.059,.056':'.053,.070,.072'}),
+            vec3(${id==='labAuer'?'.58,.61,.56':id==='labHedwig'?'.18,.091,.094':'.33,.37,.29'}),labTop)*(.55+labShade*.96);
+        `:''}
+        ${copperHair?`
+          float gingerShade=smoothstep(.0,.42,pow(dot(diffuseColor.rgb,vec3(.213,.715,.072)),.55));
+          diffuseColor.rgb=mix(vec3(.058,.011,.005),vec3(.37,.121,.039),gingerShade);
+        `:''}
+        ${freckles?`
+          vec2 fP=(castP.xy-vec2(0.,${eyeY.toFixed(4)}))*512.;
+          vec2 fI=floor(fP);
+          vec2 fV=fract(fP)-vec2(.3+.4*castHash(vec3(fI,.1)),.3+.4*castHash(vec3(fI,3.)));
+          vec2 cheek=vec2((abs(castP.x)-.028)*17.,(castP.y-${eyeY.toFixed(4)}+.022)*51.);
+          float spread=exp(-dot(cheek,cheek));
+          float dots=(1.-smoothstep(.10,.27,length(fV)))*step(.64,castHash(vec3(fI,6.)));
+          diffuseColor.rgb*=1.-dots*spread*smoothstep(.075,.121,castP.z)*(.32-.16*smoothstep(.001,.003,castD));
         `:''}
         ${field||ritual?`
           float fray=castNoise(castP*vec3(558.,835.,644.));
@@ -109,7 +131,7 @@ export function createHuman(T,id='base'){
   const proto=lib.models.get(id);if(!proto)throw Error('Unknown human: '+id);
   const actor=new T.Group(),body=clone(proto),bones=new Map(),faces=[],meshes=[];
   actor.name=id;actor.add(body);body.scale.multiplyScalar(proto.userData.size??1);
-  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion(),E=new T.Euler('YXZ');
+  const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
   body.traverse(o=>{
     if(o.isBone)bones.set(o.userData.name??o.name,o);
     if(o.isSkinnedMesh){
@@ -119,8 +141,9 @@ export function createHuman(T,id='base'){
     }
   });
   actor.updateMatrixWorld(true);
-  const rest=new Map(),bodyInv=body.matrixWorld.clone().invert();
-  for(const [n,b] of bones)rest.set(n,{q:b.quaternion.clone(),p:b.position.clone(),at:b.getWorldPosition(V()).applyMatrix4(bodyInv)});
+  const rest=new Map(),bodyInv=body.matrixWorld.clone().invert(),bodyRestQ=body.getWorldQuaternion(Q()).invert();
+  for(const [n,b] of bones)rest.set(n,{q:b.quaternion.clone(),p:b.position.clone(),
+    axis:b.getWorldQuaternion(Q()).premultiply(bodyRestQ),at:b.getWorldPosition(V()).applyMatrix4(bodyInv)});
   for(const m of meshes)m.material=personalize(T,lib,id,m.material,rest.get('eye_l')?.at.y??1.67);
   const e=new T.Euler(0,0,0,'YXZ'),q=Q(),inv=Q(),pq=Q(),worldInverse=new T.Matrix4(),A=V(),D=V(),P=V(),J=V(),goal=V(),
     start=V(),dir=V(),elbow=V(),end=V();
@@ -155,10 +178,10 @@ export function createHuman(T,id='base'){
     end.copy(start).addScaledVector(dir,l).applyMatrix4(body.matrixWorld);
     aim(na,nb,elbow);aim(nb,nc,end);
   }
-  function foot(name,x){
+  function foot(name,x,y=0){
     const b=bones.get(name);b.parent.updateWorldMatrix(true,false);
     b.parent.getWorldQuaternion(inv).invert();body.getWorldQuaternion(pq);
-    b.quaternion.copy(inv).multiply(pq).multiply(q.setFromAxisAngle(A.set(1,0,0),x));
+    b.quaternion.copy(inv).multiply(pq).multiply(q.setFromEuler(e.set(x,y,0)));
   }
   const isGhoul=id.startsWith('ghoul'),hubert=id==='hubert';
   function face(t,seed,speech=0,purse=0,smile=0,glance=0){
@@ -180,6 +203,74 @@ export function createHuman(T,id='base'){
     rot('spine_02',bend*.28,twist*.22,-tilt*.24);rot('spine_03',bend*.20,twist*.22,-tilt*.18);
     rot('neck_01',-bend*.29,lookX*.44);rot('head',-bend*.45+lookY,lookX*.56,sin(t*.96)*.026);
     body.updateWorldMatrix(true,false);worldInverse.copy(body.matrixWorld).invert();
+  }
+  const size=proto.userData.size??1,groundedY=y=>y+.003-(proto.userData.soleY??0)*size;
+  const anchorA={},anchorB={},ankleGoal=V();
+  function walk(t,distance,route,floorY,look,stopBlend){
+    // Ground anchors are sampled on the actual route, including the curves.
+    const L=1.04,motion=1-stopBlend,phase=distance/L,w=phase*tau;
+    const drop=.028+.013*cos(2*w)*motion;
+    torso(sin(w)*.023*motion,-drop,0,.018+.023*motion,sin(w)*.115*motion,
+      -.038*sin(w)*motion,t,look,0);
+    for(const [j,s] of ['l','r'].entries()){
+      const sign=j===0?1:-1,ankle=read('foot_'+s),f=frac(phase+j*.5),
+        a=(Math.floor(phase+j*.5)+.29-j*.5)*L,u=clamp((f-.59)/.41),
+        blend=u*u*(3-2*u),strideWidth=.097*sign;
+      route(a,anchorA);route(a+L,anchorB);
+      const xx=mix(anchorA.x+cos(anchorA.yaw)*strideWidth,anchorB.x+cos(anchorB.yaw)*strideWidth,blend);
+      const zz=mix(anchorA.z-sin(anchorA.yaw)*strideWidth,anchorB.z-sin(anchorB.yaw)*strideWidth,blend);
+      const yawDelta=Math.atan2(sin(anchorB.yaw-anchorA.yaw),cos(anchorB.yaw-anchorA.yaw));
+      const lift=sin(Math.PI*u)**1.35*.079*motion;
+      ankleGoal.set(xx,groundedY(floorY)+ankle.y*size+lift,zz).applyMatrix4(worldInverse);
+      solve(LIMB[s].leg,mix(ankle.x*.86,ankleGoal.x,motion),ankleGoal.y,mix(ankle.z,ankleGoal.z,motion),sign*.15,0,1);
+      const footYaw=anchorA.yaw+yawDelta*blend-actor.rotation.y;
+      foot('foot_'+s,-sin(tau*u)*.133*motion,Math.atan2(sin(footYaw),cos(footYaw))*motion);
+      solve(LIMB[s].arm,sign*(.208+.018*motion),hipsY-.160+motion*.036*Math.abs(sin(w)),.024-.113*sign*sin(w)*motion,sign*.65,-.45,-.72);
+      curl(s,.36);
+    }
+    face(t,2.34,0,0,.05,look);
+  }
+  function grip(side){
+    const n='hand_'+side,w=bones.get(n),joint=f=>read(f+'_01_'+side);
+    const fore=joint('middle').clone().sub(read(n)).normalize();
+    const z=joint('index').clone().sub(joint('pinky')).normalize();
+    const y=fore.clone().negate().addScaledVector(z,fore.dot(z)).normalize();
+    const x=V().crossVectors(y,z),palm=x.clone().negate();
+    if(palm.dot(joint('thumb').clone().sub(joint('middle')))<0)palm.negate();
+    const socket=new T.Group(),restHand=rest.get(n).axis.clone().invert();
+    socket.position.copy(joint('index')).lerp(joint('pinky'),.54).sub(read(n))
+      .addScaledVector(fore,.012).addScaledVector(palm,.010).applyQuaternion(restHand);
+    socket.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,z)).premultiply(restHand);
+    w.add(socket);
+    const curls=[];
+    for(const f of [...fingers,'thumb'])for(let i=1;i<=3;i++){
+      const name=f+'_0'+i+'_'+side,next=f+'_0'+(i+1)+'_'+side,b=bones.get(name);
+      if(!b)continue;
+      const direction=rest.has(next)?read(next).clone().sub(read(name)):read(name).clone().sub(read(f+'_0'+(i-1)+'_'+side));
+      const bq=rest.get(name).axis.clone().invert();
+      const axis=V().crossVectors(direction,palm).applyQuaternion(bq).normalize();
+      curls.push({b,name,axis,angle:f==='thumb'?[.33,.48,.30][i-1]:[.77,1.09,.68][i-1]});
+    }
+    const socketInv=socket.quaternion.clone().invert(),parentQ=Q(),curlQ=Q();
+    return {socket,hold(desired){
+      w.parent.getWorldQuaternion(parentQ).invert();
+      w.quaternion.copy(parentQ).multiply(desired).multiply(socketInv);
+      for(const {b,name,axis,angle} of curls)b.quaternion.copy(rest.get(name).q).multiply(curlQ.setFromAxisAngle(axis,angle));
+    }};
+  }
+  function deskWork(t,job,glance=0,speech=0){
+    const f=sin(t*(job==='cook'?2.3:1.55)),b=cos(t*1.65),notice=Math.min(1,speech*2);
+    torso(.014*sin(t*.91),-.040,.017,.12-.065*notice,.04*f,.020*b,t,glance,.14-.23*notice);
+    for(const [j,s] of ['l','r'].entries()){
+      const sign=j===0?1:-1,ankle=read('foot_'+s);
+      solve(LIMB[s].leg,ankle.x*.90,ankle.y,ankle.z+sign*.045,.12*sign,0,1);
+      foot('foot_'+s,0);
+      const cook=job==='cook',note=job==='registry',reach=j===0?.38:cook?.54:note?.50:.465;
+      solve(LIMB[s].arm,sign*(.166+.034*f*(j?1:.22)),j===0?1.015:1.023+.019*f,
+        reach+(j?.037*b:0),sign*.79,-.48,-.69);
+      rot('hand_'+s,.23+.10*f,sign*.14,.24*sign);curl(s,j===0?.64:1.03);
+    }
+    face(t,job.length,speech,.08,0,glance);
   }
   function pose(t,phase,motion,attack,hit,fall,seed,speech=0,look=0,purse=0){
     body.rotation.set(fall*1.41,0,fall*(isGhoul?.67:0));body.position.y=fall*.16;
@@ -235,8 +326,8 @@ export function createHuman(T,id='base'){
       const side=j===0?1:-1,ankle=read('foot_'+s);
       solve(LIMB[s].leg,ankle.x*.92,ankle.y,ankle.z+side*.056,.12*side,0,1);
       foot('foot_'+s,0);
-      solve(LIMB[s].arm,j===0?.085+.028*shift:-.174, j===0?1.128:1.18+.117*stroke*work,
-        j===0?.515:.42+.058*shift,.80*side,-.45,-.65);
+      solve(LIMB[s].arm,j===0?.10+.028*shift:-.153, j===0?1.140:1.268+.040*stroke*work,
+        j===0?.560:.429+.050*shift,.80*side,-.45,-.65);
       rot('hand_'+s,j===0?.13:-.16+.25*stroke*work,-.14*side,.12*side);
       curl(s,j===0?.25:.77);
     }
@@ -261,5 +352,5 @@ export function createHuman(T,id='base'){
     return shapes;
   }
   pose(0,0,0,0,0,0,.2);
-  return {actor,pose,dance,altarWork,joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
+  return {actor,pose,dance,altarWork,deskWork,grip,walk,groundedY,joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
 }

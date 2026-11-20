@@ -12,6 +12,7 @@ import {LODGE_ROOMS,LODGE_LIGHTS,lodgeDressing,lodgeStair} from './lab-lodge.js'
 import {lodgeArt} from './lab-lodge-art.js';
 import {CLUB_FLOOR,CLUB_CEILING,clubLevel} from './lab-layout.js';
 import {hopStair,hopClub,CLUB_LIGHTS} from './lab-hop-club.js';
+import {labStaff} from './lab-staff.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y)&&!clubLevel(p.y);
 const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS,...LODGE_ROOMS,hopClub:{name:'Hopfenamt · Nachtbetrieb',palette:['hopBrick','darkWood'],tiles:['hopPaver','fineStone'],tile:.78}};
@@ -436,12 +437,14 @@ const unstable=new Set(['return','plant','lock','ward','cells']);
 
 export function makeLabDeck(T,parent,world,materials,buildChamber){
   const deck=new T.Group(),rooms=new Map(),doors=[];deck.name='Projekt Bayern · Zellendeck';deck.visible=false;parent.add(deck);
+  const staff=labStaff(T,world);
   const lights=Array.from({length:4},()=>{const l=new T.PointLight(0xffffff,0,0,2);l.layers.set(LAB_LAYER);deck.add(l);return l});
   const hemi=new T.HemisphereLight(0xa4b0a7,0x444038,.86);hemi.layers.set(LAB_LAYER);deck.add(hemi);
   let last='',pathX=Infinity,pathZ=Infinity,preparation,phase=0,dim=1,affected=-1,normalPower=0;
   function build(id,graphics,rites,lodge){
     const node=new T.Group();node.name='Projekt Bayern · '+cellNames[id];deck.add(node);
     if(id==='chambers')buildChamber(node,graphics);else fitOut(T,node,world,id,materials,graphics,doors,rites,lodge);
+    staff.register(id,node);
     node.traverse(o=>{o.layers.set(LAB_LAYER);if(o.isMesh)o.castShadow=false});
     rooms.set(id,node);
   }
@@ -493,6 +496,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     let changed=deck.visible!==active;deck.visible=active;
     if(!active){last='';phase=0;dim=1;return changed;}
     for(const door of doors)changed=door.update(dt,p)||changed;
+    changed=staff.update(id,p,dt)||changed;
     phase=(phase+dt)%7.2;
     if(id==='hopClub'&&dt>0){rooms.get(id).userData.turn?.(dt,p,beat);changed=true;}
     // One slow brownout on a nearby fixture; no strobe, particles or new lights.
@@ -527,7 +531,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     }
     return changed;
   };
-  return {update,target:(p,look)=>cellDoorTarget(doors,p,look),visible:()=>deck.visible,prepare(renderer,scene,shaft){
+  return {update,target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,visible:()=>deck.visible,prepare(renderer,scene,shaft){
     return preparation??=prewarm(renderer,scene,shaft);
   }};
 }

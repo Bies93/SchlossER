@@ -174,7 +174,7 @@ export function addPalaceLab(T,root,world,M,moosfunk){
       const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
-    usable,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
+    usable,staffTalk:deck.talk,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
     update(dt,p,lodgeShown=false,beat=null){
       let changed=false;
       if(d.progress!==d.target){
