@@ -1,4 +1,5 @@
 import {randomSource, repeatSet} from './surface-detail.js';
+import {UPPER_ENTRY} from './palace-openings.js';
 
 const TAU=Math.PI*2,CELL=32;
 function put(bins,x,z,record,size=CELL){
@@ -226,6 +227,38 @@ function undergrowth(T){
   return geometry(T,dst);
 }
 
+function buildUpperKnot(T,group,record,trunk,wood){
+  const {x,y,z,sx,sy,sz,yaw,tint}=record;
+  const outward=new T.Vector3(-x,0,-47-z).normalize();
+  const mat=wood.clone();mat.vertexColors=false;mat.color.copy(tint);mat.side=T.DoubleSide;
+  const sample=new T.Mesh(trunk,mat);
+  sample.position.set(x,y,z);sample.scale.set(sx,sy,sz);sample.rotation.y=yaw;sample.updateMatrixWorld(true);
+  const origin=new T.Vector3(x,y+1.35,z).addScaledVector(outward,2.1);
+  const hit=new T.Raycaster(origin,outward.clone().negate(),0,2.1).intersectObject(sample,false)[0];
+  const center=hit?.point??origin.addScaledVector(outward,-2.1+.45*Math.max(sx,sz));
+  const node=new T.Group();node.name='Linde · unauffälliger Astansatz';
+  node.userData.noSceneQuery=true;node.position.copy(center).addScaledVector(outward,-.015);
+  node.rotation.y=Math.atan2(outward.x,outward.z);group.add(node);
+  const r=new T.SphereGeometry(1,18,12),uv=r.attributes.uv,pos=r.attributes.position;
+  for(let j=0;j<pos.count;j++){
+    const a=pos.getX(j),b=pos.getY(j),c=pos.getZ(j);
+    pos.setXYZ(j,.087*a+.018*b,.120*b,.060*c*(1+.10*a-.12*b));
+    uv.setXY(j,.33+a*.033,.68+b*.075);
+  }
+  pos.needsUpdate=true;uv.needsUpdate=true;r.computeVertexNormals();
+  const woodKnot=new T.Mesh(r,mat);woodKnot.receiveShadow=true;node.add(woodKnot);
+  const seam=mat.clone();seam.color.multiplyScalar(.61);
+  for(let k=0;k<2;k++){
+    const points=Array.from({length:15},(_,j)=>{
+      const a=1.05+k*.54+j*.26;
+      return new T.Vector3(Math.cos(a)*(.031+k*.018)+.012,Math.sin(a)*(.061+k*.018),.055-k*.012+.002*Math.sin(a*2));
+    });
+    const ridge=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points),14,.0025+k*.0007,4,false),k?mat:seam);
+    ridge.receiveShadow=true;node.add(ridge);
+  }
+  return {center:center.clone().addScaledVector(outward,.043),outward};
+}
+
 export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[]){
   const heroes=['sweep','spire','fork','bank','court'];
   const shapes=[...Array.from({length:6},(_,i)=>treeVariant(T,i)),
@@ -239,11 +272,14 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
   const sway={value:0};
   for(const m of [leaf,nearLeaf,midLeaf])airyLeaf(T,m,sway);
   const treeBins=new Map(),grassBins=new Map(),herbBins=new Map(),parts=[],roots=[];
+  let upperKnot=null;
   for(const {x,z,h,species,hero,backdrop=false} of treeSites){
     const i=hero?6+heroes.indexOf(hero):(species==='oak'?0:3)+Math.floor(rng()*3),s=h/(species==='oak'?14.1:16.8);
     const sx=s*(.84+rng()*.28),sz=s*(.86+rng()*.26);
     const tint=new T.Color().setRGB(.82+rng()*.20,.85+rng()*.17,.73+rng()*.27);
-    put(treeBins,x,z,{x,y:backdrop?-.24:height(x,z),z,sx,sy:s,sz,yaw:hero?Math.PI*.17:rng()*TAU,tint,i,backdrop});
+    const record={x,y:backdrop?-.24:height(x,z),z,sx,sy:s,sz,yaw:hero?Math.PI*.17:rng()*TAU,tint,i,backdrop};
+    put(treeBins,x,z,record);
+    if(!backdrop&&x===UPPER_ENTRY.treeX&&z===UPPER_ENTRY.treeZ)upperKnot=buildUpperKnot(T,group,record,shapes[i][0],wood);
     if(!backdrop){
       const r=(species==='oak'?.73:.57)*Math.max(sx,sz)*(hero?1.16:1);
       world.circle(x,z,r);roots.push({x,z,r:r+.34});
@@ -309,7 +345,7 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
     batch(T,group,bin.records,herbMesh,grass,'Saum · vereinzelte Kräuter')
   ]});
   let lastX=Infinity,lastZ=Infinity;
-  return (position,time)=>{
+  const update=(position,time)=>{
     sway.value=time*.001;
     if(Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
     lastX=position.x;lastZ=position.z;
@@ -318,4 +354,6 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
       for(const m of p.meshes)m.visible=visible;
     }
   };
+  update.upperKnot=upperKnot;
+  return update;
 }

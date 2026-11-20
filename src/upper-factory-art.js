@@ -11,6 +11,64 @@ export const FACTORY_ROOMS=[
   {title:'Munitionslinie und Abnahme',sub:'04 / SERIE',theme:0xe9bd83,poster:'FREIGABE VOR FEIERABEND',lines:['BLAUE LEERKÖRPER · ROTE SPERRKISTEN','AUSSCHUSS NICHT ZUM KANTINENDIENST.','LOS K–12 / GESPERRT SEIT DIENSTAG.']}
 ];
 
+export function factoryDetailPrints(T){
+  const c=document.createElement('canvas');c.width=c.height=2048;
+  const g=c.getContext('2d'),rng=randomSource(117784);
+  const titles=['ABNAHME 08','SCHWARM 07','DRUIDE 06','WELLE NULL','AUFNAHME 01','LEHRSTUFE 02','PRÜFUNG 03','LOS K–12'];
+  const notices=[
+    ['LANDEBUCH','08–B · GESPERRT','Für die Freigabe fehlt die Freigabe.','Platzwart: B–12'],
+    ['STATIKPLATZ','BAUGRUPPE 07','Vier geprüft. Drei zurückgekommen.','Nur Leergehäuse'],
+    ['KALIBRIERUNG','DRUIDE / WACHE','Der Druide hat eine Gegenfrage.','Notiz: Keine zweite Gegenfrage.'],
+    ['VERSUCH M–04','WELLE NULL','Die Anzeige bestätigt nur sich selbst.','Blindprobe: ohne Befund'],
+    ['AUSGABE','TEXTILIEN / NAMEN','Der Altname verbleibt in der Tasche.','Rückgabe ohne Quittung.'],
+    ['TAFELDIENST','WIEDERHOLUNG 04','Wer nicht mitkommt, beginnt vorn.','Die Tafel ist neutral.'],
+    ['AUSWERTUNG','STELLPROBE 03','Objekt 04 hat „Nein“ angekreuzt.','Fehlerkategorie: Eigenmeinung'],
+    ['AUSSCHUSS','K–12 / LEERKÖRPER','Rot gesperrt. Blau ebenfalls gesperrt.','Der Stempel ist freigegeben.']
+  ];
+  for(let i=0;i<16;i++){
+    const screen=i<8,n=i%8;
+    g.save();g.translate(i%4*512,Math.floor(i/4)*512);
+    const c1=screen?'#102326':'#c9b998',c2=screen?(n===3?'#a7d3e1':'#b9d7a8'):'#5a4637';
+    g.fillStyle=c1;g.fillRect(0,0,512,512);g.strokeStyle=c2;g.lineWidth=3;g.strokeRect(19,19,474,474);
+    const text=(s,x,y,size,font='monospace')=>{g.fillStyle=c2;g.font='bold '+size+'px '+font;g.fillText(s,x,y,442);};
+    if(screen){
+      text(titles[n],35,84,47);text(n===3?'KANAL / NULLREFERENZ':'STATUS  //  NUR LESEN',37,133,25);
+      g.strokeStyle='#446963';g.lineWidth=1.5;
+      for(let x=40;x<477;x+=35){g.beginPath();g.moveTo(x,181);g.lineTo(x,361);g.stroke();}
+      for(let y=181;y<=362;y+=30){g.beginPath();g.moveTo(40,y);g.lineTo(476,y);g.stroke();}
+      g.strokeStyle=c2;g.lineWidth=4;g.beginPath();
+      for(let x=40;x<477;x+=3){
+        const u=(x-40)/435,k=n===3?Math.sin(u*46)*Math.sin(u*6)*.65:(Math.sin(u*50+n)+Math.sin(u*18+n)*1.2)*.43;
+        const y=270+62*k+(rng()-.5)*11;
+        x===40?g.moveTo(x,y):g.lineTo(x,y);
+      }
+      g.stroke();text('ARCHIV  /  '+String(n+1).padStart(2,'0'),38,434,28);
+      g.fillStyle='#b28d58';g.fillRect(390,405,64,14);
+      for(let y=21;y<490;y+=6){g.fillStyle='rgba(5,8,8,.18)';g.fillRect(20,y,471,2);}
+    }else{
+      const [head,sub,body,last]=notices[n];
+      text(head,34,83,42,'Georgia');text(sub,36,122,22);
+      g.strokeStyle=c2;g.beginPath();g.moveTo(36,144);g.lineTo(477,144);g.stroke();
+      const marks=['08','↺','II','0','01','§','×','K'];
+      g.lineWidth=3;g.strokeRect(65,175,380,160);
+      g.beginPath();g.arc(256,255,64,0,Math.PI*2);g.stroke();
+      text(marks[n],marks[n].length>1?216:228,282,73,'Georgia');
+      for(const y of [229,251,274])for(const x of [106,355])g.fillRect(x,y,50,2);
+      text(body,35,391,19);text(last,35,432,18);
+      for(let j=0;j<3500;j++){
+        g.fillStyle=j%2?'rgba(60,41,26,.16)':'rgba(255,232,172,.20)';
+        g.fillRect(rng()*512,rng()*512,2+rng()*4,1+rng()*2);
+      }
+    }
+    g.restore();
+  }
+  const map=new T.CanvasTexture(c);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;
+  return {
+    monitor:new T.MeshStandardMaterial({map,emissiveMap:map,emissive:0xc2dbce,emissiveIntensity:.66,roughness:.57}),
+    notes:new T.MeshStandardMaterial({map,roughness:.94})
+  };
+}
+
 export function factoryPrints(T){
   const c=document.createElement('canvas');c.width=c.height=2048;
   const g=c.getContext('2d'),rng=randomSource(199331),pi=Math.PI;

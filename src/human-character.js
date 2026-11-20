@@ -312,6 +312,24 @@ export function createHuman(T,id='base'){
     }
     face(t,job.length,speech,.08,0,glance);
   }
+  function factoryPose(t,role,glance=0,speech=0){
+    if(role==='repair'){deskWork(t,'registry',glance,speech);return;}
+    const tutor=role==='trainer',waiting=role==='cadet',interval=(t+2.7)%13;
+    const cue=tutor?Math.sin(Math.PI*clamp((interval-3.8)/2.4))**2:0;
+    torso(.008*sin(t*.6),-.014,0,.012+.018*cue,.032*sin(t*.49),.021*sin(t*.68),t,
+      glance+.075*sin(t*.55),waiting?.036:-.014);
+    for(const [i,s] of ['l','r'].entries()){
+      const side=i===0?1:-1,ankle=read('foot_'+s),explain=i===1?cue:0;
+      solve(LIMB[s].leg,ankle.x*.92,ankle.y,ankle.z+side*(waiting?.026:.046),side*.115,0,1);
+      foot('foot_'+s,0,side*.056);
+      const crease=.008*sin(t*1.2+i);
+      solve(LIMB[s].arm,side*(.193+explain*.097),hipsY-.158+crease+explain*.475,.063+explain*.177,
+        side*.68,-.46,-.72);
+      rot('hand_'+s,.02-explain*.30,side*.10,.083*side);
+      curl(s,.39-.20*explain);
+    }
+    face(t,role.length+.18,speech,.025,.015,glance);
+  }
   function visitorPose(t,job,seat=0,glance=0,talk=0){
     // The ankle remains on the floor; only the hips lower to the contact
     // plane of the actual seat. All targets are applied to the same rig.
@@ -473,7 +491,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,visitorPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,visitorPose,factoryPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
     joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
   if(npcInfo)npcInfo.rig=rig;
   return rig;

@@ -116,7 +116,7 @@ async function start(){
    hits.length=0;
    return y;
  };
- upper=addPalaceUpper(T,s,model,upperWorld,stonework,(x,z)=>floorHeight(x,z));
+ upper=addPalaceUpper(T,s,model,upperWorld,stonework,(x,z)=>floorHeight(x,z),garden.upperKnot);
  const lighting=makeLighting(T,r,s,world,floorHeight);
  lighting.registerWindows(perimeter.windows);
  const audio=makeAudio(()=>{
@@ -246,7 +246,7 @@ async function start(){
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
-   const access=upper.target(pos,look);
+   const access=upper.target(pos,look,c.position);
    if(access||upper.inside(pos)||player.motion.climbing)return access??null;
    const target=pickups.target(c,activeLayers().mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
