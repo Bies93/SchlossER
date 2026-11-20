@@ -37,8 +37,19 @@ body[data-state=paused] #leave,body[data-state=paused] .paused-copy{display:bloc
 body[data-state=paused] .ready-copy{display:none}
 body[data-state=playing][data-input=drag] #drag-hint{display:block}
 body[data-state=playing][data-input=touch] #stick{display:grid;place-items:center}
-#jump{display:none;position:absolute;right:max(18px,env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));min-height:52px;border-radius:50%;background:#19201de8;touch-action:none;z-index:3}
-body[data-state=playing][data-input=touch] #jump{display:block}
+#touch-controls{display:none;position:absolute;z-index:3;right:max(12px,env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));
+  grid-template-areas:". weapon" "fire jump";align-items:end;justify-items:end;gap:7px;pointer-events:none}
+body[data-state=playing][data-input=touch] #touch-controls{display:grid}
+#touch-controls button{pointer-events:auto;touch-action:none;user-select:none;-webkit-touch-callout:none}
+#touch-weapon{grid-area:weapon;min-height:49px;min-width:96px;padding:5px 7px;font-size:12px;line-height:1.16;background:#19201de8}
+#touch-weapon-name{display:block;margin-top:3px;font-size:10px;color:#dbd2b9}
+#jump{grid-area:jump;min-height:44px;min-width:44px;padding:0 8px;border-radius:22px;background:#19201de8;font-size:11px}
+#touch-fire{grid-area:fire;width:clamp(64px,13vmin,82px);aspect-ratio:1;padding:0;border-radius:50%;border-color:#c39873;background:#4b2923ed;font-size:12px;font-weight:650}
+#touch-fire:disabled{opacity:.47;cursor:default}
+#touch-fire[data-held]{background:#805040;border-color:#e0b487}
+#touch-reticle{display:none;position:absolute;z-index:1;top:50%;left:50%;width:13px;height:13px;transform:translate(-50%,-50%);pointer-events:none;
+  background:linear-gradient(#fff8e2,#fff8e2) center/1px 100% no-repeat,linear-gradient(#fff8e2,#fff8e2) center/100% 1px no-repeat;filter:drop-shadow(0 0 1.5px #000)}
+body[data-state=playing][data-input=touch] #touch-reticle{display:block}
 main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 body[data-state=loading] #canvas{visibility:hidden}
@@ -89,6 +100,8 @@ dialog h2{font-size:29px}
 dialog form{margin-top:16px}
 @media(pointer:coarse){.desktop-copy{display:none}.touch-copy{display:block}}
 body[data-input=touch] #portal-action kbd{display:none}
+body[data-input=touch] #portal-action{bottom:calc(max(135px,16%) + env(safe-area-inset-bottom))}
+body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-area-inset-bottom))}
 @media(max-width:460px){.brand{gap:6px}.brand svg{width:23px}.brand b{font-size:17px}.brand-subtitle{padding-left:6px;font-size:8px;letter-spacing:.07em}.brand-signature{padding-left:6px;letter-spacing:0}.tools{gap:4px}.tool{padding-inline:8px}.tool.icon{padding:0}}
 @media(max-width:390px){.brand-subtitle{display:none}}
 @media(max-height:420px){.panel{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px}.panel h1,.panel h2{font-size:24px}.panel p:not(.eyebrow){margin:5px 0}.actions{margin-top:8px}}
@@ -137,7 +150,7 @@ THE SOFTWARE.
     <h2 class="paused-copy">Pausiert</h2>
     <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
     <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Leertaste</kbd> springen<br><kbd>E</kbd> interagieren · Mausrad Waffe wechseln oder wegstecken · <kbd>Esc</kbd> Pause</p>
-    <p class="touch-copy shortcuts">Links gehen, rechts umsehen. Stick nach außen zum Rennen; „Sprung“ zum Springen.</p>
+    <p class="touch-copy shortcuts">Links gehen, rechts umsehen. „Waffe wechseln“ wählt die nächste Waffe oder steckt sie weg; „Schießen“ feuert.</p>
     <label class="ghoul-option"><input id="with-ghouls" type="checkbox"> Mit Ghouls?</label>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
@@ -170,16 +183,21 @@ THE SOFTWARE.
   <div id="moosfunk-caption" role="status" hidden></div>
   <div id="npc-name" role="status" hidden></div>
   <div id="stick" aria-hidden="true"><span></span></div>
-  <button type="button" id="jump">Sprung</button>
+  <div id="touch-reticle" aria-hidden="true" hidden></div>
+  <div id="touch-controls" role="group" aria-label="Touch-Steuerung">
+    <button type="button" id="touch-weapon">Waffe wechseln<span id="touch-weapon-name">Ohne Waffe</span></button>
+    <button type="button" id="touch-fire" disabled>Schießen</button>
+    <button type="button" id="jump">Sprung</button>
+  </div>
 </main>
 <dialog id="about" aria-labelledby="help-title">
   <h2 id="help-title">So erkundest du das Schloss</h2>
   <p><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Leertaste</kbd> springen · Maus umsehen.</p>
   <p><kbd>E</kbd> interagieren / aufheben · Mausrad wechseln / wegstecken · Rechtsklick zielen · Linksklick schießen (Sturmgewehr: halten).</p>
-  <p><kbd>Esc</kbd> Pause · <kbd>M</kbd> Ton. Touch: links gehen, rechts umsehen, „Sprung“ tippen.</p>
+  <p><kbd>Esc</kbd> Pause · <kbd>M</kbd> Ton. Touch: links gehen, rechts umsehen; „Waffe wechseln“, „Schießen“ und „Sprung“ rechts. Beim Sturmgewehr zum Dauerfeuer gedrückt halten.</p>
   <p><strong>Viel Spaß wünscht Bies!</strong></p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","clubMusic":"assets/schlosskeller-2099.mp3?v=37a8bffd69ad","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","orbVoice":"assets/orb-stimme.wav?v=e902797f175e","prisonerVoice":"assets/kammer-07.wav?v=ba74508b55d2","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","humans":"assets/human-cast.glb?v=ce4352b23c3c","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}},"npcVoices":{"guestBruno":"assets/npc-voices/bruno_reiter.mp3?v=ad35aa8fe881","guestMarlene":"assets/npc-voices/marlene_vogel.mp3?v=9621d3df1aa1","guestSabine":"assets/npc-voices/sabine_roth.mp3?v=3796cb7c0c52","guestJona":"assets/npc-voices/jona_moos_ebert.mp3?v=1eab1a679cca","guestRike":"assets/npc-voices/rike_stein.mp3?v=30c7dac746b3","guestEdda":"assets/npc-voices/edda_seifert.mp3?v=d4175e202e06","niklas":"assets/npc-voices/niklas.mp3?v=76d8b285a353","labAuer":"assets/npc-voices/dr_ernst_auer.mp3?v=c0910624ae13","labHedwig":"assets/npc-voices/hedwig_kern.mp3?v=83960cf4514a","labSepp":"assets/npc-voices/sepp_moser.mp3?v=2a745519465a","clubAda":"assets/npc-voices/ada.mp3?v=ef3ff85b0da9","clubMira":"assets/npc-voices/mira.mp3?v=5ccd2018b350","clubNiko":"assets/npc-voices/niko.mp3?v=b6f0f8265196","clubSami":"assets/npc-voices/sami.mp3?v=e9098527dee8","clubVeit":"assets/npc-voices/veit.mp3?v=802fc6fce457"},"weaponSounds":{"bow_fire_01":"assets/sfx/bow_fire_01.mp3?v=318c0571218a","bow_fire_02":"assets/sfx/bow_fire_02.mp3?v=fceb9104442e","bow_fire_03":"assets/sfx/bow_fire_03.mp3?v=58865335b02d","bow_reload_open":"assets/sfx/bow_reload_open.mp3?v=b2326717cb79","bow_reload_close":"assets/sfx/bow_reload_close.mp3?v=5d29cdaffcb9","shotgun_pump_open":"assets/sfx/shotgun_pump_open.mp3?v=11f20516ee28","shotgun_pump_close":"assets/sfx/shotgun_pump_close.mp3?v=a4acff2ac716","impact_metal":"assets/sfx/impact_metal.mp3?v=ae06280607c2","impact_stone":"assets/sfx/impact_stone.mp3?v=a128ed023774","impact_soft":"assets/sfx/impact_soft.mp3?v=ae0ec4faf5db","weapon_equip":"assets/sfx/weapon_equip.mp3?v=6f8ceefd4d0c","weapon_holster":"assets/sfx/weapon_holster.mp3?v=5d140b7db0fe","rifle_field_1":"assets/sfx/rifle_field_1.wav?v=1f9f93f6afcd","rifle_field_2":"assets/sfx/rifle_field_2.wav?v=c2dae003345b","shotgun_field":"assets/sfx/shotgun_field.wav?v=c466668a5e59"}}</script><script src="./viewer.js?v=2fb8ee21a863"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=6e27220003e1","music":"assets/moorlicht.mp3?v=05a93293d7cf","clubMusic":"assets/schlosskeller-2099.mp3?v=37a8bffd69ad","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","orbVoice":"assets/orb-stimme.wav?v=e902797f175e","prisonerVoice":"assets/kammer-07.wav?v=ba74508b55d2","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","humans":"assets/human-cast.glb?v=ce4352b23c3c","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}},"npcVoices":{"guestBruno":"assets/npc-voices/bruno_reiter.mp3?v=ad35aa8fe881","guestMarlene":"assets/npc-voices/marlene_vogel.mp3?v=9621d3df1aa1","guestSabine":"assets/npc-voices/sabine_roth.mp3?v=3796cb7c0c52","guestJona":"assets/npc-voices/jona_moos_ebert.mp3?v=1eab1a679cca","guestRike":"assets/npc-voices/rike_stein.mp3?v=30c7dac746b3","guestEdda":"assets/npc-voices/edda_seifert.mp3?v=d4175e202e06","niklas":"assets/npc-voices/niklas.mp3?v=76d8b285a353","labAuer":"assets/npc-voices/dr_ernst_auer.mp3?v=c0910624ae13","labHedwig":"assets/npc-voices/hedwig_kern.mp3?v=83960cf4514a","labSepp":"assets/npc-voices/sepp_moser.mp3?v=2a745519465a","clubAda":"assets/npc-voices/ada.mp3?v=ef3ff85b0da9","clubMira":"assets/npc-voices/mira.mp3?v=5ccd2018b350","clubNiko":"assets/npc-voices/niko.mp3?v=b6f0f8265196","clubSami":"assets/npc-voices/sami.mp3?v=e9098527dee8","clubVeit":"assets/npc-voices/veit.mp3?v=802fc6fce457","cloneB07":"assets/npc-voices/clone-b07.mp3?v=d837b3a03b53","cloneAlma":"assets/npc-voices/clone-alma.mp3?v=774ac470e3bb","cloneLorenz":"assets/npc-voices/clone-lorenz.mp3?v=19b58641a92e","cloneB12":"assets/npc-voices/clone-b12.mp3?v=c6f301e00829","plazaRaban":"assets/npc-voices/plaza-raban.mp3?v=210b80cd3ec0","plazaVroni":"assets/npc-voices/plaza-vroni.mp3?v=8a726dc0e121","plazaEberwin":"assets/npc-voices/plaza-eberwin.mp3?v=916075513fc2","plazaIsolde":"assets/npc-voices/plaza-isolde.mp3?v=080ac1491e3e","plazaAnton":"assets/npc-voices/plaza-anton.mp3?v=225eccc7d4c2"},"weaponSounds":{"bow_fire_01":"assets/sfx/bow_fire_01.mp3?v=318c0571218a","bow_fire_02":"assets/sfx/bow_fire_02.mp3?v=fceb9104442e","bow_fire_03":"assets/sfx/bow_fire_03.mp3?v=58865335b02d","bow_reload_open":"assets/sfx/bow_reload_open.mp3?v=b2326717cb79","bow_reload_close":"assets/sfx/bow_reload_close.mp3?v=5d29cdaffcb9","shotgun_pump_open":"assets/sfx/shotgun_pump_open.mp3?v=11f20516ee28","shotgun_pump_close":"assets/sfx/shotgun_pump_close.mp3?v=a4acff2ac716","impact_metal":"assets/sfx/impact_metal.mp3?v=ae06280607c2","impact_stone":"assets/sfx/impact_stone.mp3?v=a128ed023774","impact_soft":"assets/sfx/impact_soft.mp3?v=ae0ec4faf5db","weapon_equip":"assets/sfx/weapon_equip.mp3?v=6f8ceefd4d0c","weapon_holster":"assets/sfx/weapon_holster.mp3?v=5d140b7db0fe","rifle_field_1":"assets/sfx/rifle_field_1.wav?v=1f9f93f6afcd","rifle_field_2":"assets/sfx/rifle_field_2.wav?v=c2dae003345b","shotgun_field":"assets/sfx/shotgun_field.wav?v=c466668a5e59"}}</script><script src="./viewer.js?v=3071d0046bdc"></script>
 </body>
 </html>

@@ -44,16 +44,17 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     previous=player.body.position.clone(),deltaPos=V();
   const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),sight=V(),projected=V(),sightAnchor=V();
   const screen=new T.Vector2(),aimScreen=new T.Vector2();
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0];
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0],
+    names=style.map(n=>n.label.split(' · ').at(-1));
   let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,t0=null,step=0,clock=0;
   let moving=0,running=0,strafe=0,inertia=0,previousYaw=player.body.rotation.y,wheel=0,wheelAt=0,wheelStepAt=-1000;
-  let wasPermitted=false,serial=0,leftHeld=false;
+  let wasPermitted=false,serial=0,leftHeld=false,touchHeld=false;
   function display(n){
     selected=n;devices.forEach((d,i)=>{d.root.visible=rig.hands[i].group.visible=i===n;});
   }
   function select(n){
     if(!swap&&selected===n)return;
-    leftHeld=false;
+    leftHeld=touchHeld=false;
     if(n<0)aiming=false;
     pending=n;
     onAction(style[n>=0?n:selected]?.kind,n<0?'holster':'equip');
@@ -106,6 +107,18 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     refresh();return true;
   }
+  function cycle(direction=1){
+    if(!isActive()||!equipmentAllowed())return;
+    const current=swap?pending:selected;
+    select(owned[(owned.indexOf(current)+Math.sign(direction)+owned.length)%owned.length]);
+  }
+  const touchReady=()=>isActive()&&selected>=0&&!swap&&equipmentAllowed();
+  function touchTrigger(pressed){
+    if(!pressed){touchHeld=false;return false;}
+    if(touchHeld||!touchReady())return false;
+    touchHeld=true;fire(performance.now());
+    return true;
+  }
   const relevant=e=>isActive()&&(document.pointerLockElement===canvas||e.target===canvas);
   window.addEventListener('mousedown',e=>{
     if(e.sourceCapabilities?.firesTouchEvents||document.body.dataset.input==='touch'||!relevant(e)||!equipmentAllowed())return;
@@ -116,19 +129,18 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   });
   window.addEventListener('mouseup',e=>{if(e.button===0)leftHeld=false;if(e.button===2){aiming=false;refresh();}});
   window.addEventListener('pointercancel',()=>{leftHeld=aiming=false;refresh();});
-  window.addEventListener('blur',()=>{leftHeld=aiming=false;});
+  window.addEventListener('blur',()=>{leftHeld=touchHeld=aiming=false;});
   document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement!==canvas)leftHeld=aiming=false;});
   canvas.addEventListener('contextmenu',e=>{if(isActive())e.preventDefault();});
   window.addEventListener('wheel',e=>{
-    if(e.ctrlKey||!relevant(e)||!e.deltaY||!equipmentAllowed())return;
+    if(e.ctrlKey||document.body.dataset.input==='touch'||!relevant(e)||!e.deltaY||!equipmentAllowed())return;
     e.preventDefault();
     const now=performance.now(),raw=e.deltaY*(e.deltaMode===1?17:e.deltaMode===2?120:1);
     if(now-wheelAt>160||Math.sign(wheel)!==Math.sign(raw))wheel=0;
     wheelAt=now;wheel+=Math.max(-110,Math.min(110,raw));
     if(Math.abs(wheel)<39||now-wheelStepAt<108)return;
-    const sign=Math.sign(wheel),current=swap?pending:selected;
-    const next=owned[(owned.indexOf(current)+sign+owned.length)%owned.length];
-    wheel=0;wheelStepAt=now;select(next);
+    const sign=Math.sign(wheel);
+    wheel=0;wheelStepAt=now;cycle(sign);
   },{passive:false});
   function update(now){
     const elapsed=t0===null?0:Math.max(0,(now-t0)/1000),dt=Math.min(.05,elapsed);t0=now;clock+=dt;
@@ -143,7 +155,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     inertia=relax(inertia,T.MathUtils.clamp(dyaw/Math.max(.001,dt),-4,4),18,dt);
     if(grounded)step+=delta*(5.04-running*.80);
     const permitted=equipmentAllowed(),transition=!!swap;
-    if(!permitted&&wasPermitted){leftHeld=aiming=false;fx.clear();flash.visible=false;}
+    if(!permitted&&wasPermitted){leftHeld=touchHeld=aiming=false;fx.clear();flash.visible=false;}
     wasPermitted=permitted;
     let holster=0;
     if(swap){
@@ -189,7 +201,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x});
     let effect=permitted&&fx.tick(dt);
-    if(leftHeld&&n.automatic&&fire(now,true)){age=0;effect=true;}
+    if((leftHeld||touchHeld)&&n.automatic&&fire(now,true)){age=0;effect=true;}
     if(flash.visible){
       effect=true;
       const width=n.kind==='shotgun'?.053:n.kind==='pistol'?.026:.034,fade=1-age/(n.kind==='shotgun'?.059:.041),k=Math.max(0,fade);
@@ -223,7 +235,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     stage.environment=scene.environment;stage.environmentIntensity=night?.72:1.05;
   }
   function stop(){
-    leftHeld=aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
+    leftHeld=touchHeld=aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
     camera.position.y=camera.rotation.z=0;flash.visible=false;refresh();
   }
   function collect(index){
@@ -248,5 +260,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
   }
   update(performance.now());
-  return {update,draw,preset,stop,collect,pickupModel,prepare,clearShots:fx.clear,showPrewarmShots:fx.showPrewarm,bodyLayer:body.layer};
+  return {update,draw,preset,stop,collect,pickupModel,prepare,cycle,touchTrigger,touchReady,
+    selectionName:()=>names[swap?pending:selected]??'Ohne Waffe',
+    clearShots:fx.clear,showPrewarmShots:fx.showPrewarm,bodyLayer:body.layer};
 }

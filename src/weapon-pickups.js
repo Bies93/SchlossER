@@ -35,7 +35,7 @@ export function weaponPickups(T,vm,wc,chapter,query,scene){
       rail.position.fromArray(at);rail.name='Damenkabine · Metallhalter';attach(rail);
     }
     items.push({id:'gear-'+index,index,layer,group,targets,action:'gear-pickup',
-      label:label+' aufnehmen',notice:label+' aufgenommen. Mit dem Mausrad auswählen.'});
+      label:label+' aufnehmen',notice:label+' aufgenommen.'});
   }
   // The door parks on the side wall; the rear rail, above the cistern,
   // stays in sight from the doorway and beyond the end of the leaf.
@@ -63,9 +63,9 @@ export function weaponPickups(T,vm,wc,chapter,query,scene){
     }
     return winner;
   }
-  function collect(item){
+  function collect(item,touch=false){
     if(!item?.group.visible||!vm.collect(item.index))return null;
-    item.group.visible=false;return item.notice;
+    item.group.visible=false;return item.notice+(touch?' Mit „Waffe wechseln“ auswählen.':' Mit dem Mausrad auswählen.');
   }
   return {target,collect};
 }

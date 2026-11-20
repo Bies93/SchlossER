@@ -17,6 +17,7 @@ import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
 import {addPauli} from './pauli-fountain.js';
 import {makeViewmodel} from './viewmodel.js';
+import {bindTouchEquipment} from './touch-equipment.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
 import {addParkStair,wcHeightAt,wcCeilingAt,wcCameraMode,isWcInterior,WC_LAYER} from './park-stair.js';
@@ -177,9 +178,12 @@ async function start(){
    names.sample(performance.now(),true);
  });
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
-   ()=>document.body.dataset.input!=='touch',targets,
+   undefined,targets,
    kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0||hallFloor(p.x,p.z)!==null);},
    audio.shotContact,audio.weaponAction,geometryQuery,activeLayers);
+ const isTouch=()=>document.body.dataset.input==='touch';
+ const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),
+   weaponName:$('touch-weapon-name'),reticle:$('touch-reticle'),viewmodel,enabled:()=>active()&&isTouch()});
  const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
@@ -298,7 +302,7 @@ async function start(){
      doorPrompt();refresh();return;
    }
    if(local?.action==='gear-pickup'){
-     const notice=pickups.collect(local);
+     const notice=pickups.collect(local,isTouch());
      if(notice)showCaption(notice,4200);
      doorPrompt();refresh();return;
    }
@@ -390,6 +394,7 @@ async function start(){
      if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
      if(wcCameraMode(player.body.position)==='surface'&&chapter.mode(player.body.position)==='surface'&&labCameraMode(player.body.position)!=='cellar'&&pauli.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
+     touchEquipment.update();
    }
    if(dirty){draw();dirty=false}
    if(active()) schedule();
@@ -398,12 +403,15 @@ async function start(){
    if(!active())return;
    document.body.dataset.state='paused';
    leaveChapel();leavePrison();orbSince=null;hideCaption();names.clear();
-   input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();
+   touchEquipment.clear();input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
    canvas,pad:$('stick'),jumpButton:$('jump'),player,active,pause:()=>pause(!document.hidden && document.hasFocus()),
-   refresh,mode:value=>{document.body.dataset.input=value}
+   refresh,mode:value=>{
+     document.body.dataset.input=value;
+     touchEquipment.update();
+   }
  });
  action.onclick=event=>{
    if(!started){started=true;ghoulsEnabled=firstRound=ghoulOption.checked;audio.mode(ghoulsEnabled);}

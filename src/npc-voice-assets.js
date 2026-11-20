@@ -1,7 +1,16 @@
-// Model/dialogue ID -> filename from the supplied voice manifest.
+// Model/dialogue ID -> local, bundled recording.
 export const NPC_VOICE_FILES=Object.freeze({
   guestBruno:'bruno_reiter.mp3',guestMarlene:'marlene_vogel.mp3',guestSabine:'sabine_roth.mp3',
   guestJona:'jona_moos_ebert.mp3',guestRike:'rike_stein.mp3',guestEdda:'edda_seifert.mp3',niklas:'niklas.mp3',
   labAuer:'dr_ernst_auer.mp3',labHedwig:'hedwig_kern.mp3',labSepp:'sepp_moser.mp3',
-  clubAda:'ada.mp3',clubMira:'mira.mp3',clubNiko:'niko.mp3',clubSami:'sami.mp3',clubVeit:'veit.mp3'
+  clubAda:'ada.mp3',clubMira:'mira.mp3',clubNiko:'niko.mp3',clubSami:'sami.mp3',clubVeit:'veit.mp3',
+  cloneB07:'clone-b07.mp3',
+  cloneAlma:'clone-alma.mp3',
+  cloneLorenz:'clone-lorenz.mp3',
+  cloneB12:'clone-b12.mp3',
+  plazaRaban:'plaza-raban.mp3',
+  plazaVroni:'plaza-vroni.mp3',
+  plazaEberwin:'plaza-eberwin.mp3',
+  plazaIsolde:'plaza-isolde.mp3',
+  plazaAnton:'plaza-anton.mp3'
 });

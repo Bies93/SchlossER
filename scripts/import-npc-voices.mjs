@@ -7,8 +7,10 @@ const input=process.argv[2];
 if(!input)throw Error('Aufruf: node scripts/import-npc-voices.mjs PFAD_ZUM_MANIFEST');
 const file=resolve(input),entries=JSON.parse(await readFile(file,'utf8')),dest=new URL('../assets/npc-voices/',import.meta.url);
 const normalized=s=>s.normalize('NFC').replace(/[„“‚‘”"']/g,'').trim();
-const files=Object.entries(NPC_VOICE_FILES),known=new Map(entries.map(e=>[e.filename,e]));
-if(files.length!==entries.length||known.size!==entries.length)throw Error('Erwartet genau einen Manifesteintrag pro Sprechrolle.');
+const known=new Map(entries.map(e=>[e.filename,e]));
+const files=Object.entries(NPC_VOICE_FILES).filter(([,name])=>known.has(name));
+if(!entries.length||files.length!==entries.length||known.size!==entries.length)
+  throw Error('Das Manifest muss bekannte, eindeutige Audiodateien enthalten.');
 function mp3(data){
   return data.length>1500&&(data.subarray(0,3).toString()==='ID3'||data[0]===0xff&&(data[1]&0xe0)===0xe0);
 }
@@ -29,7 +31,7 @@ const imported=await Promise.all(files.map(async([id,name])=>{
   if(!mp3(data))throw Error(name+': Der Download ist keine MP3.');
   return {name,data};
 }));
-// Only write after all fifteen names, lines and binary headers are validated.
+// Only write after every supplied name, line and binary header is validated.
 await mkdir(dest,{recursive:true});
 for(const {name,data} of imported){
   await writeFile(new URL(name,dest),data);
