@@ -1,6 +1,7 @@
 import {architectureKit} from './architecture-kit.js';
 import {UPPER_ENTRY as E} from './palace-openings.js';
 import {randomSource,sharedSet} from './surface-detail.js';
+import {dressUpperFactory} from './upper-factory.js';
 
 export const UPPER_LAYER=6;
 export const UPPER_FLOOR=E.sill+.023;
@@ -18,7 +19,7 @@ const entrySpan=x=>x>E.left+.14&&x<E.right-.14;
 
 export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   const room=new T.Group(),ladder=new T.Group(),portal=new T.Group();
-  room.name='Erstes Obergeschoss · Ausbaureserve';room.visible=false;
+  room.name='Erstes Obergeschoss · Referat Morgenform';room.visible=false;
   ladder.name='Gartenfassade · Anlegeleiter';ladder.visible=false;ladder.userData.noSceneQuery=true;
   portal.name='Gartenfassade · Geheimfenster';scene.add(room,ladder);facade.add(portal);
 
@@ -152,7 +153,8 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   }
   fk.flush('Obergeschoss · Boden und Decke');wk.flush('Obergeschoss · Mauerwerk');
   bk.flush('Obergeschoss · Dachbalken und Baulicht');rungGeom.dispose();
-  const ambient=new T.HemisphereLight(0xe7e0d7,0x928c83,1.30),lights=Array.from({length:3},()=>new T.PointLight(0xffdeb6,24,13.6,2));
+  const factory=dressUpperFactory(T,room,upperWorld,UPPER_FLOOR,UPPER_BAYS);
+  const ambient=new T.HemisphereLight(0xe7e0d7,0x928c83,1.23),lights=Array.from({length:3},()=>new T.PointLight(0xffdeb6,24,13.6,2));
   room.add(ambient,...lights);
   for(const o of [deck,walls,beams])o.traverse(m=>{if(m.isMesh)m.castShadow=false;});
   room.traverse(o=>o.layers.set(UPPER_LAYER));
@@ -212,10 +214,14 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
     const see=high||opening>.045&&near;
     if(room.visible!==see){room.visible=see;changed=true;}
     if(see){
+      changed=factory.update(time,p,high)||changed;
       const axis=high?p.x:E.x;
+      const tint=high?factory.theme(p):0xead6ad;
       for(let i=0;i<lights.length;i++){
         const x=Math.max(-27.5,Math.min(27.5,Math.round(axis/8)*8+(i-1)*8));
         lights[i].position.set(x,roof-.91,high&&Math.abs(p.z)<9?p.z*.44:-8.65);
+        lights[i].color.setHex(i===1?tint:i===0?0xffe5cc:0xe1e4e4);
+        lights[i].intensity=i===1?38:21;
       }
     }
     return changed;

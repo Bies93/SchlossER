@@ -6,3 +6,9 @@ Fiktiver Innenausbau für SchlossER. Der Zugang verwendet die vorhandene erste E
 - `src/palace-upper.js`: `UPPER_FLOOR` ist die Oberkante des Bodens. `UPPER_BAYS` teilt die Länge in acht Abschnitte; jede Achse hat je einen Raum zur Garten- und zur Platzseite. Die Längsachse des Hauptgangs liegt bei `z = 0`, die Gangwände bei `z = ±1.73`. Negative Z-Werte zeigen zum Garten, positive X-Werte nach Süden.
 - Neue Ausstattung für diese Etage in die Gruppe `room` oder eine ihrer Untergruppen aufnehmen, bevor ihre Layer gesetzt werden. Sie gehört auf `UPPER_LAYER`; Möbel- und Wandkollisionen gehören in `upperWorld`, nicht in die Kollisionen des Erdgeschosses.
 - Die Gartenlaibung samt Anlegeleiter freihalten. Sie ist der Hin- und Rückweg. Geöffnet wird nur einmal pro Rundgang, damit das Fenster bei einem Abstieg nicht versehentlich geschlossen werden kann.
+
+## Referat Morgenform
+
+Die acht gartenseitigen Räume sind ausgebaut; alle acht Räume zur Platzseite bleiben frei. In der Reihenfolge der X-Achse: Schwerlast-Hangar, Kleindrohnen-Montage, Druiden- und Botwerkstatt, Wellenlabor, Aufnahme und Einkleidung, Lehrsaal, Agentenprüfung, Munitionslinie. Der Fensterzugang mündet in die Aufnahme.
+
+`src/upper-factory.js` baut die Ausstattung mit gemeinsam genutzten und pro Raum zusammengefassten Materialien. `src/upper-factory-art.js` enthält die originalen Schilder und Propagandaplakate. Die vier NPCs verwenden vorhandene Rig-Vorlagen, aber eigene IDs, Kleidung, Posen und Untertitel aus `src/npc-lines.js`. Die Requisiten sind fiktive Außengehäuse und Bühnenobjekte; sie haben keine Funktion als reale Waffen oder Fluggeräte.

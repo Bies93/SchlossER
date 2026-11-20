@@ -170,7 +170,8 @@ async function start(){
      wm==='inside'||wm!=='surface'&&p.y<-.38?WC_LAYER:lm==='cellar'||lm==='threshold'&&p.y<-.38?LAB_LAYER:0;
    return layerContext;
  }
- const targets=combatTargets(T,geometryQuery,round,world,floorHeight,id=>{
+ const targetWorld={blocked(x,z,y){return (upper.inside({x,y,z})?upperWorld:world).blocked(x,z,y);}};
+ const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
    if(id==='hubert')leavePrison();
    names.sample(performance.now(),true);
@@ -253,7 +254,8 @@ async function start(){
    return target?.id==='mf-radio'&&names.target()?.id==='guestEdda'?null:target;
  };
  function hallOrPerson(){
-   if(upper.inside(player.body.position)||player.motion.climbing)return null;
+   if(player.motion.climbing)return null;
+   if(upper.inside(player.body.position))return names.target();
    const hallTarget=hall.targetFor(player,c);
    return hallTarget&&hallTarget.id!=='gallery-choir'?hallTarget:names.target()??hallTarget;
  }
@@ -290,7 +292,11 @@ async function start(){
    if(local?.action==='upper-up'||local?.action==='upper-down'){
      upper.request(local.action==='upper-up'?1:-1);doorPrompt();refresh();return;
    }
-   if(upper.inside(player.body.position)||player.motion.climbing)return;
+   if(upper.inside(player.body.position)||player.motion.climbing){
+     const person=hallOrPerson();
+     if(person?.action==='npc-talk'&&!audio.npcTalking(person.id))npcDialogue(names.use(person.id,now));
+     doorPrompt();refresh();return;
+   }
    if(local?.action==='gear-pickup'){
      const notice=pickups.collect(local);
      if(notice)showCaption(notice,4200);

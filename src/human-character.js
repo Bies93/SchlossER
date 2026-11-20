@@ -6,6 +6,7 @@ import {NPCS} from './npc-lines.js';
 const libraries=new WeakMap();
 export function installHumans(T,asset){
   const models=new Map(asset.children.map(o=>[o.userData.name??o.name,o]));
+  for(const [id,info] of Object.entries(NPCS))if(info.template&&models.has(info.template))models.set(id,models.get(info.template));
   for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)])
     if(!models.has(id))throw Error('Human template missing: '+id);
   libraries.set(T,{models,materials:new Map(),present:[]});
@@ -33,7 +34,11 @@ const wear={
   guestJona:{palette:[0x6d533b,0x526d66,0xb78248],hair:0x584d37,weather:.25},
   guestRike:{palette:[0x414a45,0x525846,0xa7453b],hair:0x53463c,weather:.23},
   guestEdda:{palette:[0x514747,0x767744,0xae7e55],hair:0x4b4240,weather:.16},
-  guestLotte:{palette:[0x665368,0x83616b,0xcba38b],hair:0x635448,weather:.06}
+  guestLotte:{palette:[0x665368,0x83616b,0xcba38b],hair:0x635448,weather:.06},
+  cloneB07:{palette:[0x343c42,0x7a8d8b,0xe0cd9c],hair:0x4a4035,weather:.06},
+  cloneB12:{palette:[0x252d30,0x52605b,0xa47b3d],hair:0x4a4035,weather:.33},
+  cloneAlma:{palette:[0x283337,0x343e58,0xcbb482],hair:0x59493f,insignia:0x967c48,weather:.08},
+  cloneLorenz:{palette:[0x303334,0x756146,0x87958b],hair:0x7a7366,coat:0xa78c65,insignia:0x6d6c53,weather:.35}
 };
 function personalize(T,lib,id,base,eyeY){
   const key=id+':'+base.uuid;if(lib.materials.has(key))return lib.materials.get(key);
@@ -47,6 +52,8 @@ function personalize(T,lib,id,base,eyeY){
   if(p.cloth&&cloth)m.color.multiply(new T.Color(p.cloth));
   if(p.hair&&(hair||brow))m.color.multiply(new T.Color(p.hair));
   if(p.shoe&&/^Shoes/.test(m.name))m.color.multiply(new T.Color(p.shoe));
+  if(p.coat&&/^LabCoat/.test(m.name))m.color.multiply(new T.Color(p.coat));
+  if(p.insignia&&/^InsigniaBlue/.test(m.name))m.color.setHex(p.insignia);
   if(hair||brow){
     m.alphaTest=m.map?.isTexture?(brow?.36:.43):0;m.transparent=false;m.depthWrite=true;m.side=T.DoubleSide;
     if(!m.map)m.color.setHex(0x3c2c27);
