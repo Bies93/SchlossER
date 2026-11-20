@@ -22,8 +22,8 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath){
   }
   function damage(n,value,color,at,spec,headShare=0){
     if(!Number.isFinite(value)||value<=0)return false;
-    const kind=spec.kind,body=kind==='bow'?50:kind==='rifle'?35:Math.min(55,Math.max(34,Math.round(value*.61)));
-    const factor=kind==='bow'?2.75:kind==='rifle'?2.6:2.35;
+    const kind=spec.kind,body=kind==='bow'?50:kind==='rifle'?35:kind==='pistol'?34:Math.min(55,Math.max(34,Math.round(value*.61)));
+    const factor=kind==='bow'?2.75:kind==='rifle'?2.6:kind==='pistol'?2.45:2.35;
     const amount=Math.round(body*(1+(factor-1)*headShare));
     if(!n.rig?.npcInfo)return ghouls.damage(n,amount,color,at);
     if(!n.alive)return false;

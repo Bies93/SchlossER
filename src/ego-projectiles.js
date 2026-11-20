@@ -77,7 +77,7 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
       }
     }
     const b=bolts.find(p=>p.state===0)??bolts.reduce((a,c)=>a.age>c.age?a:c);
-    b.position.copy(muzzle);b.velocity.subVectors(sight,muzzle).normalize().multiplyScalar(27);
+    b.position.copy(muzzle);b.velocity.subVectors(sight,muzzle).normalize().multiplyScalar(58);
     b.age=0;b.range=spec.range;b.spec=spec;b.state=1;b.mesh.visible=true;b.layer=layer;b.mask=mask;
     b.mesh.traverse(o=>o.layers.set(layer));pose(b);
   }
@@ -99,7 +99,7 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
         continue;
       }
       from.copy(b.position);
-      b.velocity.y-=1.18*dt;
+      b.velocity.y-=.58*dt;
       next.copy(from).addScaledVector(b.velocity,dt);
       heading.subVectors(next,from);const d=Math.min(heading.length(),b.range);
       if(d<=.000001){if(b.range<=.001){b.state=0;b.mesh.visible=false;}continue;}

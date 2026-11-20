@@ -167,7 +167,7 @@ async function start(){
    ()=>document.body.dataset.input!=='touch',targets,
    kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0||hallFloor(p.x,p.z)!==null);},
    audio.shotContact,audio.weaponAction,geometryQuery,activeLayers);
- const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery);
+ const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
  const names=npcFocus(T,s,c,player.body,$('npc-name'),()=>activeLayers().mask,geometryQuery);

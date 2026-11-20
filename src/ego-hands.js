@@ -11,7 +11,8 @@ export function gripHands(T,specs){
   const stitching=new T.MeshStandardMaterial({color:0x92846a,roughness:.95});
   const ellipsoid=new T.SphereGeometry(1,14,10);
   const poses=specs.map(spec=>{
-    const group=new T.Group(),nodes=[],wrists=[v(-.107,-.035,.083),v(.055,-.043,.094)];
+    const pistol=spec.kind==='pistol',group=new T.Group(),nodes=[],wrists=[
+      pistol?v(-.077,-.050,.093):v(-.107,-.035,.083),v(.055,-.043,.094)];
     group.name='Griffpose · '+spec.kind;
     for(const [hand,w] of wrists.entries()){
       const node=new T.Group();node.position.fromArray(hand===0?spec.fore:spec.grip);
@@ -57,6 +58,17 @@ export function gripHands(T,specs){
         }
         form([[.042,.015,.057],[.023,.042,.066],[-.001,.049,.064],[-.023,.046,.057]], [.016,.013,.0045]);
         for(let k=0;k<6;k++)oval(stitching,[.057,-.022+k*.007,.045+k*.0014],[.0014,.0022,.0017]);
+      } else if(pistol){
+        form([wrist,[-.048,-.032,.062],[-.020,-.013,.046],[-.005,-.001,.029]], [.029,.029,.013]);
+        oval(leather,[-.021,-.013,.035],[.023,.036,.033],-.37);
+        oval(pads,[-.037,-.023,.037],[.007,.026,.024],-.39);
+        for(let k=0;k<4;k++){
+          const y=.018-k*.018;
+          form([[-.018,y,.027],[-.018,y+.010,.007],[.002,y+.012,-.014],
+            [.025,y+.009,-.014],[.042,y+.004,-.006]], [.0105,.0098,.0043]);
+        }
+        form([[-.035,.008,.058],[-.025,.034,.049],[-.018,.055,.018],[-.016,.061,-.012]], [.014,.011,.0048]);
+        for(let i=0;i<5;i++)oval(stitching,[-.040,-.017+i*.007,.044-i*.003],[.0015,.0017,.0015]);
       } else {
         const wide=spec.kind==='shotgun',w=wide?.052:.039;
         form([wrist,[-.066,-.028,.042],[-.029,-.018,.012]], [.030,.030,.012]);

@@ -4,6 +4,7 @@ import {labLower} from './lab-layout.js';
 import {sharedSet,randomSource} from './surface-detail.js';
 
 const p=(x,y,z)=>[x,y,z],Y=HALL.floor;
+export const GALLERY_PISTOL=[WINGS.outer-.313,.544,0];
 const signs=[
   ['01 · ASTRONOMIE','Armillarsphäre','Messingringe und Himmelsachsen'],
   ['02 · ARCHITEKTUR','Das Erlanger Schloss','Schematisches Modell der Residenz'],
@@ -359,6 +360,22 @@ function framedPoster(T,root,fit,texture){
   return sheet;
 }
 
+function pistolShelf(fit){
+  // A low shelf below the artwork, separate from both the frame and the
+  // secret floor hatch. The compact prop sits on a dark felt liner.
+  const [sx,h,sz]=GALLERY_PISTOL,{box,block}=fit;
+  box('walnut',sx-.222,sx+.260,h-.056,h-.014,sz-.405,sz+.405);
+  box('ebony',sx-.216,sx+.250,h-.014,h-.004,sz-.392,sz+.392);
+  box('velvet',sx-.162,sx+.168,h-.005,h,sz-.316,sz+.316);
+  box('edgeBrass',sx-.223,sx-.216,h-.044,h-.037,sz-.380,sz+.380);
+  for(const z of [-.271,.271]){
+    box('walnutEdge',sx+.164,sx+.253,h-.244,h-.055,z-.048,z+.048);
+    box('ebony',sx+.038,sx+.181,h-.126,h-.054,z-.034,z+.034);
+    box('edgeBrass',sx+.151,sx+.165,h-.167,h-.151,z-.026,z+.026);
+  }
+  block(sx-.222,sx+.259,sz-.405,sz+.405);
+}
+
 export function furnishSouthGallery(T,root,world,common,poster){
   const entry=new T.Group(),rear=new T.Group();
   entry.name='Südflügel · Auftakt';rear.name='Südflügel · Kabinett der Sammlungen';root.add(entry,rear);
@@ -393,7 +410,7 @@ export function furnishSouthGallery(T,root,world,common,poster){
     tine:profile([[0,-.51],[.76,-.51],[.86,-.36],[.72,.155],[.49,.43],[.22,.51],[0,.515]],10)
   };
   const a=furniture(T,entry,world,materials,shapes);entrance(a);a.done();
-  const b=furniture(T,rear,world,materials,shapes);displays(b);const posterFace=framedPoster(T,rear,b,poster);b.done();
+  const b=furniture(T,rear,world,materials,shapes);displays(b);pistolShelf(b);const posterFace=framedPoster(T,rear,b,poster);b.done();
   for(const g of Object.values(shapes))g.dispose();
   return posterFace;
 }

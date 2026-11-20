@@ -40,18 +40,20 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   flash.visible=false;
   const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
   const relax=(v,d,k,dt)=>v+(d-v)*(1-Math.exp(-k*dt));
-  const clockAt=[-10,-10,-10],heard=[0,0,0],previous=player.body.position.clone(),deltaPos=V();
+  const clockAt=style.map(()=>-10),readyAt=style.map(()=>-Infinity),heard=style.map(()=>0),
+    previous=player.body.position.clone(),deltaPos=V();
   const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),sight=V(),projected=V(),sightAnchor=V();
   const screen=new T.Vector2(),aimScreen=new T.Vector2();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0];
   let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,t0=null,step=0,clock=0;
   let moving=0,running=0,strafe=0,inertia=0,previousYaw=player.body.rotation.y,wheel=0,wheelAt=0,wheelStepAt=-1000;
-  let wasPermitted=false,serial=0;
+  let wasPermitted=false,serial=0,leftHeld=false;
   function display(n){
     selected=n;devices.forEach((d,i)=>{d.root.visible=rig.hands[i].group.visible=i===n;});
   }
   function select(n){
     if(!swap&&selected===n)return;
+    leftHeld=false;
     if(n<0)aiming=false;
     pending=n;
     onAction(style[n>=0?n:selected]?.kind,n<0?'holster':'equip');
@@ -66,9 +68,11 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const fov=(camera.aspect<.8?61:54)-ads*4;
     if(eye.fov!==fov||eye.aspect!==camera.aspect){eye.aspect=camera.aspect;eye.fov=fov;eye.updateProjectionMatrix();}
   }
-  function fire(){
-    if(selected<0||swap||!equipmentAllowed())return;
-    const n=style[selected];if(clock-clockAt[selected]<n.recovery)return;
+  function fire(now,heldShot=false){
+    if(!isActive()||selected<0||swap||!equipmentAllowed()||now<readyAt[selected]-.10)return false;
+    const n=style[selected],delay=1000*n.recovery,due=readyAt[selected];
+    // Honor the cadence across normal frame jitter, never burst to catch up.
+    readyAt[selected]=(heldShot&&now-due<delay*.50?due:now)+delay;
     clockAt[selected]=clock;heard[selected]=0;serial++;kick=n.recoil;
     onFire(n.kind);
     syncProjection();camera.updateWorldMatrix(true,false);camera.getWorldPosition(origin);
@@ -100,16 +104,20 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       fx.endVolley(n);
       if(nearest!==Infinity)onContact(contact,n.kind,material);
     }
-    refresh();
+    refresh();return true;
   }
   const relevant=e=>isActive()&&(document.pointerLockElement===canvas||e.target===canvas);
   window.addEventListener('mousedown',e=>{
     if(e.sourceCapabilities?.firesTouchEvents||document.body.dataset.input==='touch'||!relevant(e)||!equipmentAllowed())return;
     if(e.button===2&&selected>=0){e.preventDefault();aiming=true;refresh();}
-    else if(e.button===0)fire();
+    else if(e.button===0&&!leftHeld){
+      leftHeld=selected>=0&&!swap;fire(performance.now());
+    }
   });
-  window.addEventListener('mouseup',e=>{if(e.button===2){aiming=false;refresh();}});
-  window.addEventListener('pointercancel',()=>{aiming=false;refresh();});
+  window.addEventListener('mouseup',e=>{if(e.button===0)leftHeld=false;if(e.button===2){aiming=false;refresh();}});
+  window.addEventListener('pointercancel',()=>{leftHeld=aiming=false;refresh();});
+  window.addEventListener('blur',()=>{leftHeld=aiming=false;});
+  document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement!==canvas)leftHeld=aiming=false;});
   canvas.addEventListener('contextmenu',e=>{if(isActive())e.preventDefault();});
   window.addEventListener('wheel',e=>{
     if(e.ctrlKey||!relevant(e)||!e.deltaY||!equipmentAllowed())return;
@@ -135,7 +143,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     inertia=relax(inertia,T.MathUtils.clamp(dyaw/Math.max(.001,dt),-4,4),18,dt);
     if(grounded)step+=delta*(5.04-running*.80);
     const permitted=equipmentAllowed(),transition=!!swap;
-    if(!permitted&&wasPermitted){aiming=false;fx.clear();flash.visible=false;}
+    if(!permitted&&wasPermitted){leftHeld=aiming=false;fx.clear();flash.visible=false;}
     wasPermitted=permitted;
     let holster=0;
     if(swap){
@@ -144,7 +152,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       if(age>=swap.down+swap.up){display(pending);swap=null;}
       else holster=age<swap.down?smooth(age/swap.down):1-smooth((age-swap.down)/swap.up);
     }
-    const index=Math.max(0,selected),n=style[index],device=devices[index],pose=rig.hands[index],age=clock-clockAt[index];
+    const index=Math.max(0,selected),n=style[index],device=devices[index],pose=rig.hands[index];
+    let age=clock-clockAt[index];
     const handling=n.kind==='bow'?smooth((age-.22)/.20)*(1-smooth((age-1.11)/.19)):
       n.kind==='shotgun'?.69*smooth((age-.12)/.18)*(1-smooth((age-.59)/.16)):0;
     const oldAds=ads,aim=aiming&&permitted&&!swap&&selected>=0?1:0;
@@ -180,9 +189,10 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x});
     let effect=permitted&&fx.tick(dt);
+    if(leftHeld&&n.automatic&&fire(now,true)){age=0;effect=true;}
     if(flash.visible){
       effect=true;
-      const width=n.kind==='shotgun'?.053:.034,fade=1-age/(n.kind==='shotgun'?.059:.041),k=Math.max(0,fade);
+      const width=n.kind==='shotgun'?.053:n.kind==='pistol'?.026:.034,fade=1-age/(n.kind==='shotgun'?.059:.041),k=Math.max(0,fade);
       if(fade<=0)flash.visible=false;
       else{
         spark.scale.set(width*k*.51,width*k*.41,width*k*1.18);
@@ -213,7 +223,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     stage.environment=scene.environment;stage.environmentIntensity=night?.72:1.05;
   }
   function stop(){
-    aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
+    leftHeld=aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
     camera.position.y=camera.rotation.z=0;flash.visible=false;refresh();
   }
   function collect(index){

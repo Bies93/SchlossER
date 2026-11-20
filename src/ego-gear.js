@@ -18,6 +18,8 @@ export function makeEquipment(T,specs){
   const m={
     coat:F(0x4c5351,.83,.55,'phosphate',1.14,.72,.08),
     blue:F(0x434d53,.77,.73,'blue',.97,.68,.07),
+    pistolSlide:F(0x586169,.70,.72,'phosphate',1.01,.61,.09),
+    pistolFrame:F(0x393d3e,.91,.03,'polymer',1.14,.30,.13),
     raw:F(0x9b9e97,.76,.83,'machine',1.04,.26,.04),
     recess:F(0x2f3231,.91,.11,'polymer',.93,.12,.63),
     polymer:F(0x61624f,.93,.035,'polymer',1.24,.24,.10),

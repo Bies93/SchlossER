@@ -201,6 +201,59 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     const root=A.build(),flag=slide.build();root.add(mag.build(),flag);
     return {root,left,animate(age){flag.position.z=.018*(ramp(0,.038,age)-ramp(.060,.169,age));}};
   }
+  if(type==='pistol'){
+    // Fictional compact handgun: exterior silhouettes and screen cosmetics.
+    // The front opening is a blind visual recess; no internal parts.
+    const S=assembly('Alma · Schlitten und Visier');
+    S.profile(m.pistolSlide,[[-.270,.017],[-.271,.046],[-.253,.066],[-.209,.074],
+      [.042,.074],[.070,.064],[.078,.048],[.078,.012],[.055,.004],[-.249,.004]],.064,0,.004);
+    S.sculpt(m.coat,[[-.256,.069,.045,.021],[-.210,.078,.044,.028],
+      [.041,.078,.043,.029],[.071,.068,.043,.024]],{power:.48,openEnd:true});
+    S.bezel(m.raw,[0,.032,-.271],.013,.0085,.008);S.cyl(m.recess,[0,.032,-.270],.009,.002);
+    S.bezel(m.coat,[0,.014,-.269],.0059,.003,.004);S.cyl(m.recess,[0,.014,-.269],.0033,.002);
+    S.box(m.recess,[.031,.048,-.099],[.0024,.024,.063],.001);
+    S.profile(m.raw,[[-.126,.040],[-.120,.057],[-.076,.057],[-.067,.050],[-.071,.038]],
+      .0038,.0332,.0008,[],{contact:.25,wear:.68});
+    S.stamp('ALMA 09',-.033,.036,-.116,.101,.013);
+    for(const s of [-1,1]){
+      for(const [z,n] of [[.020,8],[-.208,5]])for(let j=0;j<n;j++){
+        const w=z+(j-(n-1)*.5)*.007;
+        S.box(m.recess,[s*.0317,.038,w],[.0026,.038,.0028],.00065,[.211,0,0]);
+      }
+      S.box(m.coat,[s*.012,.085,.040],[.012,.014,.017],.002);
+      S.cyl(m.raw,[s*.012,.088,.050],.0021,.0018);
+    }
+    S.box(m.coat,[0,.078,.043],[.048,.009,.026],.0019);
+    S.box(m.coat,[0,.082,-.236],[.010,.012,.022],.0018);
+    S.cyl(m.enamel,[0,.087,-.226],.0023,.0021);
+
+    profile(m.pistolFrame,[[-.256,-.009],[-.250,.005],[.075,.005],[.082,-.018],[.060,-.039],
+      [-.025,-.037],[-.072,-.058],[-.143,-.054],[-.174,-.036],[-.247,-.029]],.059,0,.004);
+    sculpt(m.pistolFrame,[[-.034,-.039,-.089,.022],[-.018,-.026,-.132,.027],
+      [.003,-.017,-.169,.030],[.023,-.011,-.175,.031],[.044,-.009,-.178,.030],
+      [.061,-.009,-.166,.029],[.078,-.017,-.113,.026],[.088,-.020,-.070,.022]],
+      {power:.60,side:.19});
+    profile(m.pistolFrame,[[-.143,-.034],[-.150,-.055],[-.144,-.089],[-.120,-.108],
+      [-.063,-.112],[-.035,-.096],[-.016,-.057],[-.031,-.034]],
+      .043,0,.003,[[[-.128,-.052],[-.132,-.071],[-.114,-.090],[-.069,-.094],[-.045,-.079],[-.043,-.052]]]);
+    profile(m.coat,[[-.079,-.048],[-.061,-.048],[-.064,-.068],[-.078,-.083],[-.089,-.079],[-.078,-.068]],
+      .008,0,.0012);
+    profile(m.coat,[[-.006,-.158],[.059,-.150],[.068,-.171],[.050,-.183],[.007,-.182],[-.011,-.174]],
+      .055,0,.0024);
+    for(const s of [-1,1]){
+      profile(m.rubber,[[-.010,-.045],[.041,-.036],[.063,-.061],[.058,-.135],[.045,-.156],[.012,-.159],[-.007,-.132]],
+        .005,s*.028,.0023,[],{contact:.11,wear:.62});
+      for(let j=0;j<8;j++)for(let i=0;i<4;i++){
+        const z=.002+i*.011+(j%2?.004:0),y=-.061-j*.010;
+        box(m.carbon,[s*.031,y,z],[.0014,.0049,.0043],.00055,[s*.22,0,.045]);
+      }
+      profile(m.coat,[[-.047,-.024],[-.061,-.031],[-.037,-.038],[.017,-.029],[.012,-.022]],.005,s*.030,.0014);
+      bolt([s*.031,-.036,.040],.0032,m.coat);
+      bolt([s*.030,-.018,-.155],.0033,m.raw);
+    }
+    const root=A.build(),slide=S.build();root.add(slide);
+    return {root,left,animate(age){slide.position.z=.024*(ramp(0,.019,age)-ramp(.033,.094,age));}};
+  }
   // Amber: sculpted wood silhouette, longitudinal flutes, top and lower
   // decorative tubes on the same centerline. No interior geometry.
   // The grip panel is part of the walnut shader on this one shell. The

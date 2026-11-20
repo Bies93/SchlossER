@@ -7,13 +7,16 @@ import {coatSleeve,weaponSwatch} from './weapon-finishes.js';
 export const EQUIPMENT=[
   {kind:'bow',label:'Windbruch · Armbrust',color:0x9b5041,
     sight:[0,.119,-.287],emit:[0,.055,-.429],hold:[.169,-.177,-.555],yaw:.230,
-    fore:[0,-.083,-.287],grip:[0,-.132,.020],recovery:1.30,recoil:.013,pattern:1,impact:64,range:24,spread:0,weight:1.05},
+    fore:[0,-.083,-.287],grip:[0,-.132,.020],recovery:1.30,recoil:.013,pattern:1,impact:64,range:76,spread:0,weight:1.05},
   {kind:'rifle',label:'Vesper 17 · Sturmgewehr',color:0xa36b47,
     sight:[0,.124,-.264],emit:[0,.024,-.684],hold:[.199,-.161,-.505],yaw:.248,
-    fore:[0,-.066,-.369],grip:[0,-.139,.023],recovery:.243,recoil:.027,pattern:1,impact:54,range:22,spread:.004,weight:.91},
+    fore:[0,-.066,-.369],grip:[0,-.139,.023],recovery:1/3,automatic:true,recoil:.027,pattern:1,impact:54,range:112,spread:.0027,weight:.91},
   {kind:'shotgun',label:'Amber 08 · Pumpflinte',color:0x92563d,
     sight:[0,.069,-.631],emit:[0,.024,-.743],hold:[.199,-.165,-.519],yaw:.274,
-    fore:[0,-.077,-.397],grip:[0,-.119,.049],recovery:.752,recoil:.061,pattern:5,impact:25,range:17,spread:.047,weight:1.13}
+    fore:[0,-.077,-.397],grip:[0,-.119,.049],recovery:.752,recoil:.061,pattern:5,impact:25,range:43,spread:.036,weight:1.13},
+  {kind:'pistol',label:'Alma 09 · Kompaktpistole',color:0x788082,
+    sight:[0,.090,-.237],emit:[0,.033,-.272],hold:[.156,-.152,-.443],yaw:.164,
+    fore:[-.020,-.120,.002],grip:[0,-.100,.029],recovery:.365,recoil:.026,pattern:1,impact:38,range:70,spread:.0047,weight:.77}
 ];
 
 export function egoAssets(T){
