@@ -75,7 +75,7 @@ function install(T,root,world,d,floor,eligible){
   }
   const phase={prayer:1.1,books:2.02,wash:2.7,lounge:1.4,studio:3.6,greenhouse:1.3,rest:4.4}[d.job];
   let elapsed=phase,acc=0,speech=0,glance=0;
-  npcInfo.speak=()=>{speech=3.45;};
+  npcInfo.speak=(duration=3.45)=>{speech=duration;};
   rig.visitorPose(elapsed,d.job,d.seat);
   return (dt,player)=>{
     if(!dt||!eligible(player)||Math.hypot(player.x-d.x,player.z-d.z)>8.1)return false;

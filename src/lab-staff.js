@@ -45,7 +45,8 @@ export function labStaff(T,world){
     if(!target(p,look))return null;
     const a=actors.get(cell(p));
     if(a.chat>0)return null;
-    a.chat=3.45;return {name:a.name,line:a.line};
+    a.chat=3.45;
+    return {id:a.id,name:a.name,line:a.line,at:a.npc.actor.position,speakFor:duration=>{a.chat=duration;}};
   }
   return {register,update,target,talk};
 }

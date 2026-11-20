@@ -3,12 +3,13 @@ const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={}) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
   let danceBus,danceWet=0,danceBuffer,danceLoad,danceRetry=0,danceNode,danceStart=0,danceOffset=0;
   const spokenClips=new Map();
   let choirRequest,choirVoice,choirFailed=false;
+  let npcRequest,npcVoice;
   let radioVoice,radioAt;
   let levels={music:.48,sfx:.72};
   try{
@@ -112,9 +113,9 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
     if(!enabled)return 'muted';
     return choirVoice?'playing':choirRequest?'loading':choirFailed?'retry':'ready';
   }
-  function prepareChoir(url){
+  function prepareClip(url){
     if(!spokenClips.has(url))spokenClips.set(url,fetch(url)
-      .then(r=>{if(!r.ok)throw Error('Chor nicht erreichbar');return r.arrayBuffer()})
+      .then(r=>{if(!r.ok)throw Error('Sprachaufnahme nicht erreichbar');return r.arrayBuffer()})
       .then(bytes=>ctx.decodeAudioData(bytes))
       .catch(error=>{spokenClips.delete(url);throw error;}));
     return spokenClips.get(url);
@@ -146,7 +147,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
     if(!url||!playing||(status!=='ready'&&status!=='retry')||(!ctx&&!setup()))return;
     const request={at,url};choirRequest=request;choirFailed=false;
     try{
-      const [,buffer]=await Promise.all([ctx.resume(),prepareChoir(url)]);
+      const [,buffer]=await Promise.all([ctx.resume(),prepareClip(url)]);
       if(choirRequest!==request||!live())return;
       const a=listener();
       if(Math.hypot(at.x-a.x,at.z-a.z)>(url===prisonerUrl?6.55:4.8))return;
@@ -165,12 +166,54 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
       if(choirRequest===request)choirRequest=null;
     }
   }
+  const npcTalking=id=>npcVoice?.id===id||npcRequest?.id===id;
+  function stopNpc(){
+    npcRequest=null;
+    if(!npcVoice)return;
+    const {node,amp}=npcVoice,t=ctx.currentTime;
+    npcVoice=null;
+    amp.gain.cancelScheduledValues(t);amp.gain.setTargetAtTime(0,t,.021);node.stop(t+.08);
+    mix();
+  }
+  function updateNpc(){
+    if(!npcVoice)return;
+    const {at,amp,pan}=npcVoice,a=listener(),x=at.x-a.x,z=at.z-a.z,d=Math.hypot(x,z);
+    if(d>5.5||Math.abs(at.y+1.4-a.y)>1.95){stopNpc();return;}
+    const time=ctx.currentTime,level=1.12/(1+(Math.max(0,d-.85)/3.1)**2);
+    if(Math.abs(level-npcVoice.level)>.012){npcVoice.level=level;amp.gain.setTargetAtTime(level,time,.045);}
+    if(pan){
+      const balance=Math.max(-.66,Math.min(.66,(x*a.rightX+z*a.rightZ)/Math.max(d,1)));
+      if(Math.abs(balance-npcVoice.balance)>.015){npcVoice.balance=balance;pan.pan.setTargetAtTime(balance,time,.06);}
+    }
+  }
+  async function playNpc(id,at,started){
+    const url=npcUrls[id];
+    if(!url||!at||!playing||!enabled||npcTalking(id)||(!ctx&&!setup()))return;
+    stopNpc();stopRadio();
+    const request={id};npcRequest=request;
+    try{
+      const [,buffer]=await Promise.all([ctx.resume(),prepareClip(url)]);
+      if(npcRequest!==request||!live())return;
+      const a=listener();
+      if(Math.hypot(at.x-a.x,at.z-a.z)>4.0||Math.abs(at.y+1.4-a.y)>1.95)return;
+      const node=ctx.createBufferSource(),pan=ctx.createStereoPanner?.(),amp=gain(sfx,0);
+      node.buffer=buffer;if(pan){node.connect(pan);pan.connect(amp);}else node.connect(amp);
+      const entry={id,at,node,pan,amp,level:-1,balance:0};npcVoice=entry;
+      node.onended=()=>{
+        node.disconnect();pan?.disconnect();amp.disconnect();
+        if(npcVoice===entry){npcVoice=null;mix();}
+      };
+      node.start();updateNpc();mix();started?.(buffer.duration);
+    }catch{/* The subtitle remains available if a recording cannot play. */}
+    finally{if(npcRequest===request)npcRequest=null;}
+  }
   function mix(){
     if(!ctx)return;
     const t=ctx.currentTime;
     master.gain.setTargetAtTime(playing&&enabled?.55:0,t,.038);
-    music.gain.setTargetAtTime(levels.music*(choirVoice?(choirVoice.url===prisonerUrl?.66:.42):1)*(1-danceWet),t,choirVoice?.085:.23);
-    danceBus?.gain.setTargetAtTime(levels.music*danceWet*.88,t,.12);
+    const voiceDuck=Math.min(npcVoice?.58:1,choirVoice?(choirVoice.url===prisonerUrl?.66:.42):1);
+    music.gain.setTargetAtTime(levels.music*voiceDuck*(1-danceWet),t,voiceDuck<1?.085:.23);
+    danceBus?.gain.setTargetAtTime(levels.music*danceWet*.88*(npcVoice?.38:1),t,.12);
     sfx.gain.setTargetAtTime(levels.sfx,t,.046);
   }
   function play(){
@@ -181,12 +224,12 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
   function pause(){
-    playing=false;club(0);stopTrack();stopChoir();stopRadio();mix();
+    playing=false;club(0);stopTrack();stopChoir();stopRadio();stopNpc();mix();
   }
   function toggle(){
     enabled=!enabled;store();mix();
     if(enabled&&playing)play();
-    else{club(0);stopTrack();stopChoir();stopRadio();}
+    else{club(0);stopTrack();stopChoir();stopRadio();stopNpc();}
     return enabled;
   }
   function shot(kind){
@@ -293,6 +336,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
   }
   function playMoosfunk(at,text){
     if(!live())return;
+    stopNpc();
     const pan=tapePan(at),t=ctx.currentTime+.016;
     grit(sfx,t,.18,.093,860,2700,{pan,wet:.08,attack:.021});
     tone(sfx,t+.082,680,.105,.088,{type:'triangle',end:599,pan,wet:.10});
@@ -314,6 +358,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
   }
   function ambience(p){
     updateChoir();
+    updateNpc();
     if(radioAt&&Math.hypot(radioAt.x-p.x,radioAt.z-p.z)>4.8)stopRadio();
     if(!live()||ctx.currentTime<bedTime)return;
     bedTime=ctx.currentTime+1.2;
@@ -353,7 +398,8 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
-  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
+  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,
+    playNpc,npcTalking,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},

@@ -113,8 +113,8 @@ async function start(){
  lighting.registerWindows(perimeter.windows);
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
-   return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice);
+   return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
@@ -199,11 +199,21 @@ async function start(){
    return 1|(zone==='threshold'?1<<CHAPTER_LAYER:0)|(wcZone==='threshold'?1<<WC_LAYER:0)|
      (labZone==='threshold'?1<<LAB_LAYER:0);
  });
- let captionTimer=0,chapelTime=null,chapelTake=0;
- function hideCaption(){clearTimeout(captionTimer);caption.hidden=true;}
+ let captionTimer=0,captionId=0,chapelTime=null,chapelTake=0;
+ function hideCaption(){clearTimeout(captionTimer);captionId++;caption.hidden=true;}
  function showCaption(text,duration){
    hideCaption();caption.textContent=text;caption.hidden=false;
    captionTimer=setTimeout(hideCaption,duration);
+   return captionId;
+ }
+ function npcDialogue(speech){
+   if(!speech)return;
+   const id=showCaption(speech.name+': „'+speech.line+'“',Math.max(5500,speech.line.length*68));
+   audio.playNpc(speech.id,speech.at,seconds=>{
+     if(!active()||captionId!==id)return;
+     speech.speakFor?.(seconds);
+     clearTimeout(captionTimer);captionTimer=setTimeout(hideCaption,seconds*1000+350);
+   });
  }
  function leaveChapel(){
    if(chapelTime===null)return;
@@ -297,14 +307,12 @@ async function start(){
    }
    const person=local?null:hallOrPerson();
    if(person?.action==='npc-talk'){
-     const speech=names.use(person.id,now);
-     if(speech)showCaption(speech.name+': „'+speech.line+'“',6100);
+     if(!audio.npcTalking(person.id))npcDialogue(names.use(person.id,now));
      doorPrompt();refresh();return;
    }
    const target=local??hall.commit(player,c);if(!target)return;
    if(target.action==='lab-talk'){
-     const speech=hall.staffTalk(player,c);
-     if(speech)showCaption(speech.name+': „'+speech.line+'“',5400);
+     if(!audio.npcTalking(target.id))npcDialogue(hall.staffTalk(player,c));
      doorPrompt();refresh();return;
    }
    if(target.id==='gallery-choir')audio.playChoir({x:target.x,z:target.z});

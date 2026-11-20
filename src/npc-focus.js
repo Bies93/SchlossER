@@ -72,7 +72,7 @@ export function npcFocus(T,scene,camera,body,element,visibleLayers){
     const ent=selected;
     if(ent?.id!==id||!ent.line||ent.existing||now<(cooling.get(id)??0))return null;
     cooling.set(id,now+2700);ent.speak?.();
-    return {name:ent.name,line:ent.line};
+    return {id:ent.id,name:ent.name,line:ent.line,at:ent.actor.position,speakFor:ent.speak};
   }
   return {sample,target,use,clear(){next=0;show(null);}};
 }

@@ -1,6 +1,9 @@
 # SchlossER · Sprechliste für die Aufnahmen
 
-Die Einzeiler unten sind wortgleich mit den Untertiteln. Die Modell-IDs eignen sich als eindeutige Dateinamen; die fertigen Clips müssen anschließend noch mit den Dialogaktionen verbunden werden. Möglichst trocken aufnehmen, ohne eingebrannten Raumhall. Im Club nicht gegen den Musiktakt sprechen, sondern möglichst natürlich über eine laute Umgebung hinweg.
+Alle 15 Einzeiler sind vertont und beim Ansprechen mit `E` eingebunden. Die mit HeyGen erzeugten, vom Nutzer bereitgestellten Aufnahmen liegen in `assets/npc-voices/`. Die Modell-IDs unten sind die internen Schlüssel; die tatsächlichen MP3-Dateinamen stehen in `src/npc-voice-assets.js`. Für künftige Aufnahmen: möglichst trocken, ohne eingebrannten Raumhall.
+
+- `node scripts/import-npc-voices.mjs PFAD_ZUM_MANIFEST` prüft Figur und Dialogtext und übernimmt vorhandene MP3s aus dem benachbarten `mp3/`-Ordner oder lädt sie vom Audioanbieter. Das Skript verändert das Quellpaket nicht; Download-URLs werden weder im Spiel noch im Repo gespeichert.
+- Der Web-Build nutzt versionierte lokale MP3s; der Offline-Build bettet sie ein. Die Clips laden erst beim Ansprechen. Im Club wird die Musik während des Satzes abgesenkt. Bei stummgeschaltetem Ton bleibt der Untertitel.
 
 | Figur / vorgeschlagener Dateiname | Spielort und Vortrag | Text |
 | --- | --- | --- |
