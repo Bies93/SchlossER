@@ -20,7 +20,8 @@ export function clubGuests(T,root,hit,floor,still){
     model.actor.position.set(x,floor+.044,z);model.actor.rotation.y=yaw;
     shadow.position.set(x,floor+.040,z);
     group.add(model.actor,shadow);
-    hit(x-.21,x+.21,z-.19,z+.19);
+    model.npcInfo.shadow=shadow;
+    hit(x-.21,x+.21,z-.19,z+.19,model.alive);
     const activity=still?.24:1;model.dance(0,i*.77,i,0,activity);
     return {model,x,z,yaw,i,look:0,last:-Infinity,activity};
   });
@@ -31,6 +32,7 @@ export function clubGuests(T,root,hit,floor,still){
     acc=0;
     const beat=phase??elapsed*(128*44100/2454261);
     for(const a of guests){
+      if(!a.model.controllable())continue;
       const dx=visitor.x-a.x,dz=visitor.z-a.z,d=Math.hypot(dx,dz),
         off=Math.atan2(dx,dz)-a.yaw,angle=Math.atan2(Math.sin(off),Math.cos(off));
       if(d>8.5&&elapsed-a.last<.085)continue;

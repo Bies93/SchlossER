@@ -119,7 +119,7 @@ function cellarKit(T,root,world,id,materials,graphics){
   const dress=dressLab(T,k,root,graphics);
   const props=stationery(T,k,root,{cloth:['leather','bookB','bookC','green']});
   const box=(m,a,b,y,Y,c,d)=>k.box(m,matrices,a,b,y,Y,c,d);
-  const hit=(a,b,c,d)=>world.box(a,c,b,d,deep?p=>clubLevel(p.y):below);
+  const hit=(a,b,c,d,when)=>world.box(a,c,b,d,p=>(deep?clubLevel(p.y):below(p))&&(!when||when(p)));
   const drum=new T.CylinderGeometry(1,1,1,20),wheel=new T.TorusGeometry(1,.085,7,20),matrix=new T.Matrix4();
   const pos=new T.Vector3(),quat=new T.Quaternion(),scale=new T.Vector3(),up=new T.Vector3(0,1,0);
   function obj(m,g,x,y,z,sx,sy,sz,rx=0,ry=0,rz=0){

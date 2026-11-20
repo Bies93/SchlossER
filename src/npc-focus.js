@@ -1,9 +1,11 @@
 import {namedHumans} from './human-character.js';
+import {sceneQuery} from './scene-query.js';
 
 // A screen-space name, not a world-space label: walls and doors cannot
 // reveal names in the next room, and the camera never renders extra sprites.
-export function npcFocus(T,scene,camera,body,element,visibleLayers){
-  const ray=new T.Raycaster(),eye=new T.Vector3(),dir=new T.Vector3(),point=new T.Vector3(),offset=new T.Vector3(),hits=[],candidates=[];
+export function npcFocus(T,scene,camera,body,element,visibleLayers,query){
+  const ray=new T.Ray(),eye=new T.Vector3(),dir=new T.Vector3(),point=new T.Vector3(),offset=new T.Vector3(),candidates=[];
+  if(!query){query=sceneQuery(T,scene,body);query.build();}
   const cooling=new Map(),currentSource=()=>namedHumans(T);
   let selected=null,next=0;
   function show(entry){
@@ -18,20 +20,7 @@ export function npcFocus(T,scene,camera,body,element,visibleLayers){
     return false;
   }
   function blocked(origin,heading,length,mask){
-    ray.set(origin,heading);ray.near=.09;ray.far=Math.max(.091,length-.115);ray.layers.mask=mask;
-    // Only invoked for people in the current gaze, at a short range. Omit
-    // thin transparent props and actor meshes; ordinary doors remain solid.
-    function occludes(o){
-      if(!o.visible||o===body||o.userData.namedNpc)return false;
-      const m=o.material;
-      if(o.isMesh&&!o.isSkinnedMesh&&(o.layers.mask&mask)&&m&&!Array.isArray(m)&&m.visible!==false&&(!m.transparent||m.opacity>.53)){
-        hits.length=0;ray.intersectObject(o,false,hits);
-        if(hits.length)return true;
-      }
-      for(const child of o.children)if(occludes(child))return true;
-      return false;
-    }
-    return occludes(scene);
+    return query.trace(ray.set(origin,heading),length-.115,mask,.09,true)!==Infinity;
   }
   function sample(now,force=false){
     if(!force&&now<next)return selected;
@@ -40,7 +29,7 @@ export function npcFocus(T,scene,camera,body,element,visibleLayers){
     camera.getWorldPosition(eye);camera.getWorldDirection(dir);
     candidates.length=0;
     for(const a of currentSource()){
-      if(!a.head||!a.chest||!visible(a.actor,mask)||Math.hypot(a.actor.position.x-eye.x,a.actor.position.z-eye.z)>3.42)continue;
+      if(!a.alive||!a.head||!a.chest||!visible(a.actor,mask)||Math.hypot(a.actor.position.x-eye.x,a.actor.position.z-eye.z)>3.42)continue;
       let best=null;
       for(const j of [a.head,a.chest]){
         j.getWorldPosition(point);point.y+=.08;
@@ -65,12 +54,12 @@ export function npcFocus(T,scene,camera,body,element,visibleLayers){
     show(null);return null;
   }
   function target(){
-    if(!selected?.line||selected.existing)return null;
+    if(!selected?.alive||!selected.line||selected.existing)return null;
     return selected.target??={id:selected.id,action:'npc-talk',label:'Ansprechen'};
   }
   function use(id,now){
     const ent=selected;
-    if(ent?.id!==id||!ent.line||ent.existing||now<(cooling.get(id)??0))return null;
+    if(ent?.id!==id||!ent.alive||!ent.line||ent.existing||now<(cooling.get(id)??0))return null;
     cooling.set(id,now+2700);ent.speak?.();
     return {id:ent.id,name:ent.name,line:ent.line,at:ent.actor.position,speakFor:ent.speak};
   }

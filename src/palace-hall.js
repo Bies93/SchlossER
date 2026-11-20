@@ -180,6 +180,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   const butler=palaceButler(T,room,world);
 
   const doors=Object.values(PORTALS).map(d=>({...d,leaves:leaves[d.id],progress:0,target:0}));
+  for(const d of doors)for(const {mesh} of d.leaves)mesh.userData.movingOccluder=true;
   const closeEnough=(p,d,dist)=>Math.hypot(p.x,(p.z-d.z)*.91)<dist;
   for(const d of doors){
     const narrow=d.half-.034,outer=d.z+d.side*(d.id==='east'?.62:.51),inner=d.z-d.side*2.35;
@@ -191,7 +192,6 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   }
   const look=new T.Vector3();
   let preset='dusk',lit=false;
-  function allowGear(p){return labCameraMode(p)==='surface'&&!inPalaceWing(p.x,p.z)&&!(Math.abs(p.x)<half+.24&&p.z>=PORTALS.east.z-.49&&p.z<=PORTALS.west.z+.49)}
   function targetFor(player,camera){
     camera.getWorldDirection(look);
     const p=player.body.position;
@@ -238,6 +238,6 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
     return {changed,shadow};
   }
   function setPreset(id){preset=id;wings.setPreset(id);hallShade.emissiveIntensity=id==='night'?.86:.58}
-  return {targetFor,commit,usable,update,setPreset,allowGear,prepareLab:lab.prepare,labVisible:lab.visible,lodgeOpen:wings.hatch.open,
+  return {targetFor,commit,usable,update,setPreset,prepareLab:lab.prepare,labVisible:lab.visible,lodgeOpen:wings.hatch.open,
     staffTalk(player,camera){return lab.staffTalk(player.body.position,camera.getWorldDirection(look));}};
 }

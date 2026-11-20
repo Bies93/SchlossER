@@ -1,5 +1,6 @@
 import {randomSource} from './surface-detail.js';
 import {b,wcRoofAt} from './park-wc-layout.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const pi=Math.PI,tau=2*pi;
 const tiles=['women','men','keep','arrow','flag','map','poster','dial','press','aid','flyer'];
@@ -119,7 +120,7 @@ export function collectiveArt(T){
 }
 
 export function furnishCollective(T,kit,id){
-  const {block,hit,stamp,pipe,print}=kit;
+  const {block,hit,stamp,pipe,print,hqTile}=kit;
   const cylinder=new T.CylinderGeometry(1,1,1,18),ball=new T.SphereGeometry(1,15,10);
   const ring=new T.TorusGeometry(1,.104,8,19).rotateX(pi/2);
   const turn=new T.LatheGeometry([[0,0],[.58,0],[.80,.14],[.82,.41],[.52,.61],
@@ -127,6 +128,10 @@ export function furnishCollective(T,kit,id){
     [.30,.57],[.32,.35],[0,.22]].map(([r,y])=>new T.Vector2(r,y)),20);
   const item=(m,g,u,y,v,w,h,d,a=0)=>stamp(m,g,u,y,v,[w,h,d],a);
   const frame=(m,u,U,y,Y,v,V)=>block(m,u,U,y,Y,v,V);
+  function soft(mat,u,y,v,w,h,d,r,a=0){
+    const g=new RoundedBoxGeometry(d,h,w,2,r);
+    item(mat,g,u,y,v,1,1,1,a);g.dispose();
+  }
   function table(u,v,w,d,h){
     for(const a of [-1,1])for(const c of [-1,1]){
       const A=u+a*(w*.5-.09),B=v+c*(d*.5-.09);
@@ -134,8 +139,10 @@ export function furnishCollective(T,kit,id){
       frame('ochre',A-.047,A+.047,.015,.055,B-.047,B+.047);
     }
     frame('iron',u-w*.5,u+w*.5,h-.103,h-.065,v-d*.5+.032,v+d*.5-.032);
-    frame('wood',u-w*.5,u+w*.5,h-.074,h,v-d*.5,v+d*.5);
-    for(const q of [-.25,0,.25])frame('darkWood',u-w*.493,u+w*.493,h-.002,h+.001,v+q*d-.003,v+q*d+.003);
+    for(let i=0;i<4;i++){
+      const v0=v+(i-1.5)*d*.25;
+      soft(i===1?'pine':'wood',u,h-.034,v0,w,.068,d*.25-.0026,.008);
+    }
     hit(u-w*.5,u+w*.5,v-d*.5,v+d*.5);
   }
   function crate(u,v,w=.61,d=.47,base=0){
@@ -212,6 +219,11 @@ export function furnishCollective(T,kit,id){
       pipe('brass',[flag,1.998,v],[20.012,1.971,v],.018);
     }
     print('flag',flag-.016,1.455,0,3.22,1.038,pi,{folded:true});
+    for(let j=0;j<8;j++){
+      const v=-1.91+j*.53,y=.27+(j%3)*.045;
+      soft(j%3?'darkWood':'wood',19.91,y,v,.075,.47,.518,.013);
+      for(const e of [-.205,.205])item('iron',ball,19.866,y+.163,v+e,.009,.009,.009);
+    }
     frame('wood',13.22,16.55,.97,2.035,-4.116,-4.037);
     print('map',14.885,1.52,-4.024,3.02,.894,-pi/2);
     for(const u of [13.54,14.83,16.21])pipe('brass',[u,1.00,-4.019],[u,1.00,-3.998],.018);
@@ -220,13 +232,19 @@ export function furnishCollective(T,kit,id){
 
     // Radio bench and repair shelf; the receiver is a prop, not an interface.
     table(14.97,-3.54,3.43,.82,.948);
-    frame('darkWood',14.15,15.52,.949,1.466,-3.84,-3.32);
-    frame('iron',14.27,15.45,1.018,1.393,-3.325,-3.304);
+    soft('darkWood',14.835,1.207,-3.59,1.37,.516,.52,.044);
+    soft('iron',14.86,1.207,-3.321,1.18,.397,.036,.014);
+    soft('sea',14.85,1.205,-3.300,.966,.315,.012,.005);
     print('dial',14.85,1.206,-3.291,.935,.29,-pi/2);
     for(const u of [14.27,15.41]){
       pipe('brass',[u,1.052,-3.329],[u,1.051,-3.268],.041);
+      pipe('gasket',[u,1.052,-3.281],[u,1.052,-3.261],.048);
+      pipe('iron',[u,1.052,-3.266],[u,1.050,-3.246],.036);
+      pipe('linen',[u,1.075,-3.244],[u,1.089,-3.242],.0035);
       pipe('signal',[u,1.350,-3.319],[u,1.350,-3.295],.020);
+      for(const y of [1.023,1.384])item('brass',ball,u,y,-3.295,.008,.008,.007);
     }
+    for(let j=0;j<9;j++)soft('gasket',14.35+j*.103,1.459,-3.548,.043,.020,.207,.007);
     for(let i=0;i<5;i++){
       const u=14.62+i*.102;
       pipe('gunmetal',[u,1.076,-3.33],[u,1.076,-3.291],.014);
@@ -235,14 +253,19 @@ export function furnishCollective(T,kit,id){
     pipe('brass',[14.30,1.446,-3.74],[14.39,1.76,-3.76],.012);
     pipe('steel',[14.39,1.76,-3.76],[14.58,1.949,-3.82],.006);
     item('iron',ball,14.58,1.949,-3.82,.012,.012,.012);
+    const cone=new T.LatheGeometry([[0,0],[.22,.02],[.40,.15],[.61,.38],[.88,.87],[1,1],[.93,1],
+      [.83,.86],[.56,.4],[.32,.19],[0,.14]].map(q=>new T.Vector2(...q)),20);
     for(const u of [13.83,15.95]){
-      frame('darkWood',u-.193,u+.193,.948,1.32,-3.80,-3.33);
+      soft('darkWood',u,1.137,-3.575,.392,.378,.462,.028);
+      soft('studioFelt',u,1.136,-3.338,.350,.338,.027,.012);
       for(const [y,r] of [[1.043,.076],[1.23,.073]]){
-        pipe('brass',[u,y,-3.342],[u,y,-3.318],r*1.10);
-        pipe('iron',[u,y,-3.315],[u,y,-3.306],r);
-        item('gunmetal',ball,u,y,-3.304,.025,.025,.014);
+        pipe('brass',[u,y,-3.339],[u,y,-3.312],r*1.08);
+        stamp('studioFelt',cone,u,y,-3.337,[r,.032,r],pi/2,pi/2);
+        item('gunmetal',ball,u,y,-3.327,.011,.023,.023);
       }
+      for(const q of [-.138,.138])for(const y of [.995,1.265])item('steel',ball,u+q,y,-3.320,.008,.008,.006);
     }
+    cone.dispose();
     frame('ochre',15.89,16.41,.946,1.021,-3.38,-3.05);
     frame('paper',15.945,16.298,1.021,1.037,-3.323,-3.087);
     for(let i=0;i<4;i++)frame('darkWood',15.977,16.254,1.037,1.040,-3.296+i*.043,-3.291+i*.043);
@@ -250,32 +273,49 @@ export function furnishCollective(T,kit,id){
     pipe('iron',[14.39,.102,-3.943],[13.72,.052,-3.954],.015);
 
     // Warm centre: woven floor textile, shared couch and a low improvised table.
-    const rugTop=.005;
-    frame('rug',15.96,19.17,-.009,rugTop,-1.71,2.08);
-    for(const u of [16.08,16.16,18.97,19.05])frame('linen',u-.023,u+.023,rugTop,rugTop+.003,-1.62,1.98);
-    for(const v of [-1.64,-1.55,1.91,1.99])frame('ochre',16.03,19.10,rugTop,rugTop+.003,v-.019,v+.019);
-    for(let i=0;i<16;i++){
-      const u=16.34+(i%4)*.73,v=-1.29+Math.floor(i/4)*.89;
-      frame(i%2?'linen':'fabric',u-.08,u+.08,rugTop,rugTop+.004,v-.12,v+.12);
+    const rug=new T.PlaneGeometry(3.79,3.21).rotateX(-pi/2);
+    item('loungeTextile',rug,17.565,.011,.185,1,1,1);rug.dispose();
+    for(let j=0;j<49;j++)for(const u of [15.96,19.17]){
+      const v=-1.67+j*.076,dir=u<17?-1:1;
+      pipe(j%5?'linen':'ochre',[u,.009,v],[u+dir*(.045+(j*7%9)*.004),.006,v+.012*Math.sin(j)],.005);
     }
-    frame('darkWood',18.99,19.66,.063,.318,-1.47,1.65);
-    frame('iron',19.57,19.79,.14,.963,-1.49,1.67);
+    soft('darkWood',19.295,.230,.09,.688,.225,3.136,.036);
+    soft('tartan',19.683,.582,.09,.177,.796,3.15,.032);
+    for(const u of [19.04,19.57])for(const v of [-1.38,-.38,.56,1.55]){
+      soft('darkWood',u,.077,v,.123,.153,.113,.016);
+      pipe('brass',[u,.045,v-.050],[u,.045,v+.051],.018);
+    }
     for(const [j,v] of [-.945,.057,1.05].entries()){
-      frame(j%2?'linen':'fabric',19.04,19.55,.303,.507,v-.468,v+.472);
-      frame(j%2?'rug':'fabric',19.43,19.72,.471,.928,v-.473,v+.472);
-      pipe('darkWood',[19.039,.473,v-.445],[19.039,.473,v+.445],.007);
-      pipe('linen',[19.418,.883,v-.448],[19.418,.883,v+.448],.005);
-      item(j%2?'rug':'linen',ball,19.42,.741,v+.08,.257,.185,.101,pi*.10);
+      soft(j%2?'wool':'fabric',19.281,.412,v,.522,.188,.926,.055);
+      soft(j%2?'wool':'fabric',19.566,.709,v,.268,.473,.934,.067);
+      pipe('tartan',[19.018,.440,v-.401],[19.018,.440,v+.400],.006);
+      pipe('linen',[19.445,.886,v-.400],[19.445,.886,v+.400],.005);
+      for(const y of [.735,.819])for(const q of [-.24,0,.24])item(j%2?'tartan':'darkWood',ball,19.429,y,v+q,.009,.010,.009);
+      if(j!==1){
+        soft(j?'rug':'tartan',19.393,.654,v+(j?.10:-.094),.124,.299,.375,.051,j?.19:-.13);
+        item('ochre',ball,19.331,.656,v+(j?.10:-.094),.010,.012,.010);
+      }
     }
-    for(const v of [-1.48,1.58])frame('darkWood',19.04,19.74,.287,.632,v-.080,v+.084);
+    for(const v of [-1.48,1.58]){
+      soft('darkWood',19.38,.387,v,.707,.291,.150,.029);
+      soft('rug',19.36,.562,v,.648,.122,.172,.048);
+    }
     hit(18.99,19.79,-1.56,1.73);
     table(17.61,.31,.89,1.38,.496);
-    cup(17.41,.499,.58);cup(17.70,.499,.80,1);
+    const ceramic=new T.LatheGeometry([[0,0],[.64,0],[.73,.056],[.78,.14],[.95,.72],[1,.963],[.97,1],
+      [.86,1],[.87,.92],[.81,.72],[.67,.18],[.56,.12],[0,.12]].map(q=>new T.Vector2(...q)),20);
+    for(const [u,v,m] of [[17.41,.58,'porcelain'],[17.70,.80,'green']]){
+      item(m,ceramic,u,.499,v,.061,.112,.061);item(m,ring,u,.560,v+.064,.035,.093,.032,pi/2);
+      item('dark',cylinder,u,.520,v,.041,.002,.041);
+    }
+    ceramic.dispose();
     item('glass',turn,17.71,.5,.08,.13,.236,.13);
     frame('iron',17.38,17.62,.498,.518,-.29,-.07);
     item('ochre',ring,17.49,.519,-.184,.094,.066,.082);
     pipe('paper',[17.44,.532,-.18],[17.57,.532,-.216],.010);
     bottle(17.87,.5,-.18,0);
+    for(let i=0;i<3;i++)hqTile('airLog',17.36+i*.014,.506+i*.002,.155+i*.017,.205,.143,-pi/2,-pi/2,.18*i-.27);
+    pipe('ochre',[17.53,.51,.30],[17.56,.515,.46],.008);
     crate(17.53,1.97,.57,.585);
     item('fabric',ball,17.53,.395,1.97,.266,.091,.257);
     crate(18.56,-2.28,.63,.69);

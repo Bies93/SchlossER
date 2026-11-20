@@ -12,10 +12,12 @@ export function makeChapterPrisoner(T,room,F){
     vertexShader:'varying vec2 q;void main(){q=uv-.5;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader:'varying vec2 q;void main(){gl_FragColor=vec4(.03,.025,.023,(1.-smoothstep(.025,.49,length(q)))*.43);}' }));
   shadow.name='Kammer 07 · Bodenkontakt';shadow.scale.set(.92,1,.81);room.add(shadow);
+  rig.npcInfo.shadow=shadow;
   const [cx,cz]=CHAPTER_PRISONER,angle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   let time=0,step=0,yaw=0,previous=cx,motion=0,speech=0;
   let breath=0;
   function turn(dt,visitor){
+    if(!rig.controllable())return false;
     // If a visitor steps into his path he waits and looks up; no chase state.
     const waits=visitor&&Math.hypot(visitor.x-actor.position.x,visitor.z-actor.position.z)<.91;
     breath+=dt;if(!waits)time+=dt;
@@ -35,7 +37,8 @@ export function makeChapterPrisoner(T,room,F){
     const look=visitor?Math.atan2(Math.sin(Math.atan2(visitor.x-x,visitor.z-z)-yaw),Math.cos(Math.atan2(visitor.x-x,visitor.z-z)-yaw)):0;
     rig.pose(breath,step,motion,0,0,0,.46,mouth*.89,Math.max(-.45,Math.min(.45,look))*.67,
       speech>0&&mouth<.21?.18:0);
+    return true;
   }
   turn(0);
-  return {turn,position:actor.position,speak(){speech=5.35;}};
+  return {turn,alive:rig.alive,position:actor.position,speak(){if(rig.alive())speech=5.35;}};
 }

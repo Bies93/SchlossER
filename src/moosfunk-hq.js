@@ -1,6 +1,7 @@
 import {randomSource} from './surface-detail.js';
 import {b,wcRoofAt} from './park-wc-layout.js';
 import {radioSpot} from './moosfunk-quest.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const pi=Math.PI;
 export function furnishHQ(T,kit,id){
@@ -11,6 +12,10 @@ export function furnishHQ(T,kit,id){
     [.88,.995],[.87,.92],[.70,.43],[.48,.13],[0,.10]].map(([r,y])=>new T.Vector2(r,y)),19);
   const roof=(u,v)=>wcRoofAt(id,u,v)-b;
   const box=(m,u,y,v,w,h,d)=>block(m,u-w/2,u+w/2,y,y+h,v-d/2,v+d/2);
+  const roundBox=(mat,u,y,v,w,h,d,r)=>{
+    const g=new RoundedBoxGeometry(d,h,w,2,r);
+    stamp(mat,g,u,y+h/2,v,[1,1,1]);g.dispose();
+  };
   const bolt=(m,u,y,v,r=.014)=>stamp(m,ball,u,y,v,[r,r,r]);
   const table=(u,v,w,d,h=.90,metal='iron',top='wood')=>{
     for(const s of [-1,1])for(const t of [-1,1]){
@@ -18,8 +23,10 @@ export function furnishHQ(T,kit,id){
       box(metal,A,.018,B,.058,h-.053,.059);
       box('rubber',A,.012,B,.080,.037,.075);
     }
-    box(metal,u,h-.131,v,w*.94,.085,d*.88);
-    box(top,u,h-.056,v,w,.056,d);
+    if(top){
+      box(metal,u,h-.131,v,w*.94,.085,d*.88);
+      box(top,u,h-.056,v,w,.056,d);
+    }else for(const s of [-1,1])box(metal,u,h-.129,v+s*d*.43,w*.98,.075,.046);
     for(const s of [-1,1]){
       box('edge',u,h-.048,v+s*(d*.5+.003),w*.985,.022,.011);
       box('brass',u+s*(w*.5-.022),h-.022,v,.030,.020,.026);
@@ -238,15 +245,37 @@ export function furnishHQ(T,kit,id){
   if(id==='kitchen'){
     // Glazed splashback, free-standing sink, storage jars and a scuffed
     // refrigerator. Leave the diagonal between both portals clear.
-    for(let i=0;i<6;i++)box('tileOld',32.37+i*.506,1.02,13.043,.503,.63,.126);
-    table(33.81,12.52,3.40,.955,.973,'gunmetal','metalSink');
-    box('metalSink',32.66,.972,12.49,.765,.031,.607);
-    stamp('metalSink',vessel,32.61,.969,12.44,[.269,.079,.195]);
-    stamp('steel',flat,32.62,.999,12.458,[.053,.022,.053]);
+    box('dark',33.81,1.002,13.037,3.40,.682,.066);
+    for(let i=0;i<12;i++)for(let j=0;j<3;j++)
+      roundBox((i+j*3)%7?'tileOld':'trim',32.25+i*.283,1.014+j*.213,12.976,.272,.204,.042,.009);
+    table(33.81,12.52,3.40,.955,.973,'gunmetal',null);
+    const basinU=32.67,basinV=12.49,ru=.328,rv=.253;
+    // Countertop with one actual hole; a single formed bowl below it.
+    const steelTop=new T.Shape(),sinkHole=new T.Path(),dv=12.52-basinV,du=33.81-basinU;
+    steelTop.moveTo(-dv-.477,-du-.5*3.4);steelTop.lineTo(-dv+.477,-du-.5*3.4);
+    steelTop.lineTo(-dv+.477,-du+.5*3.4);steelTop.lineTo(-dv-.477,-du+.5*3.4);steelTop.closePath();
+    sinkHole.absellipse(0,0,rv,ru,0,pi*2,true);steelTop.holes.push(sinkHole);
+    const top=new T.ShapeGeometry(steelTop,32).rotateX(-pi*.5);
+    let uv=top.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*1.4,uv.getY(i)*1.4);
+    stamp('metalSink',top,basinU,.979,basinV,[1,1,1]);top.dispose();
+    const basin=new T.LatheGeometry([[0,0],[.61,0],[.73,.10],[.80,.37],[.88,.78],[1,1],[.96,1],
+      [.84,.77],[.74,.36],[.66,.14],[.58,.08],[0,.08]].map(([r,y])=>new T.Vector2(r,y)),64);
+    stamp('metalSink',basin,basinU,.837,basinV,[rv,.142,ru]);basin.dispose();
+    stamp('wornSteel',flat,basinU,.856,basinV,[.044,.016,.044]);
+    for(let i=0;i<6;i++){
+      const a=i*pi/3;box('dark',basinU+.022*Math.sin(a),.856,basinV+.022*Math.cos(a),.006,.003,.006);
+    }
+    for(const v of [12.045,12.993])roundBox('wornSteel',33.81,.941,v,3.40,.037,.018,.008);
     pipe('steel',[32.65,.982,12.733],[32.65,1.289,12.733],.022);
     pipe('steel',[32.65,1.289,12.733],[32.65,1.263,12.509],.022);
     pipe('steel',[32.65,1.263,12.509],[32.65,1.203,12.509],.018);
     pipe('brass',[32.73,1.068,12.73],[32.825,1.082,12.73],.013);
+    pipe('wornSteel',[basinU,.825,basinV],[basinU,.557,basinV],.026);
+    pipe('wornSteel',[basinU,.557,basinV],[basinU,.509,basinV+.17],.027);
+    pipe('wornSteel',[basinU,.509,basinV+.17],[basinU,.629,basinV+.39],.026);
+    for(const y of [.762,.57])pipe('iron',[basinU,y,basinV],[basinU,y+.035,basinV],.035);
+    roundBox('ochre',33.12,.982,12.65,.141,.061,.094,.016);
+    for(let i=0;i<4;i++)pipe('gunmetal',[33.22,1.02,12.29+i*.071],[33.58,1.02,12.29+i*.071],.007);
     for(const [i,v] of [12.31,12.69].entries()){
       stamp('iron',flat,34.43,1.011,v,[.147,.026,.147]);
       stamp('iron',flat,34.81,1.011,v,[.136,.028,.136]);
@@ -261,20 +290,36 @@ export function furnishHQ(T,kit,id){
     for(const y of [1.309,1.639]){
       box('wood',33.52,y,12.904,1.31,.037,.398);
       for(let i=0;i<5;i++)jar(33.05+i*.229,y+.039,12.896,i);
+      for(const u of [32.98,34.08]){
+        pipe('gunmetal',[u,y-.016,12.72],[u,y-.165,12.955],.013);
+        bolt('steel',u,y-.14,12.953,.009);
+      }
     }
     const rU=35.08,rV=8.27;
-    box('green',rU,.075,rV,1.12,1.74,1.041);
-    box('gunmetal',rU,.075,rV,1.16,.13,1.08);
-    box('porcelain',rU-.586,.233,rV,.091,1.03,1.02);
-    box('porcelain',rU-.590,1.286,rV,.092,.493,1.019);
+    roundBox('fridgeShell',rU,.089,rV,1.12,1.782,1.060,.091);
+    roundBox('gunmetal',rU,.046,rV,1.13,.131,1.078,.033);
+    roundBox('gasket',rU-.554,.212,rV,.049,1.611,1.002,.023);
+    roundBox('fridgeEnamel',rU-.608,.231,rV,.133,1.043,1.021,.061);
+    roundBox('fridgeEnamel',rU-.612,1.292,rV,.138,.512,1.023,.062);
     for(const y of [.84,1.52]){
-      for(const d of [-.096,.096])pipe('iron',[rU-.624,y,rV+d],[rU-.721,y,rV+d],.015);
-      pipe('steel',[rU-.721,y,rV-.098],[rU-.721,y,rV+.098],.018);
+      roundBox('wornSteel',rU-.677,y-.037,rV+.22,.029,.073,.30,.014);
+      for(const d of [-.112,.112]){
+        pipe('gunmetal',[rU-.688,y,rV+.22+d],[rU-.757,y+.015,rV+.22+d],.014);
+        bolt('brass',rU-.695,y+.025,rV+.22+d,.006);
+      }
+      pipe('steel',[rU-.756,y+.015,rV+.108],[rU-.756,y+.015,rV+.332],.017);
     }
-    for(let j=0;j<11;j++)box('iron',rU+.010,.192,rV-.407+j*.077,.624,.019,.021);
-    hqTile('fridge',rU-.64,1.617,rV-.267,.395,.255,pi,0,-.058);
-    for(const [y,v,key] of [[1.745,rV-.351,'blueTape'],[1.745,rV-.168,'ochre'],[.868,rV+.209,'safetyRed']])
-      bolt(key,rU-.650,y,v,.014);
+    for(const y of [.327,1.154,1.659]){
+      roundBox('wornSteel',rU-.577,y,rV-.489,.123,.113,.069,.012);
+      pipe('iron',[rU-.629,y-.009,rV-.504],[rU-.629,y+.122,rV-.504],.009);
+    }
+    for(let j=0;j<11;j++)box('iron',rU-.576,.092,rV-.403+j*.077,.025,.032,.031);
+    roundBox('brass',rU-.680,1.095,rV-.251,.012,.073,.234,.005);
+    hqTile('fridge',rU-.685,1.581,rV-.208,.427,.255,pi,0,-.058);
+    for(const [v,key] of [[rV-.351,'blueTape'],[rV-.168,'ochre']])bolt(key,rU-.686,1.745,v,.014);
+    for(let i=0;i<7;i++){
+      roundBox('wornSteel',rU-.675,.254+i*.021,rV+.398-i*.012,.006,.004+(i%3)*.006,.021+(i%4)*.008,.001);
+    }
     hit(rU-.665,rU+.57,rV-.53,rV+.53);
     table(31.54,10.33,2.16,.994,.825,'iron','pine');
     cloth(31.54,10.34,.825,1.98,.579,'tartan');
@@ -285,10 +330,21 @@ export function furnishHQ(T,kit,id){
     chair(31.20,11.16,1,'sage');chair(32.09,11.16,1,'wool');
     sheet('kitchenDuty',31.55,.84,10.39,.48,.266,.10);
     for(const [i,u] of [31.23,31.32,31.43].entries())stamp('tomatoRed',ball,u,.872,10.68,[.027+i*.007,.039,.035]);
+    for(const [i,u] of [31.23,31.32,31.43].entries()){
+      pipe('green',[u,.905,10.67],[u+.023,.914,10.69],.006);
+      pipe('green',[u-.016,.903,10.69],[u+.018,.910,10.67],.004);
+      bolt('tomatoRed',u-.019,.889,10.65,.010+i*.001);
+    }
+    stamp('porcelain',vessel,32.19,.837,10.64,[.145,.087,.112]);
+    for(let i=0;i<4;i++)stamp(i%2?'jarPale':'ochre',ball,32.12+i*.049,.90+(i%2)*.024,10.63+(i%2)*.035,[.052,.034,.034],i*.72);
+    roundBox('darkWood',30.77,.832,10.47,.236,.027,.337,.012);
+    pipe('wornSteel',[30.70,.862,10.44],[30.85,.859,10.49],.010);
+    pipe('darkWood',[30.85,.86,10.49],[30.91,.865,10.524],.014);
     crate(35.05,10.39,0,.710,.675,.418,true);
     crate(35.05,10.39,.46,.668,.531,.33,true);
     wallSign('kitchenDuty',29.51,1.516,13.00,1.72,.625,pi/2);
     wallSign('missing',34.86,1.539,7.02,1.36,.65,-pi/2);
+    wallSign('seed',35.68,1.42,10.91,.84,.36,pi);
     shroud(31.57,10.31,'lamp');shroud(33.68,11.76,'workLamp');
   }
 

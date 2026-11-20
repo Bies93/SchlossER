@@ -16,6 +16,7 @@ export function splitHatchFloor(l,r,d,f){
 export function galleryHatch(T,root,world,materials){
   const lid=new T.Group(),rail=new T.Group();
   lid.name='Südgalerie · getarnte Steinbodenklappe';rail.name='Südgalerie · ausklappbare Absturzsicherung';
+  lid.userData.movingOccluder=rail.userData.movingOccluder=true;
   lid.position.set(0,Y,hingeZ);rail.position.set(0,Y,railZ);root.add(lid,rail);
   const k=architectureKit(T,lid,materials),g=architectureKit(T,rail,materials),p=(x,y,z)=>[x,y,z];
   const part=(m,a,b,c,d,e,f)=>k.box(m,p,a,b,c,d,e-hingeZ,f-hingeZ);

@@ -133,8 +133,8 @@ export function orbPriest(T,room,hit){
   actor.position.set(...p(workU,npc.groundedY(DEEP_FLOOR),workV));actor.rotation.y=-Math.PI*.5;
   actor.name='Orb-Priester · Votivkammer';room.add(actor);
   const at=actor.position;
-  contactShadow(T,room,at.x,DEEP_FLOOR+.005,at.z,.81,.80);
-  hit(workU-.27,workU+.27,workV-.19,workV+.19,deepWalk);
+  npc.npcInfo.shadow=contactShadow(T,room,at.x,DEEP_FLOOR+.005,at.z,.81,.80);
+  hit(workU-.27,workU+.27,workV-.19,workV+.19,p=>npc.alive()&&deepWalk(p));
   const grip=npc.grip('r'),tool=grip.socket;
   tool.name='Votivkammer · Requisitenmesser im Handgriff';
   box(tool,handle,0,0,-.003,.023,.027,.119,.008);
@@ -152,7 +152,7 @@ export function orbPriest(T,room,hit){
   let t=0,work=0,stop=-10,attention=0,look=0,acc=0;
   const target={id:'orb-priest',action:'priest-ack',label:'Orb-Priester ansprechen'};
   function update(dt,visitor){
-    if(!dt)return false;
+    if(!dt||!npc.controllable())return false;
     t+=dt;acc+=dt;if(acc<1/30)return false;
     const s=acc;acc=0;
     const since=t-stop,w=smooth(since/.27)*(1-smooth((since-.82)/.62));
@@ -167,10 +167,11 @@ export function orbPriest(T,room,hit){
   }
   update(.045);
   return {update,target(pos,dir){
+    if(!npc.alive())return null;
     const dx=at.x-pos.x,dz=at.z-pos.z,d=Math.hypot(dx,dz);
     return d>1.01&&d<2.65&&dx*dir.x+dz*dir.z>d*.61&&t-stop>1.77?target:null;
   },use(){
-    if(t-stop<1.77)return null;
+    if(!npc.alive()||t-stop<1.77)return null;
     stop=t;return at;
   }};
 }

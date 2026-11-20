@@ -1,9 +1,11 @@
-// User-provided music and procedural effects. Audio starts on a gesture.
+import {weaponBank} from './weapon-audio.js';
+// Audio starts on a gesture.
 const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={}) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={},weaponUrls={}) {
+  const weapons=weaponBank(weaponUrls);
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
   let danceBus,danceWet=0,danceBuffer,danceLoad,danceRetry=0,danceNode,danceStart=0,danceOffset=0;
@@ -167,7 +169,8 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     }
   }
   const npcTalking=id=>npcVoice?.id===id||npcRequest?.id===id;
-  function stopNpc(){
+  function stopNpc(id){
+    if(id&&npcRequest?.id!==id&&npcVoice?.id!==id)return;
     npcRequest=null;
     if(!npcVoice)return;
     const {node,amp}=npcVoice,t=ctx.currentTime;
@@ -220,6 +223,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     playing=true;
     try{
       if(!enabled||(!ctx&&!setup()))return;
+      weapons.decode(ctx);
       mix();ctx.resume().then(startTrack,()=>{});
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
@@ -232,9 +236,19 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     else{club(0);stopTrack();stopChoir();stopRadio();stopNpc();}
     return enabled;
   }
-  function shot(kind){
+  function sample(id,volume,rate=1,pan=0,wet=0){
+    const buffer=weapons.get(id);if(!buffer)return false;
+    const bus=route(sfx,pan,wet),g=gain(bus.node,volume),n=ctx.createBufferSource();
+    n.buffer=buffer;n.playbackRate.value=rate;n.connect(g);
+    n.onended=()=>{n.disconnect();g.disconnect();bus.close()};n.start();return true;
+  }
+  let shotIndex=0;
+  function shot(kind,indoors=false){
     if(!live())return;
     const t=ctx.currentTime+.005,v=.95+random()*.10;
+    const n=shotIndex++;
+    const file=kind==='bow'?'bow_fire_0'+(1+n%3):kind==='rifle'?'rifle_field_'+(1+n%2):'shotgun_field';
+    if(sample(file,kind==='bow'?.43:kind==='rifle'?.65:.72,v,0,indoors?.26:.07))return;
     const knock=(at,hz,len,vol,pan=0)=>tone(sfx,t+at,hz*v,len,vol,{attack:.0015,end:hz*.93*v,wet:.09,pan});
     if(kind==='bow'){
       grit(sfx,t,.018,.25,920,4880,{attack:.0012,wet:.075,rate:v});
@@ -256,6 +270,8 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function weaponAction(kind,phase){
     if(!live())return;
     const t=ctx.currentTime+.007,open=phase==='open',bow=kind==='bow',v=.93+.14*random();
+    const id=phase==='equip'||phase==='holster'?'weapon_'+phase:bow?'bow_reload_'+phase:'shotgun_pump_'+phase;
+    if(sample(id,phase==='equip'||phase==='holster'?.25:.35,v,.075,.10))return;
     grit(sfx,t,open?.083:.030,bow?.11:.18,open?480:880,bow?2520:4500,
       {attack:open?.008:.0015,wet:.12,rate:v});
     grit(sfx,t+(open?.075:.023),.031,bow?.085:.12,740,4100,{attack:.002,wet:.12,rate:v});
@@ -265,6 +281,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     if(!live())return;
     const a=listener(),dx=p.x-a.x,dz=p.z-a.z,d=Math.hypot(dx,dz);
     const vol=1/(1+(d/9)**1.45),pan=Math.max(-.85,Math.min(.85,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    if(sample('impact_'+(material==='surface'?'stone':material),vol*(material==='soft'?.37:.40),.94+random()*.12,pan,.13))return;
     const t=ctx.currentTime+.006,soft=material==='soft',metal=material==='metal',
       f=metal?1110:soft?107:kind==='bow'?218:415;
     grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft?156:575,soft?1230:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
@@ -399,7 +416,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
   return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,
-    playNpc,npcTalking,stopChapel:stopRadio,mode:on=>{combat=on},
+    playNpc,npcTalking,stopNpc,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},

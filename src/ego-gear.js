@@ -1,5 +1,5 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mergeGeometries,mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 import {handledFinish,weaponSwatch} from './weapon-finishes.js';
 import {buildWeapon} from './ego-weapon-models.js';
 
@@ -163,7 +163,11 @@ export function makeEquipment(T,specs){
     }
     function build(){
       for(const [mat,list] of bins){
-        const mesh=new T.Mesh(mergeGeometries(list),mat);root.add(mesh);list.forEach(g=>g.dispose());
+        const merged=mergeGeometries(list),indexed=mergeVertices(merged,1e-7);
+        // Normals, UV seams and wear attributes are part of the weld key.
+        // Keep the original triangles, but let the GPU reuse equal vertices.
+        const mesh=new T.Mesh(indexed,mat);root.add(mesh);
+        merged.dispose();list.forEach(g=>g.dispose());
       }
       bins.clear();return root;
     }

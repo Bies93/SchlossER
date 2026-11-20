@@ -30,13 +30,14 @@ export function palaceButler(T,room,world){
   track(distance,point);
   const collision={x:point.x,z:point.z,ux:1,uz:0,half:.192,depth:.145};
   const here=p=>p.y>-.33&&p.y<1.6&&Math.abs(p.x)<HALL.half&&p.z>=HALL.zMin&&p.z<=HALL.zMax;
-  world.movingBox(.32,-8.44,2.27,8.44,collision,here);
+  npc.npcInfo.shadow=shadow;
+  world.movingBox(.32,-8.44,2.27,8.44,collision,p=>npc.alive()&&here(p));
   const floor=npc.groundedY(HALL.floor);
   actor.position.set(point.x,floor,point.z);shadow.position.x=point.x;shadow.position.z=point.z;
   npc.walk(0,distance,track,HALL.floor,0,0);
   const angle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   return (dt,p)=>{
-    if(!dt||p.y<-.85||Math.abs(p.x)>15||Math.abs(p.z)>22)return false;
+    if(!npc.controllable()||!dt||p.y<-.85||Math.abs(p.x)>15||Math.abs(p.z)>22)return false;
     acc+=dt;if(acc<1/30)return false;
     const s=acc;acc=0;t+=s;
     track(distance+.57,ahead);

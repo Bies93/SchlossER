@@ -33,9 +33,10 @@ world.add(player.body);const mount=new T.Group(),eye=new T.PerspectiveCamera(63,
 player.body.add(mount);mount.add(eye);mount.position.y=1.67;mount.rotation.x=-.13;
 const vm=makeViewmodel(T,world,eye,player,{blocked:()=>false},()=>0,r.domElement,()=>true,()=>{});
 document.body.append(r.domElement);r.domElement.style.display='none';
-vm.setCombat(true);vm.preset('dusk');
+vm.preset('dusk');
 let ms=0;
 function settle(n=28){for(let i=0;i<n;i++)vm.update(ms+=1000/60);}
+async function renderBoard(){
 for(let i=0;i<EQUIPMENT.length;i++){
   const spec=EQUIPMENT[i],model=rig.devices[i].root,
     target=new T.Vector3(0,-.041,spec.kind==='bow'?-.18:-.20);
@@ -45,7 +46,8 @@ for(let i=0;i<EQUIPMENT.length;i++){
     snap(spec.label+' · '+label,()=>r.render(studio,close));
   }
   studio.remove(model);
-  window.dispatchEvent(new KeyboardEvent('keydown',{code:'Digit'+(i+1),bubbles:true}));settle();
+  if(i){vm.collect(i);await new Promise(resolve=>setTimeout(resolve,112));}
+  r.domElement.dispatchEvent(new WheelEvent('wheel',{deltaY:120,bubbles:true,cancelable:true}));settle();
   const render=()=>{r.render(world,eye);vm.draw(r);};
   snap(spec.label+' · First Person',render);
   r.domElement.dispatchEvent(new MouseEvent('mousedown',{button:2,bubbles:true,cancelable:true}));settle();
@@ -60,6 +62,8 @@ for(let i=0;i<EQUIPMENT.length;i++){
   }
 }
 document.body.dataset.finished='true';
+}
+renderBoard();
 `;
 const page=await build({stdin:{contents:src,resolveDir:fileURLToPath(base)},bundle:true,minify:true,write:false});
 await mkdir(folder,{recursive:true});

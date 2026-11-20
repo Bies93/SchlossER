@@ -17,15 +17,15 @@ export function labStaff(T,world){
     const npc=createHuman(T,d.id),{actor}=npc;
     actor.name=d.name;actor.rotation.y=d.yaw;
     actor.position.set(d.x,npc.groundedY(LAB.floor),d.z);root.add(actor);
-    contactShadow(T,root,d.x,LAB.floor+.007,d.z,.68,.60);
+    npc.npcInfo.shadow=contactShadow(T,root,d.x,LAB.floor+.007,d.z,.68,.60);
     const t=d.id.length*.66;
     npc.deskWork(t,d.job);
-    world.circle(d.x,d.z,.197,p=>labLower(p.y)&&!clubLevel(p.y));
+    world.circle(d.x,d.z,.197,p=>npc.alive()&&labLower(p.y)&&!clubLevel(p.y));
     const target={id:d.id,action:'lab-talk',label:d.name+' ansprechen'};
     actors.set(room,{...d,npc,target,t,acc:0,gaze:0,chat:0});
   }
   function update(room,p,dt){
-    const a=actors.get(room);if(!a||!dt)return false;
+    const a=actors.get(room);if(!a?.npc.controllable()||!dt)return false;
     if(Math.hypot(a.x-p.x,a.z-p.z)>8.5)return false;
     a.acc+=dt;if(a.acc<1/24)return false;
     const step=a.acc;a.acc=0;a.t+=step;
@@ -37,7 +37,7 @@ export function labStaff(T,world){
     return true;
   }
   function target(p,look){
-    const a=actors.get(cell(p));if(!a)return null;
+    const a=actors.get(cell(p));if(!a?.npc.alive())return null;
     const x=a.x-p.x,z=a.z-p.z,d=Math.hypot(x,z);
     return d<2.22&&d>.29&&x*look.x+z*look.z>.63*d?a.target:null;
   }

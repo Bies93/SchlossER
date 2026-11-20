@@ -24,9 +24,9 @@ function install(T,root,world,d,floor,eligible){
   actor.position.set(d.x,rig.groundedY(floor),d.z);actor.rotation.y=d.yaw;root.add(actor);
   rig.shadow(false);
   const radius=d.seat?.205:.188;
-  world.circle(d.x,d.z,radius,eligible);
+  world.circle(d.x,d.z,radius,p=>rig.alive()&&eligible(p));
   // For seated poses the feet, not the torso, set the contact patch.
-  contactShadow(T,root,d.x+Math.sin(d.yaw)*(d.seat?.34:0),floor+.008,d.z+Math.cos(d.yaw)*(d.seat?.34:0),
+  npcInfo.shadow=contactShadow(T,root,d.x+Math.sin(d.yaw)*(d.seat?.34:0),floor+.008,d.z+Math.cos(d.yaw)*(d.seat?.34:0),
     d.seat?.60:.72,.70);
   function add(holder,geometry,material,x,y,z,rx=0,ry=0,rz=0){
     const o=new T.Mesh(geometry,material);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);
@@ -78,6 +78,7 @@ function install(T,root,world,d,floor,eligible){
   npcInfo.speak=(duration=3.45)=>{speech=duration;};
   rig.visitorPose(elapsed,d.job,d.seat);
   return (dt,player)=>{
+    if(!rig.controllable()){if(water&&!rig.alive())water.visible=false;return false;}
     if(!dt||!eligible(player)||Math.hypot(player.x-d.x,player.z-d.z)>8.1)return false;
     acc+=dt;if(acc<1/24)return false;
     const t=acc;acc=0;

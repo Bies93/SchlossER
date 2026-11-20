@@ -7,6 +7,7 @@ export const gateLeft=CHAPTER_CELL[0]+3.50,gateRight=CHAPTER_CELL[0]+5.30;
 export function makeCellGate(T,room,world,materials,F){
   const z=CHAPTER_CELL[3]+.19,w=gateRight-gateLeft,c=(gateLeft+gateRight)/2;
   const leaf=new T.Group();leaf.name='Hubert · rollendes Zellengitter';room.add(leaf);
+  leaf.userData.movingOccluder=true;
   const k=architectureKit(T,leaf,materials),tr=(x,y,z)=>[x,y,z];
   const box=(m,x,y,z,w,h,d)=>k.box(m,tr,x-w/2,x+w/2,y,y+h,z-d/2,z+d/2);
   for(const x of [-w/2+.035,w/2-.035])box('iron',x,.036,0,.07,2.29,.071);

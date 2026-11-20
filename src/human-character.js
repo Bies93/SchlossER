@@ -161,7 +161,8 @@ export function createHuman(T,id='base'){
     }
   });
   actor.updateMatrixWorld(true);
-  const npcInfo=NPCS[id]?{...NPCS[id],id,actor,head:bones.get('head'),chest:bones.get('spine_03'),speak:null}:null;
+  const npcInfo=NPCS[id]?{...NPCS[id],id,actor,head:bones.get('head'),chest:bones.get('spine_03'),
+    speak:null,hp:100,alive:true,reacting:false,rig:null}:null;
   if(npcInfo){actor.name=npcInfo.name;actor.userData.namedNpc=true;lib.present.push(npcInfo);}
   const rest=new Map(),bodyInv=body.matrixWorld.clone().invert(),bodyRestQ=body.getWorldQuaternion(Q()).invert();
   for(const [n,b] of bones)rest.set(n,{q:b.quaternion.clone(),p:b.position.clone(),
@@ -169,17 +170,20 @@ export function createHuman(T,id='base'){
   for(const m of meshes)m.material=personalize(T,lib,id,m.material,rest.get('eye_l')?.at.y??1.67);
   const e=new T.Euler(0,0,0,'YXZ'),q=Q(),inv=Q(),pq=Q(),worldInverse=new T.Matrix4(),A=V(),D=V(),P=V(),J=V(),goal=V(),
     start=V(),dir=V(),elbow=V(),end=V();
+  const matrixP=V(),matrixScale=V(),bodyQ=Q();
+  const matrixQ=(node,out)=>{node.matrixWorld.decompose(matrixP,out,matrixScale);return out;};
   const read=n=>rest.get(n).at, pelvis=bones.get('pelvis'),hipsY=read('pelvis').y;
   const LIMB={l:{},r:{}};
   for(const s of ['l','r']){
     LIMB[s].leg=['thigh_','calf_','foot_'].map(n=>n+s);
     LIMB[s].arm=['upperarm_','lowerarm_','hand_'].map(n=>n+s);
+    for(const chain of [LIMB[s].leg,LIMB[s].arm])chain.lengths=[rest.get(chain[1]).p.length(),rest.get(chain[2]).p.length()];
   }
   const rot=(n,x=0,y=0,z=0)=>{const b=bones.get(n);if(b)b.quaternion.copy(rest.get(n).q).multiply(q.setFromEuler(e.set(x,y,z)));};
   function aim(n,child,target){
     const b=bones.get(n),up=b.parent;up.updateWorldMatrix(true,false);
-    inv.copy(up.getWorldQuaternion(pq)).invert();
-    const desired=D.copy(target).sub(b.getWorldPosition(P)).applyQuaternion(inv).normalize();
+    matrixQ(up,inv).invert();b.updateWorldMatrix(false,false);
+    const desired=D.copy(target).sub(P.setFromMatrixPosition(b.matrixWorld)).applyQuaternion(inv).normalize();
     const r=rest.get(n).q;
     q.setFromUnitVectors(A.copy(rest.get(child).p).applyQuaternion(r).normalize(),desired);
     b.quaternion.copy(q).multiply(r);
@@ -190,7 +194,7 @@ export function createHuman(T,id='base'){
     a.getWorldPosition(start).applyMatrix4(worldInverse);
     goal.set(x,y,z);
     dir.copy(goal).sub(start);
-    const l0=rest.get(nb).p.length(),l1=rest.get(nc).p.length(),raw=dir.length();
+    const [l0,l1]=names.lengths,raw=dir.length();
     if(raw<.00001)return;
     dir.multiplyScalar(1/raw);
     const l=clamp(raw,Math.abs(l0-l1)+.009,l0+l1-.006);
@@ -202,16 +206,18 @@ export function createHuman(T,id='base'){
   }
   function foot(name,x,y=0){
     const b=bones.get(name);b.parent.updateWorldMatrix(true,false);
-    b.parent.getWorldQuaternion(inv).invert();body.getWorldQuaternion(pq);
-    b.quaternion.copy(inv).multiply(pq).multiply(q.setFromEuler(e.set(x,y,0)));
+    matrixQ(b.parent,inv).invert();
+    b.quaternion.copy(inv).multiply(bodyQ).multiply(q.setFromEuler(e.set(x,y,0)));
   }
   const isGhoul=id.startsWith('ghoul'),hubert=id==='hubert';
+  const faceNames=['BlinkL','BlinkR','JawOpen','Purse','Smile','BrowL','BrowR'],values=new Float32Array(7);
+  const channels=faces.map(m=>Object.entries(m.morphTargetDictionary).map(([name,i])=>[m.morphTargetInfluences,i,faceNames.indexOf(name)]));
   function face(t,seed,speech=0,purse=0,smile=0,glance=0){
     const z=(t+seed*1.61)%(3.82+frac(seed*.79)*2.34),blink=z<.20?sin(z/.20*Math.PI)**1.23:0,
       glanceY=sin(t*.69+seed)*.049;
-    const blend={BlinkL:blink*.99,BlinkR:blink,JawOpen:clamp(speech),Purse:purse,Smile:smile,
-      BrowL:(.5+.5*sin(t*.92+seed))*.13+speech*.19,BrowR:(.5+.5*sin(t*.78+seed+.8))*.12};
-    for(const m of faces)for(const [name,i] of Object.entries(m.morphTargetDictionary))m.morphTargetInfluences[i]=blend[name]??0;
+    values[0]=blink*.99;values[1]=blink;values[2]=clamp(speech);values[3]=purse;values[4]=smile;
+    values[5]=(.5+.5*sin(t*.92+seed))*.13+speech*.19;values[6]=(.5+.5*sin(t*.78+seed+.8))*.12;
+    for(const list of channels)for(const [dest,i,k] of list)dest[i]=values[k]??0;
     rot('eye_l',glanceY,glance*.61+sin(t*.58+seed)*.065);rot('eye_r',glanceY,glance*.61+sin(t*.58+seed)*.065);
   }
   const fingers=['index','middle','ring','pinky'];
@@ -224,7 +230,7 @@ export function createHuman(T,id='base'){
     rot('pelvis',bend*.25,twist*.30,tilt*.52);rot('spine_01',bend*.50,twist*.28,-tilt*.39);
     rot('spine_02',bend*.28,twist*.22,-tilt*.24);rot('spine_03',bend*.20,twist*.22,-tilt*.18);
     rot('neck_01',-bend*.29,lookX*.44);rot('head',-bend*.45+lookY,lookX*.56,sin(t*.96)*.026);
-    body.updateWorldMatrix(true,false);worldInverse.copy(body.matrixWorld).invert();
+    body.updateWorldMatrix(true,false);worldInverse.copy(body.matrixWorld).invert();matrixQ(body,bodyQ);
   }
   const size=proto.userData.size??1,groundedY=y=>y+.003-(proto.userData.soleY??0)*size;
   const anchorA={},anchorB={},ankleGoal=V();
@@ -407,7 +413,57 @@ export function createHuman(T,id='base'){
     for(const {b,p,base,sphere} of shapes){sphere.center.copy(p).applyMatrix4(b.matrixWorld);sphere.radius=base*scale;}
     return shapes;
   }
+  const flinchBones=['spine_02','spine_03','neck_01'].map(name=>[bones.get(name),Q()]);
+  const bonesArray=[...bones.values()],initial=bonesArray.map(()=>Q()),settled=bonesArray.map(()=>Q());
+  const pelvis0=V(),pelvisEnd=V(),at0=V(),bodyAt=V(),body0=Q(),bodyEnd=Q();
+  const turn=new T.Euler(),ease=t=>t*t*(3-2*t);
+  let clock=0,collapse=false,side=1,heading0=0,heading1=0,ground=0,travel=0,short=false;
+  function reaction(point,dying,fall,grade){
+    if(!npcInfo)return;
+    npcInfo.reacting=true;clock=0;collapse=!!dying;
+    side=(point.x-actor.position.x)*Math.cos(actor.rotation.y)-(point.z-actor.position.z)*sin(actor.rotation.y)<0?1:-1;
+    if(!collapse){for(const [b,out] of flinchBones)if(b)out.copy(b.quaternion);return;}
+    bonesArray.forEach((b,i)=>initial[i].copy(b.quaternion));
+    pelvis0.copy(pelvis.position);body0.copy(body.quaternion);bodyAt.copy(body.position);at0.copy(actor.position);
+    heading0=actor.rotation.y;
+    heading1=Math.atan2(sin(fall.x-heading0),cos(fall.x-heading0));
+    ground=grade;travel=fall.y>.67?Math.min(.24,(fall.y-.67)*.27):0;short=fall.y<1.22;
+    pose(0,.19,0,0,0,0,side>0?1.6:2.4);
+    rot('thigh_l',short?-.58:-.10,.11,.12);rot('thigh_r',short?-.40:-.18,-.13,-.20);
+    rot('calf_l',short?.86:.24);rot('calf_r',short?.70:.41);
+    face(0,0,0,0,0,0);
+    for(const list of channels)for(const [dest,i,k] of list)if(k===0||k===1)dest[i]=.93;
+    bonesArray.forEach((b,i)=>{settled[i].copy(b.quaternion);b.quaternion.copy(initial[i]);});
+    pelvisEnd.copy(pelvis.position);pelvis.position.copy(pelvis0);
+    bodyEnd.setFromEuler(turn.set(short?-1.43:-Math.PI*.5,0,side*(short?.18:.07),'YXZ'));
+    body.quaternion.copy(body0);body.position.copy(bodyAt);
+  }
+  function reactionTick(dt,visible){
+    if(!npcInfo?.reacting||!dt)return false;
+    clock+=dt;
+    if(!collapse){
+      const k=clamp(clock/.26),p=sin(Math.PI*k);
+      for(const [j,[b,base]] of flinchBones.entries())if(b)
+        b.quaternion.copy(base).multiply(q.setFromEuler(e.set(-.095*p,side*p*(.18-j*.028),side*p*.087)));
+      if(k>=1)npcInfo.reacting=false;
+      return visible;
+    }
+    const k=clamp(clock/.91),roll=ease(clamp((k-.09)/.91)),brace=ease(clamp(k*1.36));
+    actor.rotation.y=heading0+heading1*ease(clamp(k*1.65));
+    actor.position.set(at0.x-sin(actor.rotation.y)*travel*roll,
+      mix(at0.y,ground,roll),at0.z-cos(actor.rotation.y)*travel*roll);
+    body.quaternion.copy(body0).slerp(bodyEnd,roll);
+    body.position.copy(bodyAt);body.position.y=mix(bodyAt.y,short?.18:.151,roll)-.064*sin(Math.PI*k);
+    pelvis.position.copy(pelvis0).lerp(pelvisEnd,brace);
+    for(let i=0;i<bonesArray.length;i++)bonesArray[i].quaternion.copy(initial[i]).slerp(settled[i],brace);
+    if(k>=1)npcInfo.reacting=false;
+    return visible;
+  }
+  const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
+  const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  return {actor,pose,dance,altarWork,deskWork,visitorPose,grip,walk,groundedY,npcInfo,
+  const rig={actor,pose,dance,altarWork,deskWork,visitorPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
     joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
+  if(npcInfo)npcInfo.rig=rig;
+  return rig;
 }

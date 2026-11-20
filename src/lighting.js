@@ -127,7 +127,7 @@ export function makeLighting(T, renderer, scene, world, floorHeight){
     vertexShader:'varying vec3 ray;void main(){ray=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader:SKY
   }));
-  sky.renderOrder=-100;
+  sky.renderOrder=-100;sky.userData.noSceneQuery=true;
   const hemi=new T.HemisphereLight(), key=new T.DirectionalLight();
   key.castShadow=true;key.shadow.mapSize.set(2048,2048);
   scene.fog=new T.FogExp2();scene.add(sky,hemi,key,key.target);

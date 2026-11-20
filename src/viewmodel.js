@@ -4,7 +4,7 @@ import {makeEgoBody} from './ego-body.js';
 import {weaponWorld} from './ego-projectiles.js';
 
 export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,
-  creatures=null,onFire=()=>{},onContact=()=>{},onAction=()=>{}){
+  creatures=null,onFire=()=>{},onContact=()=>{},onAction=()=>{},query,context){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xe6eaf0,0x839098,1.24),key=new T.DirectionalLight(0xf7dcac,1.38),
     rim=new T.DirectionalLight(0xb5c8dc,.62);
@@ -22,7 +22,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   const arms=[-1,1].map(side=>({side,forearm:mesh(hands,cap,sleeve),wrap:mesh(hands,shell,cuff),wrist:V(),elbow:V(),end:V()}));
   const devices=rig.devices;held.add(...devices.map(d=>d.root),...rig.hands.map(p=>p.group));
-  const rangeObjects=new T.Group();rangeObjects.name='Ghoul-Modus · Treffer und Übungsmarken';scene.add(rangeObjects);
+  const rangeObjects=new T.Group();rangeObjects.name='Treffer und Übungsmarken';rangeObjects.userData.noSceneQuery=true;scene.add(rangeObjects);
   const anchors=[[57.1,47.7],[62.5,49.2],[65.7,53.7]].map(([x,z])=>{
     const y=floorHeight(x,z),center=V(x,y+.88,z);
     const stand=mesh(rangeObjects,new T.CylinderGeometry(.046,.10,.85,10),frame,x,y+.42,z);
@@ -31,7 +31,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const face=mesh(rangeObjects,new T.IcosahedronGeometry(.123,1),surface,x,center.y,z);
     return {face,timer:0,sphere:new T.Sphere(center,.14)};
   });
-  const fx=weaponWorld(T,rangeObjects,world,floorHeight,creatures,rig.bolt,anchors,onContact);
+  const fx=weaponWorld(T,rangeObjects,world,floorHeight,creatures,rig.bolt,anchors,onContact,query,context);
   const flash=new T.Group();held.add(flash);
   const shine=new T.MeshBasicMaterial({color:0xe9a33b,transparent:true,depthWrite:false,
     blending:T.AdditiveBlending,toneMapped:false});
@@ -43,8 +43,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   const clockAt=[-10,-10,-10],heard=[0,0,0],previous=player.body.position.clone(),deltaPos=V();
   const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),sight=V(),projected=V(),sightAnchor=V();
   const screen=new T.Vector2(),aimScreen=new T.Vector2();
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,coarse=matchMedia('(pointer:coarse)').matches;
-  let selected=coarse?-1:0,pending=selected,swap=null,aiming=false,ads=0,kick=0,t0=null,step=0,clock=0;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0];
+  let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,t0=null,step=0,clock=0;
   let moving=0,running=0,strafe=0,inertia=0,previousYaw=player.body.rotation.y,wheel=0,wheelAt=0,wheelStepAt=-1000;
   let wasPermitted=false,serial=0;
   function display(n){
@@ -54,6 +54,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     if(!swap&&selected===n)return;
     if(n<0)aiming=false;
     pending=n;
+    onAction(style[n>=0?n:selected]?.kind,n<0?'holster':'equip');
     if(!swap)swap={at:clock,shown:false,down:selected<0?0:.109,up:n<0?0:.176};
     else if(swap.shown)swap={at:clock,shown:false,down:.080,up:n<0?0:.160};
     // A change while still lowering replaces the destination only.
@@ -110,10 +111,6 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   window.addEventListener('mouseup',e=>{if(e.button===2){aiming=false;refresh();}});
   window.addEventListener('pointercancel',()=>{aiming=false;refresh();});
   canvas.addEventListener('contextmenu',e=>{if(isActive())e.preventDefault();});
-  window.addEventListener('keydown',e=>{
-    if(!isActive()||e.ctrlKey||e.altKey||e.metaKey||!equipmentAllowed())return;
-    if(/^Digit[0123]$/.test(e.code)&&!e.repeat){e.preventDefault();select(Number(e.code.slice(-1))-1);}
-  });
   window.addEventListener('wheel',e=>{
     if(e.ctrlKey||!relevant(e)||!e.deltaY||!equipmentAllowed())return;
     e.preventDefault();
@@ -122,7 +119,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     wheelAt=now;wheel+=Math.max(-110,Math.min(110,raw));
     if(Math.abs(wheel)<39||now-wheelStepAt<108)return;
     const sign=Math.sign(wheel),current=swap?pending:selected;
-    const next=current<0?(sign>0?0:style.length-1):(current+sign+style.length)%style.length;
+    const next=owned[(owned.indexOf(current)+sign+owned.length)%owned.length];
     wheel=0;wheelStepAt=now;select(next);
   },{passive:false});
   function update(now){
@@ -159,6 +156,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const breath=Math.sin(clock*2.04)*.0035*comfort*(1-.90*ads);
     const lookDown=smooth((-camera.parent.rotation.x-.78)/.52)*rest;
     camera.position.y=(bob*.013*(1+running*.35)-landing*.035)*comfort;camera.rotation.z=strafe*.007*comfort;
+    if(selected>=0){
     held.rotation.set(-.039*rest+sway*.020*comfort+kick*1.45-holster*.74-lookDown*.26-handling*.141+breath,
       n.yaw*rest+inertia*.008*rest+sway*.011*comfort+.069*handling,
       -strafe*.037*rest+holster*.23+running*.083*rest-.025*rest-.068*handling);
@@ -167,7 +165,6 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       n.hold[1]*rest-sightAnchor.y*ads+(bob*.012*comfort-landing*.020*comfort-(grounded?0:.032))*rest-
       running*.041*rest-holster*.41-lookDown*.19+breath*.8,
       n.hold[2]+ads*.052+kick+holster*.020);
-    if(selected>=0){
       device.animate(age);
       const support=pose.nodes[0];
       support.position.fromArray(n.fore).add(device.left);
@@ -219,10 +216,27 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
     camera.position.y=camera.rotation.z=0;flash.visible=false;refresh();
   }
-  function setCombat(on){
-    rangeObjects.visible=on;pending=on?0:-1;
-    kick=0;clockAt.fill(-10);heard.fill(0);fx.clear();stop();
+  function collect(index){
+    if(!style[index]||owned.includes(index))return false;
+    owned.push(index);owned.sort((a,b)=>a-b);onAction(style[index].kind,'equip');return true;
+  }
+  function pickupModel(index){
+    const device=devices[index];device.animate(10);
+    const copy=device.root.clone();copy.visible=true;return copy;
+  }
+  async function prepare(r){
+    const vp=r.getViewport(new T.Vector4()),sc=r.getScissor(new T.Vector4()),test=r.getScissorTest(),meshes=[];
+    for(const d of devices)d.root.visible=true;
+    for(const p of rig.hands)p.group.visible=true;
+    flash.visible=true;stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
+    try{
+      await r.compileAsync(stage,eye);
+      r.setViewport(0,0,32,32);r.setScissor(0,0,32,32);r.setScissorTest(true);r.render(stage,eye);
+    }finally{
+      display(selected);flash.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
+      r.setViewport(vp);r.setScissor(sc);r.setScissorTest(test);
+    }
   }
   update(performance.now());
-  return {update,draw,preset,stop,setCombat,clearShots:fx.clear,bodyLayer:body.layer};
+  return {update,draw,preset,stop,collect,pickupModel,prepare,clearShots:fx.clear,bodyLayer:body.layer};
 }

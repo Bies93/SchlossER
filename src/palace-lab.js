@@ -66,6 +66,7 @@ function terminalDisplay(T){
 export function addPalaceLab(T,root,world,M,moosfunk){
   const shell=new T.Group(),shaft=new T.Group(),cabinet=new T.Group();root.add(shell,shaft,cabinet);
   shell.name='Lesesaal · Verkleidung der Kellertreppe';shaft.name='Projekt Bayern · Treppenschacht';cabinet.name='Regal mit lockerem Buch';
+  cabinet.userData.movingOccluder=true;
   const plain=(color,roughness=.88,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   const glow=(color,power)=>plain(color,.62,{emissive:color,emissiveIntensity:power});
   const wood=M.oak.clone();wood.color.setHex(0x795c48);wood.vertexColors=false;

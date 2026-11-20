@@ -15,7 +15,7 @@ export function utilityDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicl
   return swingDoor(T,root,world,M,x,z,span,{id,label,floor,lower,cubicle,acoustic,ritual,open:false,solid:true,utility:true,heading,delta:acoustic?turn:ritual?-turn:-heading});
 }
 function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=false,cubicle=false,acoustic=false,ritual=false,heading=0,delta=-turn,floor=LAB.floor,lower=labLower}){
-  const leaf=new T.Group();leaf.name=(ritual?'Moosfunk · ':utility?'WC-Tür · ':solid?'Stahltür · ':'Gittertür · ')+label;leaf.position.set(x,floor,z);root.add(leaf);
+  const leaf=new T.Group();leaf.name=(ritual?'Moosfunk · ':utility?'WC-Tür · ':solid?'Stahltür · ':'Gittertür · ')+label;leaf.userData.movingOccluder=true;leaf.position.set(x,floor,z);root.add(leaf);
   const k=architectureKit(T,leaf,M),p=(u,y,d)=>[-d,y,u];
   const box=(m,a,b,l,h,c,d)=>k.box(m,p,a,b,l,h,c,d);
   if(utility){

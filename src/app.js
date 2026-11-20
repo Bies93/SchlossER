@@ -30,6 +30,9 @@ import {addChapter} from './chapter.js';
 import {CHAPTER_LAYER} from './chapter-layout.js';
 import {installHumans} from './human-character.js';
 import {npcFocus} from './npc-focus.js';
+import {sceneQuery} from './scene-query.js';
+import {combatTargets} from './combat-targets.js';
+import {weaponPickups} from './weapon-pickups.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -114,7 +117,8 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices);
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds);
+ const weaponAudioReady=audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
@@ -126,20 +130,14 @@ async function start(){
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
- const gameModes={
-   walk:{start:'Rundgang starten',description:'Schloss und Garten frei erkunden, ohne Waffen und Gegner.'},
-   ghouls:{start:'Ghoul-Modus starten',description:'Mit Armbrust, Sturmgewehr und Pumpflinte. Fünf Ghoule warten im Schlossgarten.'}
- };
- let chosenMode='walk',gameMode='walk',firstRound=false;
- const combat=()=>gameMode==='ghouls';
- const mouse=matchMedia('(any-pointer: fine)'),coarse=matchMedia('(pointer: coarse)');
- const combatAvailable=()=>mouse.matches||!coarse.matches;
- const desktopRound=()=>document.body.dataset.input!=='touch';
+ const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER];
+ const coarse=matchMedia('(pointer: coarse)'),ghoulOption=$('with-ghouls');
+ let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0;
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
- const ghoulNotice=$('ghoul-notice'),ghoulAction=$('ghoul-action'),ghoulText=$('ghoul-text');
- let noticeTimer=0,roundLabel='';
+ const ghoulNotice=$('ghoul-notice');
+ let noticeTimer=0;
  function announceGhoul(text,kind){
    clearTimeout(noticeTimer);
    ghoulNotice.textContent=text;ghoulNotice.dataset.kind=kind;ghoulNotice.hidden=false;
@@ -147,58 +145,32 @@ async function start(){
    refresh();
  }
  const round=ghoulRound(T,s,world,(x,z)=>floorHeight(x,z,0,false),announceGhoul,audio.creature);
- const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
-   ()=>{const p=player.body.position;return combat()&&desktopRound()&&hall.allowGear(p)
-     &&!(p.y<-.42&&wcHeightAt(p.x,p.z,p.y)!==null);},round,audio.shot,audio.shotContact,audio.weaponAction);
- viewmodel.setCombat(false);
- const modeButtons=[...$('game-mode').querySelectorAll('[data-mode]')];
- function chooseMode(id){
-   if(!Object.hasOwn(gameModes,id)||id==='ghouls'&&!combatAvailable())id='walk';
-   chosenMode=id;
-   for(const b of modeButtons){
-     b.disabled=b.dataset.mode==='ghouls'&&!combatAvailable();
-     b.setAttribute('aria-pressed',String(b.dataset.mode===id));
-   }
-   $('start-mode').textContent=gameModes[id].start;
-   $('mode-description').textContent=gameModes[id].description+
-     (!combatAvailable()?' Der Ghoul-Modus benötigt Maus und Tastatur.':'');
+ const geometryQuery=sceneQuery(T,s,player.body),layerContext={mask:1,layer:0};
+ function activeLayers(){
+   const p=player.body.position;
+   const cm=chapter.mode(p),wm=wcCameraMode(p),lm=labCameraMode(p);
+   const surface=cm!=='inside'&&wm!=='inside'&&lm!=='cellar';
+   layerContext.mask=surface?1:0;
+   if(lm==='cellar'||surface&&hall.labVisible())layerContext.mask|=1<<LAB_LAYER;
+   if(wm!=='surface'&&(surface||wm==='inside'))layerContext.mask|=1<<WC_LAYER;
+   if(chapter.visible()&&(surface||cm==='inside'))layerContext.mask|=1<<CHAPTER_LAYER;
+   layerContext.layer=cm==='inside'||cm==='threshold'&&p.y<-.38?CHAPTER_LAYER:
+     wm==='inside'||wm!=='surface'&&p.y<-.38?WC_LAYER:lm==='cellar'||lm==='threshold'&&p.y<-.38?LAB_LAYER:0;
+   return layerContext;
  }
- for(const b of modeButtons)b.onclick=()=>chooseMode(b.dataset.mode);
- mouse.addEventListener('change',()=>chooseMode(chosenMode));
- coarse.addEventListener('change',()=>chooseMode(chosenMode));
- chooseMode('walk');
- function applyMode(){
-   if(chosenMode===gameMode)return;
-   gameMode=chosenMode;firstRound=combat();
-   round.reset();viewmodel.setCombat(combat());audio.mode(combat());
-   clearTimeout(noticeTimer);ghoulNotice.hidden=true;
-   document.body.dataset.mode=gameMode;
- }
- function roundPrompt(){
-   const label=active()&&combat()&&desktopRound()&&!firstRound?round.prompt(player.body.position):'';
-   if(label===roundLabel)return;
-   roundLabel=label;ghoulAction.hidden=!label;
-   if(label)ghoulText.textContent=label;
- }
- function startRound(){
-   if(!active()||!combat()||!desktopRound())return;
-   if(round.begin(player.body.position)){viewmodel.clearShots();roundPrompt();refresh()}
- }
- ghoulAction.addEventListener('click',()=>{startRound();canvas.focus({preventScroll:true})});
- window.addEventListener('keydown',e=>{
-   if(!active()||e.code!=='KeyR'||e.repeat||e.altKey||e.ctrlKey||e.metaKey||!roundLabel)return;
-   e.preventDefault();startRound();
+ const targets=combatTargets(T,geometryQuery,round,world,floorHeight,id=>{
+   if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
+   if(id==='hubert')leavePrison();
+   names.sample(performance.now(),true);
  });
+ const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
+   ()=>document.body.dataset.input!=='touch',targets,
+   kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0||hallFloor(p.x,p.z)!==null);},
+   audio.shotContact,audio.weaponAction,geometryQuery,activeLayers);
+ const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
- const names=npcFocus(T,s,c,player.body,$('npc-name'),p=>{
-   const zone=chapter.mode(p),wcZone=wcCameraMode(p),labZone=labCameraMode(p);
-   if(zone==='inside')return 1<<CHAPTER_LAYER;
-   if(wcZone==='inside')return 1<<WC_LAYER;
-   if(labZone==='cellar')return 1<<LAB_LAYER;
-   return 1|(zone==='threshold'?1<<CHAPTER_LAYER:0)|(wcZone==='threshold'?1<<WC_LAYER:0)|
-     (labZone==='threshold'?1<<LAB_LAYER:0);
- });
+ const names=npcFocus(T,s,c,player.body,$('npc-name'),()=>activeLayers().mask,geometryQuery);
  let captionTimer=0,captionId=0,chapelTime=null,chapelTake=0;
  function hideCaption(){clearTimeout(captionTimer);captionId++;caption.hidden=true;}
  function showCaption(text,duration){
@@ -261,7 +233,7 @@ async function start(){
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
-   const target=chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
+   const target=pickups.target(c,activeLayers().mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
    // Edda takes priority, without making the tape deck itself unavailable.
    return target?.id==='mf-radio'&&names.target()?.id==='guestEdda'?null:target;
@@ -290,6 +262,11 @@ async function start(){
    if(!active())return;
    const now=performance.now();names.sample(now,true);
    const local=localTarget();
+   if(local?.action==='gear-pickup'){
+     const notice=pickups.collect(local);
+     if(notice)showCaption(notice,4200);
+     doorPrompt();refresh();return;
+   }
    if(local?.action==='priest-ack'){
      const at=wc.priestAck();if(!at)return;
      showCaption('Orb-Priester: „… hm …“',1550);audio.priestMurmur(at);
@@ -327,36 +304,20 @@ async function start(){
  });
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
  function draw(){
-   const p=player.body.position,mode=labCameraMode(p);
-   const wcMode=wcCameraMode(p),chapterMode=chapter.mode(p),surface=mode!=='cellar'&&wcMode!=='inside'&&chapterMode!=='inside',cellar=hall.labVisible();
-   wc.update(0,p);
-   chapter.update(0,p);
-   // The body belongs to exactly one lit layer, including at open hatches.
-   viewmodel.bodyLayer(chapterMode==='inside'||chapterMode==='threshold'&&p.y<-.38?CHAPTER_LAYER:
-     wcMode==='inside'||wcMode!=='surface'&&p.y<-.38?WC_LAYER:
-     mode==='cellar'||mode==='threshold'&&p.y<-.38?LAB_LAYER:0);
-   if(surface){
-     c.layers.set(0);
-     lighting.update(p);garden.update(p,performance.now());fountain.syncView?.(c);
-     r.render(s,c);
+   const p=player.body.position,{mask,layer}=activeLayers();
+   viewmodel.bodyLayer(layer);
+   if(mask&1){
+     lighting.update(p);garden.update(p,performance.now());
    }
-   // At the doorway share depth, not lighting. A combined camera mask
-   // would compile new palace shaders for a different number of lights.
-   if(chapterMode!=='inside'&&(cellar||mode==='cellar')){
-     c.layers.set(LAB_LAYER);const clear=r.autoClear;
-     try{if(surface)r.autoClear=false;r.render(s,c);}
-     finally{r.autoClear=clear;c.layers.set(0);}
-   }
-   if(chapterMode!=='inside'&&wcMode!=='surface'){
-     c.layers.set(WC_LAYER);const clear=r.autoClear;
-     try{if(surface)r.autoClear=false;r.render(s,c);}
-     finally{r.autoClear=clear;c.layers.set(0);}
-   }
-   if(chapter.visible()&&(surface||chapterMode==='inside')){
-     c.layers.set(CHAPTER_LAYER);const clear=r.autoClear;
-     try{if(surface)r.autoClear=false;r.render(s,c);}
-     finally{r.autoClear=clear;c.layers.set(0);}
-   }
+   // One transform update across all passes. At a hatch share depth, not
+   // lights, so the existing lighting and material permutations stay intact.
+   s.updateMatrixWorld();
+   const clear=r.autoClear;
+   try{
+     for(const pass of layerPasses)if(mask&(1<<pass)){
+       c.layers.set(pass);r.render(s,c);r.autoClear=false;
+     }
+   }finally{r.autoClear=clear;c.layers.set(0);}
    viewmodel.draw(r);
  }
  function render(time){
@@ -366,10 +327,9 @@ async function start(){
      audio.ambience(player.body.position);audio.club(clubMix(player.body.position));
      chapelCue(time,player.body.position);
      orbCue(time,player.body.position);
-     if(combat()&&desktopRound()){
-       if(firstRound&&round.prompt(player.body.position)){
-         firstRound=false;
-         if(round.begin(player.body.position)){viewmodel.clearShots();dirty=true;}
+     if(ghoulsEnabled){
+       if(firstRound&&time>=spawnCheck&&round.inside(player.body.position)){
+         spawnCheck=time+600;if(round.begin(player.body.position)){firstRound=false;dirty=true;}
        }
        if(round.tick(time,player.body.position))dirty=true;
      }
@@ -380,11 +340,12 @@ async function start(){
      if(chapter.update(dt,player.body.position)){
        dirty=true;if(chapter.mode(player.body.position)!=='inside')r.shadowMap.needsUpdate=true;
      }
+     geometryQuery.invalidateMoving();
      prisonerCue(time,player.body.position);
      if(state.shadow)r.shadowMap.needsUpdate=true;
+     if(targets.tick(dt,activeLayers().mask))dirty=true;
      names.sample(time);
      doorPrompt();
-     roundPrompt();
      if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
      if(wcCameraMode(player.body.position)==='surface'&&chapter.mode(player.body.position)==='surface'&&labCameraMode(player.body.position)!=='cellar'&&pauli.tick(time,c))dirty=true;
      if(viewmodel.update(time))dirty=true;
@@ -396,7 +357,7 @@ async function start(){
    if(!active())return;
    document.body.dataset.state='paused';
    leaveChapel();leavePrison();orbSince=null;hideCaption();names.clear();
-   input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();roundPrompt();
+   input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
@@ -404,12 +365,11 @@ async function start(){
    refresh,mode:value=>{document.body.dataset.input=value}
  });
  action.onclick=event=>{
-   if(!combatAvailable()&&chosenMode==='ghouls')chooseMode('walk');
-   applyMode();
+   if(!started){started=true;ghoulsEnabled=firstRound=ghoulOption.checked;audio.mode(ghoulsEnabled);}
    audio.play();
    document.body.dataset.state='playing';
    input.start({
-     touch:!combat()&&(event.pointerType==='touch'||coarse.matches),
+     touch:event.pointerType==='touch'||event.pointerType!=='mouse'&&coarse.matches,
      lock:event.detail>0
    });
    schedule();
@@ -468,8 +428,14 @@ async function start(){
  await hall.prepareLab(r,s);
  await wc.prepare(r,s);
  await chapter.prepare(r);
+ await viewmodel.prepare(r);
+ await round.prepare(r,c);
+ await weaponAudioReady;
+ wc.update(0,player.body.position);chapter.update(0,player.body.position);
+ geometryQuery.build();s.matrixWorldAutoUpdate=false;
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
+ fountain.syncView?.(c);
  draw();dirty=false;
  document.body.dataset.state='ready';
 }

@@ -9,6 +9,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const grade=heightAt(x,z),floor=grade-CHAPTER_DROP,deep=floor-CHAPTER_DEEP_DROP,slide=2.11;
   const room=new T.Group(),lid=new T.Group(),landing=new T.Group(),guard=new T.Group(),material=chapterMaterials(T);
   room.name='Bund der Eisernen Krone · Untergrund';room.visible=false;scene.add(room,lid,landing,guard);
+  bench.userData.movingOccluder=lid.userData.movingOccluder=guard.userData.movingOccluder=true;
   landing.name='Südweg · Sitznische und Schachtrahmen';
   guard.name='Südweg · Klappgeländer';guard.position.set(xa,grade+.021,zb);guard.rotation.x=-Math.PI*.5;guard.visible=false;
   lid.name='Südweg · getarnte Luke';lid.position.set(xa,grade,za);
@@ -97,6 +98,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   };
   room.traverse(o=>{o.layers.set(CHAPTER_LAYER);if(o.isMesh)o.castShadow=false;});
   const smooth=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n);};
+  let lightCell=null,lightX=0,lightZ=0;
   function mode(p){
     const cell=progress>.06&&p.y<grade+.36&&chapterCell(p.x,p.z,.035);
     if(cell==='stair'&&p.x>=xa-.68)return 'threshold';
@@ -120,7 +122,12 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
       (progress>.06&&p.x>xa-4&&p.x<xb+8&&p.z>za-6&&p.z<zb+6?'stair':null):chapterCell(p.x,p.z,.035);
     const gateMoved=gate.update(dt,p),changed=from!==progress||cell!==active||gateMoved;active=cell;
     room.visible=Boolean(cell);
-    if(!cell)return changed;
+    if(!cell){lightCell=null;return changed;}
+    const animated=dt>0&&(cell==='lowerHall'||cell==='prison')&&prisoner.turn(dt,p);
+    const region=cell==='duel'?p.z<-53.3?2:p.z<-52.8?1:0:cell==='lowerHall'&&p.z>-65?1:0;
+    const key=cell+region;
+    if(key===lightCell&&p.x===lightX&&p.z===lightZ)return changed||animated;
+    lightCell=key;lightX=p.x;lightZ=p.z;
     const visible=new Set([cell]),adjacent=new Set();
     for(const [a,b] of CHAPTER_LINKS)if(a===cell||b===cell)adjacent.add(a===cell?b:a);
     for(const a of adjacent)visible.add(a);
@@ -135,8 +142,6 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     if(cell==='lowerHall'&&p.z>-65.0)visible.add('duel');
     if(cell==='dormitory'||cell==='kitchen'||cell==='prison')visible.add('lowerHall');
     for(const [id,group] of objects)group.visible=visible.has(id);
-    const animated=dt>0&&visible.has('prison')&&(cell==='lowerHall'||cell==='prison');
-    if(animated)prisoner.turn(dt,p);
     const pool=[...visible].flatMap(id=>(sources[id]??[]).map(a=>[a,Math.hypot(p.x-a[0],p.z-a[2])+(id===cell?-3:0)])).sort((a,b)=>a[1]-b[1]);
     if(cell==='duel'){
       const rear=pool.findIndex(([src])=>src===(p.z<-53.3?sources.lowerStair[2]:sources.duel[2]));
@@ -154,8 +159,9 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     return changed||animated;
   }
   return {mode,visible:()=>room.visible,isBelow,update,
+    floor,attach(id,prop){objects.get(id).add(prop);prop.traverse(o=>o.layers.set(CHAPTER_LAYER));},
     prisonerAt(p){
-      if(p.y>deep+.76||chapterCell(p.x,p.z)!=='prison')return null;
+      if(!prisoner.alive()||p.y>deep+.76||chapterCell(p.x,p.z)!=='prison')return null;
       const at=prisoner.position;
       return Math.hypot(p.x-at.x,p.z-at.z)<6.35?at:null;
     },

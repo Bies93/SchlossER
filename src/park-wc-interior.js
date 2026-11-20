@@ -15,6 +15,7 @@ import {deepArt} from './moosfunk-deep-art.js';
 import {deepMaterials,DEEP_LIGHTS,buildDeepStair,furnishDeep} from './moosfunk-deep.js';
 import {orbPriest} from './orb-priest.js';
 import {wcVisitor} from './npc-visitors.js';
+import {loungeRug} from './moosfunk-lounge-textile.js';
 
 export const WC_LAYER=4;
 const lampSites=[
@@ -57,6 +58,7 @@ export function addWcInterior(T,scene,world,quest){
     wood:plain(0xb29065,.78,wood),darkWood:plain(0x8a664e,.88,wood),ochre:plain(0xb68245,.86,painted),
     red:plain(0x88554a,.91,painted),linen:plain(0xb2a27c,.97,cloth),fabric:plain(0x5c6a54,.92,cloth),rug:plain(0x805745,1,cloth),
     paper:plain(0xbcaa86),amber:plain(0x895a35,.42,{metalness:.18}),signal:{material:plain(0x9ec569,.73,{emissive:0x779742,emissiveIntensity:.61}),cast:false},
+    loungeTextile:loungeRug(T),
     ...annexMaterials(T,{painted,plaster,cloth}),...hqMaterials(T,{painted,cloth}),...shopMaterials(T),...deepMaterials(T,{painted,stone,cloth,wood})
   };
   const cyl=new T.CylinderGeometry(1,1,1,12),identity=new T.Matrix4(),m=new T.Matrix4(),tmp=new T.Vector3(),len=new T.Vector3(),up=new T.Vector3(0,1,0),scale=new T.Vector3(),rot=new T.Quaternion();
@@ -341,6 +343,7 @@ export function addWcInterior(T,scene,world,quest){
     }
   }
   return {prepare:(renderer,source)=>prep??=warm(renderer,source),update,priestAck:()=>priest?.use(),
+    attach(id,prop){layers.get(id).add(prop);prop.traverse(o=>o.layers.set(WC_LAYER));},
     target(pos,look){
       if(!lower(pos.y))return null;
       const key=wcZoneAt(pos.z-Z,X-pos.x,pos.y);let found=null,best=-Infinity;

@@ -74,7 +74,7 @@ function gardenRoutes(world){
 }
 
 export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
-  const nav=gardenRoutes(world),root=new T.Group();root.name='Schlossgarten · Ghoul-Runde';scene.add(root);
+  const nav=gardenRoutes(world),root=new T.Group();root.name='Schlossgarten · Ghoule';root.userData.noSceneQuery=true;scene.add(root);
   const rng=randomSource(238019),V=(a,b,c)=>new T.Vector3(a,b,c),point=V(0,0,0);
   const dust=new T.SphereGeometry(1,6,4);
   const groundGeometry=new T.PlaneGeometry(1,1);groundGeometry.rotateX(-Math.PI/2);
@@ -83,14 +83,14 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     vertexShader:'varying vec2 q;void main(){q=uv-.5;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
     fragmentShader:'varying vec2 q;void main(){float v=1.-smoothstep(.02,.49,length(q));gl_FragColor=vec4(.025,.026,.024,v*.30);}'
   });
-  let pool=[],state='idle',clock=0,last=null,standing=GHOUL_COUNT,cooldown=0,health=100,pulseSerial=0;
-  const inside=(p)=>here(p.x,p.z)&&insidePerimeter(p.x,p.z);
+  let pool=[],state='idle',clock=0,last=null,standing=GHOUL_COUNT,cooldown=0,pulseSerial=0;
+  const inside=(p)=>p.y>-.64&&here(p.x,p.z)&&insidePerimeter(p.x,p.z);
   function allocate(){
     for(let i=0;i<GHOUL_COUNT;i++){
       const variant=['ghoulA','ghoulB','ghoulC','ghoulB','ghoulA'][i];
       const rig=createHuman(T,variant),shadow=new T.Mesh(groundGeometry,shadowMat);
       shadow.name='Ghoul · Bodenkontakt';shadow.scale.set(1.04,1,1.03);shadow.renderOrder=1;
-      rig.shadow(false);root.add(rig.actor,shadow);
+      rig.shadow(false);rig.actor.visible=shadow.visible=false;root.add(rig.actor,shadow);
       const sparks=new T.InstancedMesh(dust,new T.MeshBasicMaterial({color:0x9bad5b,transparent:true,
         opacity:.62,depthWrite:false}),11);
       sparks.frustumCulled=false;sparks.visible=false;sparks.renderOrder=3;
@@ -110,15 +110,15 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     return null;
   }
   function begin(p){
-    if(!inside(p)||state==='running')return false;
+    if(!inside(p)||state!=='idle')return false;
     const starts=[];
     for(const [x,z] of anchors){
       const q=safeAnchor(x,z,p,starts);
-      if(!q){notify('Geh ein Stück weiter in den Garten und starte die Runde erneut.','failed');return false}
+      if(!q)return false;
       starts.push(q);
     }
     if(!pool.length)allocate();
-    state='running';standing=starts.length;health=100;cooldown=0;
+    state='running';standing=starts.length;cooldown=0;
     for(const [i,g] of pool.entries()){
       const [x,z]=starts[i];
       g.origin=[x,z];g.health=100;g.alert=false;g.mode='emerge';g.motion=g.v=g.flinch=g.fall=0;
@@ -129,10 +129,9 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
       o.scale.setScalar(g.gait);o.visible=false;g.shadow.visible=false;g.sparks.visible=false;
       g.rig.pose(clock,g.phase,0,0,0,0,g.seed);
     }
-    notify('Ghoul-Runde · fünf Ghoule im Garten','start');
+    notify('Fünf Ghoule sind im Schlossgarten.','start');
     return true;
   }
-  function prompt(p){return inside(p)&&state!=='running'?(state==='idle'?'Ghoul-Runde starten':'Neue Ghoul-Runde'):''}
   function nearest(ray,limit){
     if(state!=='running')return null;
     let best=limit,candidate=null;
@@ -159,7 +158,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     else {g.sparkOrigin.copy(g.rig.actor.position);g.sparkOrigin.y+=1.18}
     if(g.health===0){
       standing--;g.mode='down';g.fall=clock;g.tAttack=-1;g.v=0;
-      if(standing===0){state='won';notify('Runde geschafft · alle fünf Ghoule abgewehrt','won')}
+      if(standing===0){state='won';notify('Alle fünf Ghoule abgewehrt.','won')}
       else notify('Ghoul abgewehrt · '+(GHOUL_COUNT-standing)+' von '+GHOUL_COUNT,'progress');
     }else if(g.tAttack>=0){
       g.tAttack=-1;g.lastAttack=clock-.18;
@@ -183,13 +182,6 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     return true;
   }
   function stop(){last=null}
-  function reset(){
-    state='idle';stop();
-    for(const g of pool){
-      g.rig.actor.visible=g.shadow.visible=g.sparks.visible=false;
-      g.cached=null;
-    }
-  }
   function tick(time,p){
     const dt=last===null?0:Math.min(.082,(time-last)/1000);last=time;clock+=dt;
     if(!pool.length)return false;
@@ -207,10 +199,9 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
       }
       if(g.mode==='down'){
         const t=clamp((clock-g.fall)/1.12,0,1);
-        if(t>=1&&g.vanished)continue;
+        if(g.vanished)continue;
         g.rig.pose(clock,g.phase,0,0,.30*(1-t),t*t,g.seed);
-        a.scale.setScalar(g.gait*(1-clamp((t-.49)/.51,0,1)*.50));
-        a.visible=t<1;g.shadow.visible=t<1;g.vanished=t>=1;
+        a.visible=true;g.shadow.visible=t<1;g.vanished=t>=1;
         effect(g);dirty=true;continue;
       }
       if(!motionState){if(a.visible){a.visible=g.shadow.visible=g.sparks.visible=false;dirty=true}continue}
@@ -237,9 +228,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
         if(age>=.30&&!g.attackDone){
           g.attackDone=true;
           if(clearBite&&clock>=cooldown){
-            cooldown=clock+.77;health=Math.max(0,health-25);
-            if(health===0){state='failed';notify('Runde verloren · R für einen neuen Versuch','failed')}
-            else notify('Der Ghoul hat dich erwischt','hurt');
+            cooldown=clock+.77;notify('Der Ghoul hat dich erwischt.','hurt');
           }
         }
         if(age>.58){g.lastAttack=clock;g.tAttack=-1}
@@ -284,5 +273,20 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     }
     return dirty;
   }
-  return {begin,tick,stop,reset,prompt,nearest,damage};
+  async function prepare(renderer,camera){
+    if(!pool.length)allocate();
+    const vp=renderer.getViewport(new T.Vector4()),sc=renderer.getScissor(new T.Vector4()),test=renderer.getScissorTest(),
+      shadow=renderer.shadowMap.needsUpdate,meshes=[];
+    try{
+      for(const g of pool){g.rig.actor.visible=true;g.rig.actor.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});}
+      await renderer.compileAsync(scene,camera);
+      renderer.setViewport(0,0,32,32);renderer.setScissor(0,0,32,32);renderer.setScissorTest(true);
+      renderer.render(scene,camera);
+    }finally{
+      for(const g of pool)g.rig.actor.visible=false;
+      for(const [o,flag] of meshes)o.frustumCulled=flag;
+      renderer.setViewport(vp);renderer.setScissor(sc);renderer.setScissorTest(test);renderer.shadowMap.needsUpdate=shadow;
+    }
+  }
+  return {begin,tick,stop,nearest,damage,inside,prepare};
 }
