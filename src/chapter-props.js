@@ -239,7 +239,7 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
       line('brass',[[x-a,.026,z],[x,.026,z+a],[x+a,.026,z],[x,.026,z-a],[x-a,.026,z]],.007);
     }
     wainscot(16.48,22.52,-45.90,-1);wainscot(24.52,26.90,-45.90,-1);
-    wainscot(16.34,26.94,-55.78);
+    wainscot(16.34,20.17,-55.78);wainscot(22.85,26.94,-55.78);
     for(const s of [-1,1]){
       const x=X+s*4.57;
       const wallx=s<0?16.315:26.975;
@@ -257,8 +257,9 @@ export function dressChapter(T,{room,k,box:B,hit,F,id,print,cloth}){
     }
     // End wall ends at the vault's springing line; even the metal finials
     // stay below the projecting stone cornice (2.444 m).
-    frame('duel',21.65,1.918,-55.773,2.38,.788,0,true);
-    banner(18.02,1.775,-55.751,.99,1.172);banner(25.35,1.775,-55.751,.99,1.172);
+    frame('duel',25.36,1.856,-55.773,1.91,.702,0,true);
+    frame('descent',21.52,2.303,-55.68,1.985,.207,0,true);
+    banner(18.02,1.775,-55.751,.99,1.172);
     for(const [s,x] of [[-1,19.63],[1,23.67]]){
       box('darkWood',x,.09,-55.72,.254,1.96,.167);
       box('wood',x,.91,-55.616,.201,.973,.064);

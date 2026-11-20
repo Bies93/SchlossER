@@ -3,7 +3,7 @@ const sound={
   stone:[130,1850,3600,.105], gravel:[100,890,3100,.155], lawn:[89,570,1750,.14], hall:[111,1270,3900,.12]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl) {
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
   let danceBus,danceWet=0,danceBuffer,danceLoad,danceRetry=0,danceNode,danceStart=0,danceOffset=0;
@@ -128,9 +128,9 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl) {
   }
   function updateChoir(){
     if(!choirVoice)return;
-    const {at,amp,pan}=choirVoice,a=listener(),dx=at.x-a.x,dz=at.z-a.z,d=Math.hypot(dx,dz);
-    if(d>9.5){stopChoir();return;}
-    const t=ctx.currentTime,volume=1.33/(1+(Math.max(0,d-.9)/4.2)**2.3);
+    const {at,amp,pan,url}=choirVoice,a=listener(),dx=at.x-a.x,dz=at.z-a.z,d=Math.hypot(dx,dz),isPrison=url===prisonerUrl;
+    if(d>(isPrison?7.1:9.5)){stopChoir();return;}
+    const t=ctx.currentTime,volume=(isPrison?.85:1.33)/(1+(Math.max(0,d-.9)/(isPrison?3.9:4.2))**2.3);
     if(choirVoice.volume===undefined||Math.abs(volume-choirVoice.volume)>.010){
       choirVoice.volume=volume;amp.gain.setTargetAtTime(volume,t,.055);
     }
@@ -143,13 +143,13 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl) {
   }
   async function playChoir(at,url=choirUrl){
     const status=choirStatus();
-    if(!playing||(status!=='ready'&&status!=='retry')||(!ctx&&!setup()))return;
+    if(!url||!playing||(status!=='ready'&&status!=='retry')||(!ctx&&!setup()))return;
     const request={at,url};choirRequest=request;choirFailed=false;
     try{
       const [,buffer]=await Promise.all([ctx.resume(),prepareChoir(url)]);
       if(choirRequest!==request||!live())return;
       const a=listener();
-      if(Math.hypot(at.x-a.x,at.z-a.z)>4.8)return;
+      if(Math.hypot(at.x-a.x,at.z-a.z)>(url===prisonerUrl?6.55:4.8))return;
       const node=ctx.createBufferSource(),pan=ctx.createStereoPanner?.(),amp=gain(sfx,0);
       node.buffer=buffer;
       if(pan){node.connect(pan);pan.connect(amp);}else node.connect(amp);
@@ -169,7 +169,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl) {
     if(!ctx)return;
     const t=ctx.currentTime;
     master.gain.setTargetAtTime(playing&&enabled?.55:0,t,.038);
-    music.gain.setTargetAtTime(levels.music*(choirVoice?.42:1)*(1-danceWet),t,choirVoice?.085:.23);
+    music.gain.setTargetAtTime(levels.music*(choirVoice?(choirVoice.url===prisonerUrl?.66:.42):1)*(1-danceWet),t,choirVoice?.085:.23);
     danceBus?.gain.setTargetAtTime(levels.music*danceWet*.88,t,.12);
     sfx.gain.setTargetAtTime(levels.sfx,t,.046);
   }
@@ -333,6 +333,8 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl) {
   }
   return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,club,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
+    playPrisoner:at=>playChoir(at,prisonerUrl),
+    stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}
   };

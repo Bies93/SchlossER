@@ -1,12 +1,12 @@
 import {CHAPTER_BENCH,CHAPTER_CUT,CHAPTER_STEP as S,CHAPTER_LINKS,CHAPTER_LAYER,CHAPTER_DROP,
-  chapterContains,chapterCell,chapterStairFloor} from './chapter-layout.js';
+  CHAPTER_DEEP_DROP,chapterDeepStairFloor,isChapterDeep,chapterContains,chapterCell,chapterStairFloor} from './chapter-layout.js';
 import {chapterInterior} from './chapter-interior.js';
 import {chapterMaterials} from './chapter-art.js';
 import {architectureKit} from './architecture-kit.js';
 
 export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const [x,z,yaw]=CHAPTER_BENCH,[xa,xb,za,zb]=CHAPTER_CUT;
-  const grade=heightAt(x,z),floor=grade-CHAPTER_DROP,slide=2.11;
+  const grade=heightAt(x,z),floor=grade-CHAPTER_DROP,deep=floor-CHAPTER_DEEP_DROP,slide=2.11;
   const room=new T.Group(),lid=new T.Group(),landing=new T.Group(),guard=new T.Group(),material=chapterMaterials(T);
   room.name='Bund der Eisernen Krone · Untergrund';room.visible=false;scene.add(room,lid,landing,guard);
   landing.name='Südweg · Sitznische und Schachtrahmen';
@@ -79,7 +79,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   }
   world.box(xa-.034,za,xa+.03,zb,p=>passable()&&p.y>=grade-.43&&p.y<grade+.90);
   world.box(xb-.020,za,xb+.023,zb,p=>progress>.05&&!passable()&&p.y>grade-.15&&p.y<grade+1.12);
-  const objects=chapterInterior(T,room,world,material,grade,isBelow);
+  const {objects,prisoner}=chapterInterior(T,room,world,material,grade,isBelow);
   const ambient=new T.HemisphereLight(0xcad3de,0x886655,.70);room.add(ambient);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);room.add(l);return l;});
   const sources={
@@ -88,7 +88,12 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     salle:[[18.58,floor+2.20,-37.18,0xeecfa6,23,7.8],[24.10,floor+2.53,-34.73,0xd5dfeb,29,8.6]],
     archive:[[23.48,floor+2.50,-44.17,0xe6b67c,32,8],[25.63,floor+1.91,-40.74,0xa9c7d0,16,6]],
     chapter:[[10.96,floor+2.70,-38.85,0xf5c384,35,8],[14.50,floor+2.57,-40.93,0xadc3dd,20,7]],
-    duel:[[22.50,floor+2.49,-48.50,0xe4cdb4,26,8.8],[20.13,floor+2.40,-52.03,0xc8d4e1,28,9],[22.22,floor+2.45,-54.03,0xf1c18e,29,8]]
+    duel:[[22.50,floor+2.49,-48.50,0xe4cdb4,26,8.8],[20.13,floor+2.40,-52.03,0xc8d4e1,28,9],[22.22,floor+2.45,-54.03,0xf1c18e,29,8]],
+    lowerStair:[[-57.36,0xd2b890],[-59.44,0xbacccf],[-61.57,0xd2ab7d]].map(([z,c])=>[21.96,floor+chapterDeepStairFloor(z)+1.64,z,c,15,5.4]),
+    lowerHall:[[21.70,deep+2.23,-64.08,0xdbc8a7,21,6.3],[21.36,deep+2.13,-69.39,0xf1c496,21,6.9]],
+    dormitory:[[12.97,deep+2.20,-65.45,0xe5caa6,28,7.6],[17.17,deep+2.19,-68.58,0xe4b985,27,7.2],[16.82,deep+2.39,-63.95,0xb7c8bd,19,6.7]],
+    kitchen:[[26.48,deep+2.17,-65.46,0xf3c08f,29,7.4],[29.91,deep+2.42,-69.44,0xf2c08a,31,7.8],[30.16,deep+2.25,-64.37,0xc5d1c2,22,6.7]],
+    prison:[[21.04,deep+2.12,-72.90,0xe5b789,19,6.5],[25.19,deep+2.37,-75.75,0xbbcbc5,29,7.4],[26.92,deep+2.00,-77.66,0xc79668,23,6.3]]
   };
   room.traverse(o=>{o.layers.set(CHAPTER_LAYER);if(o.isMesh)o.castShadow=false;});
   const smooth=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n);};
@@ -122,21 +127,39 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     // From a landing the second opening can actually be seen in alignment.
     if(cell==='stair'||cell==='vestibule'){visible.add('vestibule');visible.add('salle');}
     if(cell==='chapter'||cell==='archive'){visible.add('salle');visible.add('vestibule');}
-    if(cell==='duel')visible.add('salle');
+    if(cell==='duel'){
+      visible.add('salle');
+      if(p.z<-52.8)visible.add('lowerHall');
+    }
+    if(cell==='lowerStair'){visible.add('duel');visible.add('lowerHall');}
+    if(cell==='lowerHall'&&p.z>-65.0)visible.add('duel');
+    if(cell==='dormitory'||cell==='kitchen'||cell==='prison')visible.add('lowerHall');
     for(const [id,group] of objects)group.visible=visible.has(id);
+    const animated=dt>0&&visible.has('prison')&&(cell==='lowerHall'||cell==='prison');
+    if(animated)prisoner.turn(dt);
     const pool=[...visible].flatMap(id=>(sources[id]??[]).map(a=>[a,Math.hypot(p.x-a[0],p.z-a[2])+(id===cell?-3:0)])).sort((a,b)=>a[1]-b[1]);
     if(cell==='duel'){
-      const rear=pool.findIndex(([src])=>src===sources.duel[2]);
+      const rear=pool.findIndex(([src])=>src===(p.z<-53.3?sources.lowerStair[2]:sources.duel[2]));
       if(rear>=lights.length)pool.splice(2,0,pool.splice(rear,1)[0]);
     }
-    ambient.intensity=cell==='chapter'?.56:cell==='stair'?.48:.71;
+    if(cell==='prison'){
+      const rear=pool.findIndex(([src])=>src===sources.prison[1]);
+      if(rear>=lights.length)pool.splice(1,0,pool.splice(rear,1)[0]);
+    }
+    ambient.intensity=cell==='chapter'?.56:cell==='stair'?.48:cell==='prison'?.48:cell==='lowerStair'?.55:.71;
     for(const [i,l] of lights.entries()){
       const a=pool[i]?.[0];l.intensity=a?.[4]??0;
       if(a){l.position.set(a[0],a[1],a[2]);l.color.setHex(a[3]);l.distance=a[5];}
     }
-    return changed;
+    return changed||animated;
   }
   return {mode,visible:()=>room.visible,isBelow,update,
+    prisonerAt(p){
+      if(p.y>deep+.76||chapterCell(p.x,p.z)!=='prison')return null;
+      const at=prisoner.position;
+      return Math.hypot(p.x-at.x,p.z-at.z)<6.35?at:null;
+    },
+    prisonerSpeaks(){prisoner.speak();},
     target(p,look){
       if(p.y<grade-.28)return null;
       const dx=bench.position.x-p.x,dz=bench.position.z-p.z;
@@ -150,13 +173,19 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
       if(!passable())return null;
       const cell=chapterCell(x,z,.002);
       if(cell==='stair'&&(y<grade-.12||x>=xa-.002))return grade+chapterStairFloor(x);
-      if(y<grade-1.78&&cell&&cell!=='stair')return floor;
+      if(y<grade-1.78&&cell&&cell!=='stair'){
+        if(cell==='lowerStair')return floor+chapterDeepStairFloor(z);
+        if(isChapterDeep(cell))return y<floor-.42?deep:null;
+        return floor;
+      }
       return null;
     },
     ceilingAt(x,z,y){
       if(y>=grade-.14)return Infinity;
       const cell=chapterCell(x,z,.002);
       if(cell==='stair')return x<=xa?grade-.183:Infinity;
+      if(cell==='lowerStair')return floor+chapterDeepStairFloor(z)+2.60;
+      if(isChapterDeep(cell))return y<floor-.42?deep+2.50:Infinity;
       return cell?floor+2.50:Infinity;
     },
     prepare(renderer){

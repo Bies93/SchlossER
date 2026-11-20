@@ -107,7 +107,7 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic);
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice);
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
@@ -218,6 +218,22 @@ async function start(){
    if(time-orbSince<450)return;
    orbHeard=true;showCaption('Stimme des Orbs — „'+orbLine+'“',13000);audio.playOrb(orbAt);
  }
+ let prisonerNext=null,prisonerCaptionUntil=0;
+ function leavePrison(){
+   if(prisonerNext===null)return;
+   prisonerNext=null;audio.stopPrisoner();
+   if(performance.now()<prisonerCaptionUntil)hideCaption();
+ }
+ function prisonerCue(time,pos){
+   const at=chapter.prisonerAt(pos);
+   if(!at){leavePrison();return;}
+   prisonerNext??=time+1850;
+   if(time<prisonerNext)return;
+   prisonerNext=time+22600;
+   prisonerCaptionUntil=time+5000;
+   showCaption('Gefangener, Kammer 07: „Deutschland … Deutschland … aaah …“',5000);
+   chapter.prisonerSpeaks();audio.playPrisoner(at);
+ }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
    return chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
@@ -313,7 +329,10 @@ async function start(){
      const state=hall.update(dt,player.body.position);
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
-     if(chapter.update(dt,player.body.position)){dirty=true;r.shadowMap.needsUpdate=true;}
+     if(chapter.update(dt,player.body.position)){
+       dirty=true;if(chapter.mode(player.body.position)!=='inside')r.shadowMap.needsUpdate=true;
+     }
+     prisonerCue(time,player.body.position);
      if(state.shadow)r.shadowMap.needsUpdate=true;
      doorPrompt();
      roundPrompt();
@@ -326,7 +345,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   leaveChapel();orbSince=null;hideCaption();
+   leaveChapel();leavePrison();orbSince=null;hideCaption();
    input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();roundPrompt();
    if(focus) action.focus({preventScroll:true});
  }

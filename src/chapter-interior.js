@@ -1,16 +1,19 @@
 import {architectureKit} from './architecture-kit.js';
-import {CHAPTER_ROOMS,CHAPTER_LINKS,CHAPTER_STEP as S,CHAPTER_DROP} from './chapter-layout.js';
+import {CHAPTER_ROOMS,CHAPTER_LINKS,CHAPTER_STEP as S,CHAPTER_DROP,CHAPTER_DEEP_STEP as D,CHAPTER_DEEP_DROP,isChapterDeep} from './chapter-layout.js';
 import {chapterArt} from './chapter-art.js';
 import {dressChapter} from './chapter-props.js';
 import {armorialCloth} from './chapter-finishes.js';
 import {randomSource} from './surface-detail.js';
+import {deepChapterDressing} from './chapter-deep.js';
+import {makeChapterPrisoner} from './chapter-prisoner.js';
 
-const p=(x,y,z)=>[x,y,z],names={vestibule:'Pförtnerkammer',salle:'Waffengalerie',archive:'Archiv der Aufnahmen',chapter:'Kapitelsaal',duel:'Fechtboden · Kronsaal'};
+const p=(x,y,z)=>[x,y,z],names={vestibule:'Pförtnerkammer',salle:'Waffengalerie',archive:'Archiv der Aufnahmen',chapter:'Kapitelsaal',duel:'Fechtboden · Kronsaal',
+  lowerHall:'Unterer Wachgang',dormitory:'Schlafkammer',kitchen:'Bundküche',prison:'Verlies · Kammer 07'};
 const roofAt=(z,a,b)=>2.53+.88*Math.sqrt(Math.max(0,1-((2*z-a-b)/(b-a))**2));
 const node=(T,parent,name)=>{const n=new T.Group();n.name=name;parent.add(n);return n;};
 
 export function chapterInterior(T,root,world,material,grade,isBelow){
-  const F=grade-CHAPTER_DROP,objects=new Map(),atlas=chapterArt(T,root),cloth=armorialCloth(T),rnd=randomSource(518019);
+  const F0=grade-CHAPTER_DROP,F1=F0-CHAPTER_DEEP_DROP,objects=new Map(),atlas=chapterArt(T,root),cloth=armorialCloth(T),rnd=randomSource(518019);
   const stair=node(T,root,'Eiserne Krone · Treppenlauf');
   const k=architectureKit(T,stair,material);
   const box=(m,a,A,y,Y,z,Z)=>k.box(m,p,a,A,grade+y,grade+Y,z,Z);
@@ -49,8 +52,43 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
     for(const a of [-.107,0,.107])box('iron',x+a-.009,x+a+.009,y-.12,y+.121,S.z0+.096,S.z0+.109);
   }
   k.flush('Eiserne Krone · Treppenschacht');objects.set('stair',stair);
+  const descent=node(T,root,'Eiserne Krone · Zweiter Treppenlauf'),ds=architectureKit(T,descent,material),
+    run=(D.top-D.foot)/D.count,plane=z=>F0-(D.top-z)*D.rise/run;
+  const sb=(m,x,X,y,Y,z,Z)=>ds.box(m,p,x,X,y,Y,z,Z);
+  for(let i=0;i<D.count;i++){
+    const z=D.top-(i+1)*run,Z=z+run,y=F0-(i+1)*D.rise;
+    sb(i%4?'deepStone':'stone2',D.x0,D.x1,y-.215,y,z,Z);
+    sb('stone3',D.x0+.023,D.x1-.023,y-.029,y+.002,z+.004,z+.051);
+    for(const [side,x] of [[1,D.x0],[-1,D.x1]]){
+      const P=(z,y)=>[x,plane(z)+y,z];
+      const points=[P(z,-.21),P(z,2.58),P(Z,2.58),P(Z,-.21)];
+      ds.quad(i%4?'deepRock':'deepStone',...(side<0?points.reverse():points),1.08,i*.113);
+      if(i%4===1){
+        const Z0=(z+Z)*.5,Y=plane(Z0)+.84,[a,b]=[x,x+side*.112].sort((a,b)=>a-b);
+        sb('iron',a,b,Y-.060,Y-.018,Z0-.020,Z0+.020);
+        sb('verdigris',x-.012,x+.012,Y-.107,Y+.022,Z0-.036,Z0+.036);
+      }
+    }
+  }
+  ds.quad('deepLime',[D.x0,plane(D.foot)+2.55,D.foot],[D.x1,plane(D.foot)+2.55,D.foot],
+    [D.x1,plane(D.top)+2.55,D.top],[D.x0,plane(D.top)+2.55,D.top],1.21);
+  for(const [s,x] of [[1,D.x0],[-1,D.x1]]){
+    const rail=(x,y,z)=>[x,plane(z)+.84+y,z];
+    ds.box('iron',rail,x+s*.083-.022,x+s*.083+.022,-.032,.018,D.foot+.16,D.top-.13);
+    ds.box('brass',rail,x+s*.083-.017,x+s*.083+.017,.018,.028,D.foot+.174,D.top-.146);
+    world.box(x-.02,D.foot,x+.02,D.top,isBelow);
+  }
+  for(const z of [-57.24,-59.33,-61.38]){
+    const x=D.x1-.091,y=plane(z)+1.54;
+    sb('iron',x-.019,x+.091,y-.137,y+.147,z-.127,z+.127);
+    sb('filament',x-.040,x-.017,y-.090,y+.103,z-.093,z+.093);
+    for(const a of [-.083,0,.083])sb('iron',x-.059,x-.035,y-.118,y+.123,z+a-.009,z+a+.009);
+  }
+  ds.flush('Eiserne Krone · Treppe zur Nachtwache');objects.set('lowerStair',descent);
+  let prisoner;
   for(const [id,rect] of Object.entries(CHAPTER_ROOMS)){
     const room=node(T,root,'Eiserne Krone · '+names[id]),[a,A,b,B]=rect;
+    const deep=isChapterDeep(id),F=deep?F1:F0;
     objects.set(id,room);
     const m=architectureKit(T,room,material),B0=(key,x,X,y,Y,z,Z)=>m.box(key,p,x,X,F+y,F+Y,z,Z);
     const hit=(x,X,z,Z)=>world.box(x,z,X,Z,isBelow);
@@ -68,7 +106,7 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
           const y=i*.304-.019;let n=l-(i%2?.332:0);
           while(n<r-.01){
             const end=n+.61+.20*rnd(),q=Math.max(n,l)+.005,Q=Math.min(r,end)-.006;
-            if(Q-q>.029)bx(['stone','stone2','stone3'][Math.floor(rnd()*3)],q,Q,y+.008,y+.294,-.043+rnd()*.012,-.019);
+            if(Q-q>.029)bx((deep?['deepRock','deepStone','stone2']:['stone','stone2','stone3'])[Math.floor(rnd()*3)],q,Q,y+.008,y+.294,-.043+rnd()*.012,-.019);
             n=end;
           }
         }
@@ -105,7 +143,7 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
     }
     const barrel=new T.BufferGeometry();barrel.setAttribute('position',new T.Float32BufferAttribute(verts,3));
     barrel.setAttribute('uv',new T.Float32BufferAttribute(uv,2));barrel.setIndex(idx);barrel.computeVertexNormals();
-    m.geometry(id==='duel'?'vaultBlue':'vaultLime',barrel,new T.Matrix4());barrel.dispose();
+    m.geometry(deep?'deepLime':id==='duel'?'vaultBlue':'vaultLime',barrel,new T.Matrix4());barrel.dispose();
     for(const z of [b,B]){
       const sign=z===b?1:-1,[d,D]=[z+sign*.041,z+sign*.122].sort((a,b)=>a-b);
       B0('stone3',a+.07,A-.07,2.47,2.54,d,D);
@@ -122,13 +160,16 @@ export function chapterInterior(T,root,world,material,grade,isBelow){
     for(let y=b,i=0;y<B-.012;y+=.71,i++){
       for(let x=a-(i%2)*.55;x<A-.012;x+=1.10){
         const l=Math.max(x+.005,a),r=Math.min(x+1.093,A),v=Math.min(y+.701,B);
-        if(r>l&&v>y+.004)B0(rnd()<.23?'stone2':'sole',l,r,-.037,0,y+.004,v);
+        if(r>l&&v>y+.004)B0(deep?(rnd()<.25?'deepStone':'deepRock'):rnd()<.23?'stone2':'sole',l,r,-.037,0,y+.004,v);
       }
     }
-    dressChapter(T,{room,k:m,box:B0,hit,F,rect,id,cloth,print:(key,...args)=>{
+    const kit={room,k:m,box:B0,hit,F,rect,id,cloth,print:(key,...args)=>{
       room.add(atlas(key,args[0],F+args[1],...args.slice(2)));
-    }});
+    }};
+    if(deep)deepChapterDressing(T,kit);
+    else dressChapter(T,kit);
+    if(id==='prison')prisoner=makeChapterPrisoner(T,room,F);
     m.flush('Eiserne Krone · '+names[id]);
   }
-  return objects;
+  return {objects,prisoner};
 }

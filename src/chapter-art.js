@@ -10,16 +10,23 @@ const art={
   banned:['GÄSTELISTE','M. ACKER            GESTRICHEN','GRUND: FRAGTE WESSEN KRONE'],
   duel:['DER KRONBODEN','EIGENE STIMME. ALTE REIHENFOLGE.','MENSURSAAL · NUR FÜR DEN BUND'],
   dynasty:['DAS HAUS OHNE ERBEN','I. TITEL   II. SIEGEL   III. ERBWART','LETZTE VERSAMMLUNG: VERTAGT'],
-  seats:['SITZORDNUNG','ÄLTESTE ZUERST · GÄSTE STEHEN','DIE KRONE BLEIBT UNBESETZT']
+  seats:['SITZORDNUNG','ÄLTESTE ZUERST · GÄSTE STEHEN','DIE KRONE BLEIBT UNBESETZT'],
+  descent:['ZWEITES UNTERGESCHOSS','RUHE · VORRAT · WACHE','NACHTWACHE MELDET SICH UNTEN'],
+  dorm:['SCHLAFKAMMER','RUHE NACH DEM LETZTEN LÄUTEN','DER DIENSTPLAN HÄNGT NEBEN DER TÜR'],
+  kitchen:['BUNDKÜCHE','EINTOPF · BROT · MALZKAFFEE','DIE NACHTWACHE ISST ZULETZT'],
+  prison:['KAMMER 07','ZUGANG GESPERRT · NICHT ÖFFNEN','AUFNAHME: 1945  /  AUSGANG: —'],
+  guard:['WACHBUCH · NACHTDIENST','ER SPRICHT IMMER NUR DASSELBE.','ÜBERGABE OHNE BESONDERHEITEN.'],
+  stores:['VORRATSBUCH','BROTE: 6   /   DOSEN: 17','FÜR DIE UNTERKUNFT EINGETEILT']
 };
 export function chapterArt(T,root){
-  const keys=Object.keys(art),c=document.createElement('canvas');c.width=1536;c.height=1536;
+  const keys=Object.keys(art),rows=Math.ceil(keys.length/3),c=document.createElement('canvas');c.width=1536;c.height=rows*512;
   const a=c.getContext('2d'),rng=randomSource(8912);
   function type(t,y,size,ink,face='Georgia'){a.font='bold '+size+'px '+face;a.textAlign='center';a.fillStyle=ink;a.fillText(t,256,y,454);}
   for(const [i,key] of keys.entries()){
     a.save();a.translate(i%3*512,Math.floor(i/3)*512);
-    const banner=key==='crest',base=banner?'#263c45':['#b39e7e','#442931','#303e47','#c4ae85','#5b2c37','#b6a282','#502c3b','#bca786','#303e47'][i];
-    const gold=banner||[1,2,4,6,8].includes(i)?'#e6c891':'#514032';
+    const banner=key==='crest',dark=banner||[1,2,4,6,8,9,10,11,12].includes(i),
+      base=['#263c45','#442931','#303e47','#c4ae85','#5b2c37','#b6a282','#502c3b','#bca786','#303e47','#303e47','#383a34','#53412f','#583c36','#b8a47e','#ab9c7b'][i],
+      gold=dark?'#e6c891':'#514032';
     a.fillStyle=base;a.fillRect(0,0,512,512);
     a.strokeStyle=gold;a.lineWidth=4;a.strokeRect(18,18,476,476);a.lineWidth=2;a.strokeRect(27,27,458,458);
     if(banner){
@@ -64,7 +71,7 @@ export function chapterArt(T,root){
     for(let j=0;j<uv.count;j++){
       const u=uv.getX(j),v=uv.getY(j);
       if(fold)P.setXYZ(j,P.getX(j),P.getY(j)-.045*(1-v)*Math.sin(9*u),.019*Math.sin(75*u)+.04*(1-v)*Math.sin(29*u));
-      uv.setXY(j,(i%3+.006+.988*u)/3,1-(Math.floor(i/3)+.994-.988*v)/3);
+      uv.setXY(j,(i%3+.006+.988*u)/3,1-(Math.floor(i/3)+.994-.988*v)/rows);
     }
     if(fold)g.computeVertexNormals();
     const m=new T.Mesh(g,material);m.name='Eiserne Krone · '+id;m.position.set(x,y,z);m.rotation.set(pitch,yaw,0,'YXZ');root.add(m);return m;
@@ -81,5 +88,10 @@ export function chapterMaterials(T){
     soot:std(0x292528,.96),bookA:std(0x5b4734,.92,cloth),bookB:std(0x614044,.91,cloth),bookC:std(0x4f625c,.91,cloth),
     iron:std(0x576067,.50,{...plate,metalness:.56}),steel:std(0xa6b1b4,.34,{...plate,metalness:.60}),brass:std(0xb28e58,.51,{metalness:.52}),
     wax:std(0xc6b288,.79),flame:std(0xffda9c,.71,{emissive:0xff9b39,emissiveIntensity:1.8}),filament:std(0xd8cab0,.68,{emissive:0xffbe7d,emissiveIntensity:.82}),
+    deepRock:std(0x84796a,.96,rock),deepStone:std(0x8c8171,.92,stone),
+    deepLime:std(0xaaa094,.97,{...plaster,normalScale:new T.Vector2(.72,.72)}),
+    enamel:std(0xb3b9af,.41),verdigris:std(0x48564f,.84,{...plate,metalness:.22}),
+    pewter:std(0x8e9693,.43,{...plate,metalness:.48}),orange:std(0x9d603b,.75),
+    bread:std(0xa76b3c,.92,plaster),crumb:std(0xcba272,.95,plaster),
     ...chapterFinishes(T)};
 }

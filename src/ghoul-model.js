@@ -14,14 +14,17 @@ const bones=[
 ];
 const gunmetal=0x5c5b51,skinTone=0x817c6a,clothTone=0x4d6250;
 
-export function ghoulTemplate(T){
+export function ghoulTemplate(T,variant='garden'){
+  const prisoner=variant==='prison';
   const V=(x,y,z)=>new T.Vector3(x,y,z),v=arr=>V(...arr),rng=randomSource(819573);
   const keys=['skin','dry','coat','liner','canvas','leather','metal','eyeBed','eye','teeth'];
-  const colors=[skinTone,0x9e927e,clothTone,0x606757,0x706b51,0x44372c,gunmetal,0x342c25,0xc4ae65,0xa69d77].map(c=>new T.Color(c));
+  const colors=(prisoner?
+    [0x8c8780,0xa79a83,0x5b6059,0x454b46,0x676958,0x493d33,0x595c59,0x292523,0x9da69d,0xb6a28a]:
+    [skinTone,0x9e927e,clothTone,0x606757,0x706b51,0x44372c,gunmetal,0x342c25,0xc4ae65,0xa69d77]).map(c=>new T.Color(c));
   const solid=(name,rough=.82)=>new T.MeshStandardMaterial({name,vertexColors:true,roughness:rough});
   const materials=keys.map(k=>solid(k,k==='metal'?.57:.88));
   materials[6].metalness=.45;materials[8].roughness=.43;
-  materials[8].emissive.set(0xc0994c);materials[8].emissiveIntensity=.37;
+  materials[8].emissive.set(prisoner?0x839189:0xc0994c);materials[8].emissiveIntensity=prisoner?.13:.37;
   for(const [i,mat] of materials.entries())if(i<6){
     mat.onBeforeCompile=shader=>{
       shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 erlGhoulBind;')
@@ -111,7 +114,7 @@ export function ghoulTemplate(T){
   for(const s of [-1,1]){
     const t=s<0?18:19;
     for(let i=0;i<7;i++){
-      const a=(i/6)*2.95+.12,y=.695+.066*Math.sin(i*3.1+s);
+      const a=(i/6)*2.95+.12,y=(prisoner?.824:.695)+.066*Math.sin(i*3.1+s);
       const u=s*(.042+.13*Math.sin(a)),z=.032+Math.cos(a)*.094;
       line(i%3?'coat':'liner',[0,t,.64],[u,.987,z],[u+s*.013,y+.17,z-.012],.045,.018,.91);
       line(i%2?'coat':'canvas',t,[u+s*.01,y+.205,z-.012],[u+s*.007,y,z-.045],.027,.015,.82);
@@ -162,6 +165,34 @@ export function ghoulTemplate(T){
   }
   line('skin',5,[-.023,1.620,.265],[.048,1.617,.255],.006,.005,.92);
   line('skin',4,[-.034,1.778,.222],[-.050,1.756,.226],.0035,.0028,.74);
+  if(prisoner){
+    // A worn field uniform and dented helmet, without weapons or insignia.
+    surface('metal',[
+      [1.730,.090,.099,.011,.136,4],[1.756,.102,.109,.010,.143,4],
+      [1.791,.106,.113,.010,.150,4],[1.833,.102,.109,.010,.148,4],
+      [1.865,.088,.095,.009,.146,4],[1.894,.062,.074,.008,.145,4],
+      [1.912,.032,.043,.009,.146,4],[1.917,.001,.001,.010,.146,4]
+    ],36,.063);
+    for(const side of [-1,1]){
+      line('metal',4,[.01+side*.089,1.741,.102],[.01+side*.105,1.767,.179],.009,.010,1.20);
+      line('leather',4,[.01+side*.090,1.760,.164],[.01+side*.078,1.622,.199],.008,.007,.81);
+      oval('metal',4,[.01+side*.105,1.775,.173],[.005,.009,.010],undefined,.83);
+      const X=side*.119;
+      panel('liner',2,[X,1.287,.193],[.102,.137,.021],[.17,side*.09,side*.043],.93);
+      panel('canvas',2,[X,1.355,.195],[.096,.037,.022],[.16,side*.09,side*.043],1.04);
+      oval('metal',2,[X,1.342,.207],[.008,.008,.006],undefined,.97);
+      line('liner',2,[side*.102,1.434,.106],[side*.207,1.412,.106],.024,.043,.88);
+      for(let j=0;j<5;j++){
+        line('canvas',2,[X-.041,1.247+j*.019,.207],[X-.038,1.258+j*.019,.208],.0017,.0015,1.23);
+      }
+    }
+    line('metal',4,[-.047,1.858,.221],[-.019,1.883,.213],.003,.003,1.29);
+    line('dry',4,[-.070,1.682,.224],[-.034,1.645,.256],.009,.005,.77);
+    line('skin',5,[-.024,1.597,.227],[.042,1.587,.227],.009,.004,.81);
+    panel('canvas',0,[-.123,.928,.106],[.061,.105,.037],[.12,-.16,.11],.83);
+    panel('leather',0,[.130,.898,.091],[.069,.126,.051],[.15,.13,-.07],.87);
+    line('canvas',2,[-.016,1.387,.204],[-.025,1.120,.185],.006,.008,.94);
+  }
 
   for(const side of [-1,1]){
     const l=side<0,s=l?6:9,e=s+1,h=s+2,c=origin(s),joint=origin(e),w=origin(h);
@@ -235,7 +266,7 @@ export function ghoulTemplate(T){
       [14,[0,-.043,.072],.077],[17,[0,-.043,.072],.077]]
       .map(([bone,offset,r])=>({bone,offset:v(offset),sphere:new T.Sphere(V(0,0,0),r)}));
     const floor=.914,A=.411,B=.389;
-    function pose(time,phase,motion,attack,flinch,fall,offset){
+    function pose(time,phase,motion,attack,flinch,fall,offset,speech=0){
       const cycle=phase*Math.PI*2,shake=Math.sin(time*13+offset),stride=.238*motion,
         brace=Math.max(0,attack),hit=Math.max(0,flinch);
       rig[0].position.y=floor-.026*(1+Math.cos(cycle*2))*motion*.50-.024*brace;
@@ -247,7 +278,7 @@ export function ghoulTemplate(T){
       rig[3].rotation.x=-.129-.23*brace+.055*Math.sin(time*1.61+offset);
       rig[4].position.y=.080-.009*brace;
       rig[4].rotation.set(-.13-.081*hit,.075*Math.sin(time*1.81+offset),-.08+.046*shake);
-      rig[5].rotation.x=.034+.193*brace;
+      rig[5].rotation.x=.034+.193*brace+.23*speech;
       for(const [t,sign] of [[12,-1],[15,1]]){
         const s=t===12?6:9,f=phase+(sign>0?.5:0),q=f-Math.floor(f),stance=.61,air=clamp((q-stance)/(1-stance));
         const delta=q<stance?1-2*q/stance:-Math.cos(Math.PI*air);
