@@ -9,6 +9,8 @@ Fiktiver Innenausbau für SchlossER. Der Zugang verwendet die vorhandene erste E
 
 ## Referat Morgenform
 
-Die acht gartenseitigen Räume sind ausgebaut; alle acht Räume zur Platzseite bleiben frei. In der Reihenfolge der X-Achse: Schwerlast-Hangar, Kleindrohnen-Montage, Druiden- und Botwerkstatt, Wellenlabor, Aufnahme und Einkleidung, Lehrsaal, Agentenprüfung, Munitionslinie. Der Fensterzugang mündet in die Aufnahme.
+In der Reihenfolge der X-Achse auf der Gartenseite: Schwerlast-Hangar, Kleindrohnen-Montage, Druiden- und Botwerkstatt, Wellenlabor, Aufnahme und Einkleidung, Lehrsaal, Agentenprüfung, Munitionslinie. Der Fensterzugang mündet in die Aufnahme.
 
 `src/upper-factory.js` baut die Ausstattung mit gemeinsam genutzten und pro Raum zusammengefassten Materialien. `src/upper-factory-art.js` enthält die originalen Schilder und Propagandaplakate. Die vier NPCs verwenden vorhandene Rig-Vorlagen, aber eigene IDs, Kleidung, Posen und Untertitel aus `src/npc-lines.js`. Die Requisiten sind fiktive Außengehäuse und Bühnenobjekte; sie haben keine Funktion als reale Waffen oder Fluggeräte.
+
+Zur Schlossplatzseite: Fundbüro der Identitäten, Protokollkammer, Register der Aussonderung, Kapelle der Letzten Unterschrift, Wartesaal der Freiwilligen, Stimm- und Haltungsschule, Spiegelprüfung und Depot ohne Rückgabe. `src/upper-plaza.js` hält Einrichtung, Kollisionen und die fünf zusätzlichen Figuren einschließlich der Depotpatrouille zusammen. `src/upper-plaza-art.js` liefert die Drucke. Die Lichtfarbe wechselt raumbezogen über die vorhandenen drei Lichtquellen; die Geschosshälfte ist auch aus der Nähe kein zweites Rendermodell der Schlossfassade.

@@ -2,6 +2,7 @@ import {architectureKit} from './architecture-kit.js';
 import {UPPER_ENTRY as E} from './palace-openings.js';
 import {randomSource,sharedSet} from './surface-detail.js';
 import {dressUpperFactory} from './upper-factory.js';
+import {dressUpperPlaza} from './upper-plaza.js';
 
 export const UPPER_LAYER=6;
 export const UPPER_FLOOR=E.sill+.023;
@@ -154,6 +155,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   fk.flush('Obergeschoss · Boden und Decke');wk.flush('Obergeschoss · Mauerwerk');
   bk.flush('Obergeschoss · Dachbalken und Baulicht');rungGeom.dispose();
   const factory=dressUpperFactory(T,room,upperWorld,UPPER_FLOOR,UPPER_BAYS);
+  const plaza=dressUpperPlaza(T,room,upperWorld,UPPER_FLOOR,UPPER_BAYS);
   const ambient=new T.HemisphereLight(0xe7e0d7,0x928c83,1.23),lights=Array.from({length:3},()=>new T.PointLight(0xffdeb6,24,13.6,2));
   room.add(ambient,...lights);
   for(const o of [deck,walls,beams])o.traverse(m=>{if(m.isMesh)m.castShadow=false;});
@@ -215,13 +217,17 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
     if(room.visible!==see){room.visible=see;changed=true;}
     if(see){
       changed=factory.update(time,p,high)||changed;
+      changed=plaza.update(time,p,high)||changed;
       const axis=high?p.x:E.x;
-      const tint=high?factory.theme(p):0xead6ad;
+      const onPlaza=high&&p.z>1.72;
+      const tint=high?(onPlaza?plaza.theme(p):factory.theme(p)):0xead6ad;
+      ambient.intensity=onPlaza?1.04:1.23;
       for(let i=0;i<lights.length;i++){
         const x=Math.max(-27.5,Math.min(27.5,Math.round(axis/8)*8+(i-1)*8));
-        lights[i].position.set(x,roof-.91,high&&Math.abs(p.z)<9?p.z*.44:-8.65);
-        lights[i].color.setHex(i===1?tint:i===0?0xffe5cc:0xe1e4e4);
-        lights[i].intensity=i===1?38:21;
+        const z=onPlaza?Math.min(8.9,2.08+p.z*.58):high&&Math.abs(p.z)<9?p.z*.44:-8.65;
+        lights[i].position.set(x,onPlaza&&i===1?roof-1.31:roof-.91,z);
+        lights[i].color.setHex(i===1?tint:i===0?(onPlaza?0xb0b8b0:0xffe5cc):0xe1e4e4);
+        lights[i].intensity=i===1?(onPlaza?34:38):onPlaza?17:21;
       }
     }
     return changed;

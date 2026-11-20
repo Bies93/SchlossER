@@ -38,7 +38,12 @@ const wear={
   cloneB07:{palette:[0x343c42,0x7a8d8b,0xe0cd9c],hair:0x4a4035,weather:.06},
   cloneB12:{palette:[0x252d30,0x52605b,0xa47b3d],hair:0x4a4035,weather:.33},
   cloneAlma:{palette:[0x283337,0x343e58,0xcbb482],hair:0x59493f,insignia:0x967c48,weather:.08},
-  cloneLorenz:{palette:[0x303334,0x756146,0x87958b],hair:0x7a7366,coat:0xa78c65,insignia:0x6d6c53,weather:.35}
+  cloneLorenz:{palette:[0x303334,0x756146,0x87958b],hair:0x7a7366,coat:0xa78c65,insignia:0x6d6c53,weather:.35},
+  plazaRaban:{palette:[0x373438,0x4d585c,0xb2ad90],hair:0x554a40,coat:0x94aaab,insignia:0xa1a796,weather:.31},
+  plazaVroni:{palette:[0x39343c,0x69504b,0xb78c5e],hair:0x56433a,weather:.16},
+  plazaEberwin:{palette:[0x332e32,0x533c42,0xb38b57],hair:0x7f7872,weather:.18},
+  plazaIsolde:{palette:[0x51453f,0x888d84,0xd5c1ac],hair:0x584d46,weather:.36},
+  plazaAnton:{palette:[0x393933,0x485047,0xa99979],hair:0x655342,weather:.23},
 };
 function personalize(T,lib,id,base,eyeY){
   const key=id+':'+base.uuid;if(lib.materials.has(key))return lib.materials.get(key);
