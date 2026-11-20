@@ -80,3 +80,97 @@ export function plazaAtlas(T){
   const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;map.anisotropy=4;
   return new T.MeshStandardMaterial({map,roughness:.86});
 }
+
+// Each nameplate gets an unscaled 512px cell; the rugs share the lower half.
+export function plazaFinishAtlas(T){
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=2048;
+  const g=canvas.getContext('2d'),rng=randomSource(712001);
+  const centered=(s,x,y,size,color,font='Georgia')=>{
+    g.textAlign='center';g.fillStyle=color;g.font='bold '+size+'px '+font;g.fillText(s,x,y,444);
+  };
+  function diamond(x,y,W,H){
+    g.beginPath();g.moveTo(x-W,y);g.lineTo(x,y-H);g.lineTo(x+W,y);g.lineTo(x,y+H);g.closePath();
+  }
+  const titles=[
+    ['FUNDBÜRO','DER IDENTITÄTEN'],
+    ['PROTOKOLLKAMMER','ORIGINALTON / ABSCHRIFT'],
+    ['REGISTER','DER AUSSONDERUNG'],
+    ['KAPELLE','DER LETZTEN UNTERSCHRIFT'],
+    ['WARTESAAL','DER FREIWILLIGEN'],
+    ['STIMM- UND','HALTUNGSSCHULE'],
+    ['SPIEGELPRÜFUNG','DOPPELGÄNGERABGLEICH'],
+    ['DEPOT','OHNE RÜCKGABE']
+  ];
+  for(let i=0;i<8;i++){
+    const {code,ink}=PLAZA_ROOMS[i];
+    g.save();g.translate(i%4*512,Math.floor(i/4)*512);g.beginPath();g.rect(0,0,512,512);g.clip();
+    const enamel=g.createLinearGradient(0,0,0,512);
+    enamel.addColorStop(0,i===3?'#562e38':'#374846');enamel.addColorStop(.32,'#2c3534');enamel.addColorStop(1,'#1b2729');
+    g.fillStyle=enamel;g.fillRect(0,0,512,512);
+    g.lineWidth=4;g.strokeStyle=ink;g.strokeRect(13,20,486,472);g.lineWidth=2;g.strokeRect(24,35,464,442);
+    for(let j=0;j<3250;j++){g.fillStyle=j%2?'#ddcaa624':'#0d151038';g.fillRect(rng()*512,rng()*512,rng()*5+1,rng()*3+1);}
+    centered('SCHLOSS ERLANGEN    ·    MORGENFORM',256,105,20,ink,'monospace');
+    centered(titles[i][0],256,256,52,'#f5e6c6');centered(titles[i][1],256,333,35,'#f5e6c6');
+    centered(code,256,425,36,ink,'monospace');
+    for(const x of [50,462]){diamond(x,425,10,16);g.stroke();}
+    g.restore();
+  }
+  const schemes=[
+    ['#623c43','#a47463','#d3af75','#38282b'],
+    ['#303f48','#65736b','#b4b69b','#28353a'],
+    ['#6e343b','#a58459','#dfbf78','#351f2b'],
+    ['#415546','#7d9378','#deca8a','#304c3e']
+  ];
+  for(let i=0;i<4;i++){
+    const [base,secondary,ink,dark]=schemes[i];
+    g.save();g.translate(i*512,1024);g.beginPath();g.rect(0,0,512,1024);g.clip();
+    g.fillStyle=base;g.fillRect(0,0,512,1024);
+    g.strokeStyle=secondary;g.lineWidth=2.5;
+    for(let x=25,j=0;x<505;x+=51,j++)for(let y=-35+(j%2?30:0);y<1070;y+=61){
+      diamond(x,y,26,31);g.stroke();diamond(x,y,8,10);g.fillStyle=j%3?dark:ink;g.fill();
+    }
+    g.strokeStyle=dark;g.lineWidth=22;g.strokeRect(26,29,460,966);
+    for(const [inset,width] of [[8,2],[13,3],[29,2],[42,4],[55,1]]){
+      g.strokeStyle=inset===29?secondary:ink;g.lineWidth=width;
+      g.strokeRect(inset,inset,512-2*inset,1024-2*inset);
+    }
+    for(const y of [256,768]){
+      diamond(256,y,141,156);g.fillStyle=dark;g.fill();g.strokeStyle=ink;g.stroke();
+      for(let n=0;n<12;n++){
+        const a=n*Math.PI/6;
+        diamond(256+Math.cos(a)*77,y+Math.sin(a)*91,12,19);g.stroke();
+      }
+      diamond(256,y,44,64);g.stroke();
+      g.beginPath();g.ellipse(256,y,28,13,0,0,Math.PI*2);g.stroke();
+      g.beginPath();g.arc(256,y,6,0,Math.PI*2);g.fillStyle=ink;g.fill();
+    }
+    for(let n=0;n<13500;n++){g.fillStyle=n%2?'#edc99c34':'#16131943';g.fillRect(rng()*512,rng()*1024,.6+rng()*2,1+rng()*5);}
+    for(let y=0;y<1024;y+=5){g.fillStyle='#33282430';g.fillRect(0,y,512,1);}
+    g.restore();
+  }
+  const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;
+  return new T.MeshStandardMaterial({map,roughness:.94,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+}
+
+export function smokedMirror(T){
+  // Baked room sheen and age spots: no reflector cameras or extra scene passes.
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=512;
+  const g=canvas.getContext('2d'),rand=randomSource(98717);
+  const v=g.createLinearGradient(10,16,245,470);
+  v.addColorStop(0,'#839b9b');v.addColorStop(.19,'#566d72');v.addColorStop(.34,'#303e47');
+  v.addColorStop(.62,'#3e5055');v.addColorStop(.82,'#29343c');v.addColorStop(1,'#505959');
+  g.fillStyle=v;g.fillRect(0,0,256,512);
+  const r=g.createRadialGradient(104,55,6,104,55,132);
+  r.addColorStop(0,'#d9ebdc8c');r.addColorStop(.32,'#b5ccc34e');r.addColorStop(1,'#b5ccc300');
+  g.fillStyle=r;g.fillRect(0,0,256,512);
+  const edge=g.createLinearGradient(0,0,256,0);
+  edge.addColorStop(0,'#131d28b8');edge.addColorStop(.13,'#14222a18');edge.addColorStop(.84,'#14222a0a');edge.addColorStop(1,'#182429a6');
+  g.fillStyle=edge;g.fillRect(0,0,256,512);
+  for(let n=0;n<2600;n++){
+    const x=rand()*256,y=rand()*512;
+    if(x>22&&x<231&&y>20&&y<472&&rand()>.056)continue;
+    g.fillStyle=n%2?'#acc4b51a':'#0e232736';g.fillRect(x,y,.5+rand()*2,1+rand()*4);
+  }
+  const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;map.anisotropy=4;
+  return new T.MeshStandardMaterial({map,roughness:.33,metalness:.15,emissive:0x526f6c,emissiveMap:map,emissiveIntensity:.18});
+}

@@ -150,7 +150,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   addParkArchitecture(T,group,world,finish);
   addParkMonuments(T,group,world,terrain.height,finish);
   return {
-    floors,bench,benchCover,upperKnot:plants.upperKnot, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
+    floors,bench,benchCover, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
     surfaceAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?(network.edge(x,z)<.17?'gravel':'lawn'):null,
     update:(position,time)=>{plants(position,time);beds(position)}
   };

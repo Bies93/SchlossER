@@ -1,6 +1,6 @@
 import {architectureKit} from './architecture-kit.js';
 import {UPPER_ENTRY as E} from './palace-openings.js';
-import {randomSource,sharedSet} from './surface-detail.js';
+import {sharedSet} from './surface-detail.js';
 import {dressUpperFactory} from './upper-factory.js';
 import {dressUpperPlaza} from './upper-plaza.js';
 
@@ -18,7 +18,7 @@ const insidePlan=(x,z,pad=0)=>Math.abs(x)<=X+pad&&Math.abs(z)<=Z+pad||
   Math.abs(x)<=squareWidth+pad&&z>=Z-pad&&z<=squareEnd+pad;
 const entrySpan=x=>x>E.left+.14&&x<E.right-.14;
 
-export function addPalaceUpper(T,scene,facade,upperWorld,M,height,upperKnot){
+export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   const room=new T.Group(),ladder=new T.Group(),portal=new T.Group();
   room.name='Erstes Obergeschoss · Referat Morgenform';room.visible=false;
   ladder.name='Gartenfassade · Anlegeleiter';ladder.visible=false;ladder.userData.noSceneQuery=true;
@@ -33,8 +33,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height,upperKnot){
   const lit=new T.MeshStandardMaterial({color:0xf5dbac,emissive:0xe9aa61,emissiveIntensity:.67,roughness:.60});
   const ash=material(0xd5c8b6,.97,'plaster',.63),silt=material(0xb3ab9b,.94,'stairStone',.68);
   const finishes={...M,wood,endGrain,iron,lit,ash,silt,
-    rock:material(0xb4a892,.99,'bedrock',.59),soot:material(0xa59a89,.99,'plaster',.53),
-    oldBoard:material(0xb5a38a,.87,'fineOak',.73),boardFade:material(0x95856e,.90,'fineOak',.66)};
+    rock:material(0xb4a892,.99,'bedrock',.59),soot:material(0xa59a89,.99,'plaster',.53)};
   const windowKit=architectureKit(T,portal,finishes);
   // A shallow rebuilt return where the sealed proxy used to be.
   for(const x of [E.left,E.right]){
@@ -91,14 +90,9 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height,upperKnot){
   const deck=new T.Group(),walls=new T.Group(),beams=new T.Group();
   deck.name='Obergeschoss · Böden';walls.name='Obergeschoss · Raumaufteilung';beams.name='Obergeschoss · Rohbau und Beleuchtung';
   room.add(deck,walls,beams);
-  const fk=architectureKit(T,deck,finishes),wk=architectureKit(T,walls,finishes),bk=architectureKit(T,beams,finishes),rand=randomSource(5967);
+  const fk=architectureKit(T,deck,finishes),wk=architectureKit(T,walls,finishes),bk=architectureKit(T,beams,finishes);
   for(const [a,b,l,r] of [[-X,X,-Z,Z],[-gardenWidth,gardenWidth,gardenEnd,-Z],[-squareWidth,squareWidth,Z,squareEnd]]){
     fk.box('silt',at,a,b,UPPER_FLOOR-.178,UPPER_FLOOR-.019,l,r);
-    for(let x=a,i=0;x<b-.014;x+=1.84,i++)for(let z=l-(i%2?.242:0);z<r-.014;z+=.484){
-      const material=rand()<.21?'boardFade':'oldBoard';
-      const u=Math.max(l,z,-1.855)+.005,z1=Math.min(r,z+.484)-.005;
-      if(z1>u)fk.box(material,at,x+.004,Math.min(x+1.84,b)-.004,UPPER_FLOOR-.022,UPPER_FLOOR,u,z1);
-    }
     fk.box('soot',at,a,b,roof,roof+.104,l,r);
   }
   function wall(axis,fixed,a,b,holes=[],toOutside=false){
@@ -147,22 +141,17 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height,upperKnot){
     bk.box(i%3?'wood':'endGrain',at,x-.084,x+.084,roof-.217,roof-.008,-Z+.16,Z-.16);
     bk.box('endGrain',at,x-.118,x+.118,roof-.246,roof-.195,-1.73,1.73);
   }
-  for(const x of [-26.3,-12.8,3.8,17.2,27.0]){
-    rod(bk,'iron',[x,roof-.039,0],[x,roof-.81,0],.012);
-    rod(bk,'iron',[x,roof-.827,0],[x,roof-.904,0],.143);
-    rod(bk,'lit',[x,roof-.920,0],[x,roof-1.024,0],.071);
-    rod(bk,'iron',[x,roof-1.031,0],[x,roof-1.061,0],.089);
-  }
   fk.flush('Obergeschoss · Boden und Decke');wk.flush('Obergeschoss · Mauerwerk');
   bk.flush('Obergeschoss · Dachbalken und Baulicht');rungGeom.dispose();
   const factory=dressUpperFactory(T,room,upperWorld,UPPER_FLOOR,UPPER_BAYS,{roof,gardenWidth,gardenEnd,Z});
-  const plaza=dressUpperPlaza(T,room,upperWorld,UPPER_FLOOR,UPPER_BAYS);
+  const plaza=dressUpperPlaza(T,room,upperWorld,UPPER_FLOOR,UPPER_BAYS,{roof,Z,squareWidth,squareEnd});
   const ambient=new T.HemisphereLight(0xe7e0d7,0x928c83,1.23),lights=Array.from({length:3},()=>new T.PointLight(0xffdeb6,24,13.6,2));
   room.add(ambient,...lights);
   for(const o of [deck,walls,beams])o.traverse(m=>{if(m.isMesh)m.castShadow=false;});
   room.traverse(o=>o.layers.set(UPPER_LAYER));
 
   let start=Infinity,opening=0,enabled=false,progress=null,direction=1,requested=0,lastTread=-1;
+  const treeGround=height(E.treeX,E.treeZ)??0;
   const treeAction={id:'upper-tree',action:'upper-unlock',label:'In die Baumrinde fassen'};
   const upAction={id:'upper-ladder-up',action:'upper-up',label:'Leiter hinaufsteigen'};
   const downAction={id:'upper-ladder-down',action:'upper-down',label:'Leiter hinuntersteigen'};
@@ -173,13 +162,10 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height,upperKnot){
   const upper=p=>p.y>UPPER_FLOOR-.24&&insidePlan(p.x,p.z,.075);
   const isFoot=p=>p.y<base+.49&&Math.abs(p.x-E.x)<.51&&p.z>=footZ-.53&&p.z<footZ+.32;
   const isTop=p=>upper(p)&&Math.abs(p.x-E.x)<.49&&p.z>gardenEnd-.04&&p.z<arrivalZ+.46;
-  function target(p,look,eye){
-    if(start===Infinity&&p.y<1&&upperKnot&&eye){
-      const {center,outward}=upperKnot;
-      const dx=center.x-eye.x,dy=center.y-eye.y,dz=center.z-eye.z;
-      const reach=Math.hypot(dx,dy,dz);
-      if(reach<=2.0&&(-dx*outward.x-dz*outward.z)>.22&&dx*look.x+dy*look.y+dz*look.z>reach*.973)return treeAction;
-    }
+  function target(p,look){
+    // The bloom is a clue, not the hitbox: proximity to the trunk works at any angle.
+    if(start===Infinity&&p.y>=treeGround-.46&&p.y<=treeGround+1.28&&
+      (p.x-E.treeX)**2+(p.z-E.treeZ)**2<=1.75**2)return treeAction;
     if(!enabled||progress!==null)return null;
     if(p.y<base+.48&&hint(p,look,E.x,footZ,.98,.34))return upAction;
     if(isTop(p)&&hint(p,look,E.x,gardenEnd-.15,1.25,.34))return downAction;
@@ -225,15 +211,16 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height,upperKnot){
       changed=factory.update(time,p,high)||changed;
       changed=plaza.update(time,p,high)||changed;
       const axis=high?p.x:E.x;
-      const onPlaza=high&&p.z>1.72;
-      const factoryBay=high&&p.z<-1.85?UPPER_BAYS.findIndex((x,i)=>p.x>=x&&p.x<UPPER_BAYS[i+1]):-1;
+      const onPlaza=high&&p.z>1.85;
+      const bayIndex=high?UPPER_BAYS.findIndex((x,i)=>p.x>=x&&p.x<UPPER_BAYS[i+1]):-1;
+      const factoryBay=high&&p.z<-1.85?bayIndex:-1;
       const tint=high?(onPlaza?plaza.theme(p):factory.theme(p)):0xead6ad;
       ambient.intensity=onPlaza?1.04:1.23;
       for(let i=0;i<lights.length;i++){
-        const bay=Math.max(0,Math.min(7,factoryBay+i-1));
-        const x=factoryBay>=0?(UPPER_BAYS[bay]+UPPER_BAYS[bay+1])*.5:
+        const bay=Math.max(0,Math.min(7,bayIndex+i-1));
+        const x=bayIndex>=0?(UPPER_BAYS[bay]+UPPER_BAYS[bay+1])*.5:
           Math.max(-27.5,Math.min(27.5,Math.round(axis/8)*8+(i-1)*8));
-        const z=factoryBay>=0?(i===1?-6.06:-4.62):onPlaza?Math.min(8.9,2.08+p.z*.58):high&&Math.abs(p.z)<9?p.z*.44:-8.65;
+        const z=factoryBay>=0?(i===1?-6.06:-4.62):onPlaza?(i===1?Math.min(8.5,2.68+p.z*.55):4.98):high?0:-8.65;
         lights[i].position.set(x,onPlaza&&i===1?roof-1.31:roof-1.02,z);
         lights[i].color.setHex(i===1?tint:i===0?(onPlaza?0xb0b8b0:0xffe5cc):0xe1e4e4);
         lights[i].intensity=i===1?(onPlaza?34:38):onPlaza?17:21;

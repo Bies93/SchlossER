@@ -236,13 +236,15 @@ function buildUpperKnot(T,group,record,trunk,wood){
   const origin=new T.Vector3(x,y+1.35,z).addScaledVector(outward,2.1);
   const hit=new T.Raycaster(origin,outward.clone().negate(),0,2.1).intersectObject(sample,false)[0];
   const center=hit?.point??origin.addScaledVector(outward,-2.1+.45*Math.max(sx,sz));
-  const node=new T.Group();node.name='Linde · unauffälliger Astansatz';
-  node.userData.noSceneQuery=true;node.position.copy(center).addScaledVector(outward,-.015);
+  const node=new T.Group();node.name='Linde · blühender Astansatz';
+  node.userData.noSceneQuery=true;node.position.copy(center).addScaledVector(outward,-.020);
   node.rotation.y=Math.atan2(outward.x,outward.z);group.add(node);
+  mat.color.lerp(new T.Color(0xbfb198),.16);
+  const bend=(a,b,c)=>new T.Vector3(.104*a+.019*b,.139*b,.083*c*(1+.10*a-.12*b));
   const r=new T.SphereGeometry(1,18,12),uv=r.attributes.uv,pos=r.attributes.position;
   for(let j=0;j<pos.count;j++){
     const a=pos.getX(j),b=pos.getY(j),c=pos.getZ(j);
-    pos.setXYZ(j,.087*a+.018*b,.120*b,.060*c*(1+.10*a-.12*b));
+    pos.setXYZ(j,...bend(a,b,c));
     uv.setXY(j,.33+a*.033,.68+b*.075);
   }
   pos.needsUpdate=true;uv.needsUpdate=true;r.computeVertexNormals();
@@ -250,13 +252,37 @@ function buildUpperKnot(T,group,record,trunk,wood){
   const seam=mat.clone();seam.color.multiplyScalar(.61);
   for(let k=0;k<2;k++){
     const points=Array.from({length:15},(_,j)=>{
-      const a=1.05+k*.54+j*.26;
-      return new T.Vector3(Math.cos(a)*(.031+k*.018)+.012,Math.sin(a)*(.061+k*.018),.055-k*.012+.002*Math.sin(a*2));
+      const t=1.05+k*.54+j*.26;
+      const a=Math.cos(t)*(.34+k*.19)+.085,b=Math.sin(t)*(.45+k*.14);
+      return bend(a,b,Math.sqrt(1-a*a-b*b)).add(new T.Vector3(0,0,.0015));
     });
     const ridge=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points),14,.0025+k*.0007,4,false),k?mat:seam);
     ridge.receiveShadow=true;node.add(ridge);
   }
-  return {center:center.clone().addScaledVector(outward,.043),outward};
+  // A single, pale blossom on a curved stem; both gently catch close-range light.
+  const green=new T.MeshStandardMaterial({color:0x647441,roughness:.91});
+  const V=(x,y,z)=>new T.Vector3(x,y,z);
+  const stem=new T.CatmullRomCurve3([V(-.025,.055,.062),V(.009,.092,.098),V(.046,.146,.123),V(.037,.193,.141)]);
+  const stalk=new T.Mesh(new T.TubeGeometry(stem,12,.005,6,false),green);node.add(stalk);
+  const bloom=new T.Group();bloom.name='Linde · helle Blüte';bloom.position.copy(stem.getPoint(1));bloom.rotation.set(-.18,-.26,.16);node.add(bloom);
+  const unit=new T.SphereGeometry(1,12,8),pose=new T.Object3D();
+  const leaflets=new T.InstancedMesh(unit,green,2);
+  for(const [i,t] of [.39,.62].entries()){
+    pose.position.copy(stem.getPoint(t)).add(V(i?.021:-.024,.006,.012));
+    pose.rotation.set(.28,i?.42:-.36,i?-1.05:.93);pose.scale.set(.012,.028,.0046);
+    pose.updateMatrix();leaflets.setMatrixAt(i,pose.matrix);
+  }
+  node.add(leaflets);
+  const petals=new T.InstancedMesh(unit,new T.MeshStandardMaterial({color:0xffffff,roughness:.82}),5);
+  for(let j=0;j<5;j++){
+    const a=j*TAU/5;
+    pose.position.set(-Math.sin(a)*.028,Math.cos(a)*.028,.008);
+    pose.rotation.set(.23,0,a);pose.scale.set(.016,.028,.0068);
+    pose.updateMatrix();petals.setMatrixAt(j,pose.matrix);
+    petals.setColorAt(j,new T.Color(j%2?0xf5d9c1:0xffebc8));
+  }
+  const heart=new T.Mesh(unit,new T.MeshStandardMaterial({color:0xd9a450,roughness:.95}));
+  heart.position.z=.014;heart.scale.set(.013,.013,.012);bloom.add(petals,heart);
 }
 
 export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[]){
@@ -272,14 +298,13 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
   const sway={value:0};
   for(const m of [leaf,nearLeaf,midLeaf])airyLeaf(T,m,sway);
   const treeBins=new Map(),grassBins=new Map(),herbBins=new Map(),parts=[],roots=[];
-  let upperKnot=null;
   for(const {x,z,h,species,hero,backdrop=false} of treeSites){
     const i=hero?6+heroes.indexOf(hero):(species==='oak'?0:3)+Math.floor(rng()*3),s=h/(species==='oak'?14.1:16.8);
     const sx=s*(.84+rng()*.28),sz=s*(.86+rng()*.26);
     const tint=new T.Color().setRGB(.82+rng()*.20,.85+rng()*.17,.73+rng()*.27);
     const record={x,y:backdrop?-.24:height(x,z),z,sx,sy:s,sz,yaw:hero?Math.PI*.17:rng()*TAU,tint,i,backdrop};
     put(treeBins,x,z,record);
-    if(!backdrop&&x===UPPER_ENTRY.treeX&&z===UPPER_ENTRY.treeZ)upperKnot=buildUpperKnot(T,group,record,shapes[i][0],wood);
+    if(!backdrop&&x===UPPER_ENTRY.treeX&&z===UPPER_ENTRY.treeZ)buildUpperKnot(T,group,record,shapes[i][0],wood);
     if(!backdrop){
       const r=(species==='oak'?.73:.57)*Math.max(sx,sz)*(hero?1.16:1);
       world.circle(x,z,r);roots.push({x,z,r:r+.34});
@@ -345,7 +370,7 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
     batch(T,group,bin.records,herbMesh,grass,'Saum · vereinzelte Kräuter')
   ]});
   let lastX=Infinity,lastZ=Infinity;
-  const update=(position,time)=>{
+  return (position,time)=>{
     sway.value=time*.001;
     if(Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
     lastX=position.x;lastZ=position.z;
@@ -354,6 +379,4 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
       for(const m of p.meshes)m.visible=visible;
     }
   };
-  update.upperKnot=upperKnot;
-  return update;
 }
