@@ -16,6 +16,7 @@ import {deepMaterials,DEEP_LIGHTS,buildDeepStair,furnishDeep} from './moosfunk-d
 import {orbPriest} from './orb-priest.js';
 import {wcVisitor} from './npc-visitors.js';
 import {loungeRug} from './moosfunk-lounge-textile.js';
+import {addWcGraffiti} from './park-wc-graffiti.js';
 
 export const WC_LAYER=4;
 const lampSites=[
@@ -216,6 +217,7 @@ export function addWcInterior(T,scene,world,quest){
         method.print(id,4.096,2.165,v,.647,.128,Math.PI);
       }
       method.print('keep',2.273,1.49,5.79,.53,.335,0);
+      addWcGraffiti(T,room);
     }
     if(['women','men','womenA','womenB','menA','menB'].includes(id))furnishWashroom(T,method,id);
     if(id==='practice')furnishPractice(T,method);
