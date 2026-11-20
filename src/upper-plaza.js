@@ -560,14 +560,6 @@ export function dressUpperPlaza(T,parent,world,F,bays,{roof,Z,squareWidth,square
       const shadow=npcInfo.shadow=contactShadow(T,room,x,F+.009,z,.72,.60);
       const state={room,rig,c,x,z,shadow,t:2.1+i*.30,last:null,say:0,glance:0,distance:0};
       npcInfo.speak=(duration=3.2)=>{state.say=duration;};
-      const head=rig.joint('head');
-      if(head&&c.mode!=='sit')for(const item of c.mode==='patrol'?
-        [['iron',0,.129,.018,.198,.058,.165],['bronze',0,.111,.095,.083,.016,.039]]:
-        c.mode==='desk'?[['blue',-.091,.055,-.017,.029,.063,.055],['bronze',-.095,.077,.054,.020,.027,.083]]:
-        [['velvet',0,.130,-.025,.188,.058,.158],['bronze',0,.124,.057,.042,.018,.021]]){
-        const [material,x,y,z,W,H,L]=item,mesh=new T.Mesh(g.block.clone(),m[material]);
-        mesh.position.set(x,y,z);mesh.scale.set(W,H,L);head.add(mesh);
-      }
       if(c.mode==='patrol'){
         const pose={x,z,ux:1,uz:0,half:.205,depth:.157},point={},lookAhead={};
         const track=(s,out)=>{

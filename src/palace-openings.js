@@ -12,6 +12,7 @@ export const WINGS={outer:29.1,z:7.70,portal:1.32,spring:2.44,rise:.59,ceiling:4
 // Bounds are taken from the first upper window of the garden risalit in the GLB.
 export const UPPER_ENTRY={x:4.994,left:4.236,right:5.752,sill:5.929,head:8.840,z:-12.205,
   treeX:10.4,treeZ:-22.2};
+export const UPPER_ROOM_PLAN={roof:10.31,X:31.92,Z:8.94,gardenWidth:12.78,squareWidth:6.59,gardenEnd:-11.42,squareEnd:11.62};
 // +X is south, -Z is east (left when facing the gallery poster).
 export const SOUTH_HATCH={x0:24.72,x1:28.91,z0:-7.27,z1:-5.70,end:30.88};
 export const SOUTH_HATCH_CUT={left:SOUTH_HATCH.x0,right:SOUTH_HATCH.x1,back:SOUTH_HATCH.z0,front:SOUTH_HATCH.z1};
@@ -33,6 +34,14 @@ export function cutPalaceOpenings(T,root){
     })))
   ];
   const innerOccluder={lo:[-4.07,-.08,-11.48],hi:[4.07,4.92,11.51]};
+  const {roof,X,Z,gardenWidth,squareWidth,gardenEnd,squareEnd}=UPPER_ROOM_PLAN;
+  // ERL_RECESS also contains the original black storey slabs and window
+  // backing. Keep the exterior backdrop, but remove it from the new shell.
+  const upperVoids=[
+    [-X,X,-Z,Z],
+    [-gardenWidth,gardenWidth,gardenEnd,-Z],
+    [-squareWidth,squareWidth,Z,squareEnd],
+  ].map(([l,r,a,b])=>({lo:[l,UPPER_ENTRY.sill-.09,a],hi:[r,roof+.125,b]}));
   // Hollow only the added interpreted rooms, behind the façade envelope.
   const wings=[1,-1].map(s=>{
     const x=[s*(HALL.half-.19),s*(WINGS.outer+.34)].sort((a,b)=>a-b);
@@ -46,8 +55,9 @@ export function cutPalaceOpenings(T,root){
     const keys=['position','normal','uv','color'].filter(k=>g.attributes[k]);
     // The original GLB has dark proxy slabs behind its fake windows.
     // Leave them in the wings, but remove them from the new room.
-    const regions=o.name==='ERL_RECESS'?[...geometryRegions,innerOccluder,...wings]:[...geometryRegions,...wings];
-    const extent=WINGS.outer+.34;
+    const recess=o.name==='ERL_RECESS';
+    const regions=recess?[...geometryRegions,innerOccluder,...wings,...upperVoids]:[...geometryRegions,...wings];
+    const extent=recess?X:WINGS.outer+.34;
     for(let i=0;i<p.count;i++)v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).toArray(pw,3*i);
     const index=[],slices=Object.fromEntries(keys.map(k=>[k,[]]));
     function vertex(i){return [[pw[3*i],pw[3*i+1],pw[3*i+2]],[i,i,i],[1,0,0]]}

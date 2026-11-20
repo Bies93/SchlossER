@@ -1,17 +1,20 @@
 import {architectureKit} from './architecture-kit.js';
-import {UPPER_ENTRY as E} from './palace-openings.js';
+import {UPPER_ENTRY as E,UPPER_ROOM_PLAN} from './palace-openings.js';
 import {sharedSet} from './surface-detail.js';
 import {dressUpperFactory} from './upper-factory.js';
 import {dressUpperPlaza} from './upper-plaza.js';
 
 export const UPPER_LAYER=6;
 export const UPPER_FLOOR=E.sill+.023;
-const roof=10.31, X=31.92, Z=8.94, gardenWidth=12.78, squareWidth=6.59,gardenEnd=-11.42,squareEnd=11.62;
+const {roof,X,Z,gardenWidth,squareWidth,gardenEnd,squareEnd}=UPPER_ROOM_PLAN;
 const width=.123, at=(x,y,z)=>[x,y,z];
 const outline=[[-X,-Z],[-gardenWidth,-Z],[-gardenWidth,gardenEnd],[gardenWidth,gardenEnd],
   [gardenWidth,-Z],[X,-Z],[X,Z],[squareWidth,Z],[squareWidth,squareEnd],[-squareWidth,squareEnd],[-squareWidth,Z],[-X,Z]];
 export const UPPER_BAYS=[-X,-24.6,-16.7,-8.85,0,8.85,16.7,24.6,X];
-const footZ=-14.78,headZ=E.z-.209,arrivalZ=gardenEnd+.58;
+const footZ=-14.78,headZ=E.z-.325,arrivalZ=gardenEnd+.58;
+const hallZ=1.73,doorHalf=.851,doorShift=.37;
+const bayAt=x=>UPPER_BAYS.findIndex((edge,i)=>x>=edge&&x<UPPER_BAYS[i+1]);
+const entryBay=bayAt(E.x),bayCenter=i=>(UPPER_BAYS[i]+UPPER_BAYS[i+1])*.5;
 const lowerCap=2.6;
 const insidePlan=(x,z,pad=0)=>Math.abs(x)<=X+pad&&Math.abs(z)<=Z+pad||
   Math.abs(x)<=gardenWidth+pad&&z>=gardenEnd-pad&&z<=-Z+pad||
@@ -35,22 +38,24 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   const finishes={...M,wood,endGrain,iron,lit,ash,silt,
     rock:material(0xb4a892,.99,'bedrock',.59),soot:material(0xa59a89,.99,'plaster',.53)};
   const windowKit=architectureKit(T,portal,finishes);
-  // A shallow rebuilt return where the sealed proxy used to be.
+  // The lining reaches the new interior face instead of leaving a gap behind
+  // the original façade. The open leaves fit entirely within this depth.
+  const revealBack=gardenEnd+.095,sashZ=-12.050;
   for(const x of [E.left,E.right]){
-    windowKit.box('cut',at,x-.036,x+.036,E.sill,E.head,-12.249,-11.75);
-    windowKit.box('sash',at,x-.015,x+.015,E.sill+.046,E.head-.043,-11.969,-11.884);
+    windowKit.box('cut',at,x-.041,x+.041,E.sill,E.head,-12.249,revealBack);
+    windowKit.box('sash',at,x-.024,x+.024,E.sill+.046,E.head-.043,sashZ-.034,sashZ+.047);
   }
-  windowKit.box('cut',at,E.left-.042,E.right+.042,E.sill-.017,UPPER_FLOOR,-12.246,gardenEnd);
-  windowKit.box('cut',at,E.left-.029,E.right+.029,E.head-.043,E.head+.018,-12.249,-11.737);
+  windowKit.box('cut',at,E.left-.042,E.right+.042,E.sill-.033,UPPER_FLOOR,-12.325,gardenEnd);
+  windowKit.box('cut',at,E.left-.029,E.right+.029,E.head-.043,E.head+.018,-12.249,revealBack);
   windowKit.flush('Geheimfenster · Sandsteinlaibung');
   const cover=new T.Mesh(new T.PlaneGeometry(E.right-E.left-.044,E.head-E.sill-.092),M.dark);
   cover.name='Geheimfenster · dunkler Hintergrund geschlossen';cover.rotation.y=Math.PI;
-  cover.position.set(E.x,(E.head+E.sill)*.5,-11.84);portal.add(cover);
+  cover.position.set(E.x,(E.head+E.sill)*.5,sashZ+.090);portal.add(cover);
   const leaves=[];
   for(const side of [-1,1]){
     const leaf=new T.Group(),a=side<0?.022:-.684,b=side<0?.684:-.022;
     leaf.name='Geheimfenster · Holzflügel';leaf.userData.movingOccluder=true;
-    leaf.position.set(side<0?E.left+.039:E.right-.039,E.sill+.04,-11.952);portal.add(leaf);
+    leaf.position.set(side<0?E.left+.049:E.right-.049,E.sill+.04,sashZ);portal.add(leaf);
     const k=architectureKit(T,leaf,finishes),top=E.head-E.sill-.103,mid=(a+b)*.5;
     k.box('glass',at,a+.029,b-.029,.040,top-.040,-.005,.014);
     for(const x of [a+.018,b-.018,mid])k.box('sash',at,x-.026,x+.026,.013,top,-.035,.039);
@@ -61,7 +66,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
     k.flush('Geheimfenster · Beschläge, Holz und Gläser');leaves.push({leaf,side});
   }
 
-  const base=height(E.x,footZ)??-.036,H=UPPER_FLOOR-base,L=H+.79;
+  const base=height(E.x,footZ)??-.036,H=UPPER_FLOOR-base,L=H+(arrivalZ-headZ)*.83;
   const railZ=y=>footZ+(headZ-footZ)*(y-base)/H;
   const rungGeom=new T.CylinderGeometry(1,1,1,11);
   const mk=architectureKit(T,ladder,finishes),m=new T.Matrix4(),axis=new T.Vector3(0,1,0),q=new T.Quaternion(),
@@ -73,13 +78,17 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   }
   for(const sign of [-1,1]){
     const x=E.x+sign*.437;
-    mk.box('wood',(u,y,d)=>[x+u,y,railZ(y)+d],-.042,.042,base+.018,UPPER_FLOOR+1.07,-.049,.045);
+    const rail=(u,y,d)=>[x+u,y,railZ(y)+d];
+    mk.box('wood',rail,-.042,.042,base+.018,UPPER_FLOOR-.063,-.049,.045);
+    mk.box('iron',rail,-.045,.045,UPPER_FLOOR-.107,UPPER_FLOOR-.061,-.052,.048);
     mk.box('iron',(u,y,d)=>[x+u,y,railZ(y)+d],-.056,.056,base+.009,base+.189,-.062,.053);
-    for(const y of [base+.267,UPPER_FLOOR-.62,UPPER_FLOOR+.405]){
+    const bracket=UPPER_FLOOR-.181;
+    rod(mk,'iron',[x,bracket,railZ(bracket)+.02],[x,bracket,-12.30],.025);
+    for(const y of [base+.267,UPPER_FLOOR-.62,UPPER_FLOOR-.158]){
       rod(mk,'iron',[x-.049,y,railZ(y)],[x+.055,y,railZ(y)],.016);
     }
   }
-  for(let y=base+.273,i=0;y<UPPER_FLOOR+.012;y+=.294,i++){
+  for(let y=base+.273,i=0;y<UPPER_FLOOR-.16;y+=.294,i++){
     const z=railZ(y);
     rod(mk,i%5===0?'endGrain':'wood',[E.x-.444,y,z],[E.x+.444,y,z],.035);
     for(const sign of [-1,1])rod(mk,'iron',[E.x+sign*.426,y,z-.049],[E.x+sign*.426,y,z-.057],.016);
@@ -125,10 +134,10 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
     else wall('z',z,Math.min(x,x2),Math.max(x,x2),z===gardenEnd?[[E.left+.033,E.right-.033,E.head-UPPER_FLOOR-.012]]:[],true);
   }
   // Continuous longitudinal hall with doors into both rows of future rooms.
-  for(const z of [-1.73,1.73]){
+  for(const z of [-hallZ,hallZ]){
     const doorways=UPPER_BAYS.slice(0,-1).map((x,i)=>{
-      const center=(x+UPPER_BAYS[i+1])*.5+(z<0?-.37:.37);
-      return [center-.851,center+.851];
+      const center=bayCenter(i)+Math.sign(z)*doorShift;
+      return [center-doorHalf,center+doorHalf];
     });
     wall('z',z,-X,X,doorways);
   }
@@ -171,6 +180,23 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
     if(isTop(p)&&hint(p,look,E.x,gardenEnd-.15,1.25,.34))return downAction;
     return null;
   }
+  function seeGarden(p){
+    if(opening<.037)return false;
+    // Keep the exterior from every point in the arrival room. Further back,
+    // only draw it if a sightline can pass through the relevant doorways.
+    if(p.z<-hallZ-.04)return p.x>=UPPER_BAYS[entryBay]-.065&&p.x<=UPPER_BAYS[entryBay+1]+.065;
+    let l=E.left,r=E.right;
+    const through=(plane,door)=>{
+      const t=(p.z-plane)/(p.z-gardenEnd),half=doorHalf+.12;
+      if(t<=.003)return Math.abs(p.x-door)<=half;
+      l=Math.max(l,p.x+(door-half-p.x)/t);r=Math.min(r,p.x+(door+half-p.x)/t);
+      return r>=l;
+    };
+    if(!through(-hallZ,bayCenter(entryBay)-doorShift))return false;
+    if(p.z<=hallZ+.07)return true;
+    const bay=bayAt(p.x);
+    return bay>=0&&through(hallZ,bayCenter(bay)+doorShift);
+  }
   function unlock(time){
     if(start!==Infinity)return false;
     start=time+142;return true;
@@ -212,13 +238,13 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
       changed=plaza.update(time,p,high)||changed;
       const axis=high?p.x:E.x;
       const onPlaza=high&&p.z>1.85;
-      const bayIndex=high?UPPER_BAYS.findIndex((x,i)=>p.x>=x&&p.x<UPPER_BAYS[i+1]):-1;
+      const bayIndex=high?bayAt(p.x):-1;
       const factoryBay=high&&p.z<-1.85?bayIndex:-1;
       const tint=high?(onPlaza?plaza.theme(p):factory.theme(p)):0xead6ad;
       ambient.intensity=onPlaza?1.04:1.23;
       for(let i=0;i<lights.length;i++){
         const bay=Math.max(0,Math.min(7,bayIndex+i-1));
-        const x=bayIndex>=0?(UPPER_BAYS[bay]+UPPER_BAYS[bay+1])*.5:
+        const x=bayIndex>=0?bayCenter(bay):
           Math.max(-27.5,Math.min(27.5,Math.round(axis/8)*8+(i-1)*8));
         const z=factoryBay>=0?(i===1?-6.06:-4.62):onPlaza?(i===1?Math.min(8.5,2.68+p.z*.55):4.98):high?0:-8.65;
         lights[i].position.set(x,onPlaza&&i===1?roof-1.31:roof-1.02,z);
@@ -243,7 +269,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
     }
   }
   return {prepare,update,target,unlock,step,request(d){requested=d;},inside:upper,visible:()=>room.visible,
-    seeGarden:p=>p.z<arrivalZ+3.3&&Math.abs(p.x-E.x)<5.55,
+    seeGarden,
     floorAt:(x,z,y)=>y>UPPER_FLOOR-.26&&insidePlan(x,z,.164)?UPPER_FLOOR:null,
     ceilingAt(x,z,y){
       if(y<UPPER_FLOOR-.26||!insidePlan(x,z,.19))return Infinity;

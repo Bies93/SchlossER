@@ -590,20 +590,6 @@ export function dressUpperFactory(T,parent,world,F,bays,{roof,gardenWidth,garden
       let chat=0;
       npcInfo.speak=duration=>{chat=typeof duration==='number'?duration:3.3;};
       actors.push({cfg,rig,x,z,time:t,get chat(){return chat;},set chat(t){chat=t;},last:null,look:0,room});
-      const head=rig.joint('head');
-      function detail(mat,key,x,y,z,a,b,c){
-        if(!head)return;
-        const mesh=new T.Mesh(g[key].clone(),mats[mat]);mesh.position.set(x,y,z);mesh.scale.set(a,b,c);head.add(mesh);
-      }
-      if(cfg.role==='repair'||cfg.role==='checker'){
-        for(const x of [-.093,.093])detail(cfg.role==='repair'?'copper':'amber','soft',x,.053,-.018,.034,.069,.061);
-        detail('coal','soft',0,.116,-.035,.217,.020,.064);
-        if(cfg.role==='repair'){
-          detail('navy','soft',0,.092,.079,.153,.042,.031);
-          detail('sky','soft',-.047,.091,.098,.033,.018,.008);
-        }
-      }
-      if(cfg.role==='trainer')detail('navy','soft',0,.131,-.018,.196,.071,.163);
     }
   }
   for(const geo of Object.values(g))geo.dispose();
