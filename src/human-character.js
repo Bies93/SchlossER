@@ -1,15 +1,17 @@
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
+import {NPCS} from './npc-lines.js';
 
 // GLB templates are loaded once; each actor has an independent skeleton and
 // morph state. Rigs, outfits, profiles and game logic are separate layers.
 const libraries=new WeakMap();
 export function installHumans(T,asset){
   const models=new Map(asset.children.map(o=>[o.userData.name??o.name,o]));
-  for(const id of ['base','hubert','ghoulA','ghoulB','ghoulC','clubAda','clubMira','clubNiko','clubSami','clubVeit','orbPriest','niklas','labAuer','labHedwig','labSepp'])
+  for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)])
     if(!models.has(id))throw Error('Human template missing: '+id);
-  libraries.set(T,{models,materials:new Map()});
+  libraries.set(T,{models,materials:new Map(),present:[]});
 }
 export const humansAvailable=T=>libraries.has(T);
+export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
@@ -24,7 +26,14 @@ const wear={
   clubVeit:{cloth:0xe2c697,hair:0xb1a398},
   orbPriest:{skin:0xc3b6a1,hair:0xb8adb0,weather:.59},
   niklas:{skin:0xf7ece3},
-  labAuer:{weather:.12},labHedwig:{weather:.08},labSepp:{weather:.27}
+  labAuer:{weather:.12},labHedwig:{weather:.08},labSepp:{weather:.27},
+  guestBruno:{palette:[0x454b52,0x757460,0xc7ba9d],hair:0xbbb5a6,weather:.17},
+  guestMarlene:{palette:[0x4b4b52,0x566477,0xd8cba9],hair:0x6c4e3b,weather:.09},
+  guestSabine:{palette:[0x453f42,0x923f57,0xbba2a1],hair:0xa05a49,weather:.08},
+  guestJona:{palette:[0x6d533b,0x526d66,0xb78248],hair:0x584d37,weather:.25},
+  guestRike:{palette:[0x414a45,0x525846,0xa7453b],hair:0x53463c,weather:.23},
+  guestEdda:{palette:[0x514747,0x767744,0xae7e55],hair:0x4b4240,weather:.16},
+  guestLotte:{palette:[0x665368,0x83616b,0xcba38b],hair:0x635448,weather:.06}
 };
 function personalize(T,lib,id,base,eyeY){
   const key=id+':'+base.uuid;if(lib.materials.has(key))return lib.materials.get(key);
@@ -32,7 +41,8 @@ function personalize(T,lib,id,base,eyeY){
     field=id==='hubert'&&/^(?:Cloth|Shoes|Pocket|Field|LinenBand|Helmet)/.test(m.name),
     formal=cloth&&(id==='niklas'||id==='orbPriest'),staff=cloth&&id.startsWith('lab'),
     copperHair=id==='niklas'&&(hair||brow),freckles=id==='niklas'&&skin,
-    ritual=/^(?:Ritual|LabCoat|Apron)/.test(m.name);
+    ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
+    visitor=cloth&&p.palette,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
   if(p.cloth&&cloth)m.color.multiply(new T.Color(p.cloth));
   if(p.hair&&(hair||brow))m.color.multiply(new T.Color(p.hair));
@@ -44,7 +54,7 @@ function personalize(T,lib,id,base,eyeY){
   if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
   if(skin||cloth||field||ritual||copperHair){
     m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
-      (field||formal||ritual||staff||copperHair?'-'+id+m.name:(skin&&p.decay)||freckles?'-'+id:'-'+(p.weather??0));
+      (field||formal||ritual||staff||visitor||copperHair?'-'+id+m.name:(skin&&p.decay)||freckles?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -74,6 +84,16 @@ function personalize(T,lib,id,base,eyeY){
           float labTop=smoothstep(.86,1.04,castP.y);
           diffuseColor.rgb=mix(vec3(${id==='labHedwig'?'.077,.059,.056':'.053,.070,.072'}),
             vec3(${id==='labAuer'?'.58,.61,.56':id==='labHedwig'?'.18,.091,.094':'.33,.37,.29'}),labTop)*(.55+labShade*.96);
+        `:''}
+        ${visitor?`
+          float seamPhase=smoothstep(.83,1.04,castP.y);
+          float shade=dot(diffuseColor.rgb,vec3(.213,.715,.072));
+          float rib=.5+.5*sin(castP.y*${id==='guestJona'?'105.':'196.'}+sin(castP.x*61.)*.31);
+          float plaid=smoothstep(.53,.72,rib)*(.5+.5*sin(castP.x*91.+castP.z*39.));
+          vec3 garment=mix(vec3(${visitor.map(vec)[0]}),vec3(${visitor.map(vec)[1]}),seamPhase);
+          float stripe=plaid*${id==='guestJona'?'.26':id==='guestLotte'?'.17':'.07'}*(1.-smoothstep(.001,.020,castD));
+          float lapel=(1.-smoothstep(.024,.104,abs(castP.x)))*smoothstep(1.22,1.44,castP.y)*step(.078,castP.z)*smoothstep(.30,.72,shade);
+          diffuseColor.rgb=mix(garment,vec3(${visitor.map(vec)[2]}),clamp(stripe*seamPhase+lapel*.70,0.,1.))*(.55+shade*1.38);
         `:''}
         ${copperHair?`
           float gingerShade=smoothstep(.0,.42,pow(dot(diffuseColor.rgb,vec3(.213,.715,.072)),.55));
@@ -141,6 +161,8 @@ export function createHuman(T,id='base'){
     }
   });
   actor.updateMatrixWorld(true);
+  const npcInfo=NPCS[id]?{...NPCS[id],id,actor,head:bones.get('head'),chest:bones.get('spine_03'),speak:null}:null;
+  if(npcInfo){actor.name=npcInfo.name;actor.userData.namedNpc=true;lib.present.push(npcInfo);}
   const rest=new Map(),bodyInv=body.matrixWorld.clone().invert(),bodyRestQ=body.getWorldQuaternion(Q()).invert();
   for(const [n,b] of bones)rest.set(n,{q:b.quaternion.clone(),p:b.position.clone(),
     axis:b.getWorldQuaternion(Q()).premultiply(bodyRestQ),at:b.getWorldPosition(V()).applyMatrix4(bodyInv)});
@@ -272,6 +294,40 @@ export function createHuman(T,id='base'){
     }
     face(t,job.length,speech,.08,0,glance);
   }
+  function visitorPose(t,job,seat=0,glance=0,talk=0){
+    // The ankle remains on the floor; only the hips lower to the contact
+    // plane of the actual seat. All targets are applied to the same rig.
+    const seated=seat>0,quiet=job==='rest',prayer=job==='prayer',smoke=job==='lounge',
+      wash=job==='wash',search=job==='books',broadcast=job==='studio',green=job==='greenhouse',
+      home=seated?(seat+.108)/size:hipsY-.037,
+      cue=.5+.5*sin(t*2.49),scan=.5+.5*sin(t*.83-.66),release=clamp(talk*.95),
+      lift=smoke?(1-clamp(Math.abs((t%8.8)-2.04)/1.65))**2*(1-release):0,
+      lean=prayer?.17:quiet?.041:smoke?-.019:wash?.185:search?.074:green?.142:.09;
+    torso(.014*sin(t*.83),home-hipsY+.004*sin(t*2.12),seated?.01:.025,lean,
+      (search?.07:quiet?.04:.024)*sin(t*.93),.023*sin(t*.76),t,glance,
+      (prayer?.27:search?mix(.18,-.11,scan):wash?.29:green?.20:broadcast?.092:.049)*(1-release)-.10*release);
+    for(const [i,s] of ['l','r'].entries()){
+      const side=i===0?1:-1,ankle=read('foot_'+s);
+      solve(LIMB[s].leg,side*(seated?.119:.103),ankle.y,ankle.z+(seated?(quiet?.39:.347):side*.035),side*.195,-.10,1);
+      foot('foot_'+s,seated?.023:0,side*.12);
+      let x=side*.175,y=home+.144,z=.298,pitch=.21,grip=.55;
+      if(prayer){x=side*.047;y=home+.417-.056*release;z=.263+.012*sin(t*1.5);pitch=-.54;grip=.31;}
+      if(wash){x=side*(.047+.027*sin(t*3.1+i));y=.903+.025*sin(t*3.6+i);z=.467+.044*sin(t*3+i);pitch=.35;grip=.56;}
+      if(search){
+        x=i===0?.135:-.16+.089*sin(t*1.05);y=i===0?1.07:mix(1.193,1.544,scan);z=i===0?.270:.410+.105*cue;
+        pitch=i===0?.24:-.25;grip=i===0?.65:.39;
+      }
+      if(smoke){x=i===0?.208:mix(-.205,-.047,lift);y=i===0?home+.099:mix(home+.213,home+.769,lift);
+        z=i===0?.23:mix(.308,.179,lift);pitch=.20-.67*lift;grip=.62;}
+      if(broadcast){x=i===0?.179:-.227+.032*sin(t*1.9);y=.993+.016*sin(t*2.0+i);z=i===0?.386:.45+.033*sin(t*1.4);grip=.62;}
+      if(green){x=side*.145+.030*sin(t*2.2+i);y=1.046+.022*sin(t*2.33+i);z=.470+.033*sin(t*2.5+i);}
+      if(quiet){x=side*.148;y=home+.045+.015*sin(t*1.43+i);z=.267;pitch=.44;grip=.49;}
+      solve(LIMB[s].arm,x,y,z,.73*side,-.48,-.64);
+      rot('hand_'+s,pitch,.22*side,(prayer?-.44:.15)*side);curl(s,grip);
+    }
+    face(t,job.length+.44,talk*.29*(.31+.69*Math.abs(sin(t*13.5))),prayer?.12:0,
+      quiet?.075:smoke?.11:.015,glance);
+  }
   function pose(t,phase,motion,attack,hit,fall,seed,speech=0,look=0,purse=0){
     body.rotation.set(fall*1.41,0,fall*(isGhoul?.67:0));body.position.y=fall*.16;
     const w=phase*tau,b=sin(t*2.2+seed),lean=isGhoul?.15:hubert?.095:.016;
@@ -352,5 +408,6 @@ export function createHuman(T,id='base'){
     return shapes;
   }
   pose(0,0,0,0,0,0,.2);
-  return {actor,pose,dance,altarWork,deskWork,grip,walk,groundedY,joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
+  return {actor,pose,dance,altarWork,deskWork,visitorPose,grip,walk,groundedY,npcInfo,
+    joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
 }

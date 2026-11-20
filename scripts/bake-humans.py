@@ -397,6 +397,32 @@ def lab_uniform(name,rig,base,floor,shirt):
         ([(.74,y+.47),(.84,y+.553),(.94,y+.47),(.84,y+.386)],'InsigniaBlue',(.07,.23,.37,1))]:
         garment_panel(n,outline,rig,floor,front,material(n,rough=.73,col=c),offset=.077 if n=='InsigniaPlate' else .095)
 
+def visitor_details(name,rig,base,floor,shirt):
+    f=shirt_front(shirt,base)
+    y=joint(RIG['spine_03']['head'],base)[1]
+    if name in ['guestBruno','guestMarlene','guestSabine','guestRike','guestEdda','guestLotte']:
+        rgb={'guestBruno':(.23,.16,.08),'guestMarlene':(.17,.28,.37),'guestSabine':(.28,.13,.16),
+             'guestRike':(.33,.064,.048),'guestEdda':(.24,.28,.12),'guestLotte':(.32,.16,.25)}[name]
+        cy=y+.48;cx=.81
+        cloth=material('VisitorPatch_'+name,rough=.94,col=(*rgb,1))
+        rim=material('VisitorThread_'+name,rough=.90,col=(.50,.40,.25,1))
+        outline=[(cx-.23,cy-.145),(cx+.19,cy-.15),(cx+.22,cy+.13),(cx-.20,cy+.15)]
+        garment_panel('Besatz',outline,rig,floor,f,rim,offset=.088)
+        garment_panel('Stoff',[(cx+(x-cx)*.83,cy+(h-cy)*.74) for x,h in outline],rig,floor,f,cloth,offset=.102)
+        if name=='guestRike':
+            # Red-and-black patch sewn onto a fictional work jacket.
+            garment_panel('Schwarz Diagonale',[(cx-.18,cy-.096),(cx+.155,cy-.098),(cx+.170,cy+.096)],
+                rig,floor,f,material('VisitorPatchInk',rough=.92,col=(.032,.024,.026,1)),offset=.126)
+    if name=='guestJona':
+        # A sewn shoulder strip and a small pendant, fitted in the same rig space.
+        for i,s in enumerate([-1,1]):
+            x=s*.74
+            garment_panel('Bortenstreifen',[(x-.080,y-.47),(x+.085,y-.47),(x+.095,y+1.07),(x-.075,y+1.07)],
+                rig,floor,f,material('VisitorBraid'+str(i),rough=.94,col=(.30,.129+i*.040,.062,1)),offset=.10)
+        cy=y+.18
+        medallion=[(.126*math.cos(i*math.tau/16),cy+.151*math.sin(i*math.tau/16)) for i in range(16)]
+        garment_panel('Messinganhänger',medallion,rig,floor,f,material('VisitorPendant',rough=.57,col=(.37,.279,.12,1),metal=.35),offset=.124)
+
 # Actor-specific builds sharing the identical topology, mapping and joint names.
 # A blend of adult targets avoids the unconfigured base's averaged mannequin.
 cast=[
@@ -415,6 +441,13 @@ cast=[
  ('labAuer','caucasian-male-old','old_caucasian_male','male_elegantsuit01','short01','shoes03',1.81,[('head-rectangular',.23),('r-eye-bag-incr',.36)]),
  ('labHedwig','caucasian-female-young','young_asian_female','female_elegantsuit01','bob01','shoes01',1.68,[('head-rectangular',.26),('chin-width-incr',.31)]),
  ('labSepp','caucasian-male-old','old_caucasian_male','male_worksuit01','short01','shoes03',1.74,[('head-oval',.40),('chin-width-incr',.49)]),
+ ('guestBruno','caucasian-male-old','old_caucasian_male','male_elegantsuit01','short03','shoes03',1.76,[('head-oval',.36)]),
+ ('guestMarlene','caucasian-female-young','young_asian_female','female_elegantsuit01','bob01','shoes01',1.66,[('head-oval',.31),('l-eye-bag-incr',.28)]),
+ ('guestSabine','caucasian-female-young','young_asian_female','female_casualsuit01','short03','shoes01',1.70,[('head-rectangular',.34),('chin-width-incr',.30)]),
+ ('guestJona','caucasian-male-young','young_caucasian_male','male_casualsuit03','afro01','shoes01',1.81,[('head-oval',.52)]),
+ ('guestRike','asian-female-young','young_asian_female','female_casualsuit01','bob01','shoes03',1.64,[('chin-width-incr',.44),('head-rectangular',.29)]),
+ ('guestEdda','caucasian-female-young','young_asian_female','female_elegantsuit01','short01','shoes03',1.74,[('head-rectangular',.48),('l-eye-bag-incr',.42)]),
+ ('guestLotte','caucasian-female-young','young_asian_female','female_casualsuit01','bob01','shoes01',1.61,[('head-oval',.36),('chin-width-incr',.20)]),
 ]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
@@ -454,6 +487,7 @@ for name,macro,skin,clothes,hair,shoes,height,features in cast:
     if name in ['orbPriest','niklas']:formal_details(name,rig,base,lo,SRC/'clothes'/clothes/(clothes+'.mhclo'))
     if name=='orbPriest':batch_ritual_hardware(rig)
     if name.startswith('lab'):lab_uniform(name,rig,base,lo,SRC/'clothes'/clothes/(clothes+'.mhclo'))
+    if name.startswith('guest'):visitor_details(name,rig,base,lo,SRC/'clothes'/clothes/(clothes+'.mhclo'))
 
 bpy.ops.wm.save_as_mainfile(filepath=str(SRC.parent/'Human-Cast.blend'),compress=True)
 bpy.ops.export_scene.gltf(filepath=str(OUT),export_format='GLB',export_extras=True,export_yup=True,

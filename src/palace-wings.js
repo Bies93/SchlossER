@@ -7,6 +7,7 @@ import {furnishSouthGallery} from './south-gallery.js';
 import {furnishNorthLibrary} from './north-library.js';
 import {galleryHatch,splitHatchFloor} from './south-hatch.js';
 import {gallerySurfaces,southGalleryArch,galleryRunners,galleryPrints} from './south-gallery-architecture.js';
+import {palaceVisitors} from './npc-visitors.js';
 import {masonryPortal} from './palace-interior-portal.js';
 import {cofferedWing,wingCeilingMaterials,wingLampStations,wingLampMount} from './palace-wing-ceiling.js';
 
@@ -49,6 +50,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
   };
   const lightSites=[];
   let posterFace,hatch;
+  const visitors=[];
   const lamps=Array.from({length:3},()=>{
     const light=new T.PointLight(0xffdfb5,0,9.8,2);group.add(light);return light;
   });
@@ -322,6 +324,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
     information(start-.137,3.296,0,1.37,.24,nameMap);
     props.finish(rootWing.name+' · Buchrücken und Papier');
     k.flush(rootWing.name);
+    visitors.push(palaceVisitors(T,rootWing,world,sign));
     if(!library)hatch.finish();
   }
   cylinder.dispose();sphere.dispose();
@@ -341,7 +344,7 @@ export function addPalaceWings(T,root,world,common,poster,seal){
       galleryCue.x=v.x;galleryCue.z=v.z;
       return galleryCue;
     },
-    update(p,id){
+    update(p,id,dt=0){
       const engaged=p.y>-.9&&Math.abs(p.z)<Z+.18&&Math.abs(p.x)<outer+.09;
       const nearest=engaged?lightSites.map(s=>({...s,d:(s.point[0]-p.x)**2+(s.point[2]-p.z)**2}))
         .sort((a,b)=>a.d+a.bias-b.d-b.bias).slice(0,lamps.length):[];
@@ -351,6 +354,9 @@ export function addPalaceWings(T,root,world,common,poster,seal){
         const fade=target?Math.max(0,Math.min(1,(172-target.d)/52)):0;
         light.intensity=target?target.power*(id==='night'?1.21:1)*fade:0;
       });
+      let animated=false;
+      for(const tick of visitors)animated=tick?.(dt,p)||animated;
+      return animated;
     },
     setPreset(id){
       const night=id==='night';

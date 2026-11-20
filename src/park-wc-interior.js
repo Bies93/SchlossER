@@ -14,6 +14,7 @@ import {shopMaterials,shopArt,shopWear} from './moosfunk-shop-finishes.js';
 import {deepArt} from './moosfunk-deep-art.js';
 import {deepMaterials,DEEP_LIGHTS,buildDeepStair,furnishDeep} from './moosfunk-deep.js';
 import {orbPriest} from './orb-priest.js';
+import {wcVisitor} from './npc-visitors.js';
 
 export const WC_LAYER=4;
 const lampSites=[
@@ -37,7 +38,7 @@ const portals=Object.fromEntries(Object.keys(ZONE_ROOMS).map(id=>[id,ZONE_LINKS.
 
 export function addWcInterior(T,scene,world,quest){
   const group=new T.Group();group.name='WC · Untergeschosse und Moosfunk';group.visible=false;scene.add(group);
-  const layers=new Map(),doors=[],activeLinks=new Map();
+  const layers=new Map(),doors=[],activeLinks=new Map(),visitors=new Map();
   const plain=(color,roughness=.86,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   const painted=sharedSet(T,'enamel',256),stone=sharedSet(T,'bedrock',256),plaster=sharedSet(T,'plaster',256),
     cloth=sharedSet(T,'canvas',128),wood=sharedSet(T,'fineOak',256);
@@ -217,6 +218,8 @@ export function addWcInterior(T,scene,world,quest){
     else if(deep)orb=furnishDeep(T,method,id)??orb;
     else if(rock)furnishCollective(T,method,id);
     if(id==='deepVotive')priest=orbPriest(T,room,method.hit);
+    const visitor=wcVisitor(T,room,world,id);
+    if(visitor)visitors.set(id,visitor);
     if(id==='collective'){
       method.block('darkWood',11.212,11.248,1.96,2.19,-1.008,.346);
       method.deepTile('entry',11.251,2.075,-.331,1.29,.19,0);
@@ -248,7 +251,8 @@ export function addWcInterior(T,scene,world,quest){
     const pulsing=dt>0&&orb&&layers.get('deepOrb').visible&&(id==='deepOrb'||id==='deepVotive'||id==='deepLounge'&&u<-9.8);
     if(pulsing)orb(dt);
     const acting=dt>0&&(id==='deepVotive'||id==='deepOrb'&&layers.get('deepVotive').visible)&&priest?.update(dt,pos);
-    if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return Boolean(pulsing||acting);
+    const attending=visitors.get(id)?.(dt,pos);
+    if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return Boolean(pulsing||acting||attending);
     prev=id;lastU=u;lastV=v;
     const visible=new Set([id]),tau=2*Math.PI;
     // Intersect doorway sight arcs along a path instead of drawing the whole
@@ -316,7 +320,7 @@ export function addWcInterior(T,scene,world,quest){
       l.position.set(...p(u,height===undefined?wcRoofAt(key,u,v)-.33:wcLevel(key)+height,v));l.intensity=watts;l.color.setHex(color);l.distance=distance;
     }
     hemi.intensity=id==='deepVotive'?.32:id==='deepOrb'?.40:id==='deepLounge'?.70:.66;
-    return changed||Boolean(pulsing||acting);
+    return changed||Boolean(pulsing||acting||attending);
   }
   async function warm(renderer,source){
     const staging=new T.Scene(),camera=new T.PerspectiveCamera(67,1,.08,120);

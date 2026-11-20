@@ -1,15 +1,13 @@
 import {createHuman,humansAvailable} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 import {LAB,labCellAt,labLower,clubLevel} from './lab-layout.js';
+import {NPCS} from './npc-lines.js';
 
 // Room-owned actors. No navigation, combat, additional lights or downloads.
 const roster={
-  infirmary:{id:'labAuer',name:'Dr. Ernst Auer',job:'clinic',x:-23.78,z:50.87,yaw:Math.PI,
-    line:'In der Akte steht „Behandlung“. So heißt es hier.'},
-  registry:{id:'labHedwig',name:'Hedwig Kern',job:'registry',x:-11.93,z:60.20,yaw:0,
-    line:'Herkunft? Für die neue Akte zählt nur der neue Name.'},
-  southMess:{id:'labSepp',name:'Sepp Moser',job:'cook',x:33.61,z:-21.43,yaw:Math.PI*.5,
-    line:'Fränkische Suppe. Auf dem Speiseplan steht jetzt bayerisch.'}
+  infirmary:{id:'labAuer',...NPCS.labAuer,job:'clinic',x:-23.78,z:50.87,yaw:Math.PI},
+  registry:{id:'labHedwig',...NPCS.labHedwig,job:'registry',x:-11.93,z:60.20,yaw:0},
+  southMess:{id:'labSepp',...NPCS.labSepp,job:'cook',x:33.61,z:-21.43,yaw:Math.PI*.5}
 };
 const limit=(x,b)=>Math.max(-b,Math.min(b,x));
 export function labStaff(T,world){

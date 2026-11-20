@@ -74,7 +74,8 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #ghoul-notice[data-kind=hurt],#ghoul-notice[data-kind=failed]{border-color:#a26c54;background:#392721ed}
 #ghoul-notice[data-kind=won]{border-color:#a1a673}
 #moosfunk-caption{position:absolute;z-index:2;left:50%;bottom:calc(clamp(128px,21%,187px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(580px,calc(100% - 30px));width:max-content;padding:10px 15px;border:1px solid #8e8367;border-radius:6px;background:#151b19f5;color:var(--ink);font-size:.92rem;line-height:1.42;text-align:center;pointer-events:none}
-body:not([data-state=playing]) #moosfunk-caption{display:none}
+#npc-name{position:absolute;z-index:2;left:50%;bottom:calc(clamp(24px,5.4%,59px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100% - 28px);width:max-content;padding:7px 14px;background:#151b19ed;border:1px solid #82765b;border-radius:6px;color:#e9dfc7;font-size:.89rem;line-height:1.35;font-weight:650;letter-spacing:.015em;text-align:center;pointer-events:none}
+body:not([data-state=playing]) :is(#moosfunk-caption,#npc-name){display:none}
 body:not([data-state=playing]) #ghoul-notice,body:not([data-mode=ghouls]) :is(#ghoul-notice,#ghoul-action){display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
 #stick span{width:31%;aspect-ratio:1;border-radius:50%;background:var(--accent);opacity:.88;pointer-events:none}
@@ -139,6 +140,7 @@ body[data-input=touch] #portal-action kbd{display:none}
   <button id="ghoul-action" type="button" hidden><kbd aria-hidden="true">R</kbd><span id="ghoul-text">Ghoul-Runde starten</span></button>
   <div id="ghoul-notice" role="status" hidden></div>
   <div id="moosfunk-caption" role="status" hidden></div>
+  <div id="npc-name" role="status" hidden></div>
   <div id="stick" aria-hidden="true"><span></span></div>
   <button type="button" id="jump">Sprung</button>
 </main>
@@ -151,6 +153,7 @@ body[data-input=touch] #portal-action kbd{display:none}
   <p><strong>Huberts Stimme:</strong> Bearbeiteter Mix aus <a href="https://commons.wikimedia.org/wiki/File:De-Deutschland.ogg">„De-Deutschland“ von joni</a> und <a href="https://opengameart.org/content/undead-moans">„Undead Moans“ von AntumDeluge</a> (CC0). Wortaufnahme und neuer Mix: <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>.</p>
   <p><strong>NPC-Basis:</strong> Anatomie, Rig und ausgewählte Oberflächen aus <a href="https://github.com/makehumancommunity/mpfb2/blob/master/LICENSE.md">MakeHuman/MPFB</a> sowie den <a href="https://static.makehumancommunity.org/assets/assetpacks.html">MakeHuman-Systemassets</a> (CC0), für SchlossER angepasst.</p>
   <p><strong>Schlosstüren:</strong> Geh zum mittleren Portal am Platz oder im Garten und drücke <kbd>E</kbd> oder tippe auf den eingeblendeten Knopf. Von der Halle führen Seitenbögen in Galerie und Lesesaal. Die Innenräume sind frei gestaltet, kein Nachbau des heutigen Grundrisses.</p>
+  <p><strong>Figuren:</strong> Schau eine Person in der Nähe an, um ihren Namen zu sehen. Steht „Ansprechen“ dabei, drücke <kbd>E</kbd> oder tippe auf den Knopf.</p>
   <p><strong>Spielmodus:</strong> Im Rundgang gibt es keine Waffen und keine Gegner. Der Ghoul-Modus ist für Maus und Tastatur: Fünf Ghoule erscheinen, sobald du den Garten erreichst. Nach Sieg oder Niederlage startet <kbd>R</kbd> im Garten eine neue Runde. Ein Moduswechsel im Pausenmenü beendet eine laufende Runde.</p>
   <p><strong>Waffen im Ghoul-Modus:</strong> <kbd>1</kbd> Windbruch (Armbrust), <kbd>2</kbd> Vesper 17 (Sturmgewehr), <kbd>3</kbd> Amber 08 (Pumpflinte). Wechsle mit dem Mausrad oder verstaue die Waffe mit <kbd>0</kbd>. Halte rechts zum Anvisieren und klicke links zum Schießen. Armbrust und Flinte werden danach automatisch wieder bereitgemacht.</p>
   <p>Das rund 65 Meter breite Schloss und seine Außenanlagen sind maßstäblich angenähert; der hintere Park ist für den Rundgang verkürzt. Maßkontrolle: Bayerische Vermessungsverwaltung. Parkwege und Lagepunkte: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>. Luftbildreferenzen: Reinhold Möller, CC BY-SA 4.0.</p>

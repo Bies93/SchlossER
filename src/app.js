@@ -29,6 +29,7 @@ import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
 import {addChapter} from './chapter.js';
 import {CHAPTER_LAYER} from './chapter-layout.js';
 import {installHumans} from './human-character.js';
+import {npcFocus} from './npc-focus.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -190,6 +191,14 @@ async function start(){
  });
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
+ const names=npcFocus(T,s,c,player.body,$('npc-name'),p=>{
+   const zone=chapter.mode(p),wcZone=wcCameraMode(p),labZone=labCameraMode(p);
+   if(zone==='inside')return 1<<CHAPTER_LAYER;
+   if(wcZone==='inside')return 1<<WC_LAYER;
+   if(labZone==='cellar')return 1<<LAB_LAYER;
+   return 1|(zone==='threshold'?1<<CHAPTER_LAYER:0)|(wcZone==='threshold'?1<<WC_LAYER:0)|
+     (labZone==='threshold'?1<<LAB_LAYER:0);
+ });
  let captionTimer=0,chapelTime=null,chapelTake=0;
  function hideCaption(){clearTimeout(captionTimer);caption.hidden=true;}
  function showCaption(text,duration){
@@ -242,12 +251,19 @@ async function start(){
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
-   return chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
+   const target=chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
+   // The console's interaction cone is broader than its face. Focus on
+   // Edda takes priority, without making the tape deck itself unavailable.
+   return target?.id==='mf-radio'&&names.target()?.id==='guestEdda'?null:target;
  };
+ function hallOrPerson(){
+   const hallTarget=hall.targetFor(player,c);
+   return hallTarget&&hallTarget.id!=='gallery-choir'?hallTarget:names.target()??hallTarget;
+ }
  const choirLabels={ready:'Chor erklingen lassen',loading:'Chor wird geladen …',playing:'Der Chor erklingt',
    muted:'Für den Chor den Ton einschalten',retry:'Chor erneut laden',unavailable:'Chor nicht verfügbar'};
  function doorPrompt(){
-   const target=active()?(localTarget()??hall.targetFor(player,c)):null;
+   const target=active()?(localTarget()??hallOrPerson()):null;
    const status=target?.id==='gallery-choir'?audio.choirStatus():'';
    const usable=target&&(target.action||hall.usable(target,player))&&(!status||status==='ready'||status==='retry');
    const uid=target?target.id+':'+target.target+':'+usable+':'+status+':'+target.label:'';
@@ -262,6 +278,7 @@ async function start(){
  }
  function handleDoor(){
    if(!active())return;
+   const now=performance.now();names.sample(now,true);
    const local=localTarget();
    if(local?.action==='priest-ack'){
      const at=wc.priestAck();if(!at)return;
@@ -277,6 +294,12 @@ async function start(){
    if(local){
      if(!local.usable(player.body.position))return;
      local.target=1-local.target;
+   }
+   const person=local?null:hallOrPerson();
+   if(person?.action==='npc-talk'){
+     const speech=names.use(person.id,now);
+     if(speech)showCaption(speech.name+': „'+speech.line+'“',6100);
+     doorPrompt();refresh();return;
    }
    const target=local??hall.commit(player,c);if(!target)return;
    if(target.action==='lab-talk'){
@@ -351,6 +374,7 @@ async function start(){
      }
      prisonerCue(time,player.body.position);
      if(state.shadow)r.shadowMap.needsUpdate=true;
+     names.sample(time);
      doorPrompt();
      roundPrompt();
      if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
@@ -363,7 +387,7 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
-   leaveChapel();leavePrison();orbSince=null;hideCaption();
+   leaveChapel();leavePrison();orbSince=null;hideCaption();names.clear();
    input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();roundPrompt();
    if(focus) action.focus({preventScroll:true});
  }
