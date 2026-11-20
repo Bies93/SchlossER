@@ -1,5 +1,5 @@
 import {architectureKit} from './architecture-kit.js';
-import {PORTALS,HALL,WINGS,inPalaceWing} from './palace-openings.js';
+import {PORTALS,HALL,WINGS,GARDEN_REVEAL,inPalaceWing} from './palace-openings.js';
 import {portalFrame} from './palace-facade.js';
 import {addPalaceWings} from './palace-wings.js';
 import {masonryPortal} from './palace-interior-portal.js';
@@ -7,6 +7,7 @@ import {addPalaceLab} from './palace-lab.js';
 import {labCameraMode} from './lab-wing.js';
 import {hallDressing} from './hall-dressing.js';
 import {sharedSet} from './surface-detail.js';
+import {palaceButler} from './palace-butler.js';
 
 const q=(x,y,z)=>[x,y,z],{floor:y,half,zMin,zMax}=HALL;
 const step=(t)=>Math.max(0,Math.min(1,t));
@@ -146,27 +147,20 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   vault('Halle · Gewölbegurte',hallStone,ribs.map(z=>[z-.137,z+.137]),.074);
   vault('Halle · Gewölbeprofile',hallTrim,ribs.flatMap(z=>[[z-.140,z-.097],[z+.097,z+.140]]),.106);
   for(const d of Object.values(PORTALS)){
-    const p=portalFrame(d),east=d.side<0,start=-1.35,end=east?-.021:.033;
+    const p=portalFrame(d),east=d.side<0,start=((east?zMin:zMax)-d.z)*d.side;
+    const end=east?GARDEN_REVEAL.back:-.455;
     for(const s of [-1,1]){
       const l=s<0?-half:d.half,r=s<0?-d.half:half;
-      k.box('hallStone',p,l,r,y,spring+rise,start,-.455);
-      k.box('hallTrim',p,s*d.half-.036,s*d.half+.036,y,Math.min(d.spring,2.91),start,end);
-      k.box('hallTrim',p,l,r,y+.026,.181,start-.081,start+.01);
+      k.box('hallStone',p,l,r,y,spring+rise,start,end);
+      if(east){
+        k.box('hallTrim',p,s*d.half-.019,s*d.half+.019,y,d.spring,start+.026,end-.018);
+      }else{
+        k.box('hallTrim',p,s*d.half-.025,s*d.half+.025,y,Math.min(d.spring,2.91),start+.024,-.31);
+      }
+      k.box('hallTrim',p,l+.012,r-.012,y+.026,.181,start-.074,start+.014);
     }
     const closeY=d.spring+d.rise;
-    k.box('hallStone',p,-d.half,d.half,closeY,spring+rise,start,-.30);
-    const corners=curve.map(([x,h])=>[d.side*x,h]).sort((a,b)=>a[0]-b[0]);
-    // Smooth ceiling termination toward each portal; external masonry still
-    // supplies the side recesses and the retained glass fanlight.
-    const z=d.side===1?zMax:zMin;
-    for(let i=1;i<corners.length;i++){
-      const [a,b]=[corners[i-1],corners[i]],base=Math.max(closeY,spring);
-      if(a[1]>base&&b[1]>base){
-        const points=[[a[0],base,z],[b[0],base,z],[b[0],b[1],z],[a[0],a[1],z]];
-        if(d.side>0)points.reverse();
-        k.quad('hallLime',...points);
-      }
-    }
+    k.box('hallStone',p,-d.half,d.half,closeY,spring+rise,start,end);
   }
   const lamps=[],bounces=[];
   for(const [i,z] of [-6.05,0,6.05].entries()){
@@ -183,6 +177,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   k.flush('Halle · Stein, Putz und Leuchten');
   const wings=addPalaceWings(T,root,world,MAT,poster,seal);
   const lab=addPalaceLab(T,root,world,MAT,moosfunk);
+  const butler=palaceButler(T,room,world);
 
   const doors=Object.values(PORTALS).map(d=>({...d,leaves:leaves[d.id],progress:0,target:0}));
   const closeEnough=(p,d,dist)=>Math.hypot(p.x,(p.z-d.z)*.91)<dist;
@@ -219,7 +214,8 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   function update(dt,p,beat=null){
     wings.update(p,preset);
     const hatchMoved=wings.hatch.update(dt,p);
-    let changed=lab.update(dt,p,wings.hatch.shown(),beat)||hatchMoved,shadow=hatchMoved&&wings.hatch.settled();
+    const attendantMoved=butler(dt,p);
+    let changed=lab.update(dt,p,wings.hatch.shown(),beat)||hatchMoved||attendantMoved,shadow=hatchMoved&&wings.hatch.settled();
     for(const d of doors){
       if(d.progress===d.target)continue;
       if(d.target===0&&Math.abs(p.z-d.z)<.92&&Math.abs(p.x)<d.half+.36)d.target=1;

@@ -17,8 +17,9 @@ export const DEEP_LIGHTS=[
   [-21.30,2.57,0xa087dc,14,5.4,'deepOrb',2.08],
   [-16.07,-2.3,0xeeb380,11,4.8,'deepOrb',2.03],
   [-24.55,.18,0xffdca4,15,5.8,'deepOrb',2.37],
-  [-22.38,-7.38,0xff965a,10,4.9,'deepVotive',1.55],
-  [-24.58,-5.30,0xbe6d70,5,3.8,'deepVotive',1.48]
+  [-22.16,-7.13,0xf6bd93,13.5,4.9,'deepVotive',1.86],
+  [-24.58,-5.30,0xbe6d70,6.0,3.8,'deepVotive',1.48],
+  [-21.11,-8.58,0x9274a5,3.9,3.3,'deepVotive',2.12]
 ];
 
 export function deepMaterials(T,{painted,stone,cloth,wood}){
@@ -532,8 +533,8 @@ export function furnishDeep(T,m,id){
     animate=makeOrb(T,room,u,v);
   }else if(id==='deepVotive'){
     const U=-22.38,V=-7.45;
-    // An abandoned altar: dark basalt on two battered trestles, copper
-    // corner shoes, linen, old stains and a votive ledger. No occupants.
+    // The basalt structure stays separate from the priest's workboard and
+    // offerings. The old dried stains remain underneath the fresh dressing.
     for(const s of [-1,1]){
       const x=U+s*.77;
       B('orbStone',x-.252,x+.252,.01,.14,V-.40,V+.40);

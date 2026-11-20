@@ -1,6 +1,7 @@
 """Blender background build: licensed hm08 anatomy, fitted outfits and real weights."""
 import bpy
 from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 from pathlib import Path
 from collections import defaultdict
 from functools import lru_cache
@@ -168,19 +169,36 @@ def item(path,base,floor,rig,kind,label,facemorph=False):
 def accessory(name,points,faces,rig,mat,floor,bone):
     return surface(name,points,[],[[(i,0) for i in p] for p in faces],[{bone:1.} for _ in points],rig,mat,floor)
 
+def shirt_front(shirt,base):
+    points=fitted(shirt,base)[0]
+    _,_,faces,_=obj(shirt.with_suffix('.obj'))
+    tree=BVHTree.FromPolygons(points,[[i for i,_ in p] for _,p in faces])
+    def front(x,y):
+        loc,_,_,_=tree.ray_cast(Vector((x,y,6)),Vector((0,0,-1)),7.0)
+        return loc.z if loc else 0.92
+    return front
+
+def garment_panel(name,outline,rig,floor,front,mat,bone='spine_03',offset=.055):
+    points=[[x,y,front(x,y)+offset] for x,y in outline]
+    x,y=np.mean(outline,axis=0)
+    points.append([x,y,front(x,y)+offset+.019])
+    n=len(outline)
+    return accessory(name,points,[(i,(i+1)%n,n) for i in range(n)],rig,mat,floor,bone)
+
 def helmet(rig,base,floor,steel):
     v=base[list(GROUPS['body'])]
     top=v[:,1].max();core=v[v[:,1]>top-1.24]
     z=(core[:,2].max()+core[:,2].min())*.5
-    w=max(abs(core[:,0]))+(.276 if steel else .22);d=(core[:,2].max()-core[:,2].min())*.5+.27
+    w=max(abs(core[:,0]))+(.200 if steel else .22);d=(core[:,2].max()-core[:,2].min())*.5+.22
     rings=[[-.94,.98],[-.907,1.008],[-.863,1.017],[-.81,1.005],[-.73,.973],[-.52,.932],[-.27,.84],[-.02,.65],[.105,.36],[.14,.007]] if steel else [
            [-.48,1.02],[-.41,1.01],[-.15,1],[.02,.94],[.20,.78],[.28,.55],[.30,.01]]
     pts=[];polys=[];N=48
     for j,(h,r) in enumerate(rings):
         for i in range(N):
             a=i*math.tau/N;c=math.cos(a);s=math.sin(a)
-            hdrop=(-.31*max(0,-s)-.16*abs(c)+.12*max(0,s))*(1-j/(len(rings)-1)) if steel else -.07*abs(c)
-            pts.append((c*w*r,top+h+hdrop,z+s*d*r))
+            hdrop=(-.39*max(0,-s)-.20*abs(c)+.15*max(0,s))*(1-j/(len(rings)-1)) if steel else -.07*abs(c)
+            wave=(.021*math.sin(a*5.7)+.013*math.sin(a*9.0)) if steel else 0
+            pts.append((c*w*(r+wave),top+h+hdrop,z+s*d*(r+wave)))
             if j:polys.append(((j-1)*N+i,j*N+i,j*N+(i+1)%N,(j-1)*N+(i+1)%N))
     accessory('SteelHelm' if steel else 'WorkCap',pts,polys,rig,material('HelmetMetal' if steel else 'CapCloth',rough=.63,col=(.093,.106,.084,1),metal=.24 if steel else 0.),floor,'head')
     if not steel:
@@ -206,26 +224,85 @@ def uniform(rig,base,floor,shirt):
             q=n*math.tau/24;pts.append(center+axis*d+t*(offset[0]+rad*radii[0]*math.cos(q)/.65)+u*(offset[1]+rad*radii[1]*math.sin(q)/.65))
             if j:ix.append(((j-1)*24+n,j*24+n,j*24+(n+1)%24,(j-1)*24+(n+1)%24))
     accessory('LinenBand',pts,ix,rig,material('LinenBand',rough=.92,col=(.51,.44,.29,1)),floor,'upperarm_l')
-    # Two angular chest pockets and a row of simple horn buttons,
-    # registered against this particular fit rather than a generic torso.
-    cloth=fitted(shirt,base)[0]
+    # Plain 1940s short field blouse: pressed buttons, flap seams and field repairs.
+    front=shirt_front(shirt,base)
     y0=joint(RIG['spine_03']['head'],base)[1]+.48
-    def front(x,y):
-        d=(cloth[:,0]-x)**2+(cloth[:,1]-y)**2
-        valid=(d<.39)&(cloth[:,2]>.13)
-        return (np.percentile(cloth[valid,2],85) if np.any(valid) else cloth[d.argmin(),2])+.115
-    coords=[];faces=[]
     for side in (-1,1):
-        for profile in [[(.60,-.70),(1.28,-.70),(1.35,.02),(.54,.02)],[(.53,.025),(1.36,.025),(1.26,.16),(.63,.16)]]:
-            b=len(coords);group=[(x*side,y0+y,front(x*side,y0+y)) for x,y in profile]
-            coords.extend(group);f=(b,b+1,b+2,b+3);faces.append(f if side>0 else f[::-1])
-    accessory('TunicPockets',coords,faces,rig,material('PocketWool',rough=.90,col=(.137,.146,.095,1)),floor,'spine_03')
+        for profile,offset,mat_name,color in [
+            ([(.52,-.64),(.61,-.75),(1.27,-.74),(1.36,-.63),(1.35,.02),(.54,.02)],.032,'PocketWool',(.105,.11,.079,1)),
+            ([(.51,.12),(.51,-.095),(.76,-.12),(.94,-.21),(1.37,-.12),(1.37,.12)],.065,'FieldFlap',(.143,.146,.101,1))]:
+            pair=[(x*side,y0+y) for x,y in (profile if side>0 else profile[::-1])]
+            garment_panel('TunicPocket',pair,rig,floor,front,material(mat_name,rough=.91,col=color),offset=offset)
+        garment_panel('Collar',[(side*x,y0+y) for x,y in ([ (.12,.68),(.39,.89),(.66,.84),(.57,.58)] if side<0 else [(.57,.58),(.66,.84),(.39,.89),(.12,.68)])],
+            rig,floor,front,material('FieldCollar',rough=.89,col=(.082,.098,.071,1)),offset=.043)
+    garment_panel('FieldRepair',[(-.80,y0-.93),(-.72,y0-1.21),(-.43,y0-1.12),(-.49,y0-.91)],rig,floor,
+        front,material('FieldPatch',rough=.94,col=(.080,.085,.061,1)),offset=.036,bone='spine_02')
     coords=[];faces=[]
-    for j in range(5):
-        x=0.036; y=y0+.18-j*.218;z=front(x,y)
-        b=len(coords);coords.extend([(x,y,z+.019)]+[(x+.050*math.cos(i*math.tau/12),y+.050*math.sin(i*math.tau/12),z) for i in range(12)])
+    for x,y in [(0.036,y0+.50-j*.258) for j in range(6) if j!=4]+[(s*.92,y0-.11) for s in [-1,1]]:
+        z=front(x,y)+.041
+        b=len(coords);coords.extend([(x,y,z+.026)]+[(x+.056*math.cos(i*math.tau/12),y+.056*math.sin(i*math.tau/12),z) for i in range(12)])
         faces.extend([(b,b+1+i,b+1+(i+1)%12) for i in range(12)])
-    accessory('TunicButtons',coords,faces,rig,material('HornButtons',rough=.52,col=(.089,.071,.042,1)),floor,'spine_03')
+    accessory('TunicButtons',coords,faces,rig,material('FieldButtons',rough=.55,col=(.125,.128,.099,1),metal=.33),floor,'spine_03')
+
+def formal_details(name,rig,base,floor,shirt):
+    F=shirt_front(shirt,base)
+    chest=joint(RIG['spine_03']['head'],base)[1]
+    neck=joint(RIG['neck_01']['head'],base)[1]
+    if name=='niklas':
+        y=neck-.50
+        garment_panel('BowTie',[(-.39,y-.13),(-.1,y-.067),(.39,y-.13),(.41,y+.12),(.10,y+.07),(-.40,y+.12)],
+          rig,floor,F,material('BowSilk',rough=.51,col=(.014,.017,.018,1)),offset=.101)
+        garment_panel('PocketSquare',[(.61,chest+.48),(.88,chest+.47),(.89,chest+.67),(.77,chest+.60),(.65,chest+.67)],
+          rig,floor,F,material('FormalLinen',rough=.85,col=(.66,.60,.51,1)),offset=.062)
+        return
+    # Dark ritual cassock over the fitted, skinned shirt and trousers. The
+    # weighted hem follows hips/knees; tabs and embroidery are integral surfaces.
+    points=[];faces=[];weights=[];N=48
+    rows=[(1.45,2.55,1.84), (1.58,2.50,1.80), (2.36,2.36,1.63),(3.54,2.25,1.39),(4.20,2.16,1.33),
+           (5.20,2.01,1.25),(6.62,1.89,1.19),(7.75,1.75,1.17),(8.86,1.68,1.08),(9.58,1.57,1.04)]
+    for row,(h,rx,rz) in enumerate(rows):
+        for i in range(N+1):
+            angle=.215+(math.tau-.43)*i/N;fold=.08*math.sin(angle*11+row*.61)+.039*math.cos(angle*17-row*.42)
+            x=math.sin(angle)*rx*(1+fold);z=math.cos(angle)*rz*(1+fold*.84)-.10
+            points.append((x,h+floor+.035*math.sin(angle*5),z))
+            side='l' if x>0 else 'r';leg=np.clip((7.8-h)/5.25,.0,.73);shin=min(leg,max(0.,(3.85-h)/4))
+            weights.append({'pelvis':1-leg,'thigh_'+side:leg-shin,'calf_'+side:shin})
+            if row and i:
+                a=row*(N+1)+i
+                faces.append([(a-N-2,0),(a-N-1,0),(a,0),(a-1,0)])
+    surface('RitualCassock',points,[],faces,weights,rig,material('RitualCloth',rough=.94,col=(.062,.027,.042,1)),floor)
+    for sign in [-1,1]:
+        for y,H in [(chest-1.8,neck-.35),(chest-1.89,chest-1.81)]:
+            x=sign*.56;low=(x-.153,x+.153);high=(x-.159,x+.159)
+            garment_panel('DamaskStole',[(low[0],y),(low[1],y),(high[1],H),(high[0],H)],rig,floor,F,
+              material('RitualStole',rough=.84,col=(.104,.028,.051,1)),offset=.127)
+        for edge in [-1,1]:
+            x=sign*.56+edge*.131
+            garment_panel('StoleBraid',[(x-.015,chest-1.8),(x+.015,chest-1.8),(x+.015,neck-.35),(x-.015,neck-.35)],
+                rig,floor,F,material('RitualThread',rough=.73,col=(.259,.157,.074,1)),offset=.148)
+        for y in [chest+i*.18 for i in range(-8,5)]:
+            x=sign*.56
+            garment_panel('ThreadWork',[(x-.063,y),(x,y-.054),(x+.063,y),(x,y+.054)],rig,floor,F,
+              material('RitualThread',rough=.73,col=(.259,.157,.074,1)),offset=.155)
+    y=chest+.52
+    disk=[(.173*math.cos(i*math.tau/24),y+.211*math.sin(i*math.tau/24)) for i in range(24)]
+    garment_panel('OrbMedallion',disk,rig,floor,F,material('RitualCopper',rough=.55,col=(.276,.169,.087,1),metal=.51),offset=.147)
+    garment_panel('OrbInset',[(-.095,y),(-.061,y-.099),(0,y-.116),(.077,y-.071),(.099,y+.05),(.025,y+.113),(-.054,y+.102)],
+        rig,floor,F,material('RitualOrbStone',rough=.49,col=(.081,.182,.174,1)),offset=.183)
+
+def batch_ritual_hardware(rig):
+    # The individual braid motifs stay easy to author, but each finish is
+    # one skinning draw rather than thirty tiny draws crossing the scene.
+    groups=defaultdict(list)
+    for o in rig.children:
+        if o.type=='MESH' and o.data.materials and o.data.materials[0].name in ['RitualThread','RitualStole']:
+            groups[o.data.materials[0].name].append(o)
+    for finish,objects in groups.items():
+        if len(objects)<2:continue
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in objects:o.select_set(True)
+        bpy.context.view_layer.objects.active=objects[0]
+        bpy.ops.object.join();objects[0].name=finish
 
 # Actor-specific builds sharing the identical topology, mapping and joint names.
 # A blend of adult targets avoids the unconfigured base's averaged mannequin.
@@ -240,6 +317,8 @@ cast=[
  ('clubNiko','caucasian-male-young','young_caucasian_male','male_casualsuit01','short01','shoes01',1.78,[('chin-width-incr',.23)]),
  ('clubSami','african-male-young','young_african_male','male_casualsuit03','afro01','shoes03',1.88,[('head-oval',.28)]),
  ('clubVeit','caucasian-male-old','old_caucasian_male','male_elegantsuit01','short03','shoes03',1.76,[('head-rectangular',.42)]),
+ ('orbPriest','caucasian-male-old','old_caucasian_male','male_elegantsuit01','short01','shoes03',1.784,[('head-oval',.52),('l-eye-bag-incr',.35)]),
+ ('niklas','caucasian-male-young','young_caucasian_male','male_elegantsuit01','short01','shoes03',1.84,[('head-rectangular',.55),('chin-width-incr',.46)]),
 ]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
@@ -275,6 +354,8 @@ for name,macro,skin,clothes,hair,shoes,height,features in cast:
         surface('Eye'+tag,eye,uv,subset,[{'eye_'+tag.lower():1.} for _ in eye],rig,eyeMat,lo)
     if name in ['hubert','ghoulA']:helmet(rig,base,lo,name=='hubert')
     if name=='hubert':uniform(rig,base,lo,SRC/'clothes'/clothes/(clothes+'.mhclo'))
+    if name in ['orbPriest','niklas']:formal_details(name,rig,base,lo,SRC/'clothes'/clothes/(clothes+'.mhclo'))
+    if name=='orbPriest':batch_ritual_hardware(rig)
 
 bpy.ops.wm.save_as_mainfile(filepath=str(SRC.parent/'Human-Cast.blend'),compress=True)
 bpy.ops.export_scene.gltf(filepath=str(OUT),export_format='GLB',export_extras=True,export_yup=True,

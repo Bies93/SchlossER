@@ -1,5 +1,5 @@
 import {architectureKit} from './architecture-kit.js';
-import {PORTALS,HALL} from './palace-openings.js';
+import {PORTALS,HALL,GARDEN_REVEAL} from './palace-openings.js';
 import {randomSource} from './surface-detail.js';
 
 const q=(x,y,z)=>[x,y,z];
@@ -84,14 +84,17 @@ function pairedWindows(T,root,M,side){
 
 function eastMasonry(T,root,M){
   const door=PORTALS.east,k=architectureKit(T,root,M),p=portalFrame(door);
-  const shell=.156,half=door.half,outer=half+.32,span=2.768,top=4.315;
+  const {back,front:shell,span,top}=GARDEN_REVEAL,half=door.half,outer=half+.32;
   const arch=(x,r=half)=>door.spring+Math.sqrt(Math.max(0,r*r-x*x))*door.rise/half;
   const inner=Array.from({length:29},(_,i)=>{const a=Math.PI-i*Math.PI/28;return [Math.cos(a)*half,door.spring+Math.sin(a)*door.rise]});
   const out=inner.map(([x,y])=>[x*outer/half,door.spring+(y-door.spring)*(door.rise+.26)/door.rise]);
   // Mortar backing and separately coursed stone below the arch spring.
   for(const side of [-1,1]){
     const r=side<0?[-span,-half]:[half,span];
-    k.box('seam',p,r[0],r[1],.013,door.spring,-.45,shell-.023);
+    // Open masonry skins: a solid box here would also draw a side cap
+    // exactly on the stone reveal at ±half.
+    k.quad('seam',p(r[0],.013,shell-.023),p(r[1],.013,shell-.023),p(r[1],door.spring,shell-.023),p(r[0],door.spring,shell-.023));
+    k.quad('stone',p(r[1],.013,back),p(r[0],.013,back),p(r[0],door.spring,back),p(r[1],door.spring,back));
     for(let row=0;row<7;row++){
       const y=.032+row*(door.spring-.032)/7,h=.032+(row+1)*(door.spring-.032)/7;
       const positions=[r[0],r[0]+(row%2?.46:.68),r[1]-.24,r[1]];
@@ -101,9 +104,10 @@ function eastMasonry(T,root,M){
       }
     }
     const a=side<0?-span:outer,b=side<0?-outer:span;
-    k.box('stone',p,a,b,door.spring,top,-.44,shell);
+    k.quad('stone',p(a,door.spring,shell),p(b,door.spring,shell),p(b,top,shell),p(a,top,shell));
+    k.quad('stone',p(b,door.spring,back),p(a,door.spring,back),p(a,top,back),p(b,top,back));
     const x=side*half;
-    const sideFace=[p(x,.016,-.49),p(x,.016,shell),p(x,door.spring,shell),p(x,door.spring,-.49)];
+    const sideFace=[p(x,.016,back),p(x,.016,shell),p(x,door.spring,shell),p(x,door.spring,back)];
     k.quad('cut',...(side<0?sideFace.reverse():sideFace));
   }
   // Build the crown with real block joints, the inner stone reveal and a
@@ -111,14 +115,14 @@ function eastMasonry(T,root,M){
   for(let i=1;i<inner.length;i++){
     const [a,b]=[inner[i-1],inner[i]],[c,d]=[out[i-1],out[i]];
     k.quad('stone',p(c[0],c[1],shell),p(d[0],d[1],shell),p(d[0],top,shell),p(c[0],top,shell),1.7,c[0]+span);
-    k.quad('wall',p(b[0],b[1],-.426),p(a[0],a[1],-.426),p(a[0],top,-.426),p(b[0],top,-.426),1.7,span+b[0]);
+    k.quad('wall',p(b[0],b[1],back),p(a[0],a[1],back),p(a[0],top,back),p(b[0],top,back),1.7,span+b[0]);
     k.quad('seam',p(a[0],a[1],shell-.019),p(b[0],b[1],shell-.019),p(d[0],d[1],shell-.019),p(c[0],c[1],shell-.019));
     const inset=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t],
       A=inset(a,b,i%2===0?.039:.008),B=inset(a,b,i%2===0?.962:.992),
       C=inset(c,d,i%2===0?.037:.008),D=inset(c,d,i%2===0?.963:.992);
     const edge=shell+(i===14||i===15?.036:.021);
     k.quad('cut',p(A[0],A[1],edge),p(B[0],B[1],edge),p(D[0],D[1],edge),p(C[0],C[1],edge));
-    k.quad('cut',p(b[0],b[1],-.48),p(a[0],a[1],-.48),p(a[0],a[1],edge),p(b[0],b[1],edge));
+    k.quad('cut',p(b[0],b[1],back),p(a[0],a[1],back),p(a[0],a[1],edge),p(b[0],b[1],edge));
   }
   k.box('cut',p,-.104,.104,arch(0)-.015,arch(0)+.295,shell-.035,shell+.049);
   k.flush('Gartenportal · Rustika, Segmentsteine und Laibung');
@@ -140,7 +144,7 @@ function leaves(T,root,M,d){
     panel(wood,L,R,.015,cap,-.076,.034);
     if(east){
       const a=side<0?Math.PI:Math.PI/2,b=side<0?Math.PI/2:0;
-      const shape=new T.Shape();shape.moveTo(L,cap-.014);shape.lineTo(R,cap-.014);
+      const shape=new T.Shape();shape.moveTo(L,cap);shape.lineTo(R,cap);
       for(let i=0;i<=16;i++){
         const u=b+(a-b)*i/16,x=Math.max(L,Math.min(R,Math.cos(u)*(d.half-.027)-hinge)),
           y=cap+(d.rise-.019)*Math.sin(u);
@@ -148,7 +152,7 @@ function leaves(T,root,M,d){
       }
       shape.closePath();
       const g=new T.ExtrudeGeometry(shape,{depth:.108,bevelEnabled:false,curveSegments:3});
-      k.geometry(wood,g,new T.Matrix4().makeTranslation(0,0,-.075));g.dispose();
+      k.geometry(wood,g,new T.Matrix4().makeTranslation(0,0,-.074));g.dispose();
       for(let i=1;i<7;i++){
         const x=L+(R-L)*i/7,worldX=x+hinge,top=cap+(d.rise-.034)*Math.sqrt(Math.max(0,1-(worldX/d.half)**2));
         panel('inset',x-.007,x+.006,.058,top-.034,.031,.038);

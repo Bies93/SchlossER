@@ -263,6 +263,11 @@ async function start(){
  function handleDoor(){
    if(!active())return;
    const local=localTarget();
+   if(local?.action==='priest-ack'){
+     const at=wc.priestAck();if(!at)return;
+     showCaption('Orb-Priester: „… hm …“',1550);audio.priestMurmur(at);
+     doorPrompt();refresh();return;
+   }
    if(local?.action){
      const notice=moosfunk.use(local);if(!notice)return;
      showCaption(notice.text,notice.voice?9600:7800);

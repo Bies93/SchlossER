@@ -3,6 +3,9 @@ export const PORTALS={
   west:{id:'west',label:'Schlossplatz',side:1,z:12.27,half:1.35,spring:2.92,rise:0},
   east:{id:'east',label:'Schlossgarten',side:-1,z:-12.04,half:1.33,spring:2.53,rise:1.27}
 };
+// Portal-frame depth (positive outwards). The garden assembly owns the
+// reveal from this joint to the archivolt; the hall only owns the return.
+export const GARDEN_REVEAL={back:-.478,front:.156,span:2.768,top:4.315};
 export const HALL={half:3.92,zMin:-11.12,zMax:11.30,floor:.071,wallDepth:.252};
 export const WINGS={outer:29.1,z:7.70,portal:1.32,spring:2.44,rise:.59,ceiling:4.31,partition:12.45};
 // +X is south, -Z is east (left when facing the gallery poster).
@@ -17,7 +20,7 @@ export const inPalaceWing=(x,z)=>Math.abs(x)>=HALL.half-.03&&Math.abs(x)<=WINGS.
 export function cutPalaceOpenings(T,root){
   const geometryRegions=[
     {lo:[-1.356,-.10,8.34],hi:[1.356,2.929,13.21]},
-    {lo:[-2.768,-.10,-13.16],hi:[2.768,4.315,-8.34]},
+    {lo:[-GARDEN_REVEAL.span,-.10,-13.16],hi:[GARDEN_REVEAL.span,GARDEN_REVEAL.top,-8.34]},
     {lo:[SOUTH_HATCH.x0,-3.90,SOUTH_HATCH.z0],hi:[SOUTH_HATCH.x1,.080,SOUTH_HATCH.z1]},
     ...[-1,1].flatMap(s=>[[4.94,9.99],[10.45,14.48]].map(([y,top])=>({
       lo:[s===1?-2.32:-2.73,y,s===1?10.43:-13.18],

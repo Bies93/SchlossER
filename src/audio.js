@@ -279,6 +279,15 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
     grit(sfx,t+.08,.88,.041,125,1050,{attack:.14,rate:.64,wet:.17});
     tone(sfx,t+.96,148,.11,.028,{type:'triangle',end:72,wet:.13});
   }
+  function priestMurmur(at){
+    if(!live())return;
+    const t=ctx.currentTime+.012,pan=tapePan(at);
+    // Closed-mouth sound, no speech service or HTTP request.
+    tone(sfx,t,101,.40,.154,{end:75,pan,wet:.23,attack:.084,shiver:29});
+    tone(sfx,t+.012,202,.34,.045,{end:150,pan,wet:.23,attack:.076,shiver:20});
+    tone(sfx,t+.014,303,.28,.018,{end:225,pan,wet:.25,attack:.088});
+    grit(sfx,t+.049,.28,.020,165,1060,{attack:.06,pan,wet:.19});
+  }
   function playMoosfunk(at,text){
     if(!live())return;
     const pan=tapePan(at),t=ctx.currentTime+.016;
@@ -343,7 +352,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl)
   }
   return {play,pause,toggle,shot,pulseContact,foot,creature,ambience,club,clubPhase,hatch,playChoir,choirStatus,playMoosfunk,playChapel,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
-    grate,playPrisoner:at=>playChoir(at,prisonerUrl),
+    grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},
     settings:()=>({...levels,enabled}),
     volume(key,value){if(key in levels&&Number.isFinite(value)){levels[key]=Math.max(0,Math.min(1,value));store();mix()}}

@@ -13,6 +13,7 @@ import {furnishWorkshop} from './moosfunk-workshop.js';
 import {shopMaterials,shopArt,shopWear} from './moosfunk-shop-finishes.js';
 import {deepArt} from './moosfunk-deep-art.js';
 import {deepMaterials,DEEP_LIGHTS,buildDeepStair,furnishDeep} from './moosfunk-deep.js';
+import {orbPriest} from './orb-priest.js';
 
 export const WC_LAYER=4;
 const lampSites=[
@@ -80,7 +81,7 @@ export function addWcInterior(T,scene,world,quest){
   const atlas=deepArt(T);
   const hemi=new T.HemisphereLight(0xb2c4bd,0x5d503b,.66);group.add(hemi);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);group.add(l);return l;});
-  let orb=null;
+  let orb=null,priest=null;
   for(const [id,bounds] of Object.entries(ZONE_ROOMS)){
     const room=new T.Group();room.name='WC · '+id;group.add(room);layers.set(id,room);
     const k=architectureKit(T,room,materials);
@@ -215,6 +216,7 @@ export function addWcInterior(T,scene,world,quest){
     else if(isNewHQ(id))furnishHQ(T,method,id);
     else if(deep)orb=furnishDeep(T,method,id)??orb;
     else if(rock)furnishCollective(T,method,id);
+    if(id==='deepVotive')priest=orbPriest(T,room,method.hit);
     if(id==='collective'){
       method.block('darkWood',11.212,11.248,1.96,2.19,-1.008,.346);
       method.deepTile('entry',11.251,2.075,-.331,1.29,.19,0);
@@ -245,7 +247,8 @@ export function addWcInterior(T,scene,world,quest){
     for(const d of doors)changed=d.update(dt,pos)||changed;
     const pulsing=dt>0&&orb&&layers.get('deepOrb').visible&&(id==='deepOrb'||id==='deepVotive'||id==='deepLounge'&&u<-9.8);
     if(pulsing)orb(dt);
-    if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return Boolean(pulsing);
+    const acting=dt>0&&(id==='deepVotive'||id==='deepOrb'&&layers.get('deepVotive').visible)&&priest?.update(dt,pos);
+    if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return Boolean(pulsing||acting);
     prev=id;lastU=u;lastV=v;
     const visible=new Set([id]),tau=2*Math.PI;
     // Intersect doorway sight arcs along a path instead of drawing the whole
@@ -313,7 +316,7 @@ export function addWcInterior(T,scene,world,quest){
       l.position.set(...p(u,height===undefined?wcRoofAt(key,u,v)-.33:wcLevel(key)+height,v));l.intensity=watts;l.color.setHex(color);l.distance=distance;
     }
     hemi.intensity=id==='deepVotive'?.32:id==='deepOrb'?.40:id==='deepLounge'?.70:.66;
-    return changed;
+    return changed||Boolean(pulsing||acting);
   }
   async function warm(renderer,source){
     const staging=new T.Scene(),camera=new T.PerspectiveCamera(67,1,.08,120);
@@ -333,10 +336,11 @@ export function addWcInterior(T,scene,world,quest){
       renderer.setViewport(viewport);renderer.setScissor(clip);renderer.setScissorTest(test);renderer.shadowMap.needsUpdate=shadow;
     }
   }
-  return {prepare:(renderer,source)=>prep??=warm(renderer,source),update,
+  return {prepare:(renderer,source)=>prep??=warm(renderer,source),update,priestAck:()=>priest?.use(),
     target(pos,look){
       if(!lower(pos.y))return null;
       const key=wcZoneAt(pos.z-Z,X-pos.x,pos.y);let found=null,best=-Infinity;
+      if(key==='deepVotive')return priest?.target(pos,look)??null;
       for(const d of doors)if(d.zones.includes(key)){const score=d.aim(pos,look);if(score>best){found=d;best=score;}}
       return found;
     }
