@@ -2,6 +2,7 @@
 import sys, wave
 from pathlib import Path
 import numpy as np
+import soundfile as sf
 
 rate = 22050
 def take(name, speed):
@@ -22,6 +23,5 @@ t = np.arange(len(out))/rate
 env = (1-np.exp(-t*2.1))*np.minimum(1, (t[-1]-t)/1.7)**2
 for f, amp in [(130.81,.036),(196.00,.032),(261.63,.016),(329.63,.014),(523.25,.008)]:
     out += amp*env*(1+.19*np.sin(2*np.pi*.41*t))*np.sin(2*np.pi*f*t+.13*np.sin(2*np.pi*2.3*t))
-with wave.open(str(Path(__file__).resolve().parents[1]/'assets'/'orb-stimme.wav'),'wb') as w:
-    w.setparams((1,2,rate,0,'NONE','not compressed'))
-    w.writeframes((out*(28500/max(abs(out)))).astype('<i2').tobytes())
+sf.write(Path(__file__).resolve().parents[1]/'assets'/'orb-stimme.flac',
+         (out*(28500/max(abs(out)))).astype('<i2'), rate, subtype='PCM_16')

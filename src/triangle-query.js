@@ -4,15 +4,16 @@ export function triangleQuery(T,g){
   const vertices=g.attributes.position,index=g.index;
   const count=Math.floor((index?.count??vertices.count)/3),stride=9;
   if(count<144)return null;
-  const ids=Uint32Array.from({length:count},(_,i)=>i);
+  const ids=new Uint32Array(count);
   let info=new Float32Array(count*stride);
   const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();
   function vertex(i,out){out.fromBufferAttribute(vertices,index?index.getX(i):i);}
   for(let i=0;i<count;i++){
     vertex(i*3,a);vertex(i*3+1,b);vertex(i*3+2,c);
-    const j=i*stride;info.set([Math.min(a.x,b.x,c.x),Math.min(a.y,b.y,c.y),Math.min(a.z,b.z,c.z),
-      Math.max(a.x,b.x,c.x),Math.max(a.y,b.y,c.y),Math.max(a.z,b.z,c.z),
-      (a.x+b.x+c.x)/3,(a.y+b.y+c.y)/3,(a.z+b.z+c.z)/3],j);
+    ids[i]=i;const j=i*stride;
+    info[j]=Math.min(a.x,b.x,c.x);info[j+1]=Math.min(a.y,b.y,c.y);info[j+2]=Math.min(a.z,b.z,c.z);
+    info[j+3]=Math.max(a.x,b.x,c.x);info[j+4]=Math.max(a.y,b.y,c.y);info[j+5]=Math.max(a.z,b.z,c.z);
+    info[j+6]=(a.x+b.x+c.x)/3;info[j+7]=(a.y+b.y+c.y)/3;info[j+8]=(a.z+b.z+c.z)/3;
   }
   function build(start,end,depth){
     const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];

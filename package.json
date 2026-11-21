@@ -2,7 +2,15 @@
   "name": "erlanger-schlossgarten",
   "private": true,
   "type": "module",
-  "scripts": {"build": "node build.mjs", "offline": "node build.mjs --offline"},
-  "dependencies": {"three": "0.180.0"},
-  "devDependencies": {"esbuild": "0.28.2"}
+  "scripts": {
+    "build": "node build.mjs",
+    "offline": "node build.mjs --offline"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "meshoptimizer": "0.22.0"
+  }
 }

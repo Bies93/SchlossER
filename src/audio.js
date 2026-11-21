@@ -10,7 +10,8 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
   let danceBus,danceWet=0,danceBuffer,danceLoad,danceRetry=0,danceNode,danceStart=0,danceOffset=0;
-  const spokenClips=new Map();
+  const spokenClips=new Map(),pendingClips=new Map();
+  let clipBytes=0;const clipBudget=12*1024*1024;
   let choirRequest,choirVoice,choirFailed=false;
   let npcRequest,npcVoice;
   let ravenToken=0,ravenNode=null;
@@ -118,11 +119,22 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     return choirVoice?'playing':choirRequest?'loading':choirFailed?'retry':'ready';
   }
   function prepareClip(url){
-    if(!spokenClips.has(url))spokenClips.set(url,fetch(url)
+    const cached=spokenClips.get(url);
+    if(cached){spokenClips.delete(url);spokenClips.set(url,cached);return Promise.resolve(cached);}
+    if(!pendingClips.has(url))pendingClips.set(url,fetch(url)
       .then(r=>{if(!r.ok)throw Error('Sprachaufnahme nicht erreichbar');return r.arrayBuffer()})
-      .then(bytes=>ctx.decodeAudioData(bytes))
-      .catch(error=>{spokenClips.delete(url);throw error;}));
-    return spokenClips.get(url);
+      .then(bytes=>ctx.decodeAudioData(bytes)).then(buffer=>{
+        const size=buffer.length*buffer.numberOfChannels*4;
+        if(size<=clipBudget){
+          while(clipBytes+size>clipBudget){
+            const [old,b]=spokenClips.entries().next().value;
+            spokenClips.delete(old);clipBytes-=b.length*b.numberOfChannels*4;
+          }
+          spokenClips.set(url,buffer);clipBytes+=size;
+        }
+        return buffer;
+      }).finally(()=>pendingClips.delete(url)));
+    return pendingClips.get(url);
   }
   function stopRaven(){
     ravenToken++;

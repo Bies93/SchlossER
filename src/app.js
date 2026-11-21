@@ -23,25 +23,26 @@ import {bindTouchEquipment} from './touch-equipment.js';
 import {ghoulRound} from './ghoul-round.js';
 import {makeAudio} from './audio.js';
 import {addParkStair,wcHeightAt,wcCeilingAt,wcCameraMode,isWcInterior,WC_LAYER} from './park-stair.js';
-import {LAB_LAYER,labFloorAt,labCeilingAt,clubMix} from './lab-layout.js';
+import {LAB_LAYER,LAB_CUT,labFloorAt,labCeilingAt,clubMix} from './lab-layout.js';
 import {labCameraMode} from './lab-wing.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {makeMoosfunk} from './moosfunk-quest.js';
-import {ORB,X as wcX,Z as wcZ,wcZoneAt} from './park-wc-layout.js';
+import {ORB,WC_CUT,X as wcX,Z as wcZ,wcZoneAt} from './park-wc-layout.js';
 import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
 import {addChapter} from './chapter.js';
-import {CHAPTER_LAYER} from './chapter-layout.js';
+import {CHAPTER_LAYER,CHAPTER_STEP} from './chapter-layout.js';
+import {SOUTH_HATCH} from './palace-openings.js';
 import {installHumans} from './human-character.js';
 import {npcFocus} from './npc-focus.js';
 import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
 import {weaponPickups} from './weapon-pickups.js';
 import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
-import {ATTIC_LAYER} from './palace-attic-layout.js';
+import {ATTIC_LAYER,ATTIC_WELL,ATTIC_FLOOR} from './palace-attic-layout.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
-const payload=JSON.parse($('assets').textContent);
+let payload=JSON.parse($('assets').textContent);
 $('assets').remove();
 const about=$('about');
 $('info').onclick=()=>about.showModal();
@@ -151,6 +152,9 @@ async function start(){
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
  },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall);
+ // Audio owns the URLs it can still request. Do not pin a second copy of the
+ // finished GLBs/textures as base64 strings in the standalone version.
+ payload=null;
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
  // Optional effects still prefetch, but slow audio cannot hold up Start.
@@ -197,7 +201,10 @@ async function start(){
    }
    const cm=chapter.mode(p),wm=wcCameraMode(p),lm=labCameraMode(p);
    const surface=cm!=='inside'&&wm!=='inside'&&lm!=='cellar';
-   layerContext.mask=surface?1:0;
+   // Body/interaction layer and optical visibility are separate: turning
+   // around in the corridor must not erase the outside of the open shaft.
+   const seesExit=wm==='inside'&&wc.seesExit()||cm==='inside'&&chapter.seesExit()||lm==='cellar'&&hall.seesLabExit();
+   layerContext.mask=surface||seesExit?1:0;
    if(lm==='cellar'||surface&&hall.labVisible())layerContext.mask|=1<<LAB_LAYER;
    if(wm!=='surface'&&(surface||wm==='inside'))layerContext.mask|=1<<WC_LAYER;
    if(chapter.visible()&&(surface||cm==='inside'))layerContext.mask|=1<<CHAPTER_LAYER;
@@ -378,8 +385,33 @@ async function start(){
    event.preventDefault();handleDoor();
  });
  portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
+ // Conservative bounds include the shaft walls, not just the line at the
+ // threshold. Keep adjacent passes out of the render when looking away.
+ const box=(x,y,z,X,Y,Z)=>new T.Box3(new T.Vector3(x-.18,y-.18,z-.18),new T.Vector3(X+.18,Y+.18,Z+.18));
+ const wcShaft=box(WC_CUT.left,-2.9,WC_CUT.back,WC_CUT.right,.8,WC_CUT.front);
+ const benchShaft=box(CHAPTER_STEP.foot,chapter.floor,CHAPTER_STEP.z0,CHAPTER_STEP.top,chapter.floor+5.6,CHAPTER_STEP.z1);
+ const northShaft=box(LAB_CUT.left,-4,LAB_CUT.back,LAB_CUT.right,2.7,LAB_CUT.front);
+ const southShaft=box(SOUTH_HATCH.x0,-4,SOUTH_HATCH.z0,SOUTH_HATCH.end,1.5,SOUTH_HATCH.z1);
+ const atticShaft=box(ATTIC_WELL.left,5.5,ATTIC_WELL.cutNear,ATTIC_WELL.right,ATTIC_FLOOR+.25,ATTIC_WELL.far);
+ const frustum=new T.Frustum(),vp=new T.Matrix4();
+ const sees=opening=>frustum.intersectsBox(opening);
+ function updateView(){
+   c.updateWorldMatrix(true,false);frustum.setFromProjectionMatrix(vp.multiplyMatrices(c.projectionMatrix,c.matrixWorldInverse));
+ }
  function draw(){
-   const p=player.body.position,{mask,layer}=activeLayers();
+   const p=player.body.position,{mask:possible,layer}=activeLayers();
+   let mask=possible;updateView();
+   if(layer===0){
+     if(!sees(wcShaft))mask&=~(1<<WC_LAYER);
+     if(!sees(benchShaft))mask&=~(1<<CHAPTER_LAYER);
+     if(!sees(northShaft)&&!sees(southShaft))mask&=~(1<<LAB_LAYER);
+   }else if(mask&1){
+     if(layer===WC_LAYER&&wcCameraMode(p)==='inside'&&!sees(wcShaft)||
+        layer===CHAPTER_LAYER&&chapter.mode(p)==='inside'&&!sees(benchShaft)||
+        layer===LAB_LAYER&&labCameraMode(p)==='cellar'&&!sees(northShaft)&&!sees(southShaft))mask&=~1;
+   }
+   if(layer===ATTIC_LAYER&&!sees(atticShaft))mask&=~(1<<UPPER_LAYER);
+   if(layer===UPPER_LAYER&&!sees(atticShaft))mask&=~(1<<ATTIC_LAYER);
    viewmodel.bodyLayer(layer);
    if(mask&1){
      lighting.update(p);garden.update(p,performance.now());
@@ -387,6 +419,9 @@ async function start(){
    // One transform update across all passes. At a hatch share depth, not
    // lights, so the existing lighting and material permutations stay intact.
    s.traverseVisible(o=>{
+     // A detached layer may return on the next frame. Its leaf matrices
+     // will update then; parents still propagate motion to mixed-layer children.
+     if(!o.children.length&&!o.isBone&&!(o.layers.mask&mask))return;
      // Invisible room trees were still updating all their local transforms.
      // Skins retain their bind-matrix update; all other parents precede children.
      if(o.isSkinnedMesh)o.updateMatrixWorld();
@@ -419,9 +454,9 @@ async function start(){
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
      if(upper.update(time,player.body.position))dirty=true;
-     if(chapter.update(dt,player.body.position)){
-       dirty=true;if(chapter.mode(player.body.position)!=='inside')r.shadowMap.needsUpdate=true;
-     }
+     updateView();
+     if(chapter.update(dt,player.body.position,sees(benchShaft)))dirty=true;
+     if(chapter.shadowMoved())r.shadowMap.needsUpdate=true;
      const {layer,mask}=activeLayers();
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
@@ -431,8 +466,10 @@ async function start(){
      if(targets.tick(dt,mask))dirty=true;
      names.sample(time);
      doorPrompt();
-     if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
-     if(wcCameraMode(player.body.position)==='surface'&&chapter.mode(player.body.position)==='surface'&&labCameraMode(player.body.position)!=='cellar'&&pauli.tick(time,c))dirty=true;
+     if(mask&1){
+       if(fountain.tick(time,c))dirty=true;
+       if(pauli.tick(time,c))dirty=true;
+     }
      if(viewmodel.update(time))dirty=true;
      touchEquipment.update();
    }
@@ -532,7 +569,9 @@ async function start(){
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
  showLoadingStep(3,'Der Rundgang wird startklar gemacht …');
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
+ const queryTime=performance.now();
  geometryQuery.build();s.matrixWorldAutoUpdate=false;
+ performance.measure('schlosser: spatial index',{start:queryTime,end:performance.now()});
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  fountain.syncView?.(c);

@@ -12,8 +12,8 @@ const license=await readFile(filepath('node_modules/three/LICENSE'),'utf8');
 const bundle=(await build({entryPoints:[filepath('src/app.js')],bundle:true,minify:true,write:false,legalComments:'inline'})).outputFiles[0].text;
 const names=['sandstone_facade','sandstone_trim','fountain_stone','oak_door','plaza_pavers','roof_slate'];
 const refs={model:'assets/schloss.glb',sculptures:'assets/skulpturen.glb',music:'assets/moorlicht.mp3',clubMusic:'assets/schlosskeller-2099.mp3',
-  galleryPoster:'assets/galerie-bies.webp',galleryChoir:'assets/galerie-chor.mp3',orbVoice:'assets/orb-stimme.wav',
-  prisonerVoice:'assets/kammer-07.wav',lodgeSeal:'assets/logensiegel.svg',humans:'assets/human-cast.glb',maps:{},
+  galleryPoster:'assets/galerie-bies.webp',galleryChoir:'assets/galerie-chor.mp3',orbVoice:'assets/orb-stimme.flac',
+  prisonerVoice:'assets/kammer-07.flac',lodgeSeal:'assets/logensiegel.svg',humans:'assets/human-cast.glb',maps:{},
   ravenCall:'assets/sfx/raven-grand-teton.mp3',
   npcVoices:Object.fromEntries(Object.entries(NPC_VOICE_FILES).map(([id,file])=>[id,'assets/npc-voices/'+file])),
   weaponSounds:Object.fromEntries(Object.entries(WEAPON_SFX).map(([id,file])=>[id,'assets/sfx/'+file]))};
@@ -33,7 +33,7 @@ await writeFile(filepath('index.html'),make(webRefs,'<script src="./viewer.js?v=
   .replace('<title>',()=>preloads+'\n<title>'));
 if(process.argv.includes('--offline')){
  const embedded=await transform(refs,(name,bytes)=>{
-   const mime=name.endsWith('.webp')?'image/webp':name.endsWith('.mp3')?'audio/mpeg':name.endsWith('.wav')?'audio/wav':name.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
+   const mime=name.endsWith('.webp')?'image/webp':name.endsWith('.mp3')?'audio/mpeg':name.endsWith('.flac')?'audio/flac':name.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
    return 'data:'+mime+';base64,'+bytes.toString('base64');
  });
  await mkdir(filepath('dist'),{recursive:true});

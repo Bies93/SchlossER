@@ -37,4 +37,4 @@ dry = np.tanh(out*1.32)
 out = dry.copy()
 for dt,g in [(.034,.10),(.082,.061),(.154,.033)]:
     n=round(dt*R);out[n:]+=g*dry[:-n]
-sf.write(HERE.parent/'assets/kammer-07.wav',out*.82/max(abs(out)),R,subtype='PCM_16')
+sf.write(HERE.parent/'assets/kammer-07.flac',out*.82/max(abs(out)),R,subtype='PCM_16')

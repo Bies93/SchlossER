@@ -1,4 +1,4 @@
-import {HALL,SOUTH_HATCH} from './palace-openings.js';
+import {HALL,SOUTH_HATCH,WINGS} from './palace-openings.js';
 
 export const LAB_CUT={left:-27.38,right:-20.78,back:-6.70,front:-4.40};
 const {left,right,back,front}=LAB_CUT;
@@ -15,7 +15,7 @@ export const CLUB_FLOOR=LAB.floor-CLUB_STAIR.count*CLUB_STAIR.rise,CLUB_CEILING=
 export const clubStep= (CLUB_STAIR.top-CLUB_STAIR.foot)/CLUB_STAIR.count;
 export const clubStairY=x=>LAB.floor-CLUB_STAIR.rise*Math.min(CLUB_STAIR.count,Math.max(0,(CLUB_STAIR.top-x)/clubStep+.40));
 export const clubLevel=y=>y<LAB.floor-1.55;
-export const nearLodgeHatch=p=>p.x>SOUTH_HATCH.x0-3.95&&p.x<SOUTH_HATCH.x1+.27&&p.z>SOUTH_HATCH.z0-.43&&p.z<2.25;
+export const nearLodgeHatch=p=>p.x>=WINGS.partition-.25&&p.x<=SOUTH_HATCH.end+.25&&Math.abs(p.z)<=WINGS.z+.25;
 // Extents are interior dimensions. Shared edges and their clear spans define
 // movement, wall cuts and the render visibility graph in the same metre grid.
 export const LAB_CELLS={

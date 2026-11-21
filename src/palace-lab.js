@@ -181,7 +181,7 @@ export function addPalaceLab(T,root,world,M,moosfunk){
       const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
-    usable,staffTalk:deck.talk,takeWardCue:deck.takeCue,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
+    usable,staffTalk:deck.talk,takeWardCue:deck.takeCue,visible:deck.visible,seesExit:deck.seesExit,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
     update(dt,p,lodgeShown=false,beat=null){
       let changed=false;
       if(d.progress!==d.target){
@@ -189,7 +189,7 @@ export function addPalaceLab(T,root,world,M,moosfunk){
         const value=d.progress+(d.target?1:-1)*dt/.94;d.progress=Math.min(1,Math.max(0,value));
         const t=d.progress;cabinet.position.z=slide*t*t*(3-2*t);changed=dt>0;
       }
-      return deck.update(p,d.target===1,dt,lodgeShown,beat)||changed;
+      return deck.update(p,d.target===1||d.progress>0,dt,lodgeShown,beat)||changed;
     }
   };
 }

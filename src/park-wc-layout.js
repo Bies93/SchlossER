@@ -121,9 +121,13 @@ export function wcCameraMode(pos){
   const u=pos.z-Z,v=X-pos.x;
   const room=wcZoneAt(u,v,pos.y);
   if(room)return room==='landing'&&v<.16?'threshold':'inside';
-  // The throat is visible from the turning landing, even while the player
-  // is still a whole flight above the threshold. Share both render layers.
-  const onReturn=u>=roomLeft-.09||v<returnStart+.06;
-  return onReturn&&u>=-.035&&u<=W+.04&&v>=back-.025&&v<.17&&pos.y<a+.86
-    ?'threshold':'surface';
+  // Both flights and the open rim can overlook the return landing.
+  if(u>=-2&&u<=W+2&&v>=back-3&&v<1.5&&pos.y>=b-.30&&pos.y<base+2.1)return 'threshold';
+  // From farther away the only possible view in is over the open cut and
+  // under the return lintel. Project both lintel ends onto garden grade.
+  if(v<0&&pos.y>=base-.25){
+    const k=(base-ceiling)/(pos.y+1.67-ceiling);
+    if(v*k>=back-.16&&roomLeft*(1-k)+u*k<=W+.16&&W*(1-k)+u*k>=-.16)return 'threshold';
+  }
+  return 'surface';
 }

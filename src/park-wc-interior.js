@@ -1,4 +1,5 @@
 import {architectureKit} from './architecture-kit.js';
+import {portalSight} from './portal-sight.js';
 import {sharedSet,randomSource} from './surface-detail.js';
 import {utilityDoor} from './lab-cell-doors.js';
 import {ZONE_ROOMS,ZONE_LINKS,X,Z,p,b,ceiling,lower,wcRoomAt,wcZoneAt,wcLevel,wcRoofAt,wcCameraMode,isRock,isAnnex,isNewHQ,isDeep,deepWalk,upperWcWalk} from './park-wc-layout.js';
@@ -251,7 +252,10 @@ export function addWcInterior(T,scene,world,quest){
   }
   cyl.dispose();
   group.traverse(o=>{o.layers.set(WC_LAYER);if(o.isMesh)o.castShadow=false});
-  let prev='',lastU=Infinity,lastV=Infinity,prep;
+  const openingHeights=([a,c])=>{
+    const y=isDeep(a)&&isDeep(c)?wcLevel(a):b;return [y,y+(isRock(a)||isRock(c)?3.2:2.35)];
+  };
+  let prev='',lastU=Infinity,lastV=Infinity,lastY=Infinity,prep;
   function update(dt,pos){
     const state=wcCameraMode(pos),u=pos.z-Z,v=X-pos.x,id=state==='surface'?null:wcZoneAt(u,v,pos.y)??'landing';
     let changed=group.visible!==!!id;group.visible=!!id;
@@ -261,49 +265,9 @@ export function addWcInterior(T,scene,world,quest){
     if(pulsing)orb(dt);
     const acting=dt>0&&(id==='deepVotive'||id==='deepOrb'&&layers.get('deepVotive').visible)&&priest?.update(dt,pos);
     const attending=visitors.get(id)?.(dt,pos);
-    if(id===prev&&Math.hypot(u-lastU,v-lastV)<.18&&!changed)return Boolean(pulsing||acting||attending);
-    prev=id;lastU=u;lastV=v;
-    const visible=new Set([id]),tau=2*Math.PI;
-    // Intersect doorway sight arcs along a path instead of drawing the whole
-    // loop of rooms. Direct neighbours still render before the threshold.
-    function arc([,,axis,edge,a,b]){
-      const U=axis==='u'?edge:u,V=axis==='v'?edge:v,t=axis==='u'?v:u;
-      if(Math.abs(axis==='u'?U-u:V-v)<.22&&t>a-.20&&t<b+.20)return null;
-      const A=axis==='u'?Math.atan2(a-v,U-u):Math.atan2(V-v,a-u);
-      const B=axis==='u'?Math.atan2(b-v,U-u):Math.atan2(V-v,b-u);
-      const centre=axis==='u'?Math.atan2((a+b)/2-v,U-u):Math.atan2(V-v,(a+b)/2-u);
-      const rel=angle=>Math.atan2(Math.sin(angle-centre),Math.cos(angle-centre));
-      return [centre+Math.min(rel(A),rel(B))-.11,centre+Math.max(rel(A),rel(B))+.11];
-    }
-    function sight(room,visits,wedge,depth){
-      if(depth===0)return;
-      for(const l of portals[room]){
-        const other=l[0]===room?l[1]:l[0];
-        if(visits.includes(other))continue;
-        const span=arc(l);
-        let next=span??wedge;
-        if(span&&wedge){
-          next=null;
-          for(const s of [-tau,0,tau]){
-            const lo=Math.max(wedge[0],span[0]+s),hi=Math.min(wedge[1],span[1]+s);
-            if(lo<=hi){next=[lo,hi];break;}
-          }
-          if(!next)continue;
-        }
-        const leaf=activeLinks.get(l);
-        if(leaf&&leaf.progress<=.01){
-          // The leaf and frame belong to the approach room. Keep that
-          // owner visible from the inside even when the door is shut.
-          if(l[1]===room)visible.add(l[0]);
-          if(leaf.peek)visible.add(other);
-          continue;
-        }
-        visible.add(other);
-        sight(other,[...visits,other],next,depth-1);
-      }
-    }
-    const reach=id==='men'||id==='menB'||isRock(id)?3:2;
-    sight(id,[id],null,reach);
+    if(id===prev&&Math.hypot(u-lastU,pos.y-lastY,v-lastV)<.18&&!changed)return Boolean(pulsing||acting||attending);
+    prev=id;lastU=u;lastV=v;lastY=pos.y;
+    const visible=portalSight(portals,id,u,v,l=>activeLinks.get(l),openingHeights,pos.y+1.67,.11);
     for(const [key,room] of layers){changed||=room.visible!==visible.has(key);room.visible=visible.has(key);}
     const near=lampSites.filter(l=>visible.has(lightRoom(l))).map(l=>{
       const key=lightRoom(l),bias=key!==id&&(isAnnex(key)||isAnnex(id)||isDeep(key)||isDeep(id))
@@ -349,7 +313,8 @@ export function addWcInterior(T,scene,world,quest){
       renderer.setViewport(viewport);renderer.setScissor(clip);renderer.setScissorTest(test);renderer.shadowMap.needsUpdate=shadow;
     }
   }
-  return {prepare:(renderer,source)=>prep??=warm(renderer,source),update,priestAck:()=>priest?.use(),
+  return {seesExit:()=>group.visible&&layers.get('landing').visible,
+    prepare:(renderer,source)=>prep??=warm(renderer,source),update,priestAck:()=>priest?.use(),
     attach(id,prop){layers.get(id).add(prop);prop.traverse(o=>o.layers.set(WC_LAYER));},
     target(pos,look){
       if(!lower(pos.y))return null;

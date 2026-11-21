@@ -182,7 +182,10 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
   function inside(p){
     return p.y>=F-.07&&inPlan(p.x,p.z)&&(!inWell(p.x,p.z)||p.x>=w.innerRight&&p.z<=tread(1)+.036);
   }
-  const linked=p=>p.x>=26.4&&p.x<=X+.1&&p.z>-3.5&&p.z<2.9;
+  // The entire end hall overlooks the open well; below, the corridor
+  // faces the stair even before the player reaches its last bay.
+  const linked=p=>inside(p)?p.x>=10.52||Math.abs(p.z)<1.22:
+    p.x>=26.4&&p.x<=X+.1&&Math.abs(p.z)<5||Math.abs(p.z)<1.82;
   function floorAt(x,z,y){
     if(!inPlan(x,z)||y<lower-.25)return null;
     if(inWell(x,z))return profile.floorAt(x,z,y);

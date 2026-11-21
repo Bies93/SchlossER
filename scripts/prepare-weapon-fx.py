@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import sys
 import wave
+import soundfile as sf
 
 parser = argparse.ArgumentParser()
 parser.add_argument("local_pack", type=Path, help="folder containing mp3/")
@@ -42,8 +43,5 @@ for key, source, begin, end, tail in (
     pcm = array.array("h", (round(y * scale * min(1., i / (.0015 * hz)) *
                                     min(1., (len(mono) - 1 - i) / (tail * hz)) ** 1.55)
                             for i, y in enumerate(mono)))
-    if sys.byteorder != "little":
-        pcm.byteswap()
-    with wave.open(str(out / (key + ".wav")), "wb") as w:
-        w.setparams((1, 2, hz, 0, "NONE", "not compressed"))
-        w.writeframes(pcm.tobytes())
+    with sf.SoundFile(out / (key + ".flac"), mode="w", samplerate=hz, channels=1, subtype="PCM_16") as f:
+        f.buffer_write(pcm.tobytes(), dtype="int16")

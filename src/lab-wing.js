@@ -13,6 +13,7 @@ import {lodgeArt} from './lab-lodge-art.js';
 import {CLUB_FLOOR,CLUB_CEILING,clubLevel} from './lab-layout.js';
 import {hopStair,hopClub,CLUB_LIGHTS} from './lab-hop-club.js';
 import {labStaff} from './lab-staff.js';
+import {portalSight} from './portal-sight.js';
 
 const {floor,ceiling}=LAB,matrices=(x,y,z)=>[x,y,z],below=p=>labLower(p.y)&&!clubLevel(p.y);
 const treatmentRooms={...MALT_ROOMS,infirmary:INFIRMARY,...RITE_ROOMS,...LODGE_ROOMS,hopClub:{name:'Hopfenamt · Nachtbetrieb',palette:['hopBrick','darkWood'],tiles:['hopPaver','fineStone'],tile:.78}};
@@ -28,31 +29,8 @@ const own=new Set(['lock:chambers','lock:spine','archive:spine','plant:spine','p
   'southVest:southStair','southVest:clubStair','hopClub:clubStair',
   ...LAB_LINKS.filter(([a,b])=>RITE_ROOMS[a]||RITE_ROOMS[b]||LODGE_ROOMS[a]&&LODGE_ROOMS[b]).map(([a,b])=>a+':'+b)]);
 
-// Find at most two rooms beyond the current room; the second doorway must
-// overlap the sight wedge of the first one. Camera frustum culling is additional.
-export function labVisibility(id,x,z){
-  const result=new Set([id]);
-  function arc(axis,edge,min,max){
-    const dx=axis==='x'?edge-x:(min+max)/2-x,dz=axis==='x'?(min+max)/2-z:edge-z;
-    const centre=Math.atan2(dz,dx),diff=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
-    if(Math.abs(axis==='x'?dx:dz)<.27&&(axis==='x'?z:x)>min-.15&&(axis==='x'?z:x)<max+.15)return null;
-    const lo=axis==='x'?Math.atan2(min-z,dx):Math.atan2(dz,min-x);
-    const hi=axis==='x'?Math.atan2(max-z,dx):Math.atan2(dz,max-x);
-    const ends=[diff(lo,centre),diff(hi,centre)].sort((a,b)=>a-b);
-    return [centre+ends[0]-.041,centre+ends[1]+.041];
-  }
-  function overlap(a,b){
-    if(!a||!b)return true;
-    for(const shift of [-Math.PI*2,0,Math.PI*2])if(Math.max(a[0],b[0]+shift)<=Math.min(a[1],b[1]+shift))return true;
-    return false;
-  }
-  for(const [a,b,...p] of ports[id]??[]){
-    const next=a===id?b:a,wedge=arc(...p);result.add(next);
-    for(const [j,k,...q] of ports[next])if(overlap(wedge,arc(...q)))result.add(j===next?k:j);
-  }
-  return result;
-}
-
+const openingHeights=([a,b])=>a==='hopClub'||b==='hopClub'?[CLUB_FLOOR,CLUB_CEILING]:[floor,ceiling];
+export const labVisibility=(id,x,z,y=floor)=>portalSight(ports,id,x,z,null,openingHeights,y+1.67);
 export function labCameraMode(p){
   const cell=labCellAt(p.x,p.z,0,p.y);
   if(!cell||p.y>-.24)return 'surface';
@@ -440,7 +418,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
   const staff=labStaff(T,world);
   const lights=Array.from({length:4},()=>{const l=new T.PointLight(0xffffff,0,0,2);l.layers.set(LAB_LAYER);deck.add(l);return l});
   const hemi=new T.HemisphereLight(0xa4b0a7,0x444038,.86);hemi.layers.set(LAB_LAYER);deck.add(hemi);
-  let last='',pathX=Infinity,pathZ=Infinity,preparation,phase=0,dim=1,affected=-1,normalPower=0;
+  let last='',pathX=Infinity,pathY=Infinity,pathZ=Infinity,preparation,phase=0,dim=1,affected=-1,normalPower=0,exitVisible=false;
   function build(id,graphics,rites,lodge){
     const node=new T.Group();node.name='Projekt Bayern · '+cellNames[id];deck.add(node);
     if(id==='chambers')buildChamber(node,graphics);else fitOut(T,node,world,id,materials,graphics,doors,rites,lodge);
@@ -491,7 +469,9 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
   }
   function update(p,opened,dt=0,lodgeShown=false,beat=null){
     const seesHatch=lodgeShown&&!labLower(p.y)&&nearLodgeHatch(p);
-    const id=seesHatch?'southStair':labCellAt(p.x,p.z,.015,p.y)||(opened&&p.x>=LAB_CUT.left-1.4&&p.x<LAB_CUT.left&&p.z>=LAB_CUT.back&&p.z<=LAB_CUT.front?'stairs':null);
+    const seesShelf=opened&&p.y>=-.24&&p.x>=LAB_CUT.left-5&&p.x<=LAB_CUT.right+1&&
+      p.z>=LAB_CUT.back-3&&p.z<=LAB_CUT.front+3;
+    const id=seesHatch?'southStair':seesShelf?'stairs':labCellAt(p.x,p.z,.015,p.y);
     const active=!!id&&(labCameraMode(p)!=='surface'||opened&&id==='stairs'||seesHatch);
     let changed=deck.visible!==active;deck.visible=active;
     if(!active){staff.update(null,p,0);last='';phase=0;dim=1;return changed;}
@@ -502,14 +482,15 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     // One slow brownout on a nearby fixture; no strobe, particles or new lights.
     const strength=unstable.has(id)&&phase>5.55&&phase<6.16
       ?1-.16*Math.sin((phase-5.55)/.61*Math.PI)**2:1;
-    if(id===last&&Math.hypot(pathX-p.x,pathZ-p.z)<.21){
+    if(id===last&&Math.hypot(pathX-p.x,pathY-p.y,pathZ-p.z)<.21){
       if(affected>=0&&strength!==dim){lights[affected].intensity=normalPower*strength;changed=true;}
       dim=strength;
       return changed;
     }
     hemi.intensity=id==='hopClub'?.47:id==='chapel'||id==='southShrine'?.40:id==='infirmary'||id==='southPrivate'?.54:.86;
-    last=id;pathX=p.x;pathZ=p.z;
-    const render=labVisibility(id,p.x,p.z);
+    last=id;pathX=p.x;pathY=p.y;pathZ=p.z;
+    const render=labVisibility(id,p.x,p.z,p.y);
+    exitVisible=render.has('stairs')||render.has('southStair');
     for(const [cell,group] of rooms){const see=render.has(cell);if(group.visible!==see)changed=true;group.visible=see}
     const choices=[...render].flatMap(cell=>(emitters[cell]??[]).map(src=>[src,Math.hypot(p.x-src[0],p.z-src[1])+(cell===id?-.9:2),cell]));
     choices.sort((a,b)=>a[1]-b[1]);
@@ -531,7 +512,8 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     }
     return changed;
   };
-  return {update,target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,takeCue:staff.takeCue,visible:()=>deck.visible,prepare(renderer,scene,shaft){
+  return {update,seesExit:()=>deck.visible&&exitVisible,
+    target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,takeCue:staff.takeCue,visible:()=>deck.visible,prepare(renderer,scene,shaft){
     return preparation??=prewarm(renderer,scene,shaft);
   }};
 }

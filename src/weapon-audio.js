@@ -2,7 +2,7 @@ export const WEAPON_SFX=Object.fromEntries([
   'bow_fire_01','bow_fire_02','bow_fire_03','bow_reload_open','bow_reload_close',
   'shotgun_pump_open','shotgun_pump_close','impact_metal','impact_stone','impact_soft',
   'weapon_equip','weapon_holster','rifle_field_1','rifle_field_2','shotgun_field'
-].map(id=>[id,id+(id.includes('_field')?'.wav':'.mp3')]));
+].map(id=>[id,id+(id.includes('_field')?'.flac':'.mp3')]));
 
 // Compressed data arrives during the loading screen. Decode on first legal
 // audio gesture, keep only decoded PCM, and degrade gracefully when offline.
