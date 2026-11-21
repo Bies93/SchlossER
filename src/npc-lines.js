@@ -3,7 +3,10 @@
 const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
 const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
-  festZwanni:{name:'Zwanni',template:'guestJona',line:"Der Boden fällt nach links ab. Die Scheibe hängt zu weit rechts. An mir liegt’s jedenfalls nicht."},
+  festZwanni:{name:'Zwanni',template:'guestJona',line:'Iiiich bin ein Goooottkönig!',choices:[
+    {label:'Leck mich!'},
+    {label:'Was willst du, Gottkönig?',reply:{clip:'festZwanniEier',line:'Ich brauche Eier zum lutschen!'}}
+  ]},
   festAnni:{name:'Anni · Theke',template:'guestSabine',line:"In Uehlfeld ist besser. Da fragt wenigstens keiner, ob wir das Bier auch warm haben."},
   festKalle:{name:'Kalle · Playlist',template:'clubNiko',line:"Die Playlist läuft auf meinem alten Laptop. Seit da Bier drin ist, spielt er nur noch Stimmungsmusik."},
   festRudi:{name:'Rudi · Schreiber',template:'guestBruno',line:"Der Zwanni wird seit fünfzehn Jahren nicht besser. Aber beim Ausredenwerfen ist er Bezirksmeister."},

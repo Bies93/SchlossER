@@ -34,7 +34,8 @@ export function bindNpcDialogue({element,play,stop,onOpen,onClose,onReply}){
     stop(speech.id);speech.listen?.(false);speech.speakFor?.(0);
     element.close();
     onClose(reason);
-    if(index!==null&&speech.alive?.())onReply(speech,speech.choices[index].reply);
+    const reply=index===null?null:speech.choices[index]?.reply;
+    if(reply&&speech.alive?.())onReply(speech,reply);
   }
   function choose(i){
     if(!conversation||!ready)return;

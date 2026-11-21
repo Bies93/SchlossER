@@ -4,6 +4,7 @@ import {sharedSet} from './surface-detail.js';
 import {contactShadow} from './palace-butler.js';
 import {createHuman} from './human-character.js';
 import {festivalFinishes,festivalFurniture,festivalBar,festivalConsole,festivalDecor} from './festival-furnishings.js';
+import {festivalCanopy} from './festival-canopy.js';
 
 const tau=Math.PI*2;
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -48,31 +49,6 @@ function boardFace(T){
   const map=new T.CanvasTexture(sheet);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;return map;
 }
 
-function letteredPanel(T,root,x,y,z,w,h,word,sub){
-  const paper=document.createElement('canvas');paper.width=1024;paper.height=256;
-  const c=paper.getContext('2d');
-  c.fillStyle='#863742';c.fillRect(0,0,1024,256);
-  for(let i=0;i<6600;i++){
-    c.fillStyle=i%2?'#e6bd8520':'#14150e18';
-    c.fillRect(i*71.7%1024,i*93.1%256,1+i%4,1+i%3);
-  }
-  c.strokeStyle='#ffcf76';c.lineWidth=6;c.setLineDash([13,9]);c.strokeRect(15,15,994,226);c.setLineDash([]);
-  for(const [x,s] of [[76,1],[948,-1]]){
-    c.fillStyle='#f6ab46';c.beginPath();c.arc(x,128,27,0,tau);c.fill();
-    c.fillStyle='#633c55';c.beginPath();c.arc(x,128,15,0,tau);c.fill();
-    c.strokeStyle='#fff0c9';c.lineWidth=5;c.beginPath();c.moveTo(x+6*s,125);c.lineTo(x+32*s,101);c.stroke();
-    c.fillStyle='#68a68c';c.beginPath();c.moveTo(x+26*s,106);c.lineTo(x+41*s,96);c.lineTo(x+41*s,112);c.closePath();c.fill();
-  }
-  c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff2cc';c.font='italic 900 118px system-ui';
-  c.shadowColor='#3d2437';c.shadowOffsetY=7;c.fillText(word,512,104,790);c.shadowOffsetY=0;
-  c.fillStyle='#fbd574';c.font='bold 35px monospace';c.fillText(sub,512,205,800);
-  const map=new T.CanvasTexture(paper);map.colorSpace=T.SRGBColorSpace;map.anisotropy=6;
-  const mesh=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshStandardMaterial({map,roughness:.91,emissive:0xe5bdb2,emissiveMap:map,emissiveIntensity:.12}));
-  mesh.position.set(x,y,z);
-  const back=mesh.clone();back.rotation.y=Math.PI;back.position.z-=.007;
-  root.add(mesh,back);return mesh;
-}
-
 export function addParkFestival(T,scene,world,height){
   const root=new T.Group();root.name="Zwanni's Funny! · Dart-Spinner Uehlfeld";scene.add(root);
   const props=new T.Group();root.add(props);
@@ -81,7 +57,7 @@ export function addParkFestival(T,scene,world,height){
   const m=bergMaterials(T);
   const matte=(color,roughness=.9,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
   const canvas=c=>new T.MeshStandardMaterial({color:c,...sharedSet(T,'canvas',512),side:T.DoubleSide,roughness:.93});
-  m.canvas=canvas(0xffdca3);m.canvasGreen=canvas(0x5f9b83);m.valance=canvas(0x467c69);
+  m.whiteFabric=canvas(0xfffefa);
   m.frame=matte(0x454946,.47,.6);m.galv=matte(0x878781,.54,.60);m.rubber=matte(0x202726);
   m.drivers=matte(0x2f3938,.7,.14);m.led=new T.MeshStandardMaterial({color:0xf4d597,emissive:0xec9741,emissiveIntensity:1.25});
   m.berry=canvas(0xbb4947);m.gold=canvas(0xe5aa53);m.blue=canvas(0x5689b7);
@@ -102,48 +78,13 @@ export function addParkFestival(T,scene,world,height){
     link('galv',[x,2.42,z],[x+inward,2.89,z],.039);pad(x,z,.11);
   }
   for(const x of [-5.94,5.94])B('frame',x,2.96,0,.115,.13,9.61);
-  const roofHeight=u=>4.76-Math.abs(u)*.293;
-  for(let i=0;i<12;i++){
-    const a=-6.19+i*(12.38/12),b=a+12.38/12,key=i%3===1?'canvasGreen':'canvas';
-    for(let j=0;j<8;j++){
-      const l=lerp(a,b,j/8),r=lerp(a,b,(j+1)/8),h=t=>roofHeight(t)-.058*Math.sin((t-a)/(b-a)*Math.PI);
-      face(key,[l,h(l),5.09],[r,h(r),5.09],[r,h(r),-5.09],[l,h(l),-5.09],1.13);
-    }
-    link('valance',[a,roofHeight(a)+.014,-5.1],[a,roofHeight(a)+.014,5.1],.018);
-    link('linen',[a-.027,roofHeight(a)+.012,-5.08],[a-.027,roofHeight(a)+.012,5.08],.009);
-  }
-  for(const z of [-4.80,0,4.80]){
-    for(const s of [-1,1]){
-      link('frame',[s*6.04,2.97,z],[0,4.72,z],.045);
-      link('frame',[s*6.04,2.97,z],[0,3.30,z],.029);
-      for(let i=1;i<4;i++)link('galv',[s*i*1.51,3.30-.083*i,z],[s*(i-1)*1.51,roofHeight((i-1)*1.51)-.10,z],.021);
-    }
-  }
-  // The back gable is sewn in; the entrance gable is deliberately open.
-  for(let i=0;i<16;i++){
-    const a=-6.03+i*.754,b=Math.min(6.03,a+.754),z=-4.91;
-    face(i%4===1?'canvasGreen':'valance',[a,2.89,z],[b,2.89,z],
-      [b,roofHeight(b)-.071,z],[a,roofHeight(a)-.071,z],1.05);
-    link('frame',[a,2.90,z+.014],[a,roofHeight(a)-.080,z+.014],.010);
-  }
-  // All four sides stay open below the valances.
-  for(const x of [-6.19,6.19])for(let i=0;i<16;i++){
-    const a=-5.08+i*.635,b=a+.635,l=2.71+.025*Math.sin(i*1.18);
-    face('valance',[x,2.99,a],[x,2.99,b],[x,l,b],[x,l,a]);
-    link('galv',[x,l+.010,a],[x,l+.010,b],.010);
-  }
-  for(let i=0;i<24;i++){
-    const a=-6.08+.5067*i,b=a+.5067,g=2.745-.039*Math.sin(i*1.85);
-    face(i%4===0?'canvasGreen':'valance',[a,3.01,-4.955],[b,3.01,-4.955],[b,g,-4.95],[a,g,-4.95]);
-  }
-  letteredPanel(T,props,0,3.08,4.88,6.57,1.02,"Zwanni's Funny!",'DART-SPINNER UEHLFELD  ·  BIER & DART');
-  for(const x of [-3.22,3.22])link('galv',[x,3.57,4.88],[x*.91,3.82,4.74],.013);
+  festivalCanopy(T,props,k,m,localY,wall);
   // Lamp chain and pennants sit below the canvas and use no additional light sources.
   for(const z of [3.34,-.60]){
     const chain=x=>2.99+Math.pow(x/6,2)*.56-.25;
     k.tube('frame',[-5.86,-4,-2,0,2,4,5.86].map(x=>[x,chain(x),z]),.012,22,6);
     for(let i=0;i<13;i++){
-      const x=-5.42+i*.90,y=chain(x),key=['berry','gold','blue','linen'][i%4];
+      const x=-5.42+i*.90,y=chain(x),key=['blue','whiteFabric','blue','gold'][i%4];
       k.cyl('iron',x,y-.021,z,.026,.07);k.oval('led',x,y-.080,z,.042,.064,.042);
       if(z>0&&i<12)face(key,[x+.19,y-.005,z],[x+.72,y-.005,z],[x+.465,y-.345,z+.046],[x+.44,y-.345,z+.046],.50);
     }
@@ -208,8 +149,9 @@ export function addParkFestival(T,scene,world,height){
     const rig=createHuman(T,id),actor=rig.actor,ground=height(C.x+x,C.z+z);
     actor.position.set(C.x+x,rig.groundedY(ground),C.z+z);actor.rotation.y=yaw;root.add(actor);
     rig.npcInfo.shadow=contactShadow(T,root,C.x+x,ground+.010,C.z+z,.86,.72);
-    const entry={rig,actor,speech:0,i,time:.72*i,talk:0};
+    const entry={rig,actor,speech:0,i,time:.72*i,talk:0,listening:false,attention:0};
     rig.npcInfo.speak=(d=6.3)=>{entry.speech=d;};
+    if(i===0)rig.npcInfo.listen=on=>{entry.listening=on;};
     // Embroidered club badge and the bartender's tied apron travel with the rig.
     const chest=rig.costumeMount('spine_03'),p=rig.restPoint('spine_03');
     const clothes=carpentry(T,chest,m);
@@ -256,21 +198,24 @@ export function addParkFestival(T,scene,world,height){
     if(!surface||!dt||(p.x-C.x)**2+(p.z-C.z)**2>37**2)return false;
     stepClock+=dt;if(stepClock<1/26)return false;
     const step=stepClock;stepClock=0;
-    if(!cast[0].speech)throwClock+=step;
+    const waiting=cast[0].listening||cast[0].speech>0;
+    const previousPhase=throwClock%12%3.2/3.2;
+    if(!waiting||(previousPhase>=.54&&previousPhase<.65))throwClock+=step;
     const seq=throwClock%12,index=Math.floor(seq/3.2),phase=(seq%3.2)/3.2;
     for(const a of cast){
       if(!a.rig.controllable())continue;
       a.speech=Math.max(0,a.speech-step);a.time+=step;
       a.talk=lerp(a.talk,a.speech>0?1:0,Math.min(1,step*8));
+      a.attention=lerp(a.attention,a.listening||a.speech>0?1:0,Math.min(1,step*6));
       const pTalk=a.talk*(.64+.22*Math.abs(Math.sin(14*a.time)));
       const off=Math.atan2(p.x-a.actor.position.x,p.z-a.actor.position.z)-a.actor.rotation.y;
-      const gaze=a.talk*Math.max(-1.04,Math.min(1.04,Math.atan2(Math.sin(off),Math.cos(off))));
+      const gaze=a.attention*Math.max(-1.04,Math.min(1.04,Math.atan2(Math.sin(off),Math.cos(off))));
       const b=a.time%7.3,r=a.time%14.5,s=playing?a.time%6.7:0;
       a.motion??={clean:0,sip:0,cue:0};
       a.motion.clean=smooth(.52,1.27,b)-smooth(4.32,5.52,b);
       a.motion.sip=smooth(6.04,6.81,r)-smooth(8.09,9.24,r);
       a.motion.cue=smooth(.2,.68,s)-smooth(3.12,5.6,s);
-      a.rig.festivalPose(a.time,a.i,index<3?phase:0,gaze,pTalk,a.motion);
+      a.rig.festivalPose(a.time,a.i,index<3&&!waiting?phase:0,gaze,pTalk,a.motion);
     }
     const ann=cast[1],rudi=cast[3];
     cloth.visible=ann.rig.alive()&&ann.talk<.22&&(ann.motion?.clean??0)>.14;
@@ -286,7 +231,7 @@ export function addParkFestival(T,scene,world,height){
     if(!cast[0].rig.alive()){darts.visible=false;return true;}
     const s=Math.floor(throwClock/12)*3+index;
     if(index===0&&phase<.40)for(const q of thrown)q.visible=false;
-    pencil.visible=index<3&&phase<.54&&cast[0].speech===0;
+    pencil.visible=index<3&&phase<.54&&!waiting;
     if(pencil.visible){hand.getWorldPosition(pencil.position);pencil.rotation.set(.02,cast[0].actor.rotation.y,.14);}
     if(index>=3||phase<.54)return true;
     if(lastThrow!==s){

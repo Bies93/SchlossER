@@ -360,7 +360,7 @@ export function festivalConsole(T,root,k,m,wall,localY){
 
 export function festivalDecor(T,root,k,m,localY){
   const B=k.box,R=k.round;
-  const rand=randomSource(88431), colors=['berry','gold','blue','linen','canvasGreen'];
+  const rand=randomSource(88431), colors=['blue','whiteFabric','berry','whiteFabric','blue'];
   // A second strand crosses the first, dipped near the middle; tails and
   // staccato colour breaks keep it from looking like mass-spawned flags.
   const anchor=[[-5.77,2.88,-3.34],[-3.31,2.71,-2.36],[0,2.55,-1.13],[3.35,2.69,.96],[5.90,3.03,2.63]];
@@ -376,10 +376,10 @@ export function festivalDecor(T,root,k,m,localY){
     if(i%3===0)k.oval('warm',vec.x-.07,vec.y-.040,vec.z,.024,.039,.024);
   }
   // Pleated paper lanterns below the roof, with wire collars and ribbon knots.
-  for(const [i,[x,z,base]] of [[-4.95,2.70,3.07],[-3.03,-.59,3.14],[.27,2.94,3.68],[3.46,-.9,3.32],
+  for(const [i,[x,z,base]] of [[-4.95,2.70,3.07],[-3.03,-.59,3.14],[1.58,2.94,3.68],[3.46,-.9,3.32],
     [4.99,2.52,2.99],[-2.15,-3.44,3.53],[2.95,-3.74,3.43]].entries()){
     const y=base-.54,h=.34+(i%3)*.07,r=.146+(i%3)*.024;
-    const [mat,lit]=i%3===0?['berry','warm']:i%3===1?['clothOne','warm']:['blue','cool'];
+    const [mat,lit]=i%3===1?['whiteFabric','warm']:['blue','cool'];
     k.tube('cable',[[x,y+h,z],[x+.021,base+.24,z+.1]],.009,1,6);
     const profile=[];
     for(let j=0;j<=12;j++){
@@ -426,7 +426,7 @@ export function festivalDecor(T,root,k,m,localY){
     }
   }
   // Rolled-up side weather sheet, attached to the frame with real webbing.
-  k.tube('canvasGreen',[[-6.00,2.88,-4.34],[-6.036,2.878,-2.37],[-6.00,2.884,-.65]],.057,14,10);
+  k.tube('whiteFabric',[[-6.00,2.88,-4.34],[-6.036,2.878,-2.37],[-6.00,2.884,-.65]],.057,14,10);
   for(const Z of [-4.28,-3.29,-2.27,-1.28,-.74]){
     R('linen',-6.00,2.882,Z,.122,.123,.042,.024);
     B('brushed',-5.937,2.831,Z,.018,.031,.039);

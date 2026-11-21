@@ -45,4 +45,13 @@ assert.equal(actions.length,6);
 assert.ok(open('bergFritz'));finish();alive=false;key('KeyJ');assert.equal(actions.length,6);
 assert.ok(!ui.pending()&&!element.isOpen);
 assert.deepEqual(attention.filter(([id])=>id==='niklas'),[['niklas',true],['niklas',false],['niklas',true],['niklas',false]]);
-console.log('Alle sechs Dialogzweige, Intro-Sperre, Abbruch und Audiozuordnung geprüft.');
+alive=true;
+for(const id of ['festZwanni',NPCS.festZwanni.choices[1].reply.clip]){
+  const bytes=await readFile(new URL('../assets/npc-voices/'+NPC_VOICE_FILES[id],import.meta.url));
+  assert.ok(bytes.length>8000&&(bytes.subarray(0,3).toString()==='ID3'||bytes[0]===255&&bytes[1]>=224));
+}
+assert.ok(open('festZwanni'));finish();key('KeyJ');
+assert.equal(actions.length,6);assert.equal(closed.at(-1),'answer');assert.ok(!ui.pending());
+assert.ok(open('festZwanni'));finish();key('KeyN');
+assert.deepEqual(actions.at(-1),['festZwanni','festZwanniEier',undefined]);
+console.log('Acht Dialogzweige, Intro-Sperre, stille Antwort, Abbruch und Audiozuordnung geprüft.');
