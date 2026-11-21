@@ -55,6 +55,7 @@ const GRAPHICS={
  fast:{dpr:1,shadow:1536},normal:{dpr:1.35,shadow:2048},high:{dpr:1.6,shadow:2048}
 };
 function showLoadingStep(index,text){
+ $('loading').dataset.step=index;
  $('loading-text').textContent=text;
  const progress=$('loading-progress');
  progress.style.setProperty('--loaded',String(index/4));
@@ -88,6 +89,7 @@ async function start(){
  r.setPixelRatio(Math.min(devicePixelRatio,GRAPHICS[quality].dpr));
  $('canvas').append(r.domElement);
  const s=new T.Scene(), c=new T.PerspectiveCamera(65,1,.08,1250);
+ showLoadingStep(1,'Ressourcen werden geladen …');
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),tl=new T.TextureLoader();
  const need=async (name,read)=>{
    try{return await read()}catch(cause){const e=new Error('Projektdatei konnte nicht gelesen werden: '+name,{cause});e.asset=name;throw e;}
@@ -98,7 +100,7 @@ async function start(){
  const [model,mapPairs,sculptures,poster,seal,humans]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
    decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal),decode('human-cast.glb',payload.humans)]);
  performance.measure('schlosser: assets',{start:bootTime,end:performance.now()});
- showLoadingStep(1,'Die Spielwelt entsteht …');
+ showLoadingStep(2,'Die Spielwelt wird aufgebaut …');
  await paintLoadingStep();
  installHumans(T,humans);
  for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
@@ -680,7 +682,8 @@ async function start(){
    c.fov=c.userData.baseFov=T.MathUtils.clamp(T.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI*24/180)/c.aspect)),65,82);
    c.updateProjectionMatrix();refresh();
  }
- showLoadingStep(2,'Licht und Materialien …');
+ showLoadingStep(3,'Letzte Vorbereitungen …');
+ await paintLoadingStep();
  const shaderTime=performance.now();
  for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
@@ -693,8 +696,6 @@ async function start(){
  await weather.prepare(r,[puddle.root,garden.orangery]);
  performance.measure('schlosser: Orangerie und Pfütze',{start:parkWarmup,end:performance.now()});
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
- showLoadingStep(3,'Letzte Vorbereitungen …');
- await paintLoadingStep();
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
  const queryTime=performance.now();
  geometryQuery.build();s.matrixWorldAutoUpdate=false;
@@ -704,10 +705,15 @@ async function start(){
  fountain.syncView?.(c);
  const hideFirstShot=viewmodel.showPrewarmShots();
  try{draw();}finally{hideFirstShot();}
+ // Don't schedule another heavy draw underneath the archive's closing stamp.
+ dirty=false;
+ showLoadingStep(4,'Spielbereit');
+ // Only the short hand-off stamp; reduced-motion and background tabs skip it.
+ if(!document.hidden&&!matchMedia('(prefers-reduced-motion: reduce)').matches)
+   await new Promise(resolve=>setTimeout(resolve,225));
+ document.body.dataset.state='ready';
  // Refresh the preview after removing the hidden projectile warm-up.
  refresh();
- showLoadingStep(4,'Spielbereit');
- document.body.dataset.state='ready';
  performance.measure('schlosser: ready',{start:bootTime,end:performance.now()});
 }
 start().catch(err=>{

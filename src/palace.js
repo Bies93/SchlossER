@@ -90,7 +90,7 @@ export function surfaceLibrary(THREE, maps) {
       mat.customProgramCacheKey=()=> 'erl-schloss-sandstein-neutrale-albedo-v2';
     }
     // Reflections follow the selected scene environment. A fixed bright
-    // horizon here would put daylight back into the windows at night.
+    // horizon here would make the windows too bright in moonlight.
     if (key === 'GLASS') {
       mat.envMapIntensity=.91;
       mat.onBeforeCompile=shader=>{

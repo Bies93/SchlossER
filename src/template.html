@@ -76,48 +76,148 @@ main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(-
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 body[data-state=loading] #canvas{visibility:hidden}
 canvas{touch-action:none;outline:none}
-body[data-state=loading] .brand-subtitle{display:none}
-.boot{--gold:#edc481;--line-art:#bf975e70;position:absolute;inset:0;z-index:1;overflow:auto;place-items:center;
-  padding:clamp(11px,3vw,37px) max(clamp(13px,3vw,42px),env(safe-area-inset-right)) max(clamp(12px,3vw,37px),env(safe-area-inset-bottom)) max(clamp(13px,3vw,42px),env(safe-area-inset-left));
-  background:radial-gradient(ellipse at 68% 37%,#233c30 0%,#132620 53%,#0a1714 94%)}
-.boot-frame{position:relative;display:grid;align-items:center;min-height:100%;width:min(100%,1540px);border:1px solid var(--line-art);box-shadow:inset 0 0 0 4px #13251e,inset 0 0 0 5px #bb935d37}
-.boot-frame::before,.boot-frame::after{content:"";position:absolute;pointer-events:none;width:24px;height:24px;border:solid #dcad65}
-.boot-frame::before{top:4px;left:4px;border-width:2px 0 0 2px}
-.boot-frame::after{bottom:4px;right:4px;border-width:0 2px 2px 0}
-.boot-layout{display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.17fr);align-items:center;gap:clamp(18px,4.2vw,70px);padding:clamp(19px,4vw,62px)}
-.boot-copy{min-width:0}
-.boot h1{margin:0;font:italic 500 clamp(53px,8vw,124px)/.9 Georgia,serif;letter-spacing:-.071em;color:#fff0d2}
-.boot h1 span{color:#e5b777}
-.boot-rule{display:flex;align-items:center;gap:12px;width:min(100%,455px);margin:clamp(17px,3.7vh,33px) 0 clamp(20px,5vh,45px);color:var(--gold)}
-.boot-rule::before,.boot-rule::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,#bc935c)}
+body[data-state=loading]{grid-template-rows:minmax(0,1fr)}
+body[data-state=loading]>header{display:none}
+.boot{--gold:#eac482;--cream:#f9e7be;--unit:min(1vw,1.78dvh);--line-art:#b8945e;position:absolute;inset:0;z-index:1;
+  isolation:isolate;overflow:auto;padding:max(9px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right)) max(9px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left));
+  background:#0c211a;color:var(--cream);font-family:Georgia,"Times New Roman",serif}
+.boot-backdrop{position:absolute;z-index:-1;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none}
+.boot-frame{position:relative;display:grid;grid-template-rows:auto 1fr;min-height:100%;border:1px solid var(--line-art);border-radius:16px;
+  box-shadow:inset 0 0 0 4px #0a211ac9,inset 0 0 0 5px #c2a574b5,0 0 24px #09181080}
+.boot-corner{position:absolute;z-index:2;width:17px;height:17px;border:solid var(--gold);border-width:1px 0 0 1px;pointer-events:none;border-radius:6px 0 0}
+.boot-corner:nth-of-type(1){left:4px;top:4px}
+.boot-corner:nth-of-type(2){right:4px;top:4px;transform:rotate(90deg)}
+.boot-corner:nth-of-type(3){right:4px;bottom:4px;transform:rotate(180deg)}
+.boot-corner:nth-of-type(4){left:4px;bottom:4px;transform:rotate(270deg)}
+.boot-masthead{display:flex;align-items:center;gap:clamp(9px,1.26vw,22px);padding:clamp(9px,calc(1.03 * var(--unit)),18px) clamp(17px,3vw,54px);
+  margin-inline:6px;border-bottom:3px double #d3a865c0;background:linear-gradient(90deg,#05140fc9,#0b1c16b8,#05140fa0);
+  font-size:clamp(15px,calc(1.47 * var(--unit)),27px);line-height:1.15}
+.boot-masthead svg,.boot-rule svg,.boot-crest svg{width:clamp(26px,2.75vw,46px);height:auto;flex:none;color:var(--gold)}
+.boot-masthead em{display:inline-block;padding-left:clamp(8px,1.35vw,24px);border-left:1px solid #c5a367;color:var(--gold);
+  font-size:.72em;letter-spacing:.19em;text-transform:uppercase;white-space:nowrap}
+.boot-credit{margin-left:auto;color:var(--gold);white-space:nowrap;font-size:.72em;font-weight:bold;letter-spacing:.18em}
+.boot-credit span,.boot-rule span{color:#dea967;font-size:1.35em}
+.boot-credit span:first-child,.boot-rule span:first-of-type{display:inline-block;transform:scaleX(-1)}
+.boot-layout{width:min(100%,1820px);margin-inline:auto;display:grid;grid-template-columns:minmax(0,.89fr) minmax(0,1.11fr);
+  column-gap:clamp(24px,3.45vw,64px);align-items:start;padding:clamp(15px,calc(2.95 * var(--unit)),54px) clamp(26px,4.3vw,80px) clamp(17px,calc(4.38 * var(--unit)),82px) clamp(34px,5.85vw,105px)}
+.boot-copy{min-width:0;padding-top:clamp(3px,calc(1.6 * var(--unit)),28px)}
+.boot-heading{position:relative;isolation:isolate}
+.boot-heading h1{position:relative;margin:0;color:var(--cream);font:italic 500 clamp(35px,calc(5.35 * var(--unit)),104px)/.94 Georgia,serif;
+  letter-spacing:-.052em;text-shadow:0 3px 9px #0006}
+.boot-heading h1 span{display:block;margin-left:.63em;font-size:.84em;color:#f1c788}
+.boot-stamp{position:absolute;z-index:-1;right:0;top:-43%;width:clamp(78px,calc(12.2 * var(--unit)),218px);aspect-ratio:1;
+  border:4px double #d7ad66;outline:1px solid #bd9a5a9a;outline-offset:3px;border-radius:50%;color:#d2aa62;opacity:.29;transform:rotate(-13deg);
+  display:grid;align-content:center;justify-items:center;gap:6px;font-size:clamp(7px,calc(.93 * var(--unit)),16px);letter-spacing:.13em}
+.boot-stamp svg{width:44%;height:auto}
+.boot-rule{display:flex;align-items:center;gap:clamp(5px,.76vw,13px);margin:clamp(9px,calc(1.65 * var(--unit)),28px) 0 clamp(11px,calc(1.9 * var(--unit)),33px);
+  color:var(--gold);font-size:clamp(12px,calc(1.64 * var(--unit)),27px)}
+.boot-rule svg{width:clamp(49px,calc(5.4 * var(--unit)),98px)}
+.boot-rule::before,.boot-rule::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,#bd8f43,#efc885,#f4db9f)}
 .boot-rule::after{transform:scaleX(-1)}
-.boot-rule svg{width:34px;height:27px;flex:none}
-.boot-status{font:600 clamp(15px,1.45vw,23px)/1.3 Georgia,serif;color:#fff0d2;margin:0 0 12px;min-height:1.3em}
-.boot-bar{position:relative;overflow:hidden;height:clamp(12px,1.22vw,19px);border:1px solid #c8a16b9c;border-radius:20px;background:#0c1a16;box-shadow:0 0 16px #edb85d1c}
-.boot-fill,.boot-sweep{position:absolute;inset:0}
-.boot-fill{background:linear-gradient(90deg,#a8743e,#e6ab57 48%,#fff1b5);transform:scaleX(var(--loaded,0));transform-origin:left;transition:transform .48s ease-out}
-.boot-sweep{width:23%;background:linear-gradient(90deg,transparent,#ffc67e78 57%,#fff6d9 82%,transparent);animation:boot-sweep 1.7s cubic-bezier(.4,0,.55,1) infinite}
-@keyframes boot-sweep{from{transform:translateX(-105%)}to{transform:translateX(440%)}}
-.boot-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:12px 0 0;padding:0;list-style:none;font-size:clamp(9px,.85vw,12px);color:#c4c8b6}
-.boot-steps li{display:flex;align-items:center;gap:clamp(4px,.64vw,10px)}
-.boot-steps li::before{content:"";display:grid;place-items:center;flex:none;width:clamp(10px,1.26vw,18px);aspect-ratio:1;border:1px solid #b7b09280;border-radius:50%;font:11px/1 system-ui}
-.boot-steps li[data-done]::before{content:"✓";border-color:#dfb16b;color:#f4c986}
-.boot-steps li[aria-current=step]{color:#ffdc96}
-.boot-steps li[aria-current=step]::before{border-color:#ffe2a9;background:radial-gradient(circle,#fff0be 0 33%,transparent 39%);box-shadow:0 0 10px #f6ba6070}
-.boot-view{min-width:0;margin:0;padding:5px;border:1px solid var(--gold);outline:1px solid #c09b6a70;outline-offset:4px;
-  border-radius:clamp(10px,2vw,29px) 3px clamp(10px,2vw,29px) 3px;background:#10201a;box-shadow:0 17px 60px #030c0870}
-.boot-view img{display:block;aspect-ratio:3/2;width:100%;height:auto;max-height:59vh;object-fit:cover;border-radius:inherit;background:#534c31}
-@media(max-aspect-ratio:5/6){
-  .boot-layout{grid-template-columns:minmax(0,1fr);justify-items:center;gap:clamp(17px,4vh,35px)}
-  .boot-view{grid-row:1;width:min(100%,490px)}.boot-view img{max-height:43vh}
-  .boot-copy{width:min(100%,450px)}.boot h1{font-size:clamp(48px,14vw,85px);text-align:center}
-  .boot-rule{margin:14px 0 15px}.boot-status{min-height:0}
+.boot-status{font:italic 500 clamp(17px,calc(1.83 * var(--unit)),32px)/1.24 Georgia,serif;
+  margin:0 0 clamp(8px,calc(1.02 * var(--unit)),18px);min-height:1.24em}
+.boot-bar{position:relative;height:clamp(14px,calc(1.48 * var(--unit)),27px);overflow:hidden;border:1px solid #e1ae5e;border-radius:30px;
+  background:#081811;box-shadow:0 0 12px #e9aa4e20,inset 0 1px 6px #000a}
+.boot-fill,.boot-sweep{position:absolute;inset:2px;border-radius:30px}
+.boot-fill{background:linear-gradient(90deg,#b98342,#e9b565 48%,#fff0bd);transform:scaleX(var(--loaded,0));transform-origin:left;
+  transition:transform .40s cubic-bezier(.2,.72,.22,1)}
+.boot-sweep{width:28%;background:linear-gradient(90deg,transparent,#dcad6330 52%,#fff0bf90 76%,transparent);
+  animation:boot-sweep 2.1s cubic-bezier(.44,0,.54,1) infinite}
+@keyframes boot-sweep{from{transform:translateX(-112%)}to{transform:translateX(355%)}}
+.boot-steps{display:grid;grid-template-columns:repeat(4,max-content);justify-content:space-between;gap:5px;margin:clamp(9px,calc(1.05 * var(--unit)),19px) 0 0;padding:0;list-style:none;
+  font-size:clamp(10px,calc(.95 * var(--unit)),17px);color:#e6dec6;line-height:1.16}
+.boot-steps li{display:flex;align-items:center;gap:clamp(4px,.59vw,11px)}
+.boot-steps li::before{content:"";display:grid;place-items:center;flex:none;width:clamp(13px,calc(1.46 * var(--unit)),26px);aspect-ratio:1;
+  border:1px solid #dbb170;border-radius:50%;font:700 clamp(10px,1vw,16px)/1 system-ui}
+.boot-steps li[data-done]::before{content:"✓";color:#ffe0a2}
+.boot-steps li[aria-current=step]{color:#ffe0a2}
+.boot-steps li[aria-current=step]::before{background:radial-gradient(circle,#fff0bd 0 38%,transparent 42%);
+  box-shadow:0 0 12px #ffce709c;animation:boot-current 1.55s ease-in-out infinite alternate}
+@keyframes boot-current{to{opacity:.68;transform:scale(.94)}}
+.boot-controls,.boot-view{--paper:radial-gradient(ellipse at 62% 18%,#fdebc7c0,transparent 53%),radial-gradient(ellipse at 7% 88%,#ad6e4259,transparent 49%),
+  repeating-linear-gradient(104deg,#6940230a 0 1px,transparent 1px 4px),linear-gradient(120deg,#e0bb83,#f0d6a5 45%,#d4aa72)}
+.boot-controls{position:relative;isolation:isolate;margin:clamp(16px,calc(2.8 * var(--unit)),48px) 0 0 clamp(-33px,-2.0vw,-7px);
+  padding:clamp(7px,calc(.96 * var(--unit)),17px) clamp(13px,2.25vw,41px) clamp(8px,calc(1.2 * var(--unit)),22px);color:#1b2419;
+  background:var(--paper);border:1px solid #c49960;border-radius:12px 4px 17px 4px;box-shadow:0 9px 20px #0008}
+.boot-controls::before{content:"";position:absolute;z-index:-1;inset:6px;border:1px solid #87512b7d;border-radius:8px 2px 12px 2px;pointer-events:none}
+.boot-clip{position:absolute;left:4%;top:clamp(-19px,-1.38vw,-10px);width:clamp(12px,1.55vw,26px);height:clamp(29px,3.8vw,63px);
+  transform:rotate(-23deg);border:2px solid #73522b;border-top-color:#e9c68e;border-left-color:#f6d59b;border-radius:18px;box-shadow:1px 2px 3px #150e0a95}
+.boot-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:9px;border-bottom:1px solid #80593580;padding:0 0 clamp(4px,.6vw,10px)}
+.boot-card-head h2{margin:0;font:italic 600 clamp(18px,calc(2.0 * var(--unit)),35px)/1 Georgia,serif}
+.boot-card-head span{font-size:clamp(8px,calc(.76 * var(--unit)),13px);letter-spacing:.11em}
+.boot-keys{display:grid;grid-template-columns:1fr 1fr;gap:clamp(8px,1.3vw,24px);padding-top:clamp(6px,.8vw,14px)}
+.boot-keys dl{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;column-gap:clamp(7px,1.05vw,19px);
+  row-gap:clamp(6px,calc(.85 * var(--unit)),15px);font-size:clamp(13px,calc(1.27 * var(--unit)),23px)}
+.boot-keys dl+dl{border-left:1px solid #7a532c80;padding-left:clamp(7px,1.3vw,23px)}
+.boot-keys dt{white-space:nowrap}
+.boot-keys dd{margin:0}
+.boot-keys kbd{display:inline-block;line-height:1.32;min-width:1.28em;text-align:center;padding:0 .24em;
+  border:1px solid #99713d;border-radius:4px;background:#183326;color:#fff1c7;box-shadow:inset 0 0 0 1px #e5b76c69,0 1px 2px #321e1266}
+.boot-keys kbd+kbd{margin-left:.12em}
+.boot-mouse{display:inline-block;position:relative;width:.86em;height:1.2em;min-height:17px;vertical-align:middle;border:1.5px solid #293528;border-radius:9px;margin-inline:.38em}
+.boot-mouse::before{content:"";position:absolute;left:50%;top:0;width:1px;height:40%;background:#293528}
+.boot-mouse.wheel::after{content:"";position:absolute;left:0;right:0;top:42%;height:1px;background:#293528}
+.boot-seal{position:absolute;width:clamp(56px,calc(8.5 * var(--unit)),147px);height:auto;right:-4.5%;bottom:clamp(-59px,calc(-3.42 * var(--unit)),-20px);
+  pointer-events:none;filter:drop-shadow(0 4px 5px #210a07a3);transform:rotate(-3deg)}
+.boot-view{position:relative;min-width:0;margin:0;padding:clamp(7px,calc(1.0 * var(--unit)),18px);border:4px double #4f3019;
+  outline:2px solid #e1b673;outline-offset:3px;border-radius:clamp(16px,2.6vw,45px);background:var(--paper);color:#243225;
+  box-shadow:0 0 0 6px #0b1e17,0 17px 45px #0009}
+.boot-plate{position:relative;overflow:hidden;border:1px solid #47391c;border-radius:clamp(8px,1.45vw,24px);background:#715534}
+.boot-plate img{display:block;width:100%;height:auto;aspect-ratio:1.54;max-height:57dvh;object-fit:cover}
+.boot-plate small{position:absolute;top:4%;right:3%;color:#2d2819;font:italic clamp(9px,1.0vw,17px)/1.15 Georgia,serif;letter-spacing:.15em;text-shadow:0 0 4px #fbe2ab}
+.boot-plate::after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,transparent 39%,#fff1b326 50%,transparent 60%);
+  transform:translateX(-110%);animation:boot-etch 1.5s .27s ease-out 1;pointer-events:none}
+@keyframes boot-etch{to{transform:translateX(110%)}}
+.boot-view figcaption{position:relative;display:grid;justify-items:center;gap:4px;padding:clamp(7px,.9vw,15px) clamp(24px,3.4vw,60px) 1px;text-align:center}
+.boot-view figcaption strong{font-weight:600;font-size:clamp(11px,calc(1.11 * var(--unit)),19px);letter-spacing:.27em;line-height:1.16}
+.boot-view figcaption em{font-size:clamp(9px,calc(.98 * var(--unit)),17px);border-top:1px solid #9b7448aa;padding-top:4px}
+.boot-crest{position:absolute;right:0;bottom:2px;display:grid;width:clamp(23px,3.2vw,55px);aspect-ratio:1;place-items:center;color:#4c3e27;
+  border:3px double #7a5b33;border-radius:40% 40% 50% 50%;transform:rotate(7deg)}
+.boot-crest svg{width:77%;color:inherit}
+.boot-catalogue{position:absolute;right:2.2%;bottom:1.15%;color:#312b1a;font-size:clamp(9px,calc(1.0 * var(--unit)),17px);line-height:1.3;transform:rotate(-6deg);
+  border-block:1px solid #8a683b95;padding:5px 8px;background:#e8c799c9;pointer-events:none}
+.boot[data-step="4"] .boot-fill{transition-duration:.14s}
+.boot[data-step="4"] .boot-seal{animation:boot-stamp .225s ease-out both}
+@keyframes boot-stamp{from{transform:rotate(-3deg) scale(1.10)}65%{transform:rotate(-5deg) scale(.975)}to{transform:rotate(-3deg) scale(1)}}
+@media(max-aspect-ratio:1/1){
+  .boot-backdrop{object-position:48% 50%}
+  .boot-layout{grid-template-columns:minmax(0,1fr);justify-items:center;gap:clamp(15px,3vh,26px);padding:17px clamp(15px,5.0vw,45px) 36px}
+  .boot-copy{display:contents}
+  .boot-heading,.boot-progress,.boot-controls,.boot-view{width:min(100%,530px)}
+  .boot-heading{text-align:center;grid-row:1}
+  .boot-heading h1{font-size:clamp(33px,10.4vw,67px)}
+  .boot-heading h1 span{display:inline;margin-left:.21em;white-space:nowrap}
+  .boot-stamp{display:none}
+  .boot-view{grid-row:2}.boot-plate img{max-height:32dvh}.boot-view figcaption em{font-size:10px}
+  .boot-progress{grid-row:3}.boot-rule{margin:0 0 7px}.boot-rule svg{width:35px}
+  .boot-controls{grid-row:4;margin:0;padding-inline:17px}
+  .boot-clip{left:auto;right:9%}.boot-seal{right:-1.5%;bottom:-25px}
+  .boot-catalogue{display:none}
 }
-@media(max-height:420px) and (min-aspect-ratio:5/6){
-  .boot{padding-block:8px}.boot-layout{padding-block:12px}.boot h1{font-size:clamp(36px,9vw,60px)}
-  .boot-rule{margin:7px 0 9px}.boot-status{margin-bottom:6px}.boot-steps{margin-top:8px}.boot-view img{max-height:62vh}
+@media(max-width:450px){
+  .boot-masthead{gap:7px;padding-inline:8px}
+  .boot-masthead em{letter-spacing:.10em;padding-left:7px}
+  .boot-credit span{display:none}.boot-credit{letter-spacing:.10em}
+  .boot-heading h1 span{display:block;margin-left:0;font-size:.75em}
+  .boot-steps{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;font-size:9px}
+  .boot-steps li{gap:3px}.boot-controls .boot-card-head span{display:none}
 }
-@media(prefers-reduced-motion:reduce){.boot-sweep{display:none;animation:none}.boot-fill{transition:none}}
+@media(max-height:450px) and (min-aspect-ratio:1/1){
+  .boot-layout{padding-block:9px 10px}.boot-masthead{padding-block:7px}
+  .boot-heading h1{font-size:clamp(26px,calc(5.7 * var(--unit)),52px)}
+  .boot-status{font-size:14px}.boot-rule{margin:5px 0 7px}.boot-rule svg{width:40px}
+  .boot-steps{grid-template-columns:repeat(4,minmax(0,1fr));font-size:9px}
+  .boot-controls{margin-top:9px;padding-block:6px}.boot-card-head span{display:none}
+  .boot-mobile{margin-block:6px;font-size:12px;line-height:1.2}.boot-seal{width:52px;bottom:-19px}
+  .boot-keys{padding-top:4px}.boot-keys dl{font-size:11px;row-gap:4px}.boot-mouse{min-height:13px}
+  .boot-plate img{max-height:54dvh}.boot-catalogue{display:none}
+}
+@media(pointer:coarse){.boot-controls .boot-desktop{display:none}.boot-controls .boot-mobile{display:block}}
+@media(pointer:fine){.boot-mobile{display:none}}
+@media(prefers-reduced-motion:reduce){
+  .boot-sweep,.boot-plate::after{display:none}.boot-fill{transition:none}
+  .boot-steps li[aria-current=step]::before,.boot[data-step="4"] .boot-seal{animation:none}
+}
 #upper-flash{position:absolute;inset:0;z-index:6;opacity:0;background:#fff;pointer-events:none}
 #berg-fade{position:absolute;inset:0;z-index:6;opacity:0;background:#0d2427;pointer-events:none}
 .panel{position:absolute;left:max(clamp(12px,4vw,60px),env(safe-area-inset-left));bottom:calc(clamp(12px,5vh,58px) + env(safe-area-inset-bottom));width:min(440px,calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))));
@@ -126,7 +226,7 @@ body[data-state=loading] .brand-subtitle{display:none}
 .panel h1,.panel h2,dialog h2{margin:0;font:normal clamp(26px,4vw,40px)/1.05 Georgia,serif;letter-spacing:-.035em}
 .panel p:not(.eyebrow),dialog p{margin:10px 0;color:var(--muted)}
 .actions{flex-wrap:wrap;margin-top:15px}
-.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.30fr) minmax(0,.86fr);gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
+.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
 .light-switch legend{padding:0 5px;color:var(--muted);font-size:11px;letter-spacing:.08em}
 .light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
 .light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
@@ -198,24 +298,63 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
   <div id="upper-flash" aria-hidden="true"></div>
   <div id="berg-fade" aria-hidden="true"></div>
   <button class="tool" id="pause" type="button" aria-label="Spiel pausieren" title="Pause">Ⅱ</button>
-  <section class="boot" id="loading" aria-labelledby="loading-title">
+  <section class="boot" id="loading" data-step="0" aria-labelledby="loading-title">
+    <img class="boot-backdrop" src="__BOOT_DESK__" alt="" decoding="async" fetchpriority="low">
     <div class="boot-frame">
+      <i class="boot-corner" aria-hidden="true"></i><i class="boot-corner" aria-hidden="true"></i>
+      <i class="boot-corner" aria-hidden="true"></i><i class="boot-corner" aria-hidden="true"></i>
+      <div class="boot-masthead">
+        <svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.45" aria-hidden="true"><path id="boot-palace-icon" d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg>
+        <span>Schloss von Erlangen</span><em>aber seltsam</em>
+        <div class="boot-credit"><span aria-hidden="true">❧</span> BIES <span aria-hidden="true">❧</span></div>
+      </div>
       <div class="boot-layout">
         <div class="boot-copy">
-          <h1 id="loading-title">Schloss<span>ER</span></h1>
-          <div class="boot-rule" aria-hidden="true"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg></div>
-          <p class="boot-status" id="loading-text" role="status">Spieldateien werden geladen …</p>
-          <div class="boot-bar" id="loading-progress" role="progressbar" aria-label="Ladefortschritt" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" aria-valuetext="Spieldateien werden geladen …">
-            <span class="boot-fill" aria-hidden="true"></span><span class="boot-sweep" aria-hidden="true"></span>
+          <div class="boot-heading">
+            <div class="boot-stamp" aria-hidden="true">
+              <span>SCHLOSS ERLANGEN</span>
+              <svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.15"><use href="#boot-palace-icon"/></svg>
+              <span>MDCCXLIII</span>
+            </div>
+            <h1 id="loading-title">Schloss Erlangen <span>by Bies</span></h1>
           </div>
-          <ol class="boot-steps" id="loading-steps" aria-hidden="true">
-            <li aria-current="step">Dateien</li><li>Aufbau</li><li>Licht</li><li>Abschluss</li>
-          </ol>
+          <div class="boot-progress">
+            <div class="boot-rule" aria-hidden="true">
+              <span>❧</span><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.45"><use href="#boot-palace-icon"/></svg><span>❧</span>
+            </div>
+            <p class="boot-status" id="loading-text" role="status">Spieldateien werden geprüft …</p>
+            <div class="boot-bar" id="loading-progress" role="progressbar" aria-label="Ladefortschritt"
+              aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" aria-valuetext="Spieldateien werden geprüft …">
+              <span class="boot-fill" aria-hidden="true"></span><span class="boot-sweep" aria-hidden="true"></span>
+            </div>
+            <ol class="boot-steps" id="loading-steps" aria-hidden="true">
+              <li aria-current="step">Dateien prüfen</li><li>Ressourcen laden</li><li>Welt aufbauen</li><li>Bereitstellen</li>
+            </ol>
+          </div>
+          <section class="boot-controls" aria-labelledby="boot-controls-title">
+            <i class="boot-clip" aria-hidden="true"></i>
+            <div class="boot-card-head"><h2 id="boot-controls-title">Steuerung</h2><span>KURZBEFEHLE · SPIEL</span><span>Kat.-Nr. <i>E–1743</i></span></div>
+            <div class="boot-keys boot-desktop">
+              <dl><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Gehen</dd>
+                <dt><span class="boot-mouse" aria-hidden="true"></span><i>Maus</i></dt><dd>Umsehen</dd>
+                <dt><kbd>Shift</kbd></dt><dd>Sprint</dd></dl>
+              <dl><dt><kbd>E</kbd></dt><dd>Interagieren</dd>
+                <dt><span class="boot-mouse wheel" aria-hidden="true"></span><i>Mausrad</i></dt><dd>Waffen</dd>
+                <dt><kbd>Esc</kbd></dt><dd>Pause</dd></dl>
+            </div>
+            <p class="boot-mobile">Links gehen · Rechts umsehen · Symbole antippen</p>
+            <img class="boot-seal" src="__BOOT_SEAL__" alt="" decoding="async" fetchpriority="low">
+          </section>
         </div>
         <figure class="boot-view">
-          <img src="__BOOT_ART__" width="1080" height="720" alt="Schloss Erlangen als Kupferstich" decoding="async" fetchpriority="low">
+          <div class="boot-plate"><img src="__BOOT_ART__" width="1080" height="720" alt="Schloss Erlangen als stilisierter Kupferstich" decoding="async" fetchpriority="low"><small aria-hidden="true">TAB. I</small></div>
+          <figcaption>
+            <strong>SCHLOSS ERLANGEN</strong><em>Schlossplatz · Tafel aus dem Spielarchiv</em>
+            <span class="boot-crest" aria-hidden="true"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.65"><use href="#boot-palace-icon"/></svg></span>
+          </figcaption>
         </figure>
       </div>
+      <div class="boot-catalogue" aria-hidden="true"><i>Archivblatt</i> &ensp; Signatur: SchErl / 12° / 1840</div>
     </div>
   </section>
   <section class="panel" id="overlay" aria-label="Spielmenü">
@@ -227,8 +366,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <label class="ghoul-option"><input id="with-ghouls" type="checkbox"> Mit Ghouls?</label>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
-      <button type="button" data-light="day" aria-pressed="false">Tageslicht</button>
-      <button type="button" data-light="dusk" aria-pressed="true">Sonnenuntergang</button>
+      <button type="button" data-light="dusk" aria-pressed="true">Abendsonne</button>
       <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
     </fieldset>
     <label class="quality-switch">Grafikqualität
