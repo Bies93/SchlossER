@@ -1,6 +1,7 @@
 import {WEATHER_ZERO as W,suspicionNote,suspicionTick} from './berg-layout.js';
 import {bergMaterials,carpentry,storyCard} from './berg-props.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {warmRoom} from './warm-room.js';
 
 export function addWeatherZero(T,scene,world,heightAt,audio){
   const g=new T.Group(),ground=heightAt(W.x,W.z);g.name='Wetterstation 0 · Amt für Restzweifel';
@@ -98,7 +99,18 @@ export function addWeatherZero(T,scene,world,heightAt,audio){
       v=p.y+1.67+reach*look.y-ground;
     return Math.abs(u)<.53&&v>1.0&&v<1.71;
   }
-  return {update(dt,p,look,surface){
+  return {async prepare(r,neighbors){
+    const camera=new T.PerspectiveCamera(65,1,.08,100);
+    camera.position.set(W.x+normal.x*5,ground+1.67,W.z+normal.z*5);
+    camera.lookAt(W.x,ground+1.3,W.z);
+    const lights=[];
+    scene.traverseVisible(o=>{if(o.isLight&&o.layers.test(camera.layers))lights.push(o);});
+    const wasVisible=fiche.visible;
+    try{
+      fiche.visible=true;
+      await warmRoom(T,r,scene,camera,[g,...neighbors],{lights});
+    }finally{fiche.visible=wasVisible;}
+  },update(dt,p,look,surface){
     const old=value,prev=receipt;
     const far=(p.x-W.x)**2+(p.z-W.z)**2>6.5**2;
     if(!printed)value=suspicionTick(value,dt,surface&&facing(p,look));

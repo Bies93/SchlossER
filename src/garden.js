@@ -160,11 +160,11 @@ export function addGarden(T, scene, world, finish) {
   const verge=addPathVerge(T,group,network,terrain.height,(x,z)=>!noBergProps(x,z,.34)&&!beds.atBed(x,z,.14)&&
     !chapterContains(CHAPTER_CUT,x,z,.35)&&!monumentClear(x,z,.20)&&!parkFacadeClearance(x,z,.15));
   const bench=addBenches(T,group,world,terrain.height);
-  addOrangery(T,group,world,finish);
+  const orangery=addOrangery(T,group,world,finish);
   addParkArchitecture(T,group,world,finish);
   addParkMonuments(T,group,world,terrain.height,finish);
   return {
-    floors,bench,benchCover, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
+    floors,bench,benchCover,orangery, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
     surfaceAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?(network.edge(x,z)<.17?'gravel':'lawn'):approaches.surfaceAt(x,z),
     update:(position,time,quality)=>{plants(position,time,quality);flowers(position,quality);verge(position)}
   };

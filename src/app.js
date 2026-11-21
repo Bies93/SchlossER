@@ -669,6 +669,10 @@ async function start(){
  await chapter.prepare(r);
  await upper.prepare(r);
  await viewmodel.prepare(r);
+ const parkWarmup=performance.now();
+ await puddle.prepare(r);
+ await weather.prepare(r,[puddle.root,garden.orangery]);
+ performance.measure('schlosser: Orangerie und Pfütze',{start:parkWarmup,end:performance.now()});
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
  showLoadingStep(3,'Letzte Vorbereitungen …');
  await paintLoadingStep();

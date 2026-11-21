@@ -1,6 +1,7 @@
 import {BERG_POOL as P,BERG_CHAIRS,BERG_LAYER,BERG_FLOOR as F,bergInside} from './berg-layout.js';
 import {bergArrival,bergReturn} from './berg-tavern.js';
 import {bergMaterials,carpentry,storyCard} from './berg-props.js';
+import {warmRoom} from './warm-room.js';
 
 export function addBergPuddle(T,scene,world,heightAt,tavern){
   const surface=new T.Group();surface.name='Orangerie · Pfütze und aufgegebener Ausschank';scene.add(surface);
@@ -59,7 +60,13 @@ export function addBergPuddle(T,scene,world,heightAt,tavern){
   const previewCam=new T.PerspectiveCamera(45,1.5,.10,30),frustum=new T.Frustum(),vp=new T.Matrix4();
   previewCam.layers.set(BERG_LAYER);
   const previewBounds=new T.Box3(new T.Vector3(P.x-P.rx,y-.2,P.z-P.rz),new T.Vector3(P.x+P.rx,y+.23,P.z+P.rz));
-  let targetTexture,near=false,lastFrame=-Infinity;
+  const targetTexture=new T.WebGLRenderTarget(360,240,{depthBuffer:true});
+  material.uniforms.mirror.value=targetTexture.texture;
+  let prepared=false,near=false,lastFrame=-Infinity;
+  function aimPreview(x=0){
+    previewCam.position.set(P.x+x,F+2.22,P.z+3.68);
+    previewCam.lookAt(P.x+x*.14,F+1.47,P.z-2.23);
+  }
   function inView(c){
     c.updateWorldMatrix(true,false);frustum.setFromProjectionMatrix(vp.multiplyMatrices(c.projectionMatrix,c.matrixWorldInverse));
     return frustum.intersectsBox(previewBounds);
@@ -70,10 +77,16 @@ export function addBergPuddle(T,scene,world,heightAt,tavern){
     const dx=x-p.x,dy=Y-(p.y+1.67),dz=z-p.z,d=Math.hypot(dx,dy,dz);
     return d<h&&(dx*look.x+dy*look.y+dz*look.z)>d*dot;
   }
-  return {update(dt,p,surfaceLayer,c,beat=null){
+  return {root:surface,async prepare(r){
+    aimPreview();
+    // The linear texture pass and the tone-mapped room use different GPU programs.
+    await warmRoom(T,r,scene,previewCam,[tavern.root],{target:targetTexture});
+    await warmRoom(T,r,scene,previewCam,[tavern.root]);
+    prepared=true;
+  },update(dt,p,surfaceLayer,c,beat=null){
     const inside=bergInside(p);tavern.root.visible=inside;
     const close=surfaceLayer&&(p.x-P.x)**2+(p.z-P.z)**2<16**2&&(!c||inView(c));
-    if(close!==near){near=close;material.uniforms.shown.value=near&&targetTexture?1:0;}
+    if(close!==near){near=close;material.uniforms.shown.value=near&&prepared?1:0;}
     const anim=inside?tavern.animate(dt,p,false,beat):near&&tavern.animate(dt,p,true);
     if(near){
       material.uniforms.clock.value+=dt;
@@ -81,13 +94,10 @@ export function addBergPuddle(T,scene,world,heightAt,tavern){
     }
     return anim||near;
   },preview(r,c,p,now){
-    if(!near||now-lastFrame<77)return;
+    if(!prepared||!near||now-lastFrame<77)return;
     if(!inView(c))return;
     lastFrame=now;
-    targetTexture??=new T.WebGLRenderTarget(360,240,{depthBuffer:true});
-    material.uniforms.mirror.value=targetTexture.texture;material.uniforms.shown.value=1;
-    const x=Math.max(-.84,Math.min(.84,(p.x-P.x)*.26));
-    previewCam.position.set(P.x+x,F+2.22,P.z+3.68);previewCam.lookAt(P.x+x*.14,F+1.47,P.z-2.23);
+    aimPreview(Math.max(-.84,Math.min(.84,(p.x-P.x)*.26)));
     const clear=r.autoClear,previous=r.getRenderTarget(),shadow=r.shadowMap.autoUpdate,needs=r.shadowMap.needsUpdate;
     const prior=tavern.root.visible;
     try{
