@@ -100,10 +100,9 @@ async function start(){
  for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
  const exterior=palaceExterior(T,finish);
- const walkSurfaces=[], importedGravel=[];
+ const walkSurfaces=[];
  model.traverse(o=>{if(!o.isMesh)return;const key=o.material.name??'';o.material=exterior(key)??o.material;
  // The original broad lawn and plaza are replaced rather than overlaid.
- if(key==='GRAVEL')importedGravel.push(o);
  if(key==='GROUND'||key==='GRASS'||key==='GRAVEL'||key.startsWith('FLOWER_')){o.visible=false;o.userData.noSceneQuery=true;return;}
  o.receiveShadow=true;o.castShadow=key!=='GLASS';});s.add(model);
  renewPalaceRoof(T,model,finish);
@@ -131,7 +130,7 @@ async function start(){
  const perimeter=addPerimeter(T,s,world,finish);
  const wc=addParkStair(T,s,world,moosfunk);
  walkSurfaces.push(...perimeter.floors);
- const garden=addGarden(T,s,world,importedGravel,finish);
+ const garden=addGarden(T,s,world,finish);
  chapter=addChapter(T,s,world,garden);
  walkSurfaces.push(...garden.floors);
  const backdrop=addBackdrop(T,s),{ground}=backdrop;
@@ -613,7 +612,7 @@ async function start(){
  }
  let last=DEFAULT_LIGHT;
  try{last=localStorage.getItem('schlosser.light')||DEFAULT_LIGHT}catch{}
- // Visitors with the retired setting fall back to sunset.
+ // Unknown saved settings from older builds fall back to sunset.
  if(!selectLight(last))selectLight(DEFAULT_LIGHT,true);
  for(const b of choices)b.onclick=()=>{if(selectLight(b.dataset.light,true))refresh()};
  qualityControl.onchange=()=>{

@@ -120,7 +120,7 @@ canvas{touch-action:none;outline:none}
 .panel h1,.panel h2,dialog h2{margin:0;font:normal clamp(26px,4vw,40px)/1.05 Georgia,serif;letter-spacing:-.035em}
 .panel p:not(.eyebrow),dialog p{margin:10px 0;color:var(--muted)}
 .actions{flex-wrap:wrap;margin-top:15px}
-.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
+.light-switch{margin:15px 0 0;padding:7px;display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.30fr) minmax(0,.86fr);gap:4px;border:1px solid var(--line);border-radius:7px;min-width:0}
 .light-switch legend{padding:0 5px;color:var(--muted);font-size:11px;letter-spacing:.08em}
 .light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
 .light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
@@ -263,6 +263,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <label class="ghoul-option"><input id="with-ghouls" type="checkbox"> Mit Ghouls?</label>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
+      <button type="button" data-light="day" aria-pressed="false">Tageslicht</button>
       <button type="button" data-light="dusk" aria-pressed="true">Sonnenuntergang</button>
       <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
     </fieldset>
@@ -285,6 +286,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <details id="credits">
       <summary>Quellen &amp; Lizenzen</summary>
       <p>Parkwege und Lagepunkte © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbilder: Reinhold Möller (CC BY-SA 4.0).</p>
+      <p>Schlossgarten-Referenzen: <a href="https://kommais.wisski.data.fau.de/wisski/navigate/2908/view">FAU / kommais</a> und <a href="https://kunstguide.erlangen.de/kuenstler/johann-baptist-mantel/delphin-bruennlein/">Kunstguide Erlangen</a>. Die Modelle sind eigenständige Annäherungen.</p>
       <p><a href="https://opengameart.org/content/gunshot-sounds">„Gunshot Sounds“</a>: Vincent Sevedge, gekürzte und abgemischte Aufnahmen, <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. Weitere Ton- und Modellcredits stehen im Ordner <code>licenses</code>.</p>
       <p><a href="https://www.nps.gov/subjects/sound/sounds-common-raven.htm">Kolkrabenruf aus dem Grand Teton National Park</a>: U.S. National Park Service (in den USA gemeinfrei).</p>
       <p>„Der letzte Walzer“: eigener Wirtshaus-Loop mit <a href="https://freepats.zenvoid.org/Organ/accordion.html">Button Accordion HN</a> von FreePats (Aufnahmen: Jeff Stauffer; Samples: CC0 1.0).</p>

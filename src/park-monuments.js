@@ -1,5 +1,6 @@
 import {architectureKit} from './architecture-kit.js';
 import {ageMasonry} from './surface-detail.js';
+import {SCHREBER,DELPHIN} from './park-plan.js';
 
 // OSM 568556985, 566152987; compressed scene coordinates. These also
 // define planting exclusions for the gravel apron and monument clearing.
@@ -7,7 +8,9 @@ export const RUECKERT=[14.7,-119.4];
 export const REITER=[-6.15,-164.1];
 export function monumentClear(x,z,pad=0){
   return Math.hypot(x-RUECKERT[0],z-RUECKERT[1])<2.45+pad||
-    Math.hypot(x-REITER[0],z-REITER[1])<3.2+pad;
+    Math.hypot(x-REITER[0],z-REITER[1])<3.2+pad||
+    Math.hypot(x-SCHREBER[0],z-SCHREBER[1])<1.54+pad||
+    Math.hypot((x-DELPHIN[0])*.70,z-DELPHIN[1])<3.15+pad;
 }
 
 export function addParkMonuments(T,root,world,height,finish){
@@ -162,6 +165,109 @@ export function addParkMonuments(T,root,world,height,finish){
     ball(kit,'sculpture',p,.40,2.83,.348,.198,.202,.14,-.18);
     ball(kit,'sculpture',p,-.35,2.78,-.342,.154,.193,.127,.37);
     world.box(REITER[0]-1.52,REITER[1]-1.93,REITER[0]+1.52,REITER[1]+1.93);
+  });
+  // FAU's Schreber photo: short urn-like shaft, high inscription block and
+  // darker stepped plinth. This model does not embed the source photograph.
+  show('Schrebersäule · verwittertes Postament', (kit,g)=>{
+    const yaw=.31-Math.PI,p=frame(...SCHREBER,-yaw);
+    for(const [r,y,Y] of [[.71,-.046,.081],[.645,.081,.185],[.571,.185,.296],[.501,.296,.962],[.567,.962,1.052],[.604,1.052,1.133]])
+      kit.box(y===.296?'sculpture':'dressed',p,-r,r,y,Y,-r,r);
+    const v=new T.LatheGeometry([[.353,1.133],[.373,1.178],[.349,1.217],[.312,1.252],[.271,1.294],
+      [.290,1.394],[.289,1.740],[.262,1.833],[.249,1.887],[.210,1.952],[.129,1.995],[0,2.010]]
+      .map(([x,y])=>new T.Vector2(x,y)),28);
+    kit.geometry('sculpture',v,matrix.makeRotationY(yaw).setPosition(...p(0,0,0)));v.dispose();
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=352;
+    const ctx=canvas.getContext('2d');ctx.clearRect(0,0,512,352);ctx.textAlign='center';
+    const words=['JOHANN CHRISTIAN','VON SCHREBER','1739 – 1810','BOTANIKER'];
+    words.forEach((line,i)=>{
+      ctx.font=(i<2?'bold 43':'32')+'px Georgia';ctx.fillStyle='#d0bd91b8';ctx.fillText(line,256,79+i*66,455);
+      ctx.fillStyle='#4b4337d8';ctx.fillText(line,255,77+i*66,455);
+    });
+    const labelTex=new T.CanvasTexture(canvas);labelTex.colorSpace=T.SRGBColorSpace;labelTex.anisotropy=4;
+    const label=new T.Mesh(new T.PlaneGeometry(.81,.54),new T.MeshStandardMaterial({
+      map:labelTex,transparent:true,depthWrite:false,roughness:.97
+    }));
+    label.rotation.y=yaw;label.position.set(...p(0,.654,.503));label.receiveShadow=true;label.userData.noSceneQuery=true;g.add(label);
+    world.circle(...SCHREBER,.72);
+  });
+  // Oval limestone rim around the small dolphin and horn-bearing putto.
+  show('Delphin-Brünnlein · ovales Steinbecken',(kit,g)=>{
+    const p=frame(...DELPHIN,0),rx=3.16,rz=2.36,N=72,profile=[
+      [1.035,-.03],[1.041,.10],[1.012,.137],[1.013,.334],[1.036,.376],[1.030,.438],
+      [1.008,.466],[.951,.471],[.921,.423],[.931,.251],[.887,.195]
+    ];
+    for(let j=0;j<N;j++){
+      const a=Math.PI*2*j/N,b=Math.PI*2*(j+1)/N;
+      const pt=(r,y,t,dr=0)=>p(rx*(r+dr)*Math.cos(t),y+(Math.cos(t*9.0)*.004),rz*(r+dr)*Math.sin(t));
+      for(let k=1;k<profile.length;k++){
+        const [r,y]=profile[k-1],[s,Y]=profile[k];
+        const seam=j%6===0?.003:0;
+        kit.quad(k>8?'darker':k%5===1?'sculpture':'dressed',pt(s,Y,a+seam),pt(s,Y,b-.001),pt(r,y,b-.001),pt(r,y,a+seam),1.25,j*.219);
+      }
+    }
+    const disk=new T.CircleGeometry(1,72);disk.rotateX(-Math.PI*.5);disk.scale(rx*.929,1,rz*.929);
+    const pool=new T.Mesh(disk,water);pool.position.set(...p(0,.288,0));pool.receiveShadow=true;pool.userData.noSceneQuery=true;g.add(pool);
+    const stoneChip=new T.IcosahedronGeometry(1,1);
+    for(let i=0;i<12;i++){
+      const a=i*2.399,rad=.28+.41*(i/11);
+      matrix.makeRotationY(a);matrix.scale(scale.set(.41+i%3*.044,.31+i%4*.072,.42+i%5*.031));
+      matrix.setPosition(...p(Math.cos(a)*rad,.38+(i%3)*.035,Math.sin(a)*rad));
+      kit.geometry(i%4?'sculpture':'darker',stoneChip,matrix);
+    }
+    stoneChip.dispose();
+    function form(stations,key='sculpture',sides=11){
+      const knots=stations.map(a=>new T.Vector3(...a.slice(0,3))),path=new T.CatmullRomCurve3(knots);
+      const frame=path.computeFrenetFrames(stations.length*5,false),n=frame.normals.length-1;
+      const pos=[],uv=[],ids=[];
+      for(let j=0;j<=n;j++){
+        const t=j/n,axis=path.getPointAt(t),v=t*(stations.length-1),i=Math.min(Math.floor(v),stations.length-2);
+        const ra=T.MathUtils.lerp(stations[i][3],stations[i+1][3],v-i),rb=T.MathUtils.lerp(stations[i][4],stations[i+1][4],v-i);
+        for(let k=0;k<=sides;k++){
+          const a=k/sides*Math.PI*2,w=axis.clone().addScaledVector(frame.normals[j],Math.cos(a)*ra)
+            .addScaledVector(frame.binormals[j],Math.sin(a)*rb);
+          pos.push(...p(w.x,w.y,w.z));uv.push(k/sides,t*1.9);
+          if(j&&k){const c=j*(sides+1)+k,u=c-sides-1;ids.push(u-1,u,c,u-1,c,c-1);}
+        }
+      }
+      const mesh=new T.BufferGeometry();mesh.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+      mesh.setAttribute('uv',new T.Float32BufferAttribute(uv,2));mesh.setIndex(ids);mesh.computeVertexNormals();
+      kit.geometry(key,mesh,matrix.identity());mesh.dispose();
+    }
+    // Curved fish body, gaping stone jaw, thick tail and a seated figure.
+    form([[.72,.59,0,.06,.12],[.46,.72,0,.31,.28],[.03,.85,0,.30,.32],[-.38,.96,0,.22,.23],
+      [-.66,1.16,0,.131,.15],[-.72,1.46,0,.068,.09],[-.53,1.61,0,.025,.047]]);
+    ball(kit,'sculpture',p,.57,.688,.038,.238,.179,.24);
+    ball(kit,'darker',p,.765,.641,.06,.045,.071,.143,.27);
+    form([[.51,.54,0,.091,.138],[.69,.526,.006,.068,.12],[.83,.60,.009,.012,.048]],'dressed',8);
+    for(const a of [-1,1]){
+      form([[-.648,1.47,0,.089,.059],[-.595,1.57,a*.154,.080,.04],[-.51,1.54,a*.303,.011,.02]],'dressed',8);
+      form([[.21,.809,a*.105,.086,.049],[.12,.733,a*.25,.061,.041],[-.036,.641,a*.355,.012,.016]],'dressed',8);
+      ball(kit,'darker',p,.478,.790,a*.20,.047,.034,.017);
+    }
+    ball(kit,'sculpture',p,.010,1.220,0,.178,.315,.155,-.195);
+    ball(kit,'dressed',p,.090,1.543,.006,.156,.171,.145,-.14);
+    ball(kit,'sculpture',p,.194,1.538,.013,.064,.095,.094,.1);
+    for(const a of [-1,1]){
+      form([[-.071,1.094,a*.113,.098,.082],[.156,1.009,a*.233,.091,.087],[.275,.843,a*.239,.059,.069],
+        [.35,.837,a*.24,.028,.051]],'sculpture',8);
+    }
+    form([[-.065,1.399,-.11,.070,.062],[-.284,1.305,-.163,.057,.061],[-.510,1.49,-.077,.037,.047]],'dressed',8);
+    form([[.097,1.394,.116,.071,.066],[.302,1.365,.167,.055,.062],[.254,1.526,.08,.046,.043]],'dressed',8);
+    form([[.219,1.541,.035,.029,.032],[.365,1.554,.072,.04,.04],[.437,1.673,.069,.053,.055],[.379,1.781,.052,.078,.076]],'sculpture',10);
+    for(let i=0;i<8;i++){
+      const a=i*2.399,gain=i%3;ball(kit,'sculpture',p,.057+Math.cos(a)*.112,1.636+gain*.026,Math.sin(a)*.124,.046,.052,.043);
+    }
+    // Faint water ribbon, seen without a dedicated light or reflection pass.
+    const jet=new T.TubeGeometry(new T.CatmullRomCurve3(Array.from({length:14},(_,i)=>{
+      const t=i/13;return new T.Vector3(...p(.373+.95*t,1.793+.48*t-1.984*t*t,.053-.14*t));
+    })),24,.014,6,false);
+    const flow=new T.Mesh(jet,new T.MeshStandardMaterial({color:0xa9c2b4,roughness:.21,transparent:true,opacity:.6,depthWrite:false}));
+    flow.userData.noSceneQuery=true;g.add(flow);
+    const stones=Array.from({length:40},(_,i)=>{
+      const [x,,z]=p(rx*1.018*Math.cos(i*Math.PI/20),0,rz*1.018*Math.sin(i*Math.PI/20));
+      return [x,z];
+    });
+    world.polygon(stones);
   });
   glob.dispose();
 }

@@ -36,9 +36,9 @@ export function addPerimeter(T,scene,world,finish) {
     m.vertexColors=true;return m;
   }
   const materials={
-    stone:tinted('SANDSTONE',0xbca274), cap:tinted('SANDSTONE_CUT',0xcbba99),
-    base:tinted('SANDSTONE_DARK',0x94836a), joint:tinted('MORTAR',0x827665),
-    iron:tinted('METAL',0x383f38), doors:tinted('WOOD',0x6e5844),
+    stone:tinted('SANDSTONE',0xbeb099), cap:tinted('SANDSTONE_CUT',0xcac0a9),
+    base:tinted('SANDSTONE_DARK',0x958978), joint:tinted('MORTAR',0x847c6f),
+    iron:tinted('METAL',0x383e38), doors:tinted('WOOD',0x6e5844),
     roof:tinted('ROOF_DARK',0x766962), lintel:tinted('SANDSTONE_CUT',0xd8c7aa),
     stucco:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.94}),
     sash:new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.70}),
@@ -64,6 +64,8 @@ export function addPerimeter(T,scene,world,finish) {
   Object.assign(materials.gutter,setts);
   materials.gutter.color.set(0xac9f8a);materials.gutter.roughness=1;materials.gutter.normalScale.setScalar(.30);
   for(const [key,exposure] of [['stone',.54],['base',.72],['cap',.15],['joint',.43],['lintel',.28],['stucco',.23],['tileRoof',.08],['houseStone',.26]])ageMasonry(materials[key],exposure);
+  materials.setts=tinted('GROUND',0xc3b8a1);
+  Object.assign(materials.setts,setts);materials.setts.normalScale.setScalar(.61);
   const scales={stone:2.6,cap:1.8,base:2.1,lintel:1.8,roof:3.2,tileRoof:1.48,doors:1.25,paving:6,street:1.2,gutter:1.2,cushion:3,walk:4,curbstone:1.7,houseStone:2.5,stucco:1.65};
   const bins=new Map(), white=new T.Color(0xffffff);
   function quad(m,a,b,c,d,tint=white,offsetU=0,offsetV=0) {
@@ -113,8 +115,24 @@ export function addPerimeter(T,scene,world,finish) {
       block(f,.07,1.03,-.48,.48);
     } else pier(f,.55,.78,2.14);
   }
-  function wall(f,l,r,seed) {
-    box(f,'base',l,r,groundY,.35,-.295,.295);
+  const ivyPalette=[0x3e5237,0x4c6340,0x506a41,0x667a48,0x405239].map(c=>new T.Color(c));
+  function ivy(f,at,depth,high,seed){
+    const p=f.point,width=.34+(seed%5)*.071,sign=Math.sign(depth);
+    for(let j=0;j<38;j++){
+      const q=Math.sin(seed*4.2+j*7.143)*.5+.5,k=Math.sin(j*2.399+seed*.37);
+      const y=.044+q*high*(1-Math.abs(k)*.48),u=at+k*(.08+width*Math.sin(1.57*q))+.089*Math.sin(y*5.8+seed);
+      const s=.026+q*.045,d=depth+sign*.006*(j%5),g=.72+q*.21;
+      const A=p(u-s,y+s*.41,d),B=p(u-s*.66,y-s*.18,d),C=p(u,y-s*g,d+sign*s*.31),
+        D=p(u+s*.83,y-s*.07,d+sign*.009),E=p(u+s*.96,y+s*.45,d),M=p(u+s*.087,y+s*.015,d+sign*s*.36),
+        top=p(u+s*.21,y+s*.63,d);
+      for(const [a,b,c,i] of [[A,B,M,j],[B,C,M,j+1],[C,D,M,j+2],[D,E,M,j+1],[E,top,M,j],[top,A,M,j+3]]){
+        const color=ivyPalette[i%ivyPalette.length];quad('verge',a,b,c,c,color);
+      }
+    }
+  }
+  function wall(f,l,r,seed,side) {
+    box(f,'base',l,r,groundY,.32,-.291,.291);
+    box(f,'base',l+.006,r-.006,.297,.359,-.312,.312,new T.Color(0xa59a87));
     box(f,'joint',l,r,.35,1.98,-.226,.226);
     let y=.35;
     const heights=seed%3===0?[.29,.35,.30,.35,.34]:[.34,.30,.34,.31,.34];
@@ -124,8 +142,9 @@ export function addPerimeter(T,scene,world,finish) {
       while(x<r-.013){
         const width=.82+.36*(.5+.5*Math.sin(seed*9.7+i*2.3+course*3.25));
         const to=Math.min(r,x+(i===0&&course%2?width*.52:width));
-        const tint=new T.Color().setScalar(.83+.15*(.5+.5*Math.sin(i*4.7+course*2.37+seed)));
-        if((i+seed+course*7)%23===0)tint.setRGB(.88,.76,.63);
+        const tone=.82+.18*(.5+.5*Math.sin(i*4.7+course*2.37+seed)),dark=course===0?.92:1;
+        const tint=new T.Color().setRGB(tone*dark,tone*(course===0?.97:1),tone*(course===0?.88:.965));
+        if((i+seed+course*7)%23===0)tint.setRGB(.84,.74,.66);
         const joint=.006+.003*(.5+.5*Math.sin(i*4.2+seed));
         if(to-x>joint*2+.002)box(f,'stone',x+joint,to-joint,y+.006,y+h-.008,-.254,.254,tint);
         x=to;i++;
@@ -135,16 +154,7 @@ export function addPerimeter(T,scene,world,finish) {
     box(f,'base',l,r,1.94,1.974,-.255,.255,new T.Color(0xb1aa92));
     cap(f,l,r,1.98,.16,.64);
     block(f,l,r,-.295,.295);
-    if(seed%4===1&&r-l>1.5){
-      const p=f.point,bright=new T.Color(0x8b925f),dim=new T.Color(0x697349),at=l+(r-l)*(.42+(seed%7)*.043);
-      for(let j=0;j<38;j++){
-        const q=Math.sin(seed*4.2+j*7.143)*.5+.5,k=Math.sin(j*2.399+seed*.37);
-        const x=at+k*(.16+q*.63),y=.081+q*.484*(1-Math.abs(k)*.68),s=.024+q*.039,d=(y<.35?.303:.266)+(j%4)*.004;
-        if(x-s<l||x+s>r)continue;
-        quad('verge',p(x-s,y,d),p(x,y-s*.84,d+.011),p(x+s,y+.006,d),
-          p(x+k*s*.19,y+s*.96,d+.014),j%3?dim:bright);
-      }
-    }
+    if(seed%3!==0&&r-l>2.01)ivy(f,(r+l)*.5+Math.sin(seed*.132)*.61,side*.320,.50+(seed%5)*.143,seed);
   }
   function rail(f,l,r,gate=false,street=false){
     if(r-l<.15)return;
@@ -184,11 +194,19 @@ export function addPerimeter(T,scene,world,finish) {
   }
   function gatePillar(f,x,height=2.35){
     pier(f,x,.79,height);
+    box(f,'base',x-.463,x+.463,.236,.278,-.46,.46);
     box(f,'cap',x-.44,x+.44,.36,.415,-.437,.437);
     box(f,'cap',x-.43,x+.43,height-.125,height-.075,-.423,.423);
+    box(f,'lintel',x-.305,x+.305,height+.140,height+.191,-.305,.305);
+    cap(f,x-.292,x+.292,height+.185,.101,.63);
+    for(const side of [-1,1]){
+      const d=side*.400;
+      box(f,'lintel',x-.247,x+.247,.60,height-.333,d-.024,d+.023);
+      box(f,'stone',x-.204,x+.204,.680,height-.413,d-.030,d+.033,new T.Color(0xb6a992));
+    }
   }
   function openGate(g){
-    const f=frame(g.a,g.b), l=.24, r=f.len-.24, leaf=(r-l)*.5, p=f.point;
+    const f=frame(g.a,g.b), l=.41, r=f.len-.41, leaf=(r-l)*.5, p=f.point;
     gatePillar(f,0);gatePillar(f,f.len);
     // Wide open, with colliders on the rotated leaves rather than across the opening.
     const hinge=(u,sign)=>{
@@ -197,7 +215,20 @@ export function addPerimeter(T,scene,world,finish) {
       rail(rotated,0,rotated.len,true);
     };
     hinge(l,-1);hinge(r,1);
-    box(f,'base',.37,f.len-.37,-.052,-.004,-.86,.82);
+    // A compact strip of small setts and a narrow slot drain bridges the
+    // mixed paving surface; it stays under shoe height and has no collider.
+    const lo=.430,hi=f.len-.430;
+    for(let row=0;row<3;row++){
+      let u=lo,n=0;const d0=-.204+row*.127;
+      while(u<hi-.022){
+        const v=Math.min(hi,u+(n++===0&&row%2?.098:.185));
+        if(v-u>.025)box(f,'setts',u+.005,v-.006,-.016,-.004+(Math.sin(n*2.71+row)*.002),d0+.003,d0+.121,
+          new T.Color().setScalar(.80+.18*(.5+.5*Math.sin(n*3.14+row*5.9))));
+        u=v;
+      }
+    }
+    box(f,'base',lo,hi,-.024,-.007,.186,.267);
+    for(let u=lo+.04;u<hi-.03;u+=.091)box(f,'iron',u,u+.017,-.008,-.002,.192,.261);
   }
   function parkPanel(edge,f) {
     const l=0, r=f.len;
@@ -209,11 +240,15 @@ export function addPerimeter(T,scene,world,finish) {
     for(let i=0;i<spanCount;i++){
       const a=l+(r-l)*i/spanCount,b=l+(r-l)*(i+1)/spanCount;
       if(i>0)pier(f,a,edge.type==='wall'?.56:.67,2.07);
-      if(edge.type==='wall')wall(f,a,b,edge.id*8+i);
+      if(edge.type==='wall')wall(f,a,b,edge.id*8+i,edge.gardenSide??1);
       else {
         box(f,'base',a,b,groundY,.32,-.236,.236);
         cap(f,a,b,.32,.10,.52);block(f,a,b,-.236,.236);
         rail(f,a,b);
+        if(edge.id%3!==1&&b-a>1.45&&edge.a?.[1]<-64){
+          const seed=edge.id*9+i;
+          if(seed%3!==1)ivy(f,(a+b)*.5+.23*Math.sin(seed),.285,.42+(seed%7)*.125,seed);
+        }
       }
     }
   }
@@ -299,7 +334,7 @@ export function addPerimeter(T,scene,world,finish) {
     [[57.5,-7.5],[73,-17],true]
   ]){
     const f=frame(a,b);
-    parkPanel({type:wallPanel?'wall':'iron',id:54},f);
+    parkPanel({type:wallPanel?'wall':'iron',id:54,gardenSide:-1},f);
     if(f.len>6&&Math.abs(a[0])<57)pier(f,0,.62,2.03);
   }
 
@@ -341,7 +376,7 @@ export function addPerimeter(T,scene,world,finish) {
     geo.setAttribute('uv',new T.Float32BufferAttribute(bin.uv,2));
     geo.setAttribute('color',new T.Float32BufferAttribute(bin.colors,3));
     geo.computeVertexNormals();
-    const walkable=['street','gutter','cushion','curbstone','walk'].includes(m);
+    const walkable=['street','gutter','cushion','curbstone','walk','setts'].includes(m);
     const surf=walkable||m==='verge';
     if(surf)materials[m].side=T.DoubleSide;
     const mesh=new T.Mesh(geo,materials[m]);mesh.name='Einfriedung / '+m;

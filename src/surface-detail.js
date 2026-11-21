@@ -35,8 +35,8 @@ export function repeatSet(T,kind,size=512) {
       const v=a*5+b*7+c*13+f*8,dry=clamp(.22+a*.56+b*.40,0,1);
       write(x,y,78+v+dry*21,102+v+dry*8,44+v*.67+dry*9,a*.066+b*.12+c*.115+f*.026,231+15*c);
     } else if(kind==='grit'){
-      const v=a*12+b*8+c*9+f*4;
-      write(x,y,174+v,156+v,126+v,a*.13+b*.20+c*.22+f*.045,226+16*b);
+      const v=a*9+b*13+c*12+f*12;
+      write(x,y,181+v,164+v,137+v*.88,a*.085+b*.16+c*.20+f*.082,227+17*b);
     } else if(kind==='bark'){
       const furrow=Math.abs(Math.sin((x/size*18+b*.33+c*.12)*Math.PI));
       const seam=Math.pow(1-furrow,7),v=66+a*22+b*22+c*18+f*12-seam*19;
@@ -140,16 +140,20 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }else if(kind==='grit'){
-    for(let i=0;i<8200;i++){
+    for(let i=0;i<9800;i++){
       const x=(rng()*size)|0,y=(rng()*size)|0;
       const l=1+Math.floor(rng()*4);
       const angle=rng()*2*Math.PI,dx=Math.cos(angle),dy=Math.sin(angle);
-      const v=(rng()-.47)*33, golden=rng()<.13;
+      const v=(rng()-.44)*46, golden=rng()<.16;
       for(let j=0;j<l;j++){
         const xx=x+Math.round(dx*j),yy=y+Math.round(dy*j);
         const n=((yy+size)%size)*size+(xx+size)%size,i4=n*4;
-        write(xx,yy,color[i4]+v+(golden?9:0),color[i4+1]+v*.80,color[i4+2]+v*.56,
-          height[n]+.033+Math.abs(v)*.0023,rough[i4]-4-j*.8);
+        write(xx,yy,color[i4]+v+(golden?8:0),color[i4+1]+v*.92,color[i4+2]+v*.78,
+          height[n]+.046+Math.abs(v)*.0032,rough[i4]-5-j*.9);
+        if(l>2&&j!==0){
+          const n2=((yy+1+size)%size)*size+(xx+size)%size,k=n2*4;
+          write(xx,yy+1,color[k]-10,color[k+1]-9,color[k+2]-7,height[n2]-.07,rough[k]);
+        }
       }
     }
   }
@@ -276,7 +280,7 @@ export function gardenMaterials(T,mask,ext) {
       vMapUv = eurGravelUV; vNormalMapUv = eurGravelUV; vRoughnessMapUv = eurGravelUV;
     `);
   };
-  gravel.customProgramCacheKey=()=> 'erl-grit-world-v1';
+  gravel.customProgramCacheKey=()=> 'erl-grit-world-v2';
   ground.onBeforeCompile=shader=>{
     worldPatch(shader);
     shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>',uv+`
@@ -305,10 +309,12 @@ export function gardenMaterials(T,mask,ext) {
       float parkCut=(1.-smoothstep(34.,67.,abs(erlWorld.x)))*(1.-smoothstep(75.,124.,-erlWorld.z));
       float mow=smoothstep(-.48,.48,cos((erlWorld.x+erlWorld.z*.045)*.647+(macro-.5)*.18))-.5;
       diffuseColor.rgb *= 1.+mow*(.050+parkCut*.068)*mix(.62,1.,macro)*(1.-verge)*(1.-bed);
-      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.158,.118,.068), soil*(.40+.35*compact));
-      diffuseColor.rgb = mix(diffuseColor.rgb,texture2D(erlGritAlbedo,fine).rgb*mix(1.0,.87,compact),verge);
-      diffuseColor.rgb *= mix(vec3(1.0),vec3(.67,.75,.60),damp*.67);
-      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.085,.057,.033)*(.91+scatter*.24),bed*.89);
+      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.185,.150,.091), soil*(.45+.25*compact));
+      vec3 gravelTone=mix(vec3(1.075,.974,.915),vec3(.93,.94,.97),damp);
+      gravelTone*=mix(.91,1.045,.34*macro+.66*compact);
+      diffuseColor.rgb = mix(diffuseColor.rgb,texture2D(erlGritAlbedo,fine).rgb*gravelTone,verge);
+      diffuseColor.rgb *= mix(vec3(1.0),vec3(.66,.77,.64),damp*.57);
+      diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.092,.063,.042)*(.81+scatter*.41),bed*.92);
     `).replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
       roughnessFactor = clamp(mix(roughnessFactor,texture2D(erlGritRough,fine).g,verge)-damp*.11-compact*.035,.61,1.0);
     `).replace('#include <normal_fragment_maps>',T.ShaderChunk.normal_fragment_maps.replace(
@@ -316,6 +322,6 @@ export function gardenMaterials(T,mask,ext) {
       'vec3 mapN = mix(texture2D(normalMap,vNormalMapUv).xyz,texture2D(erlGritNormal,fine).xyz,verge)*2.0-1.0; mapN.xy *= mix(1.31,1.0,max(verge,bed))*(1.0 - compact*.28 - bed*.20);'
     ));
   };
-  ground.customProgramCacheKey=()=> 'erl-turf-mask-v4';
-  return {ground,gravel};
+  ground.customProgramCacheKey=()=> 'erl-turf-mask-v5';
+  return {ground,gravel,gritSet:stone};
 }

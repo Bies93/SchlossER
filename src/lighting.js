@@ -4,6 +4,10 @@ import {bakeMoon,bakeStars} from './sky-maps.js';
 
 export const DEFAULT_LIGHT='dusk';
 export const LIGHTING = {
+  day:{sky:0x477fc0,horizon:0xa9c0d4,fog:0xc3c8c5,cloud:0xf1f2ef,fogDensity:.0018,
+    direction:[-.55,.77,.32],disc:0xffedc3,angular:.0064,aura:.19,stars:0,clouds:.43,
+    key:0xffedd7,power:2.67,fill:0xb5d0f1,bounce:0x8b8870,hemi:1.18,
+    exposure:1.04,env:'day',reflection:.67,lamps:0,window:.055,shadow:[78,70,.041]},
   dusk:{sky:0x5076a1,horizon:0xe8a581,fog:0xb49f97,cloud:0xf3c9ae,fogDensity:.0027,
     direction:[-.85,.29,.54],disc:0xffbd71,angular:.007,aura:.36,stars:0,clouds:.39,
     key:0xffddc3,power:2.57,fill:0xc3d6ef,bounce:0x8a8571,hemi:1.10,

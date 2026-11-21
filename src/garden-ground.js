@@ -3,11 +3,11 @@
 export function pathNetwork(T){
   const rect={x:-80,z:-260,w:160,h:264}, paths=[], index=new Map(), solid=new Map(), cell=8;
   const key=(x,z)=>x+':'+z;
-  function add(points,width,style='loose'){
+  function add(points,width,style='loose',closed=false){
     const vv=points.map(([x,z])=>new T.Vector3(x,0,z));
-    const curve=new T.CatmullRomCurve3(vv,false,'centripetal');
-    const vertices=curve.getSpacedPoints(Math.max(2,Math.ceil(curve.getLength()/1.1)));
-    paths.push({vertices,width,style});
+    const curve=new T.CatmullRomCurve3(vv,closed,'centripetal'),length=curve.getLength();
+    const vertices=curve.getSpacedPoints(Math.max(3,Math.ceil(length/.84)));
+    const route={vertices,width,style,length,curve};paths.push(route);
     for(let k=1;k<vertices.length;k++){
       const a=vertices[k-1],b=vertices[k],m=width*.5+4,dx=b.x-a.x,dz=b.z-a.z;
       const s={x:a.x,z:a.z,dx,dz,w:width*.5,style,inv:1/Math.max(1e-8,dx*dx+dz*dz)};
@@ -16,6 +16,7 @@ export function pathNetwork(T){
           const k=key(i,j);if(!index.has(k))index.set(k,[]);index.get(k).push(s);
         }
     }
+    return route;
   }
   function sample(x,z){
     let best=Infinity,style='loose';
@@ -32,7 +33,7 @@ export function pathNetwork(T){
     }
     return {edge:best,style};
   }
-  function texture({legacy=[],walls=[],beds=[]}={}){
+  function texture({legacy=[],walls=[],beds=[],canopies=[]}={}){
     const c=document.createElement('canvas');c.width=1024;c.height=1690;
     const ctx=c.getContext('2d',{willReadFrequently:true}),data=new Uint8Array(c.width*c.height*4);
     const sx=c.width/rect.w,sy=c.height/rect.h;
@@ -82,12 +83,23 @@ export function pathNetwork(T){
           stroke(vertices,width+s,v);
       }
     });
-    channel(1,()=>{for(const p of paths)if(p.style==='compact')stroke(p.vertices,p.width+.39,224)});
+    channel(1,()=>{for(const p of paths){
+      const strength=p.style==='compact'?234:p.style==='trim'?178:126;
+      for(const [s,v] of [[.98,strength*.26],[.76,strength*.59],[.53,strength]])stroke(p.vertices,p.width*s,Math.round(v));
+    }});
     channel(2,()=>{for(const {a,b} of walls){
       const v=[{x:a[0],z:a[1]},{x:b[0],z:b[1]}];
       stroke(v,1.76,23);stroke(v,1.32,69);stroke(v,.85,161);stroke(v,.61,246);
-    }});
-    channel(3,()=>{for(const p of beds){stroke(p,1.79,126);stroke(p,1.58,255)}});
+    }
+      // Baked canopy contact shade uses the wall-dampness channel.
+      for(const {x,z,h,backdrop} of canopies){
+        if(backdrop||z>-65)continue;
+        const r=h*.37,fade=ctx.createRadialGradient(x,z,0,x,z,r);
+        fade.addColorStop(0,'#5d5d5d');fade.addColorStop(.53,'#353535');fade.addColorStop(1,'#000');
+        ctx.fillStyle=fade;ctx.beginPath();ctx.arc(x,z,r,0,Math.PI*2);ctx.fill();
+      }
+    });
+    channel(3,()=>{for(const p of beds){stroke(p.points,p.width+.14,126);stroke(p.points,p.width,255)}});
     const tex=new T.DataTexture(data,c.width,c.height);
     tex.colorSpace=T.NoColorSpace;tex.anisotropy=2;tex.generateMipmaps=true;
     tex.magFilter=T.LinearFilter;tex.minFilter=T.LinearMipmapLinearFilter;tex.needsUpdate=true;

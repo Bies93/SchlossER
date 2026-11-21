@@ -1,24 +1,45 @@
 import {randomSource} from './surface-detail.js';
 
-export const BED_WIDTH=1.58;
 const TAU=Math.PI*2;
-const at=a=>[16.55*Math.cos(a),-47+11.28*Math.sin(a)];
-export const BED_ARCS=[.15,Math.PI+.15].map(a=>
-  Array.from({length:96},(_,i)=>{const [x,z]=at(a+(Math.PI-.30)*i/95);return {x,z}}));
-const edges=BED_ARCS.flatMap(arc=>arc.slice(1).map((b,i)=>{
-  const a=arc[i],dx=b.x-a.x,dz=b.z-a.z;
-  return [a.x,a.z,dx,dz,1/(dx*dx+dz*dz)];
-}));
-export function atBed(x,z,padding=0){
-  if(Math.abs(x)>19||Math.abs(z+47)>14)return false;
-  for(const [a,b,dx,dz,inv] of edges){
-    const u=x-a,v=z-b,t=Math.max(0,Math.min(1,(u*dx+v*dz)*inv));
-    if(Math.hypot(u-t*dx,v-t*dz)<BED_WIDTH*.5+padding)return true;
+const grid=4,cell=(x,z)=>Math.floor(x/grid)+':'+Math.floor(z/grid);
+export function planBeds(layout,network,allow=()=>true){
+  const strips=[],bins=new Map();
+  function trace({path,side,start=0,end=0,width,order}){
+    const n=Math.ceil((path.length-start-end)/.33),curve=path.curve;
+    let points=[];
+    const finish=()=>{if(points.length>=8)strips.push({points,width,order});points=[];};
+    for(let i=0;i<=n;i++){
+      const u=(start+(path.length-start-end)*i/n)/path.length,p=curve.getPointAt(u),v=curve.getTangentAt(u);
+      const offset=side*(path.width*.5+.40+width*.5+Math.sin(u*17.3)*.056);
+      const x=p.x-v.z*offset,z=p.z+v.x*offset;
+      // Split at every junction so the gravel links stay open.
+      if(!allow(x,z)||network.edge(x,z)<width*.5+.17){finish();continue;}
+      points.push({x,z});
+    }
+    finish();
   }
-  return false;
+  trace({path:layout.ring,side:1,start:1.28,end:1.28,width:1.01,order:1});
+  for(const e of layout.edges)trace(e);
+  for(const b of strips)for(let i=1;i<b.points.length;i++){
+    const a=b.points[i-1],c=b.points[i],dx=c.x-a.x,dz=c.z-a.z,half=b.width*.5;
+    const edge={x:a.x,z:a.z,dx,dz,inv:1/Math.max(.001,dx*dx+dz*dz),half};
+    for(let z=Math.floor((Math.min(a.z,c.z)-half-.35)/grid);z<=Math.floor((Math.max(a.z,c.z)+half+.35)/grid);z++)
+      for(let x=Math.floor((Math.min(a.x,c.x)-half-.35)/grid);x<=Math.floor((Math.max(a.x,c.x)+half+.35)/grid);x++){
+        const id=x+':'+z;if(!bins.has(id))bins.set(id,[]);bins.get(id).push(edge);
+      }
+  }
+  function atBed(x,z,padding=0){
+    for(const {x:a,z:b,dx,dz,inv,half} of bins.get(cell(x,z))??[]){
+      const u=x-a,v=z-b,t=Math.max(0,Math.min(1,(u*dx+v*dz)*inv));
+      if((u-t*dx)**2+(v-t*dz)**2<(half+padding)**2)return true;
+    }
+    return false;
+  }
+  return {strips,atBed};
 }
 
-function plant(T,kind,variant,far,swatches){
+function plant(T,kind,variant,lod,swatches){
+  const far=lod>0;
   const rng=randomSource(23817+619*variant+63*kind),pos=[],colors=[];
   const {leaf,tip,petal,inside,heart}=swatches;
   const V=(x,y,z)=>new T.Vector3(x,y,z),v=(...a)=>V(...a);
@@ -53,7 +74,14 @@ function plant(T,kind,variant,far,swatches){
       else tri(l,tip,right,c,[1,1.11,.93]);
     }
   }
-  if(kind===0){
+  if(lod===2){
+    for(let j=0;j<5;j++){
+      const a=j*2.399+variant,r=.10+rng()*.07,y=.10+rng()*.15;
+      const p=v(Math.cos(a)*r,kind===1?y+.19:y,Math.sin(a)*r);
+      if(j<3)blade(v(0,.02,0),a,.21,.055,.154);
+      cup(p,kind===1?.053:.074,j%3===0?inside:petal,4,1.48,.4);
+    }
+  }else if(kind===0){
     // Rose-like layered open cups: branching silhouette, shaded inner whorl.
     for(let j=0;j<(far?3:4);j++){
       const a=j*2.399+variant,root=v(0,.028,0),mid=v(.065*Math.cos(a),.24+rng()*.10,.065*Math.sin(a));
@@ -93,58 +121,83 @@ function plant(T,kind,variant,far,swatches){
   const g=new T.BufferGeometry();
   g.setAttribute('position',new T.Float32BufferAttribute(pos,3));
   g.setAttribute('color',new T.Float32BufferAttribute(colors,3));g.computeVertexNormals();
+  const norms=g.attributes.normal;
+  for(let j=0;j<norms.count;j++){
+    if(norms.getY(j)<0)norms.setXYZ(j,-norms.getX(j),-norms.getY(j),-norms.getZ(j));
+  }
   return g;
 }
 
-export function addBeds(T,root,height){
+export function addBeds(T,root,height,plan){
   const swatches=[
-    ['#3d5c30','#79944b','#e66e93','#d53561','#e7a351'],
-    ['#475c31','#6f8a4b','#7760c4','#5646a1','#9e82cf'],
-    ['#516b34','#859c55','#f5e2b0','#e9b768','#d69925']
-  ].map(row=>Object.fromEntries(row.map((c,i)=>[['leaf','tip','petal','inside','heart'][i],new T.Color(c)])));
-  const shapes=swatches.map((s,i)=>[plant(T,i,0,false,s),plant(T,i,0,true,s)]);
+    [0,'#426334','#7a984b','#d63548','#ac2433','#eca356'],
+    [0,'#3b5d39','#8b9a5b','#da529d','#a72a76','#f3b681'],
+    [1,'#375e39','#91a553','#7561cf','#4f4c9d','#b6a3f2'],
+    [2,'#61806b','#95a590','#fff5e7','#e7dfca','#deb25d'],
+    [2,'#547d39','#94b450','#f0bd40','#e88929','#c77b24'],
+    [2,'#415944','#8ba494','#a9b5bf','#7e97a2','#bfd0ca']
+  ];
+  const shapes=swatches.map(([kind,...row],i)=>{
+    const s=Object.fromEntries(row.map((c,j)=>[['leaf','tip','petal','inside','heart'][j],new T.Color(c)]));
+    return [0,1,2].map(lod=>plant(T,kind,i,lod,s));
+  });
   const material=new T.MeshLambertMaterial({side:T.DoubleSide,vertexColors:true});
-  const rng=randomSource(208271),o=new T.Object3D(),c=new T.Color(),parts=[];
-  function batch(g,list,label,near){
+  material.onBeforeCompile=shader=>{
+    shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',
+      T.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;',''));
+  };
+  material.customProgramCacheKey=()=>'park-petals-v2';
+  const rng=randomSource(208271),o=new T.Object3D(),c=new T.Color(),parts=[],groups=new Map();
+  function batch(g,list,label,lod){
     const mesh=new T.InstancedMesh(g,material,list.length);
     list.forEach(({x,z,s,h,yaw,tint},i)=>{
       o.position.set(x,height(x,z)+.003,z);o.scale.set(s,h,s);o.rotation.y=yaw;o.updateMatrix();
       mesh.setMatrixAt(i,o.matrix);c.setRGB(tint*(.98+rng()*.09),tint,tint*(.96+rng()*.09));mesh.setColorAt(i,c);
     });
-    mesh.receiveShadow=true;mesh.name='Brunnenbeet · '+label+(near?' nah':' mittel');mesh.computeBoundingSphere();root.add(mesh);
+    mesh.receiveShadow=true;mesh.name='Sommerbeet · '+label+' / '+lod;
+    mesh.userData.noSceneQuery=true;mesh.computeBoundingSphere();mesh.visible=false;root.add(mesh);
     return mesh;
   }
-  function patch(a,offset,kind,h,space){
-    const [ax,az]=at(a),tx=-16.55*Math.sin(a),tz=11.28*Math.cos(a),d=Math.hypot(tx,tz);
-    const records=[];
-    for(let i=0;i<space;i++){
-      const k=i*2.399+rng()*.31,r=.27*Math.sqrt(i/space)*(1+rng()*.24);
-      const x=ax+Math.cos(a)*(offset+Math.cos(k)*r)+tx/d*Math.sin(k)*r*1.57;
-      const z=az+Math.sin(a)*(offset+Math.cos(k)*r)+tz/d*Math.sin(k)*r*1.57;
-      if(atBed(x,z,-.045))records.push({x,z,s:.81+rng()*.41,h:h*(.80+rng()*.39),yaw:rng()*TAU,tint:.79+rng()*.38});
+  for(const {points,width,order} of plan.strips){
+    let run=0,remaining=0,main=0;
+    for(let j=0;j<points.length;j++){
+      const p=points[j],a=points[Math.max(0,j-1)],b=points[Math.min(points.length-1,j+1)];
+      const dx=b.x-a.x,dz=b.z-a.z,d=Math.max(.001,Math.hypot(dx,dz));
+      if(remaining--<1){
+        const scale=[0,3,1,2,0,4,1,5,0,2,3,4];
+        main=scale[(run+order*3)%scale.length];run++;remaining=4+Math.floor(rng()*6);
+      }
+      const count=width>.8?4:3;
+      for(let i=0;i<count;i++){
+        const side=((i+.22+rng()*.5)/count-.5)*width*.92,local=(rng()-.5)*.283;
+        const x=p.x-dz/d*side+dx/d*local,z=p.z+dx/d*side+dz/d*local;
+        if(!plan.atBed(x,z,-.036))continue;
+        const kind=i===0?(j%5===1?5:main===2?4:main===4?3:main):rng()<.88?main:(main+3)%6;
+        const size=.72+rng()*.50,h=(kind===2?.96:kind<2?.55:.72)*(1+(rng()-.5)*.34);
+        const X=Math.floor(x/11),Z=Math.floor(z/11),key=X+':'+Z;
+        if(!groups.has(key))groups.set(key,{x:(X+.5)*11,z:(Z+.5)*11,rows:Array.from({length:6},()=>[])});
+        groups.get(key).rows[kind].push({x,z,s:size,h,yaw:rng()*TAU,tint:.88+rng()*.24});
+      }
     }
-    return records;
   }
-  for(let half=0;half<2;half++)for(let sector=0;sector<4;sector++){
-    const a0=half*Math.PI+.166+sector*.70,a1=a0+.70,[x,z]=at((a0+a1)*.5);
-    const beds=[[],[],[]];
-    for(let j=0;j<12;j++){
-      const a=a0+.043+(a1-a0-.036)*(j+rng()*.68)/12;
-      const notes=Math.sin((j+sector*12)*.34+half*.79);
-      beds[0].push(...patch(a,-.34+Math.sin(a*5.2)*.10,0,1.09,notes>-.21?5:3));
-      beds[1].push(...patch(a+.016,.01+Math.sin(a*11.1)*.075,1,.94,notes>.35?3:5));
-      if(notes>-.43||j%4===0)beds[2].push(...patch(a-.021,.36,2,.76,notes>.31?5:3));
-    }
-    const meshes=beds.map((b,i)=>[
-      batch(shapes[i][0],b,['Rosen','Blütenspiere','Blütensaum'][i],true),
-      batch(shapes[i][1],b,['Rosen','Blütenspiere','Blütensaum'][i],false)
-    ]);
-    parts.push({x,z,meshes});
+  const labels=['Rot','Pink','Salbei','Weiß','Gold','Silberlaub'];
+  for(const {x,z,rows} of groups.values()){
+    const layers=[[],[],[]];
+    for(let i=0;i<rows.length;i++)if(rows[i].length)
+      for(let j=0;j<3;j++)layers[j].push(batch(shapes[i][j],rows[i],labels[i],j));
+    parts.push({x,z,layers,lod:-1});
   }
-  return pos=>{
-    for(const {x,z,meshes} of parts){
-      const d=Math.hypot(pos.x-x,pos.z-z);
-      for(const [near,mid] of meshes){near.visible=d<25;mid.visible=d>=25&&d<99}
+  let lastX=Infinity,lastZ=Infinity,lastQuality;
+  return (pos,quality)=>{
+    if(lastQuality===quality&&Math.abs(pos.x-lastX)+Math.abs(pos.z-lastZ)<.7)return;
+    lastX=pos.x;lastZ=pos.z;lastQuality=quality;
+    const ranges=quality==='fast'?[13,29,80]:quality==='high'?[23,46,111]:[17,36,98];
+    for(const p of parts){
+      const d=(pos.x-p.x)**2+(pos.z-p.z)**2,lod=ranges.findIndex(r=>d<r*r);
+      if(p.lod===lod)continue;
+      for(const m of p.layers[p.lod]??[])m.visible=false;
+      for(const m of p.layers[lod]??[])m.visible=true;
+      p.lod=lod;
     }
   };
 }

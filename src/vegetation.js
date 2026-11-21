@@ -79,8 +79,8 @@ function geometry(T,{p,n,u,c,idx}){
   if(!n.length)g.computeVertexNormals();
   return g;
 }
-function treeVariant(T,variant,hero){
-  const oak=hero?!['spire','court'].includes(hero):variant<3,rng=randomSource(6132+variant*10489),V=(x,y,z)=>new T.Vector3(x,y,z);
+function treeVariant(T,variant,hero,lite=false){
+  const oak=hero?!['spire','court'].includes(hero):variant<3,rng=randomSource(6132+variant*10489+(lite?111728:0)),V=(x,y,z)=>new T.Vector3(x,y,z);
   const bark=buffers(),coarse=buffers(),middle=buffers(),detail=buffers(),twigs=buffers();
   function branch(a,b,r0,r1,sides,part=bark){
     const axis=b.clone().sub(a),length=axis.length();axis.normalize();
@@ -127,15 +127,35 @@ function treeVariant(T,variant,hero){
   const at=t=>V(Math.sin(phase+t*2)*t*.91+(hero==='sweep'?2.32:hero==='fork'?-1.37:hero==='bank'?-2.87:hero==='court'?1.04:.26)*t*Math.abs(t),
     -.18+h*t,Math.cos(phase+t*2)*t*.66);
   const rads=[root*1.28,root*.77,root*.60,root*.44,root*.29,root*.17,.035];
-  for(let j=0;j<6;j++)branch(at(j/6-.006),at((j+1)/6+.007),rads[j],rads[j+1],hero?13:10);
-  for(let j=0;j<(hero?8:6);j++){
+  for(let j=0;j<6;j++)branch(at(j/6-.006),at((j+1)/6+.007),rads[j],rads[j+1],hero?13:lite?7:10);
+  for(let j=0;j<(hero?8:lite?4:6);j++){
     const a=phase+j*(hero?2.39:TAU/6)+(rng()-.5)*.51,d=root*(1.25+rng()*(hero?1.94:1.2));
     const x=Math.cos(a)*d,z=Math.sin(a)*d;
     if(hero){
       const p=V(x*.51-z*.14,.107,z*.58+x*.12),q=V(x*.20,.35,z*.19);
       branch(V(x,-.069,z),p,.027,root*.15,7);
       branch(p,q,root*.16,root*.249,8);branch(q,V(0,.63+rng()*.54,0),root*.251,root*.326,9);
-    }else branch(V(x,-.028,z),V(0,.64+rng()*.50,0),.032,root*.31,7);
+    }else branch(V(x,-.028,z),V(0,.64+rng()*.50,0),.032,root*.31,lite?5:7);
+  }
+  if(lite){
+    for(let t=0;t<5;t++){
+      const count=[4,6,7,6,4][t],r0=(oak?5.94:4.56)*Math.sin((.18+t*.176)*Math.PI)**.63;
+      for(let j=0;j<count;j++){
+        const a=j*TAU/count+t*2.37+phase+(rng()-.5)*.72,r=r0*(.78+rng()*.39);
+        const A=at(.34+t*.12),c=V(Math.cos(a),0,Math.sin(a));
+        const B=c.clone().multiplyScalar(r*.63).add(V(A.x*.53,A.y+1.45,A.z*.52));
+        const C=c.clone().multiplyScalar(r).add(V(A.x*.57,A.y+2.69+rng()*1.1,A.z*.55));
+        const mass=B.clone().lerp(C,.69);
+        branch(A,B,root*(.29-t*.031),root*.086,5);branch(B,C,root*.086,.015,5);
+        const base=oak?0:2,wide=3.15+rng()*1.38;
+        for(let k=0;k<3;k++){
+          const q=mass.clone().add(V((rng()-.5)*.92,(rng()-.5)*1.04,(rng()-.5)*.93));
+          spray(coarse,q,wide*(1-k*.076),a+k*1.34,.83+rng()*.24,base+(k%2?0:1));
+        }
+        spray(middle,C.clone().addScaledVector(c,.51),1.80+rng()*.84,a+1.42,.91+rng()*.19,base);
+      }
+    }
+    return [bark,coarse,middle,detail,twigs].map(b=>geometry(T,b));
   }
   const tiers=oak?5:6;
   for(let tier=0;tier<tiers;tier++){
@@ -301,7 +321,8 @@ function buildUpperKnot(T,group,record,trunk,wood){
 export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[]){
   const heroes=['sweep','spire','fork','bank','court'];
   const shapes=[...Array.from({length:6},(_,i)=>treeVariant(T,i)),
-    ...heroes.map((hero,i)=>treeVariant(T,6+i,hero))],rng=randomSource(42274);
+    ...heroes.map((hero,i)=>treeVariant(T,6+i,hero)),treeVariant(T,1,null,true),treeVariant(T,4,null,true)],
+    rng=randomSource(42274);
   const leaf=new T.MeshLambertMaterial({map:leafAtlas(T),alphaTest:.30,alphaToCoverage:true,
     side:T.DoubleSide,vertexColors:true});
   const wood=new T.MeshStandardMaterial({...repeatSet(T,'bark',512),roughness:1,vertexColors:true});
@@ -311,11 +332,13 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
   const sway={value:0};
   for(const m of [leaf,nearLeaf,midLeaf])airyLeaf(T,m,sway);
   const treeBins=new Map(),parts=[],roots=[];
-  for(const {x,z,h,species,hero,backdrop=false} of treeSites){
-    const i=hero?6+heroes.indexOf(hero):(species==='oak'?0:3)+Math.floor(rng()*3),s=h/(species==='oak'?14.1:16.8);
-    const sx=s*(.84+rng()*.28),sz=s*(.86+rng()*.26);
+  const tones={wine:[1.23,.44,.60],deep:[.83,.92,.86],fresh:[1.10,1.06,.79]};
+  for(const {x,z,h,species,hero,backdrop=false,infill=false,tone} of treeSites){
+    const oak=species==='oak',i=infill?11+(oak?0:1):hero?6+heroes.indexOf(hero):(oak?0:3)+Math.floor(rng()*3),s=h/(oak?14.1:16.8);
+    const sx=s*((infill?.93:.84)+rng()*.28),sz=s*((infill?.92:.86)+rng()*.26);
     const tint=new T.Color().setRGB(.82+rng()*.20,.85+rng()*.17,.73+rng()*.27);
-    const record={x,y:backdrop?-.24:height(x,z),z,sx,sy:s,sz,yaw:hero?Math.PI*.17:rng()*TAU,tint,i,backdrop};
+    const leaf=tone?tint.clone().multiply(new T.Color().setRGB(...tones[tone])):tint;
+    const record={x,y:backdrop?-.24:height(x,z),z,sx,sy:s,sz,yaw:hero?Math.PI*.17:rng()*TAU,tint,i,backdrop,infill,leaf};
     put(treeBins,x,z,record);
     if(!backdrop&&x===UPPER_ENTRY.treeX&&z===UPPER_ENTRY.treeZ)buildUpperKnot(T,group,record,shapes[i][0],wood);
     if(!backdrop){
@@ -327,11 +350,17 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
     const list=bin.records.filter(o=>o.i===i);if(!list.length)continue;
     const [trunk,coarse,middle,detail,twigs]=shapes[i],near=list.filter(o=>!o.backdrop);
     batch(T,group,list,trunk,wood,'Bäume · Wurzel und Astgerüst',near.length>0);
-    batch(T,group,list,coarse,leaf,'Bäume · Kronen',near.length>0);
+    const foliated=list.map(p=>({...p,tint:p.leaf}));
+    batch(T,group,foliated,coarse,leaf,i>=11?'Waldgürtel · Kronendach':'Bäume · Kronen',near.length>0);
     if(near.length){
-      parts.push({x:bin.x,z:bin.z,dist:117,meshes:[batch(T,group,near,middle,midLeaf,'Bäume · Mittlere Kronengruppen')]});
+      const close=foliated.filter(p=>!p.backdrop);
+      if(i>=11){
+        parts.push({x:bin.x,z:bin.z,dist:67,fast:42,meshes:[batch(T,group,close,middle,nearLeaf,'Waldgürtel · Blattrand')]});
+        continue;
+      }
+      parts.push({x:bin.x,z:bin.z,dist:117,fast:93,meshes:[batch(T,group,close,middle,midLeaf,'Bäume · Mittlere Kronengruppen')]});
       parts.push({x:bin.x,z:bin.z,dist:72,meshes:[
-        batch(T,group,near,detail,nearLeaf,'Bäume · Nahlaub'),
+        batch(T,group,close,detail,nearLeaf,'Bäume · Nahlaub'),
         batch(T,group,near,twigs,wood,'Bäume · Seitenzweige')
       ]});
     }
@@ -348,14 +377,15 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
     ]});
   }
   const turf=plantParkTurf(T,group,coverage,height,roots);
-  let lastX=Infinity,lastZ=Infinity;
+  let lastX=Infinity,lastZ=Infinity,lastQuality;
   return (position,time,quality)=>{
     sway.value=time*.001;
     turf(position,quality);
-    if(Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
-    lastX=position.x;lastZ=position.z;
+    if(lastQuality===quality&&Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
+    lastX=position.x;lastZ=position.z;lastQuality=quality;
     for(const p of parts){
-      const visible=(p.x-position.x)**2+(p.z-position.z)**2<p.dist**2;
+      const radius=quality==='fast'?(p.fast??p.dist*.91):p.dist;
+      const visible=(p.x-position.x)**2+(p.z-position.z)**2<radius**2;
       for(const m of p.meshes)m.visible=visible;
     }
   };
