@@ -16,6 +16,7 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
+  gardenHannes:{cloth:0x97a28b,hair:0xb39370,palette:[0x605645,0x576b53,0x806b52],weather:.16},
   hubert:{skin:0xb5b8aa,weather:.96},
   ghoulA:{skin:0xabb5a4,cloth:0x786d54,weather:1,decay:1.0},
   ghoulB:{skin:0xb5c4bf,cloth:0x777f73,weather:.95,decay:.86},
@@ -227,10 +228,10 @@ export function createHuman(T,id='base'){
   const isGhoul=id.startsWith('ghoul'),hubert=id==='hubert';
   const faceNames=['BlinkL','BlinkR','JawOpen','Purse','Smile','BrowL','BrowR'],values=new Float32Array(7);
   const channels=faces.map(m=>Object.entries(m.morphTargetDictionary).map(([name,i])=>[m.morphTargetInfluences,i,faceNames.indexOf(name)]));
-  function face(t,seed,speech=0,purse=0,smile=0,glance=0){
+  function face(t,seed,speech=0,purse=0,smile=0,glance=0,eyes=0){
     const z=(t+seed*1.61)%(3.82+frac(seed*.79)*2.34),blink=z<.20?sin(z/.20*Math.PI)**1.23:0,
       glanceY=sin(t*.69+seed)*.049;
-    values[0]=blink*.99;values[1]=blink;values[2]=clamp(speech);values[3]=purse;values[4]=smile;
+    values[0]=Math.max(blink*.99,eyes);values[1]=Math.max(blink,eyes);values[2]=clamp(speech);values[3]=purse;values[4]=smile;
     values[5]=(.5+.5*sin(t*.92+seed))*.13+speech*.19;values[6]=(.5+.5*sin(t*.78+seed+.8))*.12;
     for(const list of channels)for(const [dest,i,k] of list)dest[i]=values[k]??0;
     rot('eye_l',glanceY,glance*.61+sin(t*.58+seed)*.065);rot('eye_r',glanceY,glance*.61+sin(t*.58+seed)*.065);
@@ -404,6 +405,20 @@ export function createHuman(T,id='base'){
     }
     face(t,6.58,talk*(.44+.56*Math.abs(sin(t*17.6))),.017,.026,glance);
   }
+  function meditate(t,attention=0,glance=0,talk=0){
+    const breath=sin(t*1.06),home=.174/size;
+    torso(.004*breath,home-hipsY+.005*breath,-.014,.045+.015*breath,
+      .018*glance,.010*breath,t,glance,.115-.15*attention);
+    for(const [i,s] of ['l','r'].entries()){
+      const side=i===0?1:-1,ankle=read('foot_'+s);
+      solve(LIMB[s].leg,-side*(i===0?.128:.169),(ankle.y+(i===0?.040:.021)),i===0?.338:.452,
+        side,.07,.22);
+      foot('foot_'+s,-.025,-side*1.20);
+      solve(LIMB[s].arm,side*.302,.318+.007*breath,i===0?.175:.204,side*.73,-.26,-.60);
+      rot('hand_'+s,.37,side*.19,.15*side);curl(s,.22);
+    }
+    face(t,3.59,talk,.018,.072,glance,.91*(1-attention));
+  }
   function pose(t,phase,motion,attack,hit,fall,seed,speech=0,look=0,purse=0){
     body.rotation.set(fall*1.41,0,fall*(isGhoul?.67:0));body.position.y=fall*.16;
     const w=phase*tau,b=sin(t*2.2+seed),lean=isGhoul?.15:hubert?.095:.016;
@@ -531,7 +546,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,visitorPose,factoryPose,chairPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,visitorPose,factoryPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

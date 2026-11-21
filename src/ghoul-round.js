@@ -273,20 +273,12 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     }
     return dirty;
   }
-  async function prepare(renderer,camera){
+  function prepare(renderer,camera){
     if(!pool.length)allocate();
-    const vp=renderer.getViewport(new T.Vector4()),sc=renderer.getScissor(new T.Vector4()),test=renderer.getScissorTest(),
-      shadow=renderer.shadowMap.needsUpdate,meshes=[];
-    try{
-      for(const g of pool){g.rig.actor.visible=true;g.rig.actor.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});}
-      await renderer.compileAsync(scene,camera);
-      renderer.setViewport(0,0,32,32);renderer.setScissor(0,0,32,32);renderer.setScissorTest(true);
-      renderer.render(scene,camera);
-    }finally{
-      for(const g of pool)g.rig.actor.visible=false;
-      for(const [o,flag] of meshes)o.frustumCulled=flag;
-      renderer.setViewport(vp);renderer.setScissor(sc);renderer.setScissorTest(test);renderer.shadowMap.needsUpdate=shadow;
-    }
+    // No visibility or viewport changes: the normal garden render may run
+    // while this optional cast's shaders finish compiling.
+    const warmCamera=camera.clone();warmCamera.layers.set(0);
+    return renderer.compileAsync(root,warmCamera,scene);
   }
   return {begin,tick,stop,nearest,damage,inside,prepare};
 }

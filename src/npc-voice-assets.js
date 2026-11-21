@@ -15,5 +15,6 @@ export const NPC_VOICE_FILES=Object.freeze({
   plazaAnton:'plaza-anton.mp3',
   chapterOskar:'chapter-oskar.mp3',
   chapterMatthias:'chapter-matthias.mp3',
-  chapterKonrad:'chapter-konrad.mp3'
+  chapterKonrad:'chapter-konrad.mp3',
+  gardenHannes:'garden-hannes.mp3'
 });

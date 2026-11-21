@@ -4,6 +4,7 @@ import {chapterInterior} from './chapter-interior.js';
 import {chapterMaterials} from './chapter-art.js';
 import {architectureKit} from './architecture-kit.js';
 import {chapterMembers} from './chapter-members.js';
+import {warmRoom} from './warm-room.js';
 
 export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const [x,z,yaw]=CHAPTER_BENCH,[xa,xb,za,zb]=CHAPTER_CUT;
@@ -199,19 +200,11 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
       return cell?floor+2.50:Infinity;
     },
     prepare(renderer){
-      if(!prepared)prepared=(async()=>{
+      if(!prepared){
         const c=new T.PerspectiveCamera(65,1,.08,1250);
         c.position.set(25,floor+1.6,-34.3);c.lookAt(11,floor+1.7,-38.8);c.layers.set(CHAPTER_LAYER);
-        const vp=renderer.getViewport(new T.Vector4()),sc=renderer.getScissor(new T.Vector4()),test=renderer.getScissorTest();
-        room.visible=true;const meshes=[];room.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
-        try{
-          await renderer.compileAsync(scene,c);renderer.setViewport(0,0,32,32);renderer.setScissor(0,0,32,32);
-          renderer.setScissorTest(true);renderer.render(scene,c);
-        }finally{
-          room.visible=false;for(const [o,culled] of meshes)o.frustumCulled=culled;
-          renderer.setViewport(vp);renderer.setScissor(sc);renderer.setScissorTest(test);
-        }
-      })();
+        prepared=warmRoom(T,renderer,scene,c,[room]);
+      }
       return prepared;
     }};
 }

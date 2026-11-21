@@ -5,6 +5,7 @@ import {dressUpperFactory} from './upper-factory.js';
 import {dressUpperPlaza} from './upper-plaza.js';
 import {addPalaceAttic} from './palace-attic.js';
 import {ATTIC_LAYER,ATTIC_FLOOR,ATTIC_WELL} from './palace-attic-layout.js';
+import {warmRoom} from './warm-room.js';
 
 export const UPPER_LAYER=6;
 export const UPPER_FLOOR=E.sill+.023;
@@ -262,22 +263,11 @@ export function addPalaceUpper(T,scene,facade,upperWorld,atticWorld,M,height){
     return changed;
   }
   async function prepare(renderer){
-    const camera=new T.PerspectiveCamera(65,1,.08,120),vp=renderer.getViewport(new T.Vector4()),sc=renderer.getScissor(new T.Vector4()),
-      test=renderer.getScissorTest(),shadow=renderer.shadowMap.needsUpdate,restore=room.visible,loft=attic.root.visible,meshes=[];
+    const camera=new T.PerspectiveCamera(65,1,.08,120);
     camera.layers.set(UPPER_LAYER);camera.position.set(4.98,UPPER_FLOOR+1.65,-8.69);camera.lookAt(4.98,UPPER_FLOOR+1.63,0);
-    room.visible=true;room.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
-    try{
-      await renderer.compileAsync(scene,camera);
-      renderer.setViewport(0,0,32,32);renderer.setScissor(0,0,32,32);renderer.setScissorTest(true);
-      renderer.render(scene,camera);
-      attic.update({x:30.9,y:ATTIC_FLOOR,z:-2},true);
-      camera.layers.set(ATTIC_LAYER);camera.position.set(30.9,ATTIC_FLOOR+1.67,-2);camera.lookAt(1,ATTIC_FLOOR+1.45,0);
-      await renderer.compileAsync(scene,camera);renderer.render(scene,camera);
-    }finally{
-      attic.update({x:0,y:0,z:0},false);attic.root.visible=loft;
-      room.visible=restore;for(const [o,f] of meshes)o.frustumCulled=f;
-      renderer.setViewport(vp);renderer.setScissor(sc);renderer.setScissorTest(test);renderer.shadowMap.needsUpdate=shadow;
-    }
+    await warmRoom(T,renderer,scene,camera,[room,attic.stair]);
+    camera.layers.set(ATTIC_LAYER);camera.position.set(30.9,ATTIC_FLOOR+1.67,-2);camera.lookAt(1,ATTIC_FLOOR+1.45,0);
+    await warmRoom(T,renderer,scene,camera,[attic.root]);
   }
   return {prepare,update,target,unlock,step,request(d){requested=d;},inside:upper,visible:()=>room.visible,
     seeGarden,insideAttic:attic.inside,stairLink:attic.linked,downSnap:attic.downSnap,

@@ -8,6 +8,7 @@ import {addBackdrop} from './backdrop.js';
 import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {addPalaceRavens} from './palace-ravens.js';
+import {addGardenMeditation} from './garden-meditation.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
@@ -45,6 +46,7 @@ $('assets').remove();
 const about=$('about');
 $('info').onclick=()=>about.showModal();
 async function start(){
+ const bootTime=performance.now();
  const r=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
  r.setPixelRatio(Math.min(devicePixelRatio,1.6));
  $('canvas').append(r.domElement);
@@ -58,6 +60,7 @@ async function start(){
  const image=url=>url?tl.loadAsync(url).catch(()=>null):null;
  const [model,mapPairs,sculptures,poster,seal,humans]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
    decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal),decode('human-cast.glb',payload.humans)]);
+ performance.measure('schlosser: assets',{start:bootTime,end:performance.now()});
  installHumans(T,humans);
  for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
@@ -129,7 +132,9 @@ async function start(){
    return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
  },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall);
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
- const weaponAudioReady=audio.preloadWeapons();
+ const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
+ // Optional effects still prefetch, but slow audio cannot hold up Start.
+ void audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
    if(kind==='climb'||upper.inside(event)){audio.foot('wood',power,kind==='land',foot);return;}
@@ -145,7 +150,7 @@ async function start(){
  const active=()=>document.body.dataset.state==='playing';
  const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER,ATTIC_LAYER];
  const coarse=matchMedia('(pointer: coarse)'),ghoulOption=$('with-ghouls');
- let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0;
+ let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0,ghoulsWarming=null,ghoulsReady=false;
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
  function schedule(){if(!frame) frame=requestAnimationFrame(render)}
  function refresh(){dirty=true;schedule()}
@@ -261,6 +266,7 @@ async function start(){
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
    const access=upper.target(pos,look);
+   if(access?.action==='upper-unlock'&&names.target()?.id==='gardenHannes')return null;
    if(access||upper.inside(pos)||player.motion.climbing)return access??null;
    const target=pickups.target(c,activeLayers().mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
@@ -382,7 +388,7 @@ async function start(){
      chapelCue(time,player.body.position);
      orbCue(time,player.body.position);
      if(ghoulsEnabled){
-       if(firstRound&&time>=spawnCheck&&round.inside(player.body.position)){
+       if(firstRound&&ghoulsReady&&time>=spawnCheck&&round.inside(player.body.position)){
          spawnCheck=time+600;if(round.begin(player.body.position)){firstRound=false;dirty=true;}
        }
        if(round.tick(time,player.body.position))dirty=true;
@@ -395,11 +401,13 @@ async function start(){
      if(chapter.update(dt,player.body.position)){
        dirty=true;if(chapter.mode(player.body.position)!=='inside')r.shadowMap.needsUpdate=true;
      }
-     if(ravens.update(dt,player.body.position,activeLayers().layer===0))dirty=true;
+     const {layer,mask}=activeLayers();
+     if(ravens.update(dt,player.body.position,layer===0))dirty=true;
+     if(meditation.update(dt,player.body.position,layer===0))dirty=true;
      geometryQuery.invalidateMoving();
      prisonerCue(time,player.body.position);
      if(state.shadow)r.shadowMap.needsUpdate=true;
-     if(targets.tick(dt,activeLayers().mask))dirty=true;
+     if(targets.tick(dt,mask))dirty=true;
      names.sample(time);
      doorPrompt();
      if(chapter.mode(player.body.position)!=='inside'&&labCameraMode(player.body.position)!=='cellar'&&fountain.tick(time,c))dirty=true;
@@ -424,8 +432,17 @@ async function start(){
      touchEquipment.update();
    }
  });
+ function warmGhouls(){
+   ghoulsWarming??=Promise.resolve().then(()=>round.prepare(r,c))
+     .catch(error=>console.warn('Ghoul-Vorbereitung fehlgeschlagen; die Szene wird bei Bedarf geladen.',error))
+     .finally(()=>{ghoulsReady=true;});
+ }
+ ghoulOption.addEventListener('change',()=>{if(!started&&ghoulOption.checked)warmGhouls();});
  action.onclick=event=>{
-   if(!started){started=true;ghoulsEnabled=firstRound=ghoulOption.checked;audio.mode(ghoulsEnabled);}
+   if(!started){
+     started=true;ghoulsEnabled=firstRound=ghoulOption.checked;audio.mode(ghoulsEnabled);
+     if(ghoulsEnabled)warmGhouls();
+   }
    audio.play();
    document.body.dataset.state='playing';
    input.start({
@@ -484,22 +501,25 @@ async function start(){
    c.updateProjectionMatrix();refresh();
  }
  $('loading-text').textContent='Die 3D-Szene wird vorbereitet …';
+ const shaderTime=performance.now();
  for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
  await wc.prepare(r,s);
  await chapter.prepare(r);
  await upper.prepare(r);
  await viewmodel.prepare(r);
- const hideFirstShot=viewmodel.showPrewarmShots();
- try{await round.prepare(r,c);}finally{hideFirstShot();}
- await weaponAudioReady;
+ performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
  geometryQuery.build();s.matrixWorldAutoUpdate=false;
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  fountain.syncView?.(c);
- draw();dirty=false;
+ const hideFirstShot=viewmodel.showPrewarmShots();
+ try{draw();}finally{hideFirstShot();}
+ // Refresh the preview after removing the hidden projectile warm-up.
+ refresh();
  document.body.dataset.state='ready';
+ performance.measure('schlosser: ready',{start:bootTime,end:performance.now()});
 }
 start().catch(err=>{
  console.error(err);$('canvas').hidden=true;

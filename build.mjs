@@ -24,8 +24,13 @@ const transform=async(obj,visit)=>Object.fromEntries(await Promise.all(Object.en
  key,typeof value==='object'?await transform(value,visit):visit(value,await readFile(filepath(value)))
 ])));
 const webRefs=await transform(refs,(name,bytes)=>name+'?v='+digest(bytes));
+// Start the largest fetches while the browser is still parsing the page and
+// its viewer bundle. The versioned URL and credentials match GLTFLoader.
+const preloads=[webRefs.model,webRefs.humans,webRefs.sculptures]
+  .map(url=>'<link rel="preload" as="fetch" href="'+url+'" crossorigin="anonymous">').join('\n');
 await writeFile(filepath('viewer.js'),bundle);
-await writeFile(filepath('index.html'),make(webRefs,'<script src="./viewer.js?v='+digest(bundle)+'"></script>'));
+await writeFile(filepath('index.html'),make(webRefs,'<script src="./viewer.js?v='+digest(bundle)+'"></script>')
+  .replace('<title>',()=>preloads+'\n<title>'));
 if(process.argv.includes('--offline')){
  const embedded=await transform(refs,(name,bytes)=>{
    const mime=name.endsWith('.webp')?'image/webp':name.endsWith('.mp3')?'audio/mpeg':name.endsWith('.wav')?'audio/wav':name.endsWith('.svg')?'image/svg+xml':'application/octet-stream';

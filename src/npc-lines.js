@@ -8,6 +8,7 @@ export const NPCS={
   guestRike:{name:'Rike Stein',line:'Die Tomaten kennen keine Obrigkeit. Nur wenn’s ums Gießen geht, brauchen sie plötzlich einen Staat.'},
   guestEdda:{name:'Edda Seifert',line:'Psst. Wir sind auf Sendung. Hörer haben wir noch keine, aber Beschwerden schon.'},
   guestLotte:{name:'Lotte Weber'},
+  gardenHannes:{name:'Hannes Mohr',template:'guestJona',line:'Ich mag Bäume.'},
   cloneB07:{name:'Klon B–07 · Anwärter',template:'clubSami',line:'Ich habe meinen neuen Namen schon gelernt. Darf ich den alten behalten, wenn ihn keiner hört?'},
   cloneAlma:{name:'Alma Zinn · Ausbilderin',template:'labHedwig',line:'Abschnitt drei: freiwillige Begeisterung. Wer keine mitgebracht hat, bekommt welche zugeteilt.'},
   cloneLorenz:{name:'Lorenz Sattler · Botwart',template:'labAuer',line:'Der Druide sollte Befehle auslegen. Jetzt legt er Beschwerde ein. Saubere Arbeit, würde ich sagen.'},

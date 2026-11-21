@@ -203,7 +203,7 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
     if(y>=F-profile.rise-.033)return F;
     return null;
   }
-  return {root,inside,linked,floorAt,
+  return {root,stair,inside,linked,floorAt,
     ceilingAt(x,z,y){
       if(y>=F-.08&&inPlan(x,z)||y>=lower-.23&&inWell(x,z))return C-.26;
       return null;
