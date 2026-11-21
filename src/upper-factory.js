@@ -5,13 +5,14 @@ import {createHuman,humansAvailable} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 import {factoryPrints,factoryDetailPrints,FACTORY_ROOMS} from './upper-factory-art.js';
 import {factoryFinishMaterials,dressFactoryFinishes} from './upper-factory-finishes.js';
+import {classroomMaterials,dressClassroom} from './upper-classroom.js';
 
 const pi=Math.PI,at=(x,y,z)=>[x,y,z],front=-1.73;
 const staff=[
   {room:0,id:'cloneB12',u:2.47,d:4.29,yaw:-.64,role:'checker'},
   {room:2,id:'cloneLorenz',u:-2.23,d:3.72,yaw:pi,role:'repair'},
   {room:4,id:'cloneB07',u:-1.96,d:4.60,yaw:.38,role:'cadet'},
-  {room:5,id:'cloneAlma',u:1.34,d:5.43,yaw:-.22,role:'trainer'}
+  {room:5,id:'cloneAlma',u:1.49,d:4.89,yaw:-.22,role:'trainer'}
 ];
 export function dressUpperFactory(T,parent,world,F,bays,{roof,gardenWidth,gardenEnd,Z}){
   const paint=sharedSet(T,'enamel',256),grain=sharedSet(T,'cutMetal',256),fabric=sharedSet(T,'canvas',256),
@@ -27,7 +28,7 @@ export function dressUpperFactory(T,parent,world,F,bays,{roof,gardenWidth,garden
     boards:std(0x8a6e51,.90,wood),felt:std(0x5d5351,.97,fabric),canvas:std(0x888d82,.97,fabric),
     tile:std(0xa7b0a4,.86,lime),paper:std(0xd3c5a4,.94,fabric),char:std(0x39473f,.82,paint),
     sky:glow(0x99cfd8,.66),warm:glow(0xe2bd7f,.57),rose:glow(0xb95439,.48),moss:glow(0x9daf77,.39),
-    print:factoryPrints(T),...factoryDetailPrints(T),...factoryFinishMaterials(T)
+    print:factoryPrints(T),...factoryDetailPrints(T),...factoryFinishMaterials(T),...classroomMaterials(T)
   };
   const g={
     soft:new RoundedBoxGeometry(1,1,1,2,.075),
@@ -271,7 +272,7 @@ export function dressUpperFactory(T,parent,world,F,bays,{roof,gardenWidth,garden
       poster(i+8,u,2.35,rear(u)-.148,.91,1.08);
     }
     const sign=i%2?-1:1,u=sign*(edge-.197);
-    poster(i+8,u,1.95,i===5?4.96:3.26,.74,.78,-sign*pi*.5,'notes');
+    if(i!==5)poster(i+8,u,1.95,3.26,.74,.78,-sign*pi*.5,'notes');
     for(const q of [-.71,.71]){
       const h=uDoor+q*1.25;
       box('gunmetal',h,1.36,.143,.039,2.50,.087);
@@ -463,37 +464,11 @@ export function dressUpperFactory(T,parent,world,F,bays,{roof,gardenWidth,garden
       }
       stripe(.53,3.88,.12,2.28);
     }else if(i===5){
-      const x=-.22;
-      shape('char','soft',x,.096,6.19,5.43,.185,1.38);foot(x,6.19,5.43,1.36);
-      box('ceilingEdge',x,.152,5.506,5.37,.053,.041);
-      for(const u of [-2.76,-1.5,1.09,2.32])bolt(u,.151,5.480,.010);
-      poster(i,-1.77,2.72,rear(-1.77)-.145,1.46,1.76);
-      poster(i+8,1.80,2.79,rear(1.80)-.147,1.38,1.54,0,'notes');
-      // The broad teaching panel belongs to the stage, not to the stepped masonry.
-      shape('ceilingEdge','soft',.25,2.60,6.87,1.16,1.01,.112);
-      plate(13,.25,2.602,6.811,1.062,.88,0,0,'notes');
-      for(const u of [-.25,.75])box('coal',u,1.088,6.884,.048,1.862,.068);
-      shape('boards','soft',x,1.026,6.05,.67,1.60,.56);
-      shape('ceilingEdge','soft',x,.269,6.052,.754,.151,.645);
-      shape('felt','soft',x,1.065,5.763,.42,1.002,.026);
-      shape('copper','soft',x,1.382,5.738,.161,.155,.022,0,0,pi*.25);
-      shape('amber','soft',x,1.835,6.04,.76,.087,.63,-.10);
-      plate(13,x,1.886,6.062,.44,.383,0,-pi*.5,'notes');
-      foot(x,6.05,.78,.64);
-      for(const d of [2.40,3.74])for(const u of [-2.03,.89,2.20]){
-        table(u,d,.83,.58,.78,'boards');plate(i+8,u+.08,.788,d+.019,.37,.29,-.16,-pi*.5);
-        tube('copper',[u-.233,.788,d-.111],[u-.200,.788,d+.018],.006);
-        shape('felt','soft',u+.271,.797,d+.186,.117,.034,.084);
-        box('gunmetal',u,.68,d-.263,.65,.034,.036);
-        box('boards',u,.570,d-.127,.70,.067,.265);
-        shape('green','soft',u,.455,d-.59,.47,.079,.46);
-        shape('boards','soft',u,.57,d-.81,.465,.444,.053);
-        for(const s of [-1,1]){
-          for(const z of [-.18,.18])tube('coal',[u+s*.18,.018,d-.57+z],[u+s*.17,.414,d-.57+z*.93],.024);
-          tube('gunmetal',[u+s*.17,.371,d-.74],[u+s*.18,.725,d-.818],.022);
-        }
-        foot(u,d-.57,.47,.46);
-      }
+      const platform=(l,r,a,b,h)=>{
+        const x0=xyz(l,0,a)[0],x1=xyz(r,0,b)[0],z0=front-b,z1=front-a;
+        world.support([[x0,z0],[x1,z0],[x1,z1],[x0,z1]],F+h,p=>p.y>=F-.25,null);
+      };
+      dressClassroom(k,{edge,rear,xyz,box,shape,tube,plate,poster,table,foot,platform,bulb});
     }else if(i===6){
       stripe(-1.13,4.08,.131,4.47);stripe(1.33,4.08,.131,4.47);
       for(const [x,d] of [[0,4.24],[.12,6.01]]){

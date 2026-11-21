@@ -1,6 +1,7 @@
 import {architectureKit} from './architecture-kit.js';
 import {sharedSet} from './surface-detail.js';
 import {ATTIC_LAYER,ATTIC_FLOOR as F,ATTIC_CEILING as C,ATTIC_WELL as w,atticStair} from './palace-attic-layout.js';
+import {dressStairWell,stairMaterials} from './palace-stair-detail.js';
 
 const X=31.92,Z=8.74,at=(x,y,z)=>[x,y,z];
 const inPlan=(x,z)=>Math.abs(x)<=X&&Math.abs(z)<=Z;
@@ -19,7 +20,8 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
     stone:surface('stairStone',0xa09585,.97),plaster:surface('plaster',0xb9ae9b,.97),lime:surface('plaster',0xc9bcaa,.96),
     iron:new T.MeshStandardMaterial({color:0x484139,metalness:.45,roughness:.84}),
     brass:new T.MeshStandardMaterial({color:0x92764b,metalness:.43,roughness:.68}),
-    glass:new T.MeshStandardMaterial({color:0xf0cf91,emissive:0xf2a461,emissiveIntensity:.72,roughness:.58})
+    glass:new T.MeshStandardMaterial({color:0xf0cf91,emissive:0xf2a461,emissiveIntensity:.72,roughness:.58}),
+    ...stairMaterials(T)
   };
   const profile=atticStair(lower),{rise,mid,tread}=profile;
   const kit=parent=>architectureKit(T,parent,m);
@@ -38,18 +40,20 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
   for(let j=0;j<w.steps;j++){
     const loY=lower+(j+1)*rise,hiY=mid+(j+1)*rise;
     const treadBox=(a,b,low,high,y,dir)=>{
-      box(k,'dark',a,b,y-rise,y-.040,low,high);
-      box(k,j%4===1?'pale':'oak',a,b,y-.046,y,low-(dir===1?.013:0),high+(dir===-1?.013:0));
+      box(k,'jamb',a+.012,b-.012,y-rise,y-.046,low,high);
+      box(k,j%4===1?'oak':'tread',a+.006,b-.006,y-.046,y,low-(dir===1?.013:0),high+(dir===-1?.013:0));
       const lip=dir===1?low-.014:high+.014;
-      box(k,'edge',a+.006,b-.006,y-.039,y-.008,lip-.006,lip+.006);
-      for(const x of [a+.071,b-.071])box(k,'iron',x-.014,x+.014,y,y+.002,lip+dir*.038-.006,lip+dir*.038+.006);
+      box(k,'nose',a+.009,b-.009,y-.038,y-.008,lip-.006,lip+.006);
+      for(const x of [a+.071,b-.071]){
+        box(k,'forged',x-.011,x+.011,y+.0006,y+.0027,lip+dir*.042-.007,lip+dir*.042+.007);
+      }
     };
     treadBox(w.left,w.innerLeft,tread(j),tread(j+1),loY,1);
     treadBox(w.innerRight,w.right,tread(w.steps-j-1),tread(w.steps-j),hiY,-1);
   }
   box(k,'dark',w.left,w.right,mid-.175,mid-.037,w.turn,w.far);
   for(let z=w.turn,j=0;z<w.far-.005;z+=.149,j++){
-    box(k,j%3===0?'edge':'oak',w.left,w.right,mid-.037,mid,z,Math.min(w.far,z+.146));
+    box(k,j%3===0?'oak':'tread',w.left+.006,w.right-.006,mid-.037,mid,z,Math.min(w.far,z+.146));
   }
   for(const x of [w.left+.04,w.innerLeft-.033]){
     beam(k,'dark',[x,lower-.090,w.start-.028],[x,mid-.141,w.turn+.035],.068,.208);
@@ -58,7 +62,7 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
     beam(k,'dark',[x,mid-.117,w.turn+.035],[x,F-.129,w.start-.028],.069,.208);
   }
   box(k,'plaster',w.left-.088,w.left,lower,10.35,-.78,w.far);
-  box(k,'edge',w.left-.102,w.left,lower+.024,lower+.144,-.78,w.far);
+  box(k,'jamb',w.left-.102,w.left+.021,lower+.024,lower+.144,-.776,w.far-.013);
   box(k,'stone',w.left-.146,w.left+.014,lower,lower+2.50,-.819,-.765);
   box(k,'stone',w.left-.146,w.left+.014,lower+2.39,lower+2.55,w.cutNear,-.765);
   const plateZ=-.23,plateY=lower+1.65;
@@ -81,16 +85,6 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
   sign.name='Diensttreppe · altes Hinweisschild';sign.rotation.y=-Math.PI/2;
   sign.position.set(w.left-.114,plateY,plateZ);stair.add(sign);
   box(k,'plaster',w.innerLeft,w.innerRight,lower,F,w.cutNear,w.turn-.025);
-  for(const [x,z0,z1,y0,y1] of [
-    [w.innerLeft-.032,w.start+.045,w.turn-.09,lower+.92,mid+.89],
-    [w.right-.035,w.start+.045,w.turn-.09,F+.87,mid+.95]
-  ]){
-    beam(k,'edge',[x,y0,z0],[x,y1,z1],.060,.071);
-    for(let i=0;i<=3;i++){
-      const t=i/3,z=z0+(z1-z0)*t,y=y0+(y1-y0)*t;
-      box(k,'iron',x-.03,x+.03,y-.194,y-.022,z-.013,z+.013);
-    }
-  }
   lowerWorld.box(w.left-.088,-.78,w.left,w.far);
   lowerWorld.box(w.innerLeft,w.cutNear,w.innerRight,w.turn-.025);
   lowerWorld.box(w.left,w.far,w.right,w.far+.025);
@@ -117,17 +111,9 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
     [w.left,w.innerRight,w.start-.08,w.start],
     [w.left,w.right,w.far,w.far+.09]
   ]){
-    box(up,'edge',a,b,F-.153,F+.022,c,d);
-    box(up,'dark',a,b,F+.918,F+.987,c,d);
-    const alongZ=d-c>b-a,len=alongZ?d-c:b-a,n=Math.ceil(len/.225);
-    for(let i=0;i<=n;i++){
-      const x=alongZ?(a+b)/2:a+.037+(b-a-.074)*i/n;
-      const z=alongZ?c+.037+(d-c-.074)*i/n:(c+d)/2;
-      const rail=i===0||i===n?.070:.028;
-      box(up,i===0||i===n?'dark':'iron',x-rail/2,x+rail/2,F+.02,F+.945,z-rail/2,z+rail/2);
-    }
     atticWorld.box(a,c,b,d);
   }
+  dressStairWell(T,{k,up,box,beam,w,lower,F,mid});
   // These keep a diagonal approach from hopping off the return flight.
   atticWorld.box(w.innerLeft,w.start,w.innerRight,w.turn-.025);
   atticWorld.box(w.right,w.start,w.right+.09,w.far);

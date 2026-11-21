@@ -258,6 +258,12 @@ export function addPalaceUpper(T,scene,facade,upperWorld,atticWorld,M,height){
         lights[i].position.set(x,onPlaza&&i===1?roof-1.31:roof-1.02,z);
         lights[i].color.setHex(i===1?tint:i===0?(onPlaza?0xb0b8b0:0xffe5cc):0xe1e4e4);
         lights[i].intensity=i===1?(onPlaza?34:38):onPlaza?17:21;
+        lights[i].distance=13.6;
+      }
+      if(high&&p.x>28.8&&p.z>-1.72&&p.z<1.72){
+        const l=lights[2],turn=p.y>UPPER_FLOOR+1.32;
+        l.position.set(turn?31.11:30.35,turn?ATTIC_FLOOR-.45:UPPER_FLOOR+2.40,turn?1.12:.21);
+        l.color.setHex(0xffd394);l.intensity=19;l.distance=6.3;
       }
     }
     return changed;
