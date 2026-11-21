@@ -3,6 +3,8 @@ import {UPPER_ENTRY as E,UPPER_ROOM_PLAN} from './palace-openings.js';
 import {sharedSet} from './surface-detail.js';
 import {dressUpperFactory} from './upper-factory.js';
 import {dressUpperPlaza} from './upper-plaza.js';
+import {addPalaceAttic} from './palace-attic.js';
+import {ATTIC_LAYER,ATTIC_FLOOR,ATTIC_WELL} from './palace-attic-layout.js';
 
 export const UPPER_LAYER=6;
 export const UPPER_FLOOR=E.sill+.023;
@@ -21,7 +23,7 @@ const insidePlan=(x,z,pad=0)=>Math.abs(x)<=X+pad&&Math.abs(z)<=Z+pad||
   Math.abs(x)<=squareWidth+pad&&z>=Z-pad&&z<=squareEnd+pad;
 const entrySpan=x=>x>E.left+.14&&x<E.right-.14;
 
-export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
+export function addPalaceUpper(T,scene,facade,upperWorld,atticWorld,M,height){
   const room=new T.Group(),ladder=new T.Group(),portal=new T.Group();
   room.name='Erstes Obergeschoss · Referat Morgenform';room.visible=false;
   ladder.name='Gartenfassade · Anlegeleiter';ladder.visible=false;ladder.userData.noSceneQuery=true;
@@ -102,7 +104,9 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   const fk=architectureKit(T,deck,finishes),wk=architectureKit(T,walls,finishes),bk=architectureKit(T,beams,finishes);
   for(const [a,b,l,r] of [[-X,X,-Z,Z],[-gardenWidth,gardenWidth,gardenEnd,-Z],[-squareWidth,squareWidth,Z,squareEnd]]){
     fk.box('silt',at,a,b,UPPER_FLOOR-.178,UPPER_FLOOR-.019,l,r);
-    fk.box('soot',at,a,b,roof,roof+.104,l,r);
+    const w=ATTIC_WELL,cuts=b===X?[[a,w.left,l,r],[w.left,w.right,l,w.cutNear],
+      [w.left,w.right,w.far,r],[w.right,b,l,r]]:[[a,b,l,r]];
+    for(const [u,v,za,zb] of cuts)fk.box('soot',at,u,v,roof,roof+.104,za,zb);
   }
   function wall(axis,fixed,a,b,holes=[],toOutside=false){
     const P=axis==='x'?(u,y,d)=>[fixed-d,y,u]:(u,y,d)=>[u,y,fixed+d],lo=UPPER_FLOOR,hi=roof;
@@ -148,7 +152,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   // Columns and a handful of timber ties distinguish the otherwise empty bays.
   for(let x=-29.5,i=0;x<31;x+=4.55,i++){
     bk.box(i%3?'wood':'endGrain',at,x-.084,x+.084,roof-.217,roof-.008,-Z+.16,Z-.16);
-    bk.box('endGrain',at,x-.118,x+.118,roof-.246,roof-.195,-1.73,1.73);
+    bk.box('endGrain',at,x-.118,Math.min(x+.118,ATTIC_WELL.left),roof-.246,roof-.195,-1.73,1.73);
   }
   fk.flush('Obergeschoss · Boden und Decke');wk.flush('Obergeschoss · Mauerwerk');
   bk.flush('Obergeschoss · Dachbalken und Baulicht');rungGeom.dispose();
@@ -158,6 +162,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   room.add(ambient,...lights);
   for(const o of [deck,walls,beams])o.traverse(m=>{if(m.isMesh)m.castShadow=false;});
   room.traverse(o=>o.layers.set(UPPER_LAYER));
+  const attic=addPalaceAttic(T,scene,upperWorld,atticWorld,UPPER_FLOOR,UPPER_LAYER);
 
   let start=Infinity,opening=0,enabled=false,progress=null,direction=1,requested=0,lastTread=-1;
   const treeGround=height(E.treeX,E.treeZ)??0;
@@ -170,7 +175,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   };
   const upper=p=>p.y>UPPER_FLOOR-.24&&insidePlan(p.x,p.z,.075);
   const isFoot=p=>p.y<base+.49&&Math.abs(p.x-E.x)<.51&&p.z>=footZ-.53&&p.z<footZ+.32;
-  const isTop=p=>upper(p)&&Math.abs(p.x-E.x)<.49&&p.z>gardenEnd-.04&&p.z<arrivalZ+.46;
+  const isTop=p=>upper(p)&&!attic.inside(p)&&Math.abs(p.x-E.x)<.49&&p.z>gardenEnd-.04&&p.z<arrivalZ+.46;
   function target(p,look){
     // The bloom is a clue, not the hitbox: proximity to the trunk works at any angle.
     if(start===Infinity&&p.y>=treeGround-.46&&p.y<=treeGround+1.28&&
@@ -230,8 +235,10 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
       for(const {leaf,side} of leaves)leaf.rotation.y=side*a*Math.PI*.491;
       cover.visible=open<.037;ladder.visible=open>.075;enabled=open>=.90;
     }
-    const high=upper(p),near=(Math.abs(p.x-E.x)<19&&p.z<arrivalZ+1.2&&p.z>footZ-26&&p.y>=base-.6);
-    const see=high||opening>.045&&near;
+    const high=upper(p),lowerVisible=high&&(!attic.inside(p)||attic.linked(p)),
+      near=(Math.abs(p.x-E.x)<19&&p.z<arrivalZ+1.2&&p.z>footZ-26&&p.y>=base-.6);
+    changed=attic.update(p,high)||changed;
+    const see=lowerVisible||!high&&opening>.045&&near;
     if(room.visible!==see){room.visible=see;changed=true;}
     if(see){
       changed=factory.update(time,p,high)||changed;
@@ -256,22 +263,28 @@ export function addPalaceUpper(T,scene,facade,upperWorld,M,height){
   }
   async function prepare(renderer){
     const camera=new T.PerspectiveCamera(65,1,.08,120),vp=renderer.getViewport(new T.Vector4()),sc=renderer.getScissor(new T.Vector4()),
-      test=renderer.getScissorTest(),shadow=renderer.shadowMap.needsUpdate,restore=room.visible,meshes=[];
+      test=renderer.getScissorTest(),shadow=renderer.shadowMap.needsUpdate,restore=room.visible,loft=attic.root.visible,meshes=[];
     camera.layers.set(UPPER_LAYER);camera.position.set(4.98,UPPER_FLOOR+1.65,-8.69);camera.lookAt(4.98,UPPER_FLOOR+1.63,0);
     room.visible=true;room.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
     try{
       await renderer.compileAsync(scene,camera);
       renderer.setViewport(0,0,32,32);renderer.setScissor(0,0,32,32);renderer.setScissorTest(true);
       renderer.render(scene,camera);
+      attic.update({x:30.9,y:ATTIC_FLOOR,z:-2},true);
+      camera.layers.set(ATTIC_LAYER);camera.position.set(30.9,ATTIC_FLOOR+1.67,-2);camera.lookAt(1,ATTIC_FLOOR+1.45,0);
+      await renderer.compileAsync(scene,camera);renderer.render(scene,camera);
     }finally{
+      attic.update({x:0,y:0,z:0},false);attic.root.visible=loft;
       room.visible=restore;for(const [o,f] of meshes)o.frustumCulled=f;
       renderer.setViewport(vp);renderer.setScissor(sc);renderer.setScissorTest(test);renderer.shadowMap.needsUpdate=shadow;
     }
   }
   return {prepare,update,target,unlock,step,request(d){requested=d;},inside:upper,visible:()=>room.visible,
-    seeGarden,
-    floorAt:(x,z,y)=>y>UPPER_FLOOR-.26&&insidePlan(x,z,.164)?UPPER_FLOOR:null,
+    seeGarden,insideAttic:attic.inside,stairLink:attic.linked,downSnap:attic.downSnap,
+    floorAt:(x,z,y)=>attic.floorAt(x,z,y)??(y>UPPER_FLOOR-.26&&insidePlan(x,z,.164)?UPPER_FLOOR:null),
     ceilingAt(x,z,y){
+      const atticCeiling=attic.ceilingAt(x,z,y);
+      if(atticCeiling!==null)return atticCeiling;
       if(y<UPPER_FLOOR-.26||!insidePlan(x,z,.19))return Infinity;
       if(entrySpan(x)&&z<gardenEnd+.18)return E.head-.061;
       const crossing=Math.abs(Math.abs(z)-1.73)<.15;

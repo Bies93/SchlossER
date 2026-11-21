@@ -5,6 +5,7 @@ import {createHuman,humansAvailable} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 import {plazaAtlas,smokedMirror,PLAZA_ROOMS} from './upper-plaza-art.js';
 import {plazaFinishMaterials,dressPlazaFinishes,dressUpperHall} from './upper-plaza-finishes.js';
+import {ATTIC_WELL} from './palace-attic-layout.js';
 
 const pi=Math.PI,front=1.73,xyz=(x,y,z)=>[x,y,z];
 const crew={
@@ -581,7 +582,7 @@ export function dressUpperPlaza(T,parent,world,F,bays,{roof,Z,squareWidth,square
     }
   }
   for(const v of Object.values(g))v.dispose();
-  const updateHall=dressUpperHall(T,parent,world,m,F,bays,roof);
+  const updateHall=dressUpperHall(T,parent,world,m,F,bays,roof,ATTIC_WELL.left);
 
   function update(time,p,inside){
     let changed=updateHall(p,inside);

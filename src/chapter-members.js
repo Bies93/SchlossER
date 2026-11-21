@@ -3,6 +3,7 @@ import {sharedSet} from './surface-detail.js';
 import {createHuman,humansAvailable} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 import {CHAPTER_LAYER} from './chapter-layout.js';
+import {ARCHIVE_CLERK,createArchiveStamp} from './chapter-archive.js';
 
 const pi=Math.PI,TAU=2*pi,at=(x,y,z)=>[x,y,z];
 const clamp=x=>Math.min(1,Math.max(0,x));
@@ -101,7 +102,7 @@ export function chapterMembers(T,rooms,world,F,isBelow){
   const cloth=sharedSet(T,'canvas',512);
   const roster=[
     ['chapterOskar','chapter','chair',xChair,zChair,forward,[0x703340,0x32252d,0x54272e]],
-    ['chapterMatthias','archive','archive',24.90,-41.38,pi-.10,[0x4c5143,0x423b28,0x918063]],
+    ['chapterMatthias','archive','archive',ARCHIVE_CLERK.x,ARCHIVE_CLERK.z,ARCHIVE_CLERK.yaw,[0x4c5143,0x423b28,0x918063]],
     ['chapterKonrad','duel','duel',24.94,-54.08,-.70,[0x293d50,0x4f3a35,0x572e34]]
   ];
   const cast=roster.map(([id,roomId,kind,x,z,yaw,palette],i)=>{
@@ -119,7 +120,10 @@ export function chapterMembers(T,rooms,world,F,isBelow){
       rig.chairPose(state.t,seatHeight,1);
     }else{
       world.circle(x,z,.215,collides);
-      if(kind==='archive')rig.deskWork(state.t,'registry');else rig.factoryPose(state.t,'trainer');
+      if(kind==='archive'){
+        state.work=createArchiveStamp(T,room,F);state.stampPose=rig.archivePose();
+        state.attention=0;state.work.tick(1.3);state.stampPose(state.t,state.work);
+      }else rig.factoryPose(state.t,'trainer');
     }
     return state;
   });
@@ -149,6 +153,7 @@ export function chapterMembers(T,rooms,world,F,isBelow){
   return {update(dt,p){
     let changed=false;
     for(const a of cast){
+      if(a.kind==='archive'&&!a.rig.controllable())a.work.park();
       if(!a.room.visible||!a.rig.controllable()||Math.abs(p.y-F)>2.0||
         Math.hypot(a.actor.position.x-p.x,a.actor.position.z-p.z)>9.6){a.acc=0;continue;}
       a.acc+=dt;if(a.acc<.039)continue;
@@ -158,7 +163,11 @@ export function chapterMembers(T,rooms,world,F,isBelow){
       a.glance+=(target-a.glance)*Math.min(1,step*5.2);
       const talk=a.say>0?.18+.16*Math.abs(Math.sin(a.t*15)):0;
       if(a.kind==='chair')chair(a,step,p,talk);
-      else if(a.kind==='archive')a.rig.deskWork(a.t,'registry',a.glance,talk);
+      else if(a.kind==='archive'){
+        a.attention+=((a.say>0?1:0)-a.attention)*Math.min(1,step*5.2);
+        a.work.tick(step*(1-a.attention));
+        a.stampPose(a.t,a.work,a.glance,talk,a.attention);
+      }
       else a.rig.factoryPose(a.t,'trainer',a.glance,talk);
       changed=true;
     }

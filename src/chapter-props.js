@@ -1,6 +1,7 @@
 import {stationery} from './interior-stationery.js';
 import {randomSource} from './surface-detail.js';
 import {chapterCraft} from './chapter-craft.js';
+import {ARCHIVE_DESK,ARCHIVE_WORK,archivePrint} from './chapter-archive.js';
 
 export function dressChapter(T,{room,k,box:B,hit,platform,F,id,print,cloth}){
   const pi=Math.PI,rnd=randomSource(9318+id.charCodeAt(0)),ball=new T.SphereGeometry(1,14,9),pin=new T.CylinderGeometry(1,1,1,12),
@@ -201,18 +202,50 @@ export function dressChapter(T,{room,k,box:B,hit,platform,F,id,print,cloth}){
   }else if(id==='archive'){
     shelf(20.70,-45.49,2.90,.48);shelf(25.57,-45.49,1.99,.48);
     shelf(20.50,-41.66,2.08,.63);
-    craft.sideTable(25.17,-42.21,2.39,.89,.916,'velvetBlue');
-    props.folio(24.82,F+.941,-42.15,.39,.273,.41,0,{loose:true,thickness:.014});
-    props.folio(25.73,F+.941,-42.31,.371,.246,2.87,2,{loose:false,thickness:.038});
-    props.folio(24.94,F+.006,-42.12,.29,.22,-.36,2,{loose:false,thickness:.036});
-    candle(24.23,.94,-42.40,.174);candle(25.86,.94,-42.40,.118);
-    cylinder('brass',25.46,1.019,-42.269,.046,.14);
-    cylinder('soot',25.46,1.085,-42.269,.028,.012);
-    for(let i=0;i<4;i++)box(i%2?'bookC':'bookA',25.86,1.002+i*.032,-42.14,.29,.029,.174);
+    const {x,z,surface:y}=ARCHIVE_DESK,w=ARCHIVE_WORK;
+    craft.sideTable(x,z,2.39,.89,.916,'velvetBlue');
+    // Leather-lined writing station, with texturing and separate sewn page edges.
+    box('leatherTrim',w.pageX,y,w.pageZ,.418,.008,.284);
+    box('paper',w.pageX,y+.007,w.pageZ,.398,.013,.268);
+    for(let j=0;j<3;j++)box('inlayGold',w.pageX,y+.008+j*.0035,w.pageZ+.135,.390,.001,.0012);
+    for(let j=0;j<7;j++){
+      const zz=w.pageZ-.108+j*.035;
+      rod('brass',w.pageX-.005,w.paper+.002,zz,w.pageX+.004,w.paper+.002,zz+.003,.0019);
+    }
+    const page=archivePrint(T);page.position.y+=F;room.add(page);
+    box('walnut',w.inkX,y,w.inkZ,.137,.015,.113);
+    box('soot',w.inkX,w.inkY-.007,w.inkZ,.113,.007,.091);
+    for(const s of [-1,1]){
+      box('brass',w.inkX+s*.063,y+.014,w.inkZ,.006,.008,.111);
+      box('brass',w.inkX,y+.014,w.inkZ+s*.054,.128,.008,.006);
+    }
+    box('walnut',w.inkX,y+.004,w.inkZ-.116,.134,.018,.103);
+    box('brass',w.inkX,y+.019,w.inkZ-.116,.097,.006,.066);
+    for(const a of [-.043,.043])cylinder('brass',w.inkX+a,y+.017,w.inkZ-.058,.008,.012);
+    // Sorting tray with three staggered files, plus ink bottle and a dip pen.
+    const tx=25.76,tz=-42.21;
+    box('walnut',tx,y,tz,.405,.028,.300);
+    for(const s of [-1,1])box('walnut',tx+s*.191,y+.020,tz,.019,.095,.300);
+    box('darkWood',tx,y+.021,tz-.141,.375,.092,.019);
+    box('darkWood',tx,y+.022,tz+.138,.376,.027,.014);
+    box('brass',tx,y+.033,tz-.154,.113,.034,.006);
+    for(let j=0;j<3;j++)props.folio(tx+(j-1)*.019,F+y+.029+j*.030,tz+.012-(j%2)*.022,.307,.222,j*.097-.098,j+1,
+      {loose:j===2,thickness:.027});
+    const ix=24.52,iz=-42.28;
+    cylinder('soot',ix,y+.043,iz,.039,.089);
+    cylinder('brass',ix,y+.083,iz,.025,.020);
+    cylinder('soot',ix,y+.099,iz,.027,.018);
+    box('paper',ix,y+.030,iz-.038,.041,.022,.0025);
+    box('darkWood',24.48,y,-42.147,.224,.008,.044);
+    rod('walnut',24.378,y+.019,-42.139,24.552,y+.021,-42.161,.006);
+    rod('brass',24.552,y+.021,-42.161,24.579,y+.019,-42.166,.0048);
+    candle(24.24,.932,-42.469,.170);candle(26.06,.932,-42.467,.129);
+    // The second protocol remains literally underneath, as in his line.
+    props.folio(24.94,F+.006,-42.12,.32,.24,-.28,2,{loose:false,thickness:.033});
+    props.folio(24.97,F+.040,-42.097,.29,.22,-.33,7,{loose:true,thickness:.005});
     frame('archive',19.20,1.762,-43.84,1.28,.89,pi/2);
     frame('dynasty',19.20,1.779,-39.80,1.22,.95,pi/2);
     frame('duel',23.52,2.378,-45.57,1.12,.219);
-    brassToken(25.02,.942,-42.43);brassToken(25.15,.942,-42.39);
     frame('banned',26.61,1.805,-40.90,1.32,.902,-pi/2);
     lamp(20.44,2.20,-45.64);lamp(25.38,2.20,-45.64);
     carpet(23.10,-43.41,1.42,2.95,'wine');

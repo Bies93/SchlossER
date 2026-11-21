@@ -294,12 +294,34 @@ export function createHuman(T,id='base'){
       const axis=V().crossVectors(direction,palm).applyQuaternion(bq).normalize();
       curls.push({b,name,axis,angle:f==='thumb'?[.33,.48,.30][i-1]:[.77,1.09,.68][i-1]});
     }
-    const socketInv=socket.quaternion.clone().invert(),parentQ=Q(),curlQ=Q();
-    return {socket,hold(desired){
+    const socketInv=socket.quaternion.clone().invert(),parentQ=Q(),curlQ=Q(),wristQ=Q(),offset=V();
+    return {socket,wristAt(point,desired,out){
+      wristQ.copy(desired).multiply(socketInv);
+      return out.copy(point).sub(offset.copy(socket.position).applyQuaternion(wristQ).multiplyScalar(size));
+    },hold(desired,tension=1){
       w.parent.getWorldQuaternion(parentQ).invert();
       w.quaternion.copy(parentQ).multiply(desired).multiply(socketInv);
-      for(const {b,name,axis,angle} of curls)b.quaternion.copy(rest.get(name).q).multiply(curlQ.setFromAxisAngle(axis,angle));
+      for(const {b,name,axis,angle} of curls)b.quaternion.copy(rest.get(name).q).multiply(curlQ.setFromAxisAngle(axis,angle*tension));
     }};
+  }
+  function archivePose(){
+    const left=grip('l'),right=grip('r'),goal=V(),basis=new T.Matrix4();
+    // World axes: wrist back toward the clerk, thumb up on the stamp;
+    // opposite hand lies open on the outer edge of the register.
+    const stampQ=Q().setFromRotationMatrix(basis.makeBasis(V(-1,0,0),V(0,0,1),V(0,1,0)));
+    const pageQ=Q().setFromRotationMatrix(basis.makeBasis(V(0,1,0),V(0,0,1),V(1,0,0)));
+    return (t,work,glance=0,speech=0,notice=0)=>{
+      torso(.006*sin(t*.80),-.024,.036,.22-.085*notice,-.043,.020,t,glance,.27-.28*notice);
+      for(const s of ['l','r']){
+        const sign=s==='l'?1:-1,a=read('foot_'+s);
+        solve(LIMB[s].leg,a.x*.87,a.y,a.z+sign*.028,sign*.11,0,1);foot('foot_'+s,0,sign*.051);
+        const [socket,desired,target]=s==='l'?[left,pageQ,work.left]:[right,stampQ,work.right];
+        socket.wristAt(target,desired,goal).applyMatrix4(worldInverse);
+        solve(LIMB[s].arm,goal.x,goal.y,goal.z,sign*.81,-.54,-.43);
+        socket.hold(desired,s==='l'?.085:.70);
+      }
+      face(t,7,speech,.035,0,glance);
+    };
   }
   function deskWork(t,job,glance=0,speech=0){
     const f=sin(t*(job==='cook'?2.3:1.55)),b=cos(t*1.65),notice=Math.min(1,speech*2);
@@ -509,7 +531,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,visitorPose,factoryPose,chairPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,visitorPose,factoryPose,chairPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

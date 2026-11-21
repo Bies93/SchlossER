@@ -6,7 +6,7 @@ const GRAVITY=18.5, JUMP_SPEED=6.74, JUMP_BUFFER=.145, COYOTE=.088, DOWN_SNAP=.1
 const clamp = (v, max) => Math.min(max, Math.max(-max, v));
 
 export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceilingHeight=()=>Infinity,
-  {moveWorld=()=>world,traverse}= {}) {
+  {moveWorld=()=>world,traverse,stepDown}= {}) {
   const body = new T.Group();
   const look = new T.Group();
   look.position.y = PLAYER.eye;
@@ -87,7 +87,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
             }else{vx=vz=0}
           }
         }
-        if(grounded&&groundY<y-DOWN_SNAP){grounded=false;vy=0}
+        if(grounded&&groundY<y-(stepDown?.(x,z,baseY)??DOWN_SNAP)){grounded=false;vy=0}
         if(grounded){y=groundY;vy=0}
         else{
           vy-=GRAVITY*STEP;

@@ -36,6 +36,7 @@ import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
 import {weaponPickups} from './weapon-pickups.js';
 import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
+import {ATTIC_LAYER} from './palace-attic-layout.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -82,6 +83,8 @@ async function start(){
  let chapter,upper;
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p)&&!chapter?.isBelow(p));
  const upperWorld=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
+ const atticWorld=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
+ const localWorld=p=>upper.insideAttic(p)?atticWorld:upper.inside(p)?upperWorld:world;
  addFixedColliders(world);
  const pauli=addPauli(T,s,world);
  const moosfunk=makeMoosfunk();
@@ -118,7 +121,7 @@ async function start(){
    hits.length=0;
    return y;
  };
- upper=addPalaceUpper(T,s,model,upperWorld,stonework,(x,z)=>floorHeight(x,z));
+ upper=addPalaceUpper(T,s,model,upperWorld,atticWorld,stonework,(x,z)=>floorHeight(x,z));
  const lighting=makeLighting(T,r,s,world,floorHeight);
  lighting.registerWindows(perimeter.windows);
  const audio=makeAudio(()=>{
@@ -133,14 +136,14 @@ async function start(){
    const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
  },(x,z,y)=>Math.min(chapter.ceilingAt(x,z,y),wcCeilingAt(x,z,y),labCeilingAt(x,z,y),upper.ceilingAt(x,z,y)),
-   {moveWorld:p=>upper.inside(p)?upperWorld:world,traverse:upper.step});
+   {moveWorld:localWorld,traverse:upper.step,stepDown:(x,z,y)=>upper.inside({x,y,z})?upper.downSnap(x,z):null});
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
- const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER];
+ const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER,ATTIC_LAYER];
  const coarse=matchMedia('(pointer: coarse)'),ghoulOption=$('with-ghouls');
  let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0;
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
@@ -158,8 +161,13 @@ async function start(){
  const geometryQuery=sceneQuery(T,s,player.body),layerContext={mask:1,layer:0};
  function activeLayers(){
    const p=player.body.position;
+   if(upper.insideAttic(p)){
+     layerContext.layer=ATTIC_LAYER;layerContext.mask=(1<<ATTIC_LAYER)|(upper.stairLink(p)?1<<UPPER_LAYER:0);
+     return layerContext;
+   }
    if(upper.inside(p)){
      layerContext.layer=UPPER_LAYER;layerContext.mask=(1<<UPPER_LAYER)|(upper.seeGarden(p)?1:0);
+     if(upper.stairLink(p))layerContext.mask|=1<<ATTIC_LAYER;
      return layerContext;
    }
    const cm=chapter.mode(p),wm=wcCameraMode(p),lm=labCameraMode(p);
@@ -173,7 +181,7 @@ async function start(){
      wm==='inside'||wm!=='surface'&&p.y<-.38?WC_LAYER:lm==='cellar'||lm==='threshold'&&p.y<-.38?LAB_LAYER:0;
    return layerContext;
  }
- const targetWorld={blocked(x,z,y){return (upper.inside({x,y,z})?upperWorld:world).blocked(x,z,y);}};
+ const targetWorld={blocked(x,z,y){return localWorld({x,y,z}).blocked(x,z,y);}};
  const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
    if(id==='hubert')leavePrison();

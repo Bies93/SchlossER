@@ -104,12 +104,12 @@ export function dressPlazaFinishes(k,{i,w,parts,pos,box,ceiling,rear}){
   if(i===6)rug(1,-2.28,2.75,.81,1.10);
 }
 
-export function dressUpperHall(T,parent,world,m,F,bays,roof){
+export function dressUpperHall(T,parent,world,m,F,bays,roof,ceilingEnd=bays.at(-1)){
   const C=roof-F,Y=new T.Vector3(0,1,0),matrix=new T.Matrix4(),q=new T.Quaternion(),s=new T.Vector3(),p=new T.Vector3(),v=new T.Vector3();
   const tube=new T.CylinderGeometry(1,1,1,14),ring=new T.TorusGeometry(1,.075,6,20);
   const segments=[];
   for(let i=0;i<bays.length-1;i++){
-    const [l,r]=[bays[i],bays[i+1]],center=(l+r)*.5;
+    const [l,r]=[bays[i],bays[i+1]],center=(l+r)*.5,cap=Math.min(r,ceilingEnd),capMid=(l+cap)*.5;
     const group=new T.Group();group.name='Obergeschoss · Längsgang '+(i+1);parent.add(group);segments.push({l,r,group});
     const k=architectureKit(T,group,m),pos=(x,y,z)=>[x,F+y,z];
     const box=(mat,x,y,z,w,h,d)=>k.box(mat,pos,x-w/2,x+w/2,y-h/2,y+h/2,z-d/2,z+d/2);
@@ -140,8 +140,8 @@ export function dressUpperHall(T,parent,world,m,F,bays,roof){
         box('railWood',(A+B)/2,.129,z-sign*.032,B-A,.087,.091);
         for(let x=A+.20;x<B-.13;x+=.73)box('bronze',x,.456,z-sign*.048,.015,.545,.022);
       }
-      box('hallIvory',center,C-.092,z,r-l,.188,.155);
-      box('railWood',center,C-.222,z-sign*.042,r-l,.097,.163);
+      box('hallIvory',capMid,C-.092,z,cap-l,.188,.155);
+      box('railWood',capMid,C-.222,z-sign*.042,cap-l,.097,.163);
     }
     if(i===1||i===3||i===6){
       const x=l+1.10,z=-1.347;
@@ -171,13 +171,13 @@ export function dressUpperHall(T,parent,world,m,F,bays,roof){
       }
     }
     // A closed coffering grid and centrally hung opal shade, mounted through the ceiling plane.
-    k.quad('hallIvory',pos(l,C-.013,-1.65),pos(r,C-.013,-1.65),pos(r,C-.013,1.65),pos(l,C-.013,1.65),1.5);
-    for(const x of [l+.21,center,r-.21]){
+    k.quad('hallIvory',pos(l,C-.013,-1.65),pos(cap,C-.013,-1.65),pos(cap,C-.013,1.65),pos(l,C-.013,1.65),1.5);
+    for(const x of [l+.21,center,cap-.21]){
       box('railWood',x,C-.251,0,.111,.093,3.09);
       box('bronze',x,C-.306,0,.123,.021,3.11);
       for(const z of [-1.12,0,1.12])box('railWood',x,C-.105,z,.092,.224,.092);
     }
-    for(const z of [-1.11,1.11])box('railWood',center,C-.249,z,r-l-.37,.080,.121);
+    for(const z of [-1.11,1.11])box('railWood',capMid,C-.249,z,cap-l-.37,.080,.121);
     rod('bronze',[center,C-.244,0],[center,3.43,0],.021);
     rod('iron',[center,3.43,0],[center,3.50,0],.238);
     rod('filament',[center,3.35,0],[center,3.434,0],.186);
