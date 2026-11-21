@@ -16,10 +16,10 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
-  festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x3c2a22,weather:.15,bulk:1.30,mess:.93},
-  festAnni:{palette:[0x534752,0xbc7773,0xd1ac89],hair:0x715443,weather:.13,bulk:1.10,mess:.64},
-  festKalle:{palette:[0x303a4a,0xd18a55,0xd1a881],hair:0x624337,weather:.11,bulk:1.18,mess:.87},
-  festRudi:{palette:[0x51483d,0x7b89ac,0xc7af8b],hair:0x8e714f,weather:.18,bulk:1.25,mess:.76},
+  festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x412e27,weather:.15,bulk:.47,mess:.47},
+  festAnni:{palette:[0x534752,0xbc7773,0xd1ac89],hair:0x715443,weather:.13,bulk:.14},
+  festKalle:{palette:[0x303a4a,0xd18a55,0xd1a881],hair:0x624337,weather:.11,bulk:.21},
+  festRudi:{palette:[0x51483d,0x7b89ac,0xc7af8b],hair:0x8e714f,weather:.18,bulk:.34},
   bergWirt:{palette:[0x49372d,0xc2ac8b,0xe2cbb0],bodice:0x994538,hair:0x94775d,weather:.22},
   bergLeni:{palette:[0x514041,0xbbb99f,0xe3cfb4],bodice:0x266050,hair:0x684031,weather:.09},
   bergDora:{palette:[0x4a3044,0x917b9d,0xc5a995],bodice:0x75384a,hair:0xada39c,weather:.17},
@@ -257,8 +257,11 @@ export function createHuman(T,id='base'){
             const x=p.getX(i),y=p.getY(i),z=p.getZ(i),u=x-cx,v=z-cz;
             const a=Math.atan2(v,u),tuft=Math.sin(a*7+z*25)*.55+Math.sin(a*11+x*30)*.45;
             const r=style.mess*sm(y,min.y+band*.21,min.y+band*.78);
-            p.setXYZ(i,cx+u*(1+r*(.25+.18*tuft))+.016*r*Math.sin(a*3),y+r*(.042+.034*tuft),
-              cz+v*(1+r*(.21+.15*tuft))+.008*r*Math.cos(a*4));
+            // Keep the rooted layer over the scalp. Broaden the crown instead
+            // of stretching it into the former high quiff.
+            p.setXYZ(i,cx+u*(1+r*(.20+.075*tuft))+.005*r*Math.sin(a*3),
+              y+r*(.017+.008*tuft),
+              cz+v*(1+r*(.17+.083*tuft))+.003*r*Math.cos(a*4));
           }
           g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;
         }
@@ -582,28 +585,55 @@ export function createHuman(T,id='base'){
     face(t,role*1.121+.65,talk*(.52+.28*Math.abs(sin(t*14.7)))+heave*.24,.022+sob*.27,
       (role===2?.063:role===0?.092:.027)*(1-sob),glance,sob*.65);
   }
-  function festivalPose(t,role,phase,look=0,talk=0){
-    const zw=role===0,bar=role===1,stage=role===2,weight=sin(t*1.09),
-      draw=(progress(.12,.43,phase)-progress(.47,.54,phase))*(talk>0?0:1),
-      throwOut=(progress(.43,.55,phase)-progress(.61,.79,phase))*(talk>0?0:1),
-      gesture=talk*.68*(.7+.3*sin(t*4.9)),
-      wipe=bar?(.5+.5*sin(t*1.58))*(1-talk):0;
-    torso(weight*.015,-.022-.024*throwOut,0,.038+.194*throwOut+(bar?.074:0),
-      .125*(throwOut-draw)+weight*.038,.014*weight,t,look,zw?-.048*draw+.075*throwOut:stage?-.04:.036);
+  const festEye=read('eye_r')??read('head');
+  function festivalPose(t,role,phase,look=0,talk=0,props={}){
+    const zw=role===0,bar=role===1,dj=role===2,guest=role===3,
+      working=1-clamp(talk*1.5),weight=sin(t*.78+role*.79),gesture=talk*(.65+.35*sin(t*4.2)),
+      aim=zw?(progress(.08,.34,phase)-progress(.493,.555,phase))*working:0,
+      release=zw?(progress(.48,.555,phase)-progress(.64,.86,phase))*working:0,
+      set=zw?(progress(.05,.15,phase)-progress(.70,.95,phase))*working:0,
+      wash=(props.clean??0)*working,sip=(props.sip??0)*working,
+      cue=dj?(props.cue??0)*working:0;
+    const bend=.022+bar*.143*wash+dj*(.096-.055*gesture)+guest*(.034-.085*sip)+release*.131;
+    torso(.024*weight-.024*set,-.019-.014*set-.008*wash-.011*release,.021*set+.061*release+.045*wash,
+      bend,weight*.044-.207*aim+.183*release+.145*gesture*Math.sign(look),.017*weight+.047*aim,
+      t,look,zw?.037*set-.061*aim+.052*release:dj?.126*(1-gesture):bar?.148*wash:guest?-.148*sip:.045);
     for(const [i,s] of ['l','r'].entries()){
       const sign=i===0?1:-1,a=read('foot_'+s);
-      solve(LIMB[s].leg,a.x*1.07,a.y,a.z+(zw?sign*.112:sign*.026),sign*.19,-.045,1);
-      foot('foot_'+s,0,sign*.08);
-      let x=sign*(.232+.071*gesture),y=hipsY-.14+.32*gesture,z=.057+gesture*.17;
-      if(zw&&i===1){x=-.206+.072*throwOut;y+=.685*draw+.56*throwOut;z+=.235*draw+.58*throwOut;}
-      if(bar){x+=wipe*.112;y+=.36;z+=.25+.078*wipe;}
-      if(stage){y+=.29+.016*sin(t*5+i);z+=.26+(i===1?.065:.045)*sin(t*2.23+i)-.12*gesture;}
-      if(role===3){y+=.25;z+=.26+.032*sin(t*2.5+i);}
-      solve(LIMB[s].arm,x,y,z,sign*.76,-.45,-.48);
-      rot('hand_'+s,.08+.38*draw-.29*throwOut+.21*wipe-(stage?.24:0),sign*.19,.13*sign);
-      curl(s,zw&&i===1?.55+.43*draw-.31*throwOut:bar?.26:.39);
+      solve(LIMB[s].leg,a.x*(zw?1.29:1.12),a.y,a.z+(zw?sign*-.105:sign*.029),sign*.18,-.035,1);
+      foot('foot_'+s,0,sign*(zw?.17:.083));
+      let x=sign*(.205+.034*gesture),y=hipsY-.13+.239*gesture,z=.086+.19*gesture,rx=.11,close=.33;
+      if(zw&&i===1){
+        x=mix(-.216,-.135,aim)+.045*release;
+        y=mix(hipsY+.07,festEye.y-.103,aim)+release*.43;
+        z=mix(.119,festEye.z+.176,aim)+release*.379;
+        rx=.11+.37*aim-.64*release;close=.69+.18*aim-.51*release;
+      }else if(zw){
+        y+=.102+.068*set;z+=.077+.038*set;
+      }else if(bar){
+        const sweep=sin(t*2.64)*.093*wash;
+        x=mix(sign*.206+.059*gesture,i===1?-.161+sweep:.263,working);
+        y=mix(y,1.075/size+.027*(1-wash),working);
+        z=mix(z,i===1?.326+.108*wash:.30+.050*wash,working);
+        rx=-(i===1?.15+.18*wash:.10);close=.33+.21*wash*(i===1);
+      }else if(dj){
+        const taps=.018*Math.max(0,sin(t*13+i*1.58))*cue;
+        x=mix(x,sign*(i===1?.213:.353)+.031*sin(t*(i===1?1.18:2.4))*cue,working);
+        y=mix(y,1.061/size+taps+.048*(1-cue),working);
+        z=mix(z,.346+.064*cue+.031*sin(t*1.07+i)*cue,working);
+        rx=-.21+.074*sin(t*2.34+i)*cue;close=.28+.24*(i===0)*cue;
+      }else if(guest&&i===1){
+        x=mix(-.173,-.104,sip);y=mix(hipsY+.184,festEye.y-.193,sip);
+        z=mix(.266,festEye.z+.137,sip);rx=.10-.46*sip;close=.72;
+      }else if(guest){
+        y=mix(y,1.105/size+.023*sin(t*1.65),working);z=mix(z,.414+.055*sin(t*1.8),working);
+        rx=-.26+.1*sin(t*2.78)*working;close=.36+.33*working;
+      }
+      solve(LIMB[s].arm,x,y,z,sign*.73,-.44,-.58);
+      rot('hand_'+s,rx,sign*(.14+.08*aim),(.075+.08*release)*sign);
+      curl(s,close);
     }
-    face(t,5.4+role,talk,.056,stage?.036:0,look);
+    face(t,5.4+role,talk,.032+release*.04,(dj?.106:.04)*(1-gesture)-sip*.07,look);
   }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);

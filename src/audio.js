@@ -519,9 +519,9 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       for(let i=0;i<6;i++)grit(sfx,t+.05+i*.060,.056,.093,450,5300,{attack:.003,rate:1.06-i*.04});
     }else grit(sfx,t,.024,.061,900,4750,{attack:.001});
   }
-  function festival(playerAt){
+  function festival(playerAt,playing=true){
     let amount=0,pan=0;
-    if(playerAt&&festivalUrl&&live()){
+    if(playing&&playerAt&&festivalUrl&&live()){
       const dx=FESTIVAL_PA.x-playerAt.x,dz=FESTIVAL_PA.z-playerAt.z,d=Math.hypot(dx,dz);
       const fade=Math.max(0,Math.min(1,(26-d)/20));
       amount=fade*fade*(3-2*fade);

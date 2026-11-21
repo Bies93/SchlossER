@@ -257,7 +257,7 @@ async function start(){
  const isTouch=()=>document.body.dataset.input==='touch';
  const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),reloadButton:$('touch-reload'),
    weaponName:$('touch-weapon-name'),viewmodel,enabled:()=>controls()&&isTouch()});
- const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s,floorHeight,world);
+ const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s,floorHeight,world,garden.festival.archive);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
  const names=npcFocus(T,s,c,player.body,$('npc-name'),()=>activeLayers().mask,geometryQuery);
@@ -364,7 +364,9 @@ async function start(){
    if(access?.action==='upper-unlock'&&names.target()?.id==='gardenHannes')return null;
    if(upper.insideAttic(pos))return names.target()?null:upper.atticTarget(pos,look,atticBlocked);
    if(access||upper.inside(pos)||player.motion.climbing)return access??null;
-   const target=pickups.target(c,activeLayers().mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
+   const {layer,mask}=activeLayers();
+   const target=(layer===0?garden.festival.target(c,geometryQuery,mask,pos):null)
+     ??pickups.target(c,mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
    // Edda takes priority, without making the tape deck itself unavailable.
    return target?.id==='mf-radio'&&names.target()?.id==='guestEdda'?null:target;
@@ -439,6 +441,12 @@ async function start(){
    if(local?.action==='gear-pickup'){
      const notice=pickups.collect(local,isTouch());
      if(notice)showCaption(notice,4200);
+     doorPrompt();refresh();return;
+   }
+   if(local?.action==='festival-playlist'){
+     const playing=garden.festival.toggleMusic();
+     audio.festival(player.body.position,playing);
+     showCaption(playing?'Kalles Playlist läuft wieder.':'Kalles Playlist pausiert.',2150);
      doorPrompt();refresh();return;
    }
    if(local?.action==='priest-ack'){
@@ -551,7 +559,7 @@ async function start(){
      if(chapter.shadowMoved())r.shadowMap.needsUpdate=true;
      const {layer,mask}=activeLayers();
      audio.berg(layer===BERG_LAYER,tavern.musicianAlive());
-     audio.festival(layer===0?player.body.position:null);
+     audio.festival(layer===0?player.body.position:null,garden.festival.playing);
      if(puddle.update(dt,player.body.position,layer===0,c,audio.bergPhase()))dirty=true;
      if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
@@ -695,6 +703,7 @@ async function start(){
  await viewmodel.prepare(r);
  const parkWarmup=performance.now();
  await puddle.prepare(r);
+ garden.festival.prepare(r);
  await weather.prepare(r,[puddle.root,garden.orangery,garden.festival.root]);
  performance.measure('schlosser: Orangerie und Pfütze',{start:parkWarmup,end:performance.now()});
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});

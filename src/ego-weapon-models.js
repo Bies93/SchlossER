@@ -295,6 +295,13 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     for(const s of [-1,1]){
       stamp('FALKENRIED',s*.0426,.012,-.118,.123,.024);
       profile(m.wood,[[.298,-.018],[.319,-.037],[.313,-.076],[.282,-.081],[.241,-.061],[.247,-.033]],.006,s*.052,.002);
+      // Museum-prop details on the outside: maker's plate and repaired finish.
+      profile(m.coat,[[.211,-.069],[.224,-.079],[.214,-.092],[.178,-.089],
+        [.171,-.076],[.182,-.067]],.005,s*.047,.0018,[],{wear:.60,contact:.16});
+      bolt([s*.051,-.080,.196],.006,m.raw);
+      for(const [z,y] of [[.287,-.085],[.274,-.088],[.260,-.090]])
+        profile(m.wood,[[z,y],[z+.018,y+.010],[z+.020,y+.012],[z+.005,y+.009]],
+          .0018,s*.052,.0005,[],{wear:.81,contact:.05});
     }
     const control=assembly('Falkenried · bewegliche Ziermechanik');
     control.cyl(m.blue,[0,0,0],.012,.142,'z');

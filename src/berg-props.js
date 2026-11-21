@@ -1,4 +1,5 @@
 import {architectureKit} from './architecture-kit.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {sharedSet} from './surface-detail.js';
 
 export const at=(x,y,z)=>[x,y,z];
@@ -42,6 +43,10 @@ export function carpentry(T,parent,mats){
     kit.geometry(m,g,matrix.compose(v.set(x,y,z),q.setFromEuler(e.set(rx,ry,rz)),one.set(X,Y,Z)));
   }
   return {box:(m,x,y,z,w,h,d)=>kit.box(m,at,x-w/2,x+w/2,y-h/2,y+h/2,z-d/2,z+d/2),
+    round(m,x,y,z,w,h,d,r=.02,rx=0,ry=0,rz=0){
+      const g=new RoundedBoxGeometry(w,h,d,1,r);
+      put(m,g,x,y,z,1,1,1,rx,ry,rz);g.dispose();
+    },
     quad:kit.quad,cyl:(m,x,y,z,r,h,rx=0)=>put(m,c,x,y,z,r,h,r,rx),
     oval:(m,x,y,z,w,h,d)=>put(m,sphere,x,y,z,w,h,d),
     ring:(m,x,y,z,w,h,depth=.25,rx=0,ry=0)=>put(m,t,x,y,z,w,h,depth,rx,ry),
