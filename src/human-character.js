@@ -73,7 +73,7 @@ function personalize(T,lib,id,base,eyeY){
     field=id==='hubert'&&/^(?:Cloth|Shoes|Pocket|Field|LinenBand|Helmet)/.test(m.name),
     formal=cloth&&(id==='niklas'||id==='orbPriest'),staff=cloth&&id.startsWith('lab'),
     copperHair=id==='niklas'&&(hair||brow),freckles=id==='niklas'&&skin,
-    blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,
+    blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,jakeScalp=id==='gardenHannes'&&skin,
     ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
     visitor=cloth&&p.palette,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
@@ -89,7 +89,7 @@ function personalize(T,lib,id,base,eyeY){
   if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
   if(skin||cloth||field||ritual||copperHair||blondHair){
     m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
-      (field||formal||ritual||staff||visitor||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles?'-'+id:'-'+(p.weather??0));
+      (field||formal||ritual||staff||visitor||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -103,6 +103,13 @@ function personalize(T,lib,id,base,eyeY){
         float castD=max(length(dFdx(castP)),length(dFdy(castP)));
         float castFine=(castNoise(castP*${skin?'545.':'360.'})-.5)*(1.-smoothstep(.001,.010,castD));
         float castDirt=smoothstep(.38,.75,castNoise(castP*vec3(21.,17.,24.))*.63+castNoise(castP*vec3(72.,52.,89.))*.37)*${(p.weather??0).toFixed(3)};
+        ${jakeScalp?`
+          float crown=castP.y-${eyeY.toFixed(4)};
+          float hairline=mix(.018,.093,smoothstep(-.012,.097,castP.z))+.009*sin(castP.x*32.);
+          float stubble=smoothstep(hairline-.007,hairline+.014,crown);
+          float dots=smoothstep(.47,.77,castNoise(castP*465.));
+          diffuseColor.rgb*=mix(vec3(1.),vec3(.62,.58,.54)-.26*dots*(1.-smoothstep(.001,.009,castD)),stubble);
+        `:''}
         ${cloth&&id==='hubert'?`
           float l=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
           float tunic=smoothstep(.83,1.04,castP.y);
@@ -220,6 +227,21 @@ export function createHuman(T,id='base'){
     if(id.startsWith('berg')&&/^(Insignia|Bortenstreifen|Messinganhänger|Besatz|Stoff)/.test(o.name))o.visible=false;
     if(o.isBone)bones.set(o.userData.name??o.name,o);
     if(o.isSkinnedMesh){
+      if(id==='gardenHannes'){
+        const type=o.material.name??'';
+        if(/^Hair/.test(type)){o.visible=false;return;}
+        if(/^Cloth/.test(type)){
+          // A heavier build in bind space: the clothes stay on the normal animated skeleton.
+          const g=o.geometry.clone(),p=g.attributes.position,sm=T.MathUtils.smoothstep;
+          for(let i=0;i<p.count;i++){
+            const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+            const belly=sm(y,.80,.99)*(1-sm(y,1.19,1.43))*(1-sm(Math.abs(x),.22,.36));
+            const thighs=sm(y,.40,.59)*(1-sm(y,.84,.97));
+            p.setXYZ(i,x*(1+.30*belly+.12*thighs),y,z*(1+.48*belly+.14*thighs)+.051*belly*sm(z,-.012,.10));
+          }
+          g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;
+        }
+      }
       o.castShadow=false;o.receiveShadow=true;
       o.boundingSphere=new T.Sphere(V(0,.96,0),1.31);
       if(o.morphTargetDictionary)faces.push(o);meshes.push(o);

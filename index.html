@@ -58,63 +58,48 @@ main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(-
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 body[data-state=loading] #canvas{visibility:hidden}
 canvas{touch-action:none;outline:none}
-.boot{--boot-gold:#e0be89;--boot-line:#c7aa714d;position:absolute;inset:0;z-index:1;overflow:auto;
-  padding:clamp(15px,3.2vw,48px) max(clamp(14px,4.7vw,72px),env(safe-area-inset-right))
-    max(clamp(14px,3.1vw,45px),env(safe-area-inset-bottom)) max(clamp(14px,4.7vw,72px),env(safe-area-inset-left));
-  background:radial-gradient(ellipse at 78% 47%,#36362b 0%,#1e2822 42%,#111b19 83%)}
-.boot-frame{width:min(100%,1380px);min-height:100%;margin:auto;display:grid;grid-template-rows:auto 1fr auto;border:1px solid var(--boot-line);position:relative;
-  background:linear-gradient(var(--boot-gold),var(--boot-gold)) top left/18px 1px,
-    linear-gradient(var(--boot-gold),var(--boot-gold)) top left/1px 18px,
-    linear-gradient(var(--boot-gold),var(--boot-gold)) bottom right/18px 1px,
-    linear-gradient(var(--boot-gold),var(--boot-gold)) bottom right/1px 18px;background-repeat:no-repeat}
-.boot-meta,.boot-bottom{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 clamp(14px,2.5vw,37px);
-  padding:clamp(9px,1.7vh,16px) 0;color:#d2c4a5;font-size:.67rem;letter-spacing:.13em;text-transform:uppercase}
-.boot-meta{border-bottom:1px solid var(--boot-line);font-weight:660}
-.boot-bottom{border-top:1px solid var(--boot-line);color:#b9bdab}
-.boot-index{display:inline-flex;align-items:center;gap:.66rem}
-.boot-index::before{content:"";width:5px;height:5px;background:var(--boot-gold);transform:rotate(45deg)}
-.boot-layout{display:grid;grid-template-columns:minmax(0,.91fr) minmax(0,1.35fr);align-items:center;gap:clamp(12px,3.1vw,55px);
-  padding:clamp(12px,3.5vw,62px) clamp(14px,3.8vw,68px)}
-.boot-copy{min-width:0;max-width:33rem}
-.boot-location{margin:0 0 .95rem;color:var(--boot-gold);font-size:clamp(9px,1vw,12px);font-weight:700;letter-spacing:.20em;text-transform:uppercase}
-.boot h1{margin:0;font:normal clamp(40px,5.5vw,88px)/.96 Georgia,serif;letter-spacing:-.054em;color:#f5ead7}
-.boot h1 span{display:block;margin-top:.17em;color:#dfbf8b;font-size:.68em;letter-spacing:-.035em}
-.boot-intro{margin:clamp(10px,2vh,24px) 0 0;color:#d6d9c9;font-size:clamp(13px,1.22vw,17px);max-width:27rem}
-.boot-process{margin-top:clamp(19px,5vh,53px)}
-.boot-status{display:flex;align-items:baseline;justify-content:space-between;gap:.65rem;min-height:1.4em}
-.boot-status p{margin:0;color:#f4e8d0;font-size:clamp(12px,1.1vw,15px);font-weight:600}
-.boot-counter{color:#c7af82;font:11px/1.5 ui-monospace,monospace;white-space:nowrap}
-.boot-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:11px 0 0;padding:0;list-style:none}
-.boot-steps li{position:relative;min-width:0;overflow:hidden;padding-top:10px;color:#b9c1b4;font-size:clamp(9px,.85vw,12px)}
-.boot-steps li::before,.boot-steps li::after{content:"";position:absolute;top:0;left:0;height:2px;background:#7d806650}
-.boot-steps li::before{width:100%}
-.boot-steps li::after{width:37%;display:none;background:#f5d6a1}
-.boot-steps li[data-done]{color:#e0cba7}
-.boot-steps li[data-done]::before{background:#c7a471}
-.boot-steps li[aria-current=step]{color:#f5e5c4}
-.boot-steps li[aria-current=step]::before{background:#b798635e}
-.boot-steps li[aria-current=step]::after{display:block;animation:boot-glint 1.65s ease-in-out infinite alternate}
-@keyframes boot-glint{from{transform:translateX(0);opacity:.65}to{transform:translateX(170%);opacity:1}}
-.boot-view{position:relative;margin:0;min-width:0;align-self:center}
-.boot-view svg{display:block;width:100%;height:auto;max-height:48vh}
-.boot-view figcaption{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:clamp(5px,1.7vh,17px);
-  color:#dac69f;font-size:clamp(8px,.85vw,11px);font-weight:620;letter-spacing:.16em;text-transform:uppercase;text-align:center}
-.boot-view figcaption::before,.boot-view figcaption::after{content:"";width:clamp(13px,3vw,40px);height:1px;background:var(--boot-line)}
-@media(prefers-reduced-motion:reduce){.boot-steps li[aria-current=step]::after{animation:none;width:100%}}
-@media(max-width:670px) and (min-aspect-ratio:5/6){.boot h1{font-size:clamp(32px,6vw,45px)}}
+body[data-state=loading] .brand-subtitle{display:none}
+.boot{--gold:#edc481;--line-art:#bf975e70;position:absolute;inset:0;z-index:1;overflow:auto;place-items:center;
+  padding:clamp(11px,3vw,37px) max(clamp(13px,3vw,42px),env(safe-area-inset-right)) max(clamp(12px,3vw,37px),env(safe-area-inset-bottom)) max(clamp(13px,3vw,42px),env(safe-area-inset-left));
+  background:radial-gradient(ellipse at 68% 37%,#233c30 0%,#132620 53%,#0a1714 94%)}
+.boot-frame{position:relative;display:grid;align-items:center;min-height:100%;width:min(100%,1540px);border:1px solid var(--line-art);box-shadow:inset 0 0 0 4px #13251e,inset 0 0 0 5px #bb935d37}
+.boot-frame::before,.boot-frame::after{content:"";position:absolute;pointer-events:none;width:24px;height:24px;border:solid #dcad65}
+.boot-frame::before{top:4px;left:4px;border-width:2px 0 0 2px}
+.boot-frame::after{bottom:4px;right:4px;border-width:0 2px 2px 0}
+.boot-layout{display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.17fr);align-items:center;gap:clamp(18px,4.2vw,70px);padding:clamp(19px,4vw,62px)}
+.boot-copy{min-width:0}
+.boot h1{margin:0;font:italic 500 clamp(53px,8vw,124px)/.9 Georgia,serif;letter-spacing:-.071em;color:#fff0d2}
+.boot h1 span{color:#e5b777}
+.boot-rule{display:flex;align-items:center;gap:12px;width:min(100%,455px);margin:clamp(17px,3.7vh,33px) 0 clamp(20px,5vh,45px);color:var(--gold)}
+.boot-rule::before,.boot-rule::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,#bc935c)}
+.boot-rule::after{transform:scaleX(-1)}
+.boot-rule svg{width:34px;height:27px;flex:none}
+.boot-status{font:600 clamp(15px,1.45vw,23px)/1.3 Georgia,serif;color:#fff0d2;margin:0 0 12px;min-height:1.3em}
+.boot-bar{position:relative;overflow:hidden;height:clamp(12px,1.22vw,19px);border:1px solid #c8a16b9c;border-radius:20px;background:#0c1a16;box-shadow:0 0 16px #edb85d1c}
+.boot-fill,.boot-sweep{position:absolute;inset:0}
+.boot-fill{background:linear-gradient(90deg,#a8743e,#e6ab57 48%,#fff1b5);transform:scaleX(var(--loaded,0));transform-origin:left;transition:transform .48s ease-out}
+.boot-sweep{width:23%;background:linear-gradient(90deg,transparent,#ffc67e78 57%,#fff6d9 82%,transparent);animation:boot-sweep 1.7s cubic-bezier(.4,0,.55,1) infinite}
+@keyframes boot-sweep{from{transform:translateX(-105%)}to{transform:translateX(440%)}}
+.boot-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:12px 0 0;padding:0;list-style:none;font-size:clamp(9px,.85vw,12px);color:#c4c8b6}
+.boot-steps li{display:flex;align-items:center;gap:clamp(4px,.64vw,10px)}
+.boot-steps li::before{content:"";display:grid;place-items:center;flex:none;width:clamp(10px,1.26vw,18px);aspect-ratio:1;border:1px solid #b7b09280;border-radius:50%;font:11px/1 system-ui}
+.boot-steps li[data-done]::before{content:"✓";border-color:#dfb16b;color:#f4c986}
+.boot-steps li[aria-current=step]{color:#ffdc96}
+.boot-steps li[aria-current=step]::before{border-color:#ffe2a9;background:radial-gradient(circle,#fff0be 0 33%,transparent 39%);box-shadow:0 0 10px #f6ba6070}
+.boot-view{min-width:0;margin:0;padding:5px;border:1px solid var(--gold);outline:1px solid #c09b6a70;outline-offset:4px;
+  border-radius:clamp(10px,2vw,29px) 3px clamp(10px,2vw,29px) 3px;background:#10201a;box-shadow:0 17px 60px #030c0870}
+.boot-view img{display:block;aspect-ratio:3/2;width:100%;height:auto;max-height:59vh;object-fit:cover;border-radius:inherit;background:#534c31}
 @media(max-aspect-ratio:5/6){
-  .boot-layout{grid-template-columns:minmax(0,1fr);align-content:center;padding-block:clamp(16px,4vh,38px);gap:clamp(11px,2vh,25px)}
-  .boot-copy{margin-inline:auto;width:min(100%,420px)}
-  .boot h1{font-size:clamp(40px,9vw,67px)}
-  .boot-view{grid-row:1}.boot-view svg{max-height:29vh}
-  .boot-view figcaption{margin-top:4px}
+  .boot-layout{grid-template-columns:minmax(0,1fr);justify-items:center;gap:clamp(17px,4vh,35px)}
+  .boot-view{grid-row:1;width:min(100%,490px)}.boot-view img{max-height:43vh}
+  .boot-copy{width:min(100%,450px)}.boot h1{font-size:clamp(48px,14vw,85px);text-align:center}
+  .boot-rule{margin:14px 0 15px}.boot-status{min-height:0}
 }
-@media(max-width:430px){.boot-meta{gap:8px;letter-spacing:.10em}.boot-view-number{display:none}}
-@media(max-height:420px){
-  .boot{padding-block:7px}.boot-meta,.boot-bottom{padding-block:5px}
-  .boot-layout{padding-block:8px}.boot-location{margin-bottom:7px}.boot-intro{margin-top:6px}
-  .boot-process{margin-top:11px}.boot-view svg{max-height:37vh}
+@media(max-height:420px) and (min-aspect-ratio:5/6){
+  .boot{padding-block:8px}.boot-layout{padding-block:12px}.boot h1{font-size:clamp(36px,9vw,60px)}
+  .boot-rule{margin:7px 0 9px}.boot-status{margin-bottom:6px}.boot-steps{margin-top:8px}.boot-view img{max-height:62vh}
 }
+@media(prefers-reduced-motion:reduce){.boot-sweep{display:none;animation:none}.boot-fill{transition:none}}
 #upper-flash{position:absolute;inset:0;z-index:6;opacity:0;background:#fff;pointer-events:none}
 #berg-fade{position:absolute;inset:0;z-index:6;opacity:0;background:#0d2427;pointer-events:none}
 .panel{position:absolute;left:max(clamp(12px,4vw,60px),env(safe-area-inset-left));bottom:calc(clamp(12px,5vh,58px) + env(safe-area-inset-bottom));width:min(440px,calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))));
@@ -180,7 +165,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
 @media(max-width:390px){.brand-subtitle{display:none}}
 @media(max-height:420px){.panel{bottom:calc(8px + env(safe-area-inset-bottom));padding:12px}.panel h1,.panel h2{font-size:24px}.panel p:not(.eyebrow){margin:5px 0}.actions{margin-top:8px}}
 </style>
-<meta name="description" content="Ein interaktiver Rundgang durch das Erlanger Schloss und seinen Garten."><!--
+<meta name="description" content="Ein interaktives Spiel im Erlanger Schloss und Schlossgarten."><!--
 The MIT License
 
 Copyright © 2010-2025 three.js authors
@@ -217,81 +202,28 @@ THE SOFTWARE.
   <div id="canvas"></div>
   <div id="upper-flash" aria-hidden="true"></div>
   <div id="berg-fade" aria-hidden="true"></div>
-  <button class="tool" id="pause" type="button" aria-label="Rundgang pausieren" title="Pause">Ⅱ</button>
+  <button class="tool" id="pause" type="button" aria-label="Spiel pausieren" title="Pause">Ⅱ</button>
   <section class="boot" id="loading" aria-labelledby="loading-title">
     <div class="boot-frame">
-      <div class="boot-meta"><span class="boot-index">Erlangen zu Fuß</span><span><span class="boot-view-number">Ansicht 01 · </span>Schlossplatz</span></div>
       <div class="boot-layout">
         <div class="boot-copy">
-          <p class="boot-location">Erlangen · Virtueller Rundgang</p>
-          <h1 id="loading-title">Schloss <span>&amp; Schlossgarten</span></h1>
-          <p class="boot-intro">Vom Pflaster des Schlossplatzes bis hinter die alten Mauern.</p>
-          <div class="boot-process">
-            <div class="boot-status"><p id="loading-text" role="status">Modelle und Texturen werden geladen …</p><span class="boot-counter" id="loading-counter" aria-hidden="true">01 / 04</span></div>
-            <ol class="boot-steps" id="loading-steps" aria-hidden="true">
-              <li aria-current="step">Dateien</li><li>Aufbau</li><li>Licht</li><li>Abschluss</li>
-            </ol>
+          <h1 id="loading-title">Schloss<span>ER</span></h1>
+          <div class="boot-rule" aria-hidden="true"><svg viewBox="0 0 44 35" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 29h40M4 26V13h11v-3l7-5 7 5v3h11v13M2 13l4-5h10m12 0h10l4 5M15 13h14M15 26V13m14 13V13M19 26v-6a3 3 0 0 1 6 0v6M7 17h2m2 0h2m18 0h2m2 0h2M7 21h2m2 0h2m18 0h2m2 0h2"/></svg></div>
+          <p class="boot-status" id="loading-text" role="status">Spieldateien werden geladen …</p>
+          <div class="boot-bar" id="loading-progress" role="progressbar" aria-label="Ladefortschritt" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" aria-valuetext="Spieldateien werden geladen …">
+            <span class="boot-fill" aria-hidden="true"></span><span class="boot-sweep" aria-hidden="true"></span>
           </div>
+          <ol class="boot-steps" id="loading-steps" aria-hidden="true">
+            <li aria-current="step">Dateien</li><li>Aufbau</li><li>Licht</li><li>Abschluss</li>
+          </ol>
         </div>
         <figure class="boot-view">
-          <svg viewBox="0 0 800 396" aria-hidden="true" focusable="false">
-            <defs>
-              <linearGradient id="boot-stone" x2=".14" y2="1" gradientUnits="objectBoundingBox">
-                <stop stop-color="#72705a"/><stop offset=".58" stop-color="#4e5041"/><stop offset="1" stop-color="#343f35"/>
-              </linearGradient>
-              <linearGradient id="boot-glass" x2="0" y2="1" gradientUnits="objectBoundingBox">
-                <stop stop-color="#171f1c"/><stop offset="1" stop-color="#514c35"/>
-              </linearGradient>
-              <path id="boot-window" d="M0 0h17v29H0z"/>
-              <g id="boot-bay" stroke="#c5af7b" stroke-width=".85">
-                <path d="M-8 -5h33v119H-8z" fill="#c4af7923" stroke="none"/>
-                <use href="#boot-window" fill="url(#boot-glass)"/><use href="#boot-window" y="40" fill="url(#boot-glass)"/><use href="#boot-window" y="80" fill="url(#boot-glass)"/>
-                <path d="M-3 -3h23m-24 43 12-8 13 8M-4 78h25M-4 31h25m-25 40h25m-25 40h25M8 0v29m0 11v29m0 11v29M0 13h17M0 53h17M0 93h17" fill="none"/>
-              </g>
-              <g id="boot-wing">
-                <path d="M0 88 28 49h237v39z" fill="#272f29" stroke="#b6a47c"/>
-                <path d="M0 88h266v145H0z" fill="url(#boot-stone)" stroke="#ae9a72"/>
-                <path d="M0 94h266M0 137h266M0 178h266M0 228h266M6 103v122m249-122v122m7-132v133" fill="none" stroke="#b8a97e" opacity=".67"/>
-                <path d="M14 82h249M20 72h243M25 61h238" fill="none" stroke="#81795d"/>
-                <use href="#boot-bay" x="21" y="105"/><use href="#boot-bay" x="58" y="105"/><use href="#boot-bay" x="95" y="105"/>
-                <use href="#boot-bay" x="132" y="105"/><use href="#boot-bay" x="169" y="105"/><use href="#boot-bay" x="206" y="105"/><use href="#boot-bay" x="243" y="105"/>
-              </g>
-            </defs>
-            <g fill="none" stroke="#b8a57c" stroke-width="1" opacity=".48">
-              <circle cx="400" cy="160" r="145"/><circle cx="400" cy="160" r="156" stroke-dasharray="1 6"/>
-              <path d="M400 3V0m0 37V14M232 160h30m276 0h30M400 306v17M232 28l13 8m323-8-13 8M186 120h28m372 0h28M112 169h29m518 0h29"/>
-            </g>
-            <path fill="#dec888" d="M399 18h2v16h-2zM393 25h14v2h-14zM186 80l2 6 6 2-6 2-2 6-2-6-6-2 6-2zM620 74l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>
-            <g transform="translate(46 76)">
-              <use href="#boot-wing"/><use href="#boot-wing" transform="translate(708 0) scale(-1 1)"/>
-              <path d="M256 87h196v146H256z" fill="url(#boot-stone)" stroke="#d3b989"/>
-              <path d="M253 92h202v11H253zM252 135h204v5H252zM252 175h204v6H252zM252 225h204v8H252z" fill="#827657" stroke="#c4a978"/>
-              <path d="M249 87h210l-8-6H257zm7-8h196V54h-63l-35-17-35 17h-63z" fill="#766f53" stroke="#d8be8b"/>
-              <path d="M314 64l40-23 40 23h-80zm17-1 23-13 23 13h-46z" fill="#333931" stroke="#dac08c" stroke-linejoin="round"/>
-              <path d="M256 74h60m76 0h60M265 68v11m12-11v11m12-11v11m12-11v11m106-11v11m12-11v11m12-11v11m12-11v11" fill="none" stroke="#d4b985"/>
-              <path d="M266 54V38m-5 4h10m20 12V36m-5 5h10m121 13V36m-5 5h10m20 13V38m-5 4h10M350 35l4-7 4 7m-4-9v-6" fill="none" stroke="#d4b985" stroke-linecap="round"/>
-              <use href="#boot-bay" x="271" y="104"/><use href="#boot-bay" x="308" y="104"/>
-              <use href="#boot-bay" x="383" y="104"/><use href="#boot-bay" x="420" y="104"/>
-              <path d="M341 106h26v29h-26zM339 145h30v26h-30z" fill="url(#boot-glass)" stroke="#cfb782"/>
-              <path d="M354 106v29m0 10v26m-13-51h26m-28 38h30M336 225v-26a18 18 0 0 1 36 0v26z" fill="#252a23" stroke="#d8bd86"/>
-              <path d="M331 225v-26a23 23 0 0 1 46 0v26m-23-44v44m-29 3h58l5 5h-68z" fill="none" stroke="#bcaa7b"/>
-              <path d="M256 106h7v118h-7zm188 0h7v118h-7z" fill="#a28e66" stroke="#c4ac7d"/>
-              <path d="M22 186h15v25H22zM672 146h15v26h-15zM347 146h14v20h-14z" fill="#ebc677" opacity=".49"/>
-            </g>
-            <g fill="none" stroke="#aa9971" opacity=".62">
-              <path d="M28 309h744M46 315h708M79 326h642M99 338h602M132 355h536M172 375h456M250 396h300"/>
-              <path d="M389 309 290 396m100-87-47 87m56-87v87m11-87 47 87m-46-87 99 87M285 312l-130 84m360-84 130 84" opacity=".58"/>
-            </g>
-            <path d="M8 313q20-41 56-44-4 8-17 16 13-4 23 1-18 8-35 10 13 0 16 5l-10 12zm784 0q-20-41-56-44 4 8 17 16-13-4-23 1 18 8 35 10-13 0-16 5l10 12z" fill="#121d18" stroke="#8d8c65" stroke-opacity=".62"/>
-          </svg>
-          <figcaption>Ansicht vom Schlossplatz</figcaption>
+          <img src="assets/loading-schloss-kupferstich.webp?v=41defbe45d93" width="1080" height="720" alt="Schloss Erlangen als Kupferstich" decoding="async" fetchpriority="low">
         </figure>
       </div>
-      <div class="boot-bottom"><span>SchlossER · Erlangen</span><span>Schloss &amp; Garten</span></div>
     </div>
   </section>
-  <section class="panel" id="overlay" aria-label="Rundgang">
-    <p class="eyebrow">Erlangen zu Fuß</p>
+  <section class="panel" id="overlay" aria-label="Spielmenü">
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
     <h2 class="paused-copy">Pausiert</h2>
     <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
@@ -317,7 +249,7 @@ THE SOFTWARE.
       <label>Effekte <input type="range" min="0" max="100" value="72" data-audio="sfx"></label>
     </details>
     <div class="actions">
-      <button type="button" class="primary" id="enter"><span class="ready-copy" id="start-mode">Rundgang starten</span><span class="paused-copy">Weitergehen</span></button>
+      <button type="button" class="primary" id="enter"><span class="ready-copy" id="start-mode">Spiel starten</span><span class="paused-copy">Weiterspielen</span></button>
       <button type="button" class="tool icon" id="full" aria-label="Vollbild umschalten" title="Vollbild umschalten" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg></button>
     </div>
     <details id="credits">
@@ -330,7 +262,7 @@ THE SOFTWARE.
     </details>
   </section>
   <section class="panel" id="error" aria-labelledby="error-title">
-    <h2 id="error-title">Rundgang nicht verfügbar</h2>
+    <h2 id="error-title">Spiel konnte nicht starten</h2>
     <p id="error-text" role="alert">Die 3D-Szene konnte nicht geladen werden. Prüfe, ob alle Projektdateien erreichbar sind, und versuche es erneut.</p>
     <button class="primary" type="button" onclick="location.reload()">Erneut versuchen</button>
   </section>
@@ -365,6 +297,6 @@ THE SOFTWARE.
   <p><strong>Viel Spaß wünscht Bies!</strong></p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>
-<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=ff70284b74ad","music":"assets/moorlicht.mp3?v=05a93293d7cf","clubMusic":"assets/schlosskeller-2099.mp3?v=37a8bffd69ad","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","orbVoice":"assets/orb-stimme.flac?v=2f734db42375","prisonerVoice":"assets/kammer-07.flac?v=9d07b8ffe870","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","humans":"assets/human-cast.glb?v=34142b3a70f5","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}},"ravenCall":"assets/sfx/raven-grand-teton.mp3?v=50ac94bd9cb8","bergMusic":"assets/berg-walzer.mp3?v=3a0db1f892e2","npcVoices":{"bergWirt":"assets/npc-voices/dialog-michi-kerwa.mp3?v=9f95772723a6","bergLeni":"assets/npc-voices/bergLeni.mp3?v=45d57d10c45a","bergDora":"assets/npc-voices/bergDora.mp3?v=c5376580857a","bergFritz":"assets/npc-voices/dialog-bons-fcn.mp3?v=b5595f34cde4","bonsSchluchzen":"assets/npc-voices/dialog-bons-schluchzen.mp3?v=4dd6c921982b","bergUdo":"assets/npc-voices/bergUdo.mp3?v=3803b411d978","guestBruno":"assets/npc-voices/bruno_reiter.mp3?v=ad35aa8fe881","guestMarlene":"assets/npc-voices/marlene_vogel.mp3?v=9621d3df1aa1","guestSabine":"assets/npc-voices/sabine_roth.mp3?v=3796cb7c0c52","guestJona":"assets/npc-voices/jona_moos_ebert.mp3?v=1eab1a679cca","guestRike":"assets/npc-voices/rike_stein.mp3?v=30c7dac746b3","guestEdda":"assets/npc-voices/edda_seifert.mp3?v=d4175e202e06","niklas":"assets/npc-voices/dialog-niklas-frage.mp3?v=ae703edf47aa","niklasAntwort":"assets/npc-voices/dialog-niklas-antwort.mp3?v=a3b191a2bfe7","labAuer":"assets/npc-voices/dr_ernst_auer.mp3?v=c0910624ae13","labHedwig":"assets/npc-voices/hedwig_kern.mp3?v=83960cf4514a","labSepp":"assets/npc-voices/sepp_moser.mp3?v=2a745519465a","labPrisoner":"assets/npc-voices/lab-prisoner-kilian.mp3?v=77e17c9899ce","labPatient":"assets/npc-voices/lab-patient-tobias.mp3?v=0ddc2b22e1ae","clubAda":"assets/npc-voices/ada.mp3?v=ef3ff85b0da9","clubMira":"assets/npc-voices/mira.mp3?v=5ccd2018b350","clubNiko":"assets/npc-voices/niko.mp3?v=b6f0f8265196","clubSami":"assets/npc-voices/sami.mp3?v=e9098527dee8","clubVeit":"assets/npc-voices/veit.mp3?v=802fc6fce457","cloneB07":"assets/npc-voices/clone-b07.mp3?v=d837b3a03b53","cloneAlma":"assets/npc-voices/clone-alma.mp3?v=774ac470e3bb","cloneLorenz":"assets/npc-voices/clone-lorenz.mp3?v=19b58641a92e","cloneB12":"assets/npc-voices/clone-b12.mp3?v=c6f301e00829","plazaRaban":"assets/npc-voices/plaza-raban.mp3?v=210b80cd3ec0","plazaVroni":"assets/npc-voices/plaza-vroni.mp3?v=8a726dc0e121","plazaEberwin":"assets/npc-voices/plaza-eberwin.mp3?v=916075513fc2","plazaIsolde":"assets/npc-voices/plaza-isolde.mp3?v=080ac1491e3e","plazaAnton":"assets/npc-voices/plaza-anton.mp3?v=225eccc7d4c2","chapterOskar":"assets/npc-voices/chapter-oskar.mp3?v=0283be03af79","chapterMatthias":"assets/npc-voices/chapter-matthias.mp3?v=f2f35aeb38ab","chapterKonrad":"assets/npc-voices/chapter-konrad.mp3?v=c07c01218170","gardenHannes":"assets/npc-voices/dialog-jake-baeume.mp3?v=2cbd462b7801","jakeDumm":"assets/npc-voices/dialog-jake-dumm.mp3?v=8eb26ad7c1a2","jakeNaeher":"assets/npc-voices/dialog-jake-naeher.mp3?v=6155aa292f2c"},"weaponSounds":{"bow_fire_01":"assets/sfx/bow_fire_01.mp3?v=318c0571218a","bow_fire_02":"assets/sfx/bow_fire_02.mp3?v=fceb9104442e","bow_fire_03":"assets/sfx/bow_fire_03.mp3?v=58865335b02d","bow_reload_open":"assets/sfx/bow_reload_open.mp3?v=b2326717cb79","bow_reload_close":"assets/sfx/bow_reload_close.mp3?v=5d29cdaffcb9","shotgun_pump_open":"assets/sfx/shotgun_pump_open.mp3?v=11f20516ee28","shotgun_pump_close":"assets/sfx/shotgun_pump_close.mp3?v=a4acff2ac716","impact_metal":"assets/sfx/impact_metal.mp3?v=ae06280607c2","impact_stone":"assets/sfx/impact_stone.mp3?v=a128ed023774","impact_soft":"assets/sfx/impact_soft.mp3?v=ae0ec4faf5db","weapon_equip":"assets/sfx/weapon_equip.mp3?v=6f8ceefd4d0c","weapon_holster":"assets/sfx/weapon_holster.mp3?v=5d140b7db0fe","rifle_field_1":"assets/sfx/rifle_field_1.flac?v=015fa5760b71","rifle_field_2":"assets/sfx/rifle_field_2.flac?v=e67fdbf3578d","shotgun_field":"assets/sfx/shotgun_field.flac?v=b28c3b376b02"}}</script><script src="./viewer.js?v=b404a074b0e0"></script>
+<script type="application/json" id="assets">{"model":"assets/schloss.glb?v=2eaf7bd8557f","sculptures":"assets/skulpturen.glb?v=ff70284b74ad","music":"assets/moorlicht.mp3?v=05a93293d7cf","clubMusic":"assets/schlosskeller-2099.mp3?v=37a8bffd69ad","galleryPoster":"assets/galerie-bies.webp?v=fa86a092fc60","galleryChoir":"assets/galerie-chor.mp3?v=0d01b2e577b0","orbVoice":"assets/orb-stimme.flac?v=2f734db42375","prisonerVoice":"assets/kammer-07.flac?v=9d07b8ffe870","lodgeSeal":"assets/logensiegel.svg?v=dd9cea5716ff","humans":"assets/human-cast.glb?v=34142b3a70f5","maps":{"sandstone_facade":{"albedo":"assets/sandstone_facade_albedo.webp?v=4855457fd4b8","normal":"assets/sandstone_facade_normal.webp?v=badb297619b9"},"sandstone_trim":{"albedo":"assets/sandstone_trim_albedo.webp?v=181a2b366217","normal":"assets/sandstone_trim_normal.webp?v=2d6b808668b5"},"fountain_stone":{"albedo":"assets/fountain_stone_albedo.webp?v=778aa505e762","normal":"assets/fountain_stone_normal.webp?v=d70ea2286fd6"},"oak_door":{"albedo":"assets/oak_door_albedo.webp?v=a2b4e46795b0","normal":"assets/oak_door_normal.webp?v=565228cd4cfb"},"plaza_pavers":{"albedo":"assets/plaza_pavers_albedo.webp?v=19cc7ac36e99","normal":"assets/plaza_pavers_normal.webp?v=30ba91dd9b73"},"roof_slate":{"albedo":"assets/roof_slate_albedo.webp?v=6cb289ce4b27","normal":"assets/roof_slate_normal.webp?v=3ef5194d4f8e"}},"ravenCall":"assets/sfx/raven-grand-teton.mp3?v=50ac94bd9cb8","bergMusic":"assets/berg-walzer.mp3?v=3a0db1f892e2","npcVoices":{"bergWirt":"assets/npc-voices/dialog-michi-kerwa.mp3?v=9f95772723a6","bergLeni":"assets/npc-voices/bergLeni.mp3?v=45d57d10c45a","bergDora":"assets/npc-voices/bergDora.mp3?v=c5376580857a","bergFritz":"assets/npc-voices/dialog-bons-fcn.mp3?v=a5ebf39421cf","bonsSchluchzen":"assets/npc-voices/dialog-bons-schluchzen.mp3?v=4dd6c921982b","bergUdo":"assets/npc-voices/bergUdo.mp3?v=3803b411d978","guestBruno":"assets/npc-voices/bruno_reiter.mp3?v=ad35aa8fe881","guestMarlene":"assets/npc-voices/marlene_vogel.mp3?v=9621d3df1aa1","guestSabine":"assets/npc-voices/sabine_roth.mp3?v=3796cb7c0c52","guestJona":"assets/npc-voices/jona_moos_ebert.mp3?v=1eab1a679cca","guestRike":"assets/npc-voices/rike_stein.mp3?v=30c7dac746b3","guestEdda":"assets/npc-voices/edda_seifert.mp3?v=d4175e202e06","niklas":"assets/npc-voices/dialog-niklas-frage.mp3?v=ae703edf47aa","niklasAntwort":"assets/npc-voices/dialog-niklas-antwort.mp3?v=a3b191a2bfe7","labAuer":"assets/npc-voices/dr_ernst_auer.mp3?v=c0910624ae13","labHedwig":"assets/npc-voices/hedwig_kern.mp3?v=83960cf4514a","labSepp":"assets/npc-voices/sepp_moser.mp3?v=2a745519465a","labPrisoner":"assets/npc-voices/lab-prisoner-kilian.mp3?v=77e17c9899ce","labPatient":"assets/npc-voices/lab-patient-tobias.mp3?v=0ddc2b22e1ae","clubAda":"assets/npc-voices/ada.mp3?v=ef3ff85b0da9","clubMira":"assets/npc-voices/mira.mp3?v=5ccd2018b350","clubNiko":"assets/npc-voices/niko.mp3?v=b6f0f8265196","clubSami":"assets/npc-voices/sami.mp3?v=e9098527dee8","clubVeit":"assets/npc-voices/veit.mp3?v=802fc6fce457","cloneB07":"assets/npc-voices/clone-b07.mp3?v=d837b3a03b53","cloneAlma":"assets/npc-voices/clone-alma.mp3?v=774ac470e3bb","cloneLorenz":"assets/npc-voices/clone-lorenz.mp3?v=19b58641a92e","cloneB12":"assets/npc-voices/clone-b12.mp3?v=c6f301e00829","plazaRaban":"assets/npc-voices/plaza-raban.mp3?v=210b80cd3ec0","plazaVroni":"assets/npc-voices/plaza-vroni.mp3?v=8a726dc0e121","plazaEberwin":"assets/npc-voices/plaza-eberwin.mp3?v=916075513fc2","plazaIsolde":"assets/npc-voices/plaza-isolde.mp3?v=080ac1491e3e","plazaAnton":"assets/npc-voices/plaza-anton.mp3?v=225eccc7d4c2","chapterOskar":"assets/npc-voices/chapter-oskar.mp3?v=0283be03af79","chapterMatthias":"assets/npc-voices/chapter-matthias.mp3?v=f2f35aeb38ab","chapterKonrad":"assets/npc-voices/chapter-konrad.mp3?v=c07c01218170","gardenHannes":"assets/npc-voices/dialog-jake-baeume.mp3?v=2cbd462b7801","jakeDumm":"assets/npc-voices/dialog-jake-dumm.mp3?v=8eb26ad7c1a2","jakeNaeher":"assets/npc-voices/dialog-jake-naeher.mp3?v=6155aa292f2c"},"weaponSounds":{"bow_fire_01":"assets/sfx/bow_fire_01.mp3?v=318c0571218a","bow_fire_02":"assets/sfx/bow_fire_02.mp3?v=fceb9104442e","bow_fire_03":"assets/sfx/bow_fire_03.mp3?v=58865335b02d","bow_reload_open":"assets/sfx/bow_reload_open.mp3?v=b2326717cb79","bow_reload_close":"assets/sfx/bow_reload_close.mp3?v=5d29cdaffcb9","shotgun_pump_open":"assets/sfx/shotgun_pump_open.mp3?v=11f20516ee28","shotgun_pump_close":"assets/sfx/shotgun_pump_close.mp3?v=a4acff2ac716","impact_metal":"assets/sfx/impact_metal.mp3?v=ae06280607c2","impact_stone":"assets/sfx/impact_stone.mp3?v=a128ed023774","impact_soft":"assets/sfx/impact_soft.mp3?v=ae0ec4faf5db","weapon_equip":"assets/sfx/weapon_equip.mp3?v=6f8ceefd4d0c","weapon_holster":"assets/sfx/weapon_holster.mp3?v=5d140b7db0fe","rifle_field_1":"assets/sfx/rifle_field_1.flac?v=015fa5760b71","rifle_field_2":"assets/sfx/rifle_field_2.flac?v=e67fdbf3578d","shotgun_field":"assets/sfx/shotgun_field.flac?v=b28c3b376b02"}}</script><script src="./viewer.js?v=7b26e604b6db"></script>
 </body>
 </html>

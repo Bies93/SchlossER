@@ -4,6 +4,28 @@ import {sharedSet} from './surface-detail.js';
 import {createHuman} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 
+function glasses(T,rig){
+  const mount=rig.costumeMount('head'),a=rig.restPoint('eye_l'),b=rig.restPoint('eye_r');
+  const iron=new T.MeshStandardMaterial({color:0x332827,metalness:.45,roughness:.32});
+  const glass=new T.MeshStandardMaterial({color:0xd6e7e1,roughness:.12,transparent:true,opacity:.1,depthWrite:false});
+  const rims=new T.TorusGeometry(1,.071,8,36),lens=new T.CircleGeometry(1,36),bridge=[];
+  function arm(points,r){
+    const m=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points),12,r,7,false),iron);
+    mount.add(m);
+  }
+  for(const eye of [a,b]){
+    const sign=Math.sign(eye.x),x=eye.x+sign*.005,y=eye.y-.004,z=eye.z+.036;
+    const frame=new T.Mesh(rims,iron),pane=new T.Mesh(lens,glass);
+    frame.position.set(x,y,z);pane.position.set(x,y,z-.0009);
+    frame.scale.set(.034,.025,.041);pane.scale.set(.032,.023,1);mount.add(frame,pane);
+    bridge.push(new T.Vector3(x-sign*.032,y+.007,z));
+    arm([new T.Vector3(x+sign*.034,y+.006,z),new T.Vector3(sign*.083,y+.006,z-.016),
+      new T.Vector3(sign*.085,y+.001,z-.095),new T.Vector3(sign*.081,y-.016,z-.115)],.0023);
+  }
+  arm([bridge[0],bridge[0].clone().lerp(bridge[1],.5).add(new T.Vector3(0,.004,.005)),bridge[1]],.0024);
+  mount.traverse(o=>{o.userData.noSceneQuery=true;});
+}
+
 export function addGardenMeditation(T,scene,world,heightAt){
   const x=tree.treeX-1.79,z=tree.treeZ+.38,y=heightAt(x,z),yaw=-1.28;
   const cos=Math.cos(yaw),sin=Math.sin(yaw),rig=createHuman(T,'gardenHannes');
@@ -27,8 +49,9 @@ export function addGardenMeditation(T,scene,world,heightAt){
   kit.flush(seat.name);seat.traverse(o=>{if(o.isMesh)o.castShadow=false;});
   const {actor,npcInfo}=rig;
   actor.position.set(x,rig.groundedY(y+.029),z);actor.rotation.y=yaw;scene.add(actor);
+  glasses(T,rig);
   const p=place(0,.030,.085);
-  npcInfo.shadow=contactShadow(T,seat,...p,.91,.72);
+  npcInfo.shadow=contactShadow(T,seat,...p,1.04,.77);
   world.circle(x,z,.34,p=>Math.abs(p.y-y)<.65&&rig.alive());
   let t=3.11,acc=0,say=0,attention=0,glance=0,listening=false;
   npcInfo.listen=on=>{listening=on;};

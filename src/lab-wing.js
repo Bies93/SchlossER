@@ -513,7 +513,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     return changed;
   };
   return {update,seesExit:()=>deck.visible&&exitVisible,
-    target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,takeCue:staff.takeCue,visible:()=>deck.visible,prepare(renderer,scene,shaft){
+    target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,visible:()=>deck.visible,prepare(renderer,scene,shaft){
     return preparation??=prewarm(renderer,scene,shaft);
   }};
 }

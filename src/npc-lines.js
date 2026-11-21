@@ -53,7 +53,7 @@ export const NPCS={
   labHedwig:{name:'Hedwig Kern',line:'Herkunft? Für die neue Akte zählt nur der neue Name.',existing:true},
   labSepp:{name:'Sepp Moser',line:'Fränkische Suppe. Auf dem Speiseplan steht jetzt bayerisch.',existing:true},
   orbPriest:{name:'Orb-Priester',existing:true},
-  hubert:{name:'Hubert',existing:true},
+  hubert:{name:'Hubert',line:'Deutschland … Deutschland … aaah …'},
   clubAda:{name:'Ada',line:'Das hier ist die einzige Schicht, bei der mir keiner die Schritte vorschreibt.'},
   clubMira:{name:'Mira',line:'Wenn die Kugel stehen bleibt, tanz weiter. Sonst merken sie, dass wir keine Techniker haben.'},
   clubNiko:{name:'Niko',line:'Das Bier heißt Kontrollgetränk. Die Kontrolle hab ich schon verloren.'},

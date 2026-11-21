@@ -19,7 +19,6 @@ const roster={
 const limit=(x,b)=>Math.max(-b,Math.min(b,x));
 export function labStaff(T,world){
   const actors=new Map(),cell=p=>labLower(p.y)&&!clubLevel(p.y)?labCellAt(p.x,p.z,.001,p.y):null;
-  let pending=null,entered=false;
   function pencil(){
     const holder=new T.Group(),bar=new T.Mesh(new T.CylinderGeometry(.0043,.0043,.142,6),
       new T.MeshStandardMaterial({color:0x9a5229,roughness:.75}));
@@ -62,16 +61,10 @@ export function labStaff(T,world){
   }
   const cue=a=>({id:a.id,name:a.name,line:a.line,at:a.npc.actor.position,speakFor:a.speak});
   function update(room,p,dt){
-    if(room!=='infirmary'){entered=false;pending=null;}
     let changed=false;
     for(const a of actors.get(room)??[]){
       if(!a.npc.controllable()||!dt)continue;
       const distance=Math.hypot(a.x-p.x,a.z-p.z);
-      if(pending===a&&distance>3.85){pending=null;entered=false;}
-      if(a.job==='patient'&&!entered&&distance<3.55&&
-        (p.x<-22.06||Math.abs(p.z-WARD_CHAIR.z)<.64)){
-        entered=true;if(a.chat<=0)pending=a;
-      }
       if(distance>8.5)continue;
       a.acc+=dt;if(a.acc<1/24)continue;
       const step=a.acc;a.acc=0;a.t+=step;a.chat=Math.max(0,a.chat-step);
@@ -81,12 +74,6 @@ export function labStaff(T,world){
       pose(a);changed=true;
     }
     return changed;
-  }
-  function takeCue(){
-    if(!pending)return null;
-    const a=pending;pending=null;
-    if(!a.npc.alive()||a.chat>0)return null;
-    a.speak();return cue(a);
   }
   const staffAt=p=>actors.get(cell(p))?.find(a=>a.existing&&a.npc.alive());
   function target(p,look){
@@ -100,5 +87,5 @@ export function labStaff(T,world){
     if(a.chat>0)return null;
     a.speak();return cue(a);
   }
-  return {register,update,target,talk,takeCue};
+  return {register,update,target,talk};
 }

@@ -56,7 +56,10 @@ const GRAPHICS={
 };
 function showLoadingStep(index,text){
  $('loading-text').textContent=text;
- $('loading-counter').textContent=String(index+1).padStart(2,'0')+' / 04';
+ const progress=$('loading-progress');
+ progress.style.setProperty('--loaded',String(index/4));
+ progress.setAttribute('aria-valuenow',index);
+ progress.setAttribute('aria-valuetext',text);
  for(const [i,step] of Array.from($('loading-steps').children).entries()){
    step.toggleAttribute('data-done',i<index);
    if(i===index)step.setAttribute('aria-current','step');
@@ -95,7 +98,7 @@ async function start(){
  const [model,mapPairs,sculptures,poster,seal,humans]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
    decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal),decode('human-cast.glb',payload.humans)]);
  performance.measure('schlosser: assets',{start:bootTime,end:performance.now()});
- showLoadingStep(1,'Schloss und Garten werden aufgebaut …');
+ showLoadingStep(1,'Die Spielwelt entsteht …');
  await paintLoadingStep();
  installHumans(T,humans);
  for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
@@ -189,7 +192,7 @@ async function start(){
  s.add(player.body);
  const canvas=r.domElement;
  canvas.tabIndex=-1;
- canvas.setAttribute('aria-label','3D-Rundgang');
+ canvas.setAttribute('aria-label','3D-Spielwelt');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
  let conversation=null;
@@ -265,6 +268,12 @@ async function start(){
  function npcDialogue(speech){
    if(!speech)return;
    if(speech.choices){conversation.open(speech);return;}
+   if(speech.id==='hubert'){
+     const at=chapter.prisonerAt(player.body.position);
+     if(!at||prisonerCaption!==null)return;
+     prisonerCaption=showCaption(speech.name+': „'+speech.line+'“',5350);
+     chapter.prisonerSpeaks();audio.playPrisoner(at);return;
+   }
    const text=speech.stageDirection?speech.line:speech.name+': „'+speech.line+'“';
    const id=showCaption(text,Math.max(5500,speech.line.length*68));
    if(speech.id.startsWith('crown')){
@@ -335,21 +344,11 @@ async function start(){
    if(time-orbSince<450)return;
    orbHeard=true;showCaption('Stimme des Orbs — „'+orbLine+'“',13000);audio.playOrb(orbAt);
  }
- let prisonerNext=null,prisonerCaptionUntil=0;
+ let prisonerCaption=null;
  function leavePrison(){
-   if(prisonerNext===null)return;
-   prisonerNext=null;audio.stopPrisoner();
-   if(performance.now()<prisonerCaptionUntil)hideCaption();
- }
- function prisonerCue(time,pos){
-   const at=chapter.prisonerAt(pos);
-   if(!at){leavePrison();return;}
-   prisonerNext??=time+1850;
-   if(time<prisonerNext)return;
-   prisonerNext=time+22600;
-   prisonerCaptionUntil=time+5350;
-   showCaption('Hubert: „Deutschland … Deutschland … aaah …“',5350);
-   chapter.prisonerSpeaks();audio.playPrisoner(at);
+   if(prisonerCaption===null)return;
+   if(captionId===prisonerCaption)hideCaption();
+   prisonerCaption=null;audio.stopPrisoner();
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
@@ -541,7 +540,6 @@ async function start(){
      }
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
      const state=hall.update(dt,player.body.position,audio.clubPhase());
-     if(caption.hidden&&!dialogueOpen())npcDialogue(hall.takeWardCue());
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
      if(upper.update(time,player.body.position))dirty=true;
@@ -555,7 +553,7 @@ async function start(){
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
      geometryQuery.invalidateMoving();
-     prisonerCue(time,player.body.position);
+     if(prisonerCaption!==null&&(prisonerCaption!==captionId||!chapter.prisonerAt(player.body.position)))leavePrison();
      if(state.shadow)r.shadowMap.needsUpdate=true;
      if(targets.tick(dt,mask))dirty=true;
      if(dialogueOpen()&&!conversation.pending()?.alive?.())conversation.close('interrupt');
@@ -663,7 +661,7 @@ async function start(){
    c.fov=T.MathUtils.clamp(T.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI*24/180)/c.aspect)),65,82);
    c.updateProjectionMatrix();refresh();
  }
- showLoadingStep(2,'Licht und Materialien werden vorbereitet …');
+ showLoadingStep(2,'Licht und Materialien …');
  const shaderTime=performance.now();
  for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
@@ -672,7 +670,8 @@ async function start(){
  await upper.prepare(r);
  await viewmodel.prepare(r);
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
- showLoadingStep(3,'Der Rundgang wird startklar gemacht …');
+ showLoadingStep(3,'Letzte Vorbereitungen …');
+ await paintLoadingStep();
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
  const queryTime=performance.now();
  geometryQuery.build();s.matrixWorldAutoUpdate=false;
@@ -684,6 +683,7 @@ async function start(){
  try{draw();}finally{hideFirstShot();}
  // Refresh the preview after removing the hidden projectile warm-up.
  refresh();
+ showLoadingStep(4,'Spielbereit');
  document.body.dataset.state='ready';
  performance.measure('schlosser: ready',{start:bootTime,end:performance.now()});
 }
@@ -691,7 +691,7 @@ start().catch(err=>{
  console.error(err);$('canvas').hidden=true;
  if(err.asset)$('error-text').textContent='Die Projektdatei '+err.asset+' konnte nicht geladen werden. Bitte den lokalen Build oder die veröffentlichte Version vollständig neu laden.';
  else if (!window.WebGL2RenderingContext || /WebGL context/.test(err.message)) {
-   $('error-text').textContent='Für den Rundgang braucht dein Browser WebGL 2. Aktiviere die Hardwarebeschleunigung oder versuche es mit einem anderen Browser.';
+   $('error-text').textContent='Für dieses Spiel braucht dein Browser WebGL 2. Aktiviere die Hardwarebeschleunigung oder versuche es mit einem anderen Browser.';
  }
  document.body.dataset.state='error';
 });

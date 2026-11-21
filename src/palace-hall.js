@@ -238,6 +238,6 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
     return {changed,shadow};
   }
   function setPreset(id){preset=id;wings.setPreset(id);hallShade.emissiveIntensity=id==='night'?.86:.58}
-  return {targetFor,commit,usable,update,setPreset,prepareLab:lab.prepare,labVisible:lab.visible,seesLabExit:lab.seesExit,lodgeOpen:wings.hatch.open,takeWardCue:lab.takeWardCue,
+  return {targetFor,commit,usable,update,setPreset,prepareLab:lab.prepare,labVisible:lab.visible,seesLabExit:lab.seesExit,lodgeOpen:wings.hatch.open,
     staffTalk(player,camera){return lab.staffTalk(player.body.position,camera.getWorldDirection(look));}};
 }
