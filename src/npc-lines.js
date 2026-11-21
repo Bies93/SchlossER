@@ -1,10 +1,14 @@
 // Stable model/voice IDs. "existing" means the scene already owns the
 // interaction and must not get a second E prompt or duplicate playback.
+const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
+const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
-  bergWirt:{name:"Bertl Kießling · Wirt",template:'labSepp',line:"Freili, früher war der Berch noch oben. Wie s’ uns zug’sperrt ham, simmer halt a Stockwerk tiefer. Hock di her."},
+  bergWirt:{name:'Kerwas Michi',template:'labSepp',line:'Halb besoffen ist rausgeschmissenes Geld!'},
   bergLeni:{name:"Leni Beck · Schankkellnerin",template:'guestSabine',line:"Früher hat mei Mutter die Maß ohne Strich ausg’schenkt. Der Strich war am Deckel. Schau, der da is noch von vor der Flut."},
   bergDora:{name:"Dora Pfister · Stammgast",template:'guestMarlene',line:"Alla, früher ham mer für die letzte Runde a Bleim g’sunga. Heut sing mer’s nimmer. Sonst könnt’s ja wirklich die letzte sei."},
-  bergFritz:{name:"Fritz Gugel · Fassmacher",template:'guestBruno',line:"Das letzte Fass? Des ham mer neunzehnhundertsiebzich ang’stocha. Seitdem is bloß die Eich’n älter worn."},
+  bergFritz:{name:'Bons',template:'clubNiko',line:'Dei Mudda ist dei Vadda F-C-N!',choices:[
+    {label:'Geh heim Bons!',reply:bonsReply},{label:'Deine Mudda ist eine Jutta!',reply:bonsReply}
+  ]},
   bergUdo:{name:"Udo Heller · Musikant",template:'guestJona',line:"Früher ham mer am Berch bis zum Regen g’spielt. Jetzt spiel mer bis zum Trocknen. Des zieht si, wenn mer in einer Pfützn wohnt."},
   guestBruno:{name:'Bruno Reiter',line:'Heiliger Bies, erleuchte uns. Aber bitte nicht schon wieder mit dem Chor.'},
   guestMarlene:{name:'Marlene Vogel',line:'Ich suche die Chronik. Im Katalog steht: ausgeliehen, seit 1743.'},
@@ -13,7 +17,10 @@ export const NPCS={
   guestRike:{name:'Rike Stein',line:'Die Tomaten kennen keine Obrigkeit. Nur wenn’s ums Gießen geht, brauchen sie plötzlich einen Staat.'},
   guestEdda:{name:'Edda Seifert',line:'Psst. Wir sind auf Sendung. Hörer haben wir noch keine, aber Beschwerden schon.'},
   guestLotte:{name:'Lotte Weber'},
-  gardenHannes:{name:'Jake',template:'guestJona',line:'Ich mag Bäume.'},
+  gardenHannes:{name:'Jake',template:'guestJona',line:'Ich mag Bäume.',choices:[
+    {label:'Bist du dumm?',reply:{clip:'jakeDumm',line:'Ja, ein bisschen dumm bin ich.'}},
+    {label:'Ja, ich mag auch Bäume!',reply:{clip:'jakeNaeher',line:'Sehr gut, dann tritt näher an ihn!'}}
+  ]},
   cloneB07:{name:'Klon B–07 · Anwärter',template:'clubSami',line:'Ich habe meinen neuen Namen schon gelernt. Darf ich den alten behalten, wenn ihn keiner hört?'},
   cloneAlma:{name:'Alma Zinn · Ausbilderin',template:'labHedwig',line:'Abschnitt drei: freiwillige Begeisterung. Wer keine mitgebracht hat, bekommt welche zugeteilt.'},
   cloneLorenz:{name:'Lorenz Sattler · Botwart',template:'labAuer',line:'Der Druide sollte Befehle auslegen. Jetzt legt er Beschwerde ein. Saubere Arbeit, würde ich sagen.'},
@@ -36,7 +43,9 @@ export const NPCS={
   chapterOskar:{name:'Oskar Ried · Vorsitzender',template:'niklas',line:'Setz dich ruhig. Nur nicht hier. Für diesen Stuhl haben wir vier Satzungsänderungen gebraucht.'},
   chapterMatthias:{name:'Matthias Kern · Archivar',template:'guestBruno',line:'Von jeder Sitzung gibt es zwei Protokolle. Das ehrliche liegt unter dem Tisch.'},
   chapterKonrad:{name:'Konrad Falk · Fechtmeister',template:'labSepp',line:'Die Klingen sind geputzt. Die Ehre muss noch bis morgen einweichen.'},
-  niklas:{name:'Niklas',line:'Guten Abend. Die Galerie ist offen. Was dahinter liegt, gehört nicht zur Führung.'},
+  niklas:{name:'Niklas',line:'Hi, hast du meine Hoden gesehen?',choices:[
+    {label:'Nein, Eierloser Spast!',reply:niklasReply},{label:'Was? Nein?!',reply:niklasReply}
+  ]},
   labAuer:{name:'Dr. Ernst Auer',line:'In der Akte steht „Behandlung“. So heißt es hier.',existing:true},
   labPrisoner:{name:'Kilian Beck · Zelle C',template:'guestBruno',line:'Ich hab heimlich alkoholfreies Bier getrunken. Jetzt sitz ich dafür lebenslänglich.'},
   labPatient:{name:'Tobias Lang · Patient',template:'guestJona',line:'Aaah! Aufhören!'},

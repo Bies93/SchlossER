@@ -34,6 +34,7 @@ import {CHAPTER_LAYER,CHAPTER_STEP} from './chapter-layout.js';
 import {SOUTH_HATCH} from './palace-openings.js';
 import {installHumans} from './human-character.js';
 import {npcFocus} from './npc-focus.js';
+import {bindNpcDialogue} from './npc-dialogue-ui.js';
 import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
 import {weaponPickups} from './weapon-pickups.js';
@@ -191,6 +192,8 @@ async function start(){
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
+ let conversation=null;
+ const dialogueOpen=()=>Boolean(conversation?.pending()),controls=()=>active()&&!dialogueOpen();
  const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER,ATTIC_LAYER,BERG_LAYER];
  const coarse=matchMedia('(pointer: coarse)'),ghoulOption=$('with-ghouls');
  let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0,ghoulsWarming=null,ghoulsReady=false;
@@ -236,17 +239,18 @@ async function start(){
  const targetWorld={blocked(x,z,y){return localWorld({x,y,z}).blocked(x,z,y);}};
  const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
+   if(conversation?.pending()?.id===id)conversation.close('interrupt');
    if(id==='hubert')leavePrison();
    if(id==='bergUdo')audio.berg(bergInside(player.body.position),false);
    names.sample(performance.now(),true);
  },ravens);
- const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
+ const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,controls,refresh,
    undefined,targets,
    kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0||hallFloor(p.x,p.z)!==null);},
    audio.shotContact,audio.weaponAction,geometryQuery,activeLayers);
  const isTouch=()=>document.body.dataset.input==='touch';
  const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),
-   weaponName:$('touch-weapon-name'),reticle:$('touch-reticle'),viewmodel,enabled:()=>active()&&isTouch()});
+   weaponName:$('touch-weapon-name'),reticle:$('touch-reticle'),viewmodel,enabled:()=>controls()&&isTouch()});
  const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
@@ -260,16 +264,41 @@ async function start(){
  }
  function npcDialogue(speech){
    if(!speech)return;
-   const id=showCaption(speech.name+': „'+speech.line+'“',Math.max(5500,speech.line.length*68));
+   if(speech.choices){conversation.open(speech);return;}
+   const text=speech.stageDirection?speech.line:speech.name+': „'+speech.line+'“';
+   const id=showCaption(text,Math.max(5500,speech.line.length*68));
    if(speech.id.startsWith('crown')){
      audio.crownCue('voice',speech.at,speech.line);speech.speakFor?.(speech.line.length*.059);return;
    }
    audio.playNpc(speech.id,speech.at,seconds=>{
      if(!active()||captionId!==id)return;
-     speech.speakFor?.(seconds);
+     if(!speech.stageDirection)speech.speakFor?.(seconds);
      clearTimeout(captionTimer);captionTimer=setTimeout(hideCaption,seconds*1000+350);
-   });
+   },undefined,speech.clip);
  }
+ let resumeMouse=false,resumeTouch=false;
+ conversation=bindNpcDialogue({
+   element:$('npc-dialogue'),
+   play:(speech,started,finished,stillValid)=>audio.playNpc(speech.id,speech.at,seconds=>{
+     speech.speakFor?.(seconds);started(seconds);
+   },finished,speech.clip,stillValid),
+   stop:id=>audio.stopNpc(id),
+   onOpen(){
+     resumeMouse=document.pointerLockElement===canvas;resumeTouch=isTouch();
+     document.body.dataset.dialogue='open';
+     hideCaption();names.clear();touchEquipment.clear();input.clear();viewmodel.stop();doorPrompt();refresh();
+   },
+   onClose(reason){
+     delete document.body.dataset.dialogue;
+     if(active())input.start({touch:resumeTouch,lock:resumeMouse&&reason==='answer'});
+     resumeMouse=resumeTouch=false;doorPrompt();refresh();
+   },
+   onReply(speech,reply){
+     if(reply.reaction)speech.react?.(reply.reaction);
+     else speech.speakFor?.(2);
+     npcDialogue({...speech,...reply,choices:undefined});
+   }
+ });
  function leaveChapel(){
    if(chapelTime===null)return;
    chapelTime=null;chapelTake=0;audio.stopChapel();hideCaption();
@@ -347,7 +376,7 @@ async function start(){
  const choirLabels={ready:'Chor erklingen lassen',loading:'Chor wird geladen …',playing:'Der Chor erklingt',
    muted:'Für den Chor den Ton einschalten',retry:'Chor erneut laden',unavailable:'Chor nicht verfügbar'};
  function doorPrompt(){
-   const target=active()?(localTarget()??hallOrPerson()):null;
+   const target=controls()?(localTarget()??hallOrPerson()):null;
    const status=target?.id==='gallery-choir'?audio.choirStatus():'';
    const usable=target&&(target.action||hall.usable(target,player))&&(!status||status==='ready'||status==='retry');
    const uid=target?target.id+':'+target.target+':'+usable+':'+status+':'+target.label:'';
@@ -361,7 +390,7 @@ async function start(){
    }
  }
  function handleDoor(){
-   if(!active())return;
+   if(!controls())return;
    const now=performance.now();names.sample(now,true);
    const local=localTarget();
    if(local?.action==='berg-portal'){
@@ -441,11 +470,11 @@ async function start(){
    doorPrompt();refresh();
  }
  window.addEventListener('keydown',event=>{
-   if(!active()||event.code!=='KeyE'||event.repeat||event.ctrlKey||event.altKey||event.metaKey)return;
+   if(!controls()||event.code!=='KeyE'||event.repeat||event.ctrlKey||event.altKey||event.metaKey)return;
    if(event.target.closest?.('button:not(#portal-action), input, textarea, select, a'))return;
    event.preventDefault();handleDoor();
  });
- portalAction.addEventListener('click',()=>{handleDoor();canvas.focus({preventScroll:true})});
+ portalAction.addEventListener('click',()=>{handleDoor();if(!dialogueOpen())canvas.focus({preventScroll:true})});
  // Conservative bounds include the shaft walls, not just the line at the
  // threshold. Keep adjacent passes out of the render when looking away.
  const box=(x,y,z,X,Y,Z)=>new T.Box3(new T.Vector3(x-.18,y-.18,z-.18),new T.Vector3(X+.18,Y+.18,Z+.18));
@@ -500,7 +529,7 @@ async function start(){
  function render(time){
    frame=0;
    if(active()){
-     if(input.tick(time))dirty=true;
+     if(controls()&&input.tick(time))dirty=true;
      audio.ambience(player.body.position);audio.club(clubMix(player.body.position));
      chapelCue(time,player.body.position);
      orbCue(time,player.body.position);
@@ -512,7 +541,7 @@ async function start(){
      }
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
      const state=hall.update(dt,player.body.position,audio.clubPhase());
-     if(caption.hidden)npcDialogue(hall.takeWardCue());
+     if(caption.hidden&&!dialogueOpen())npcDialogue(hall.takeWardCue());
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
      if(upper.update(time,player.body.position))dirty=true;
@@ -529,7 +558,8 @@ async function start(){
      prisonerCue(time,player.body.position);
      if(state.shadow)r.shadowMap.needsUpdate=true;
      if(targets.tick(dt,mask))dirty=true;
-     names.sample(time);
+     if(dialogueOpen()&&!conversation.pending()?.alive?.())conversation.close('interrupt');
+     if(!dialogueOpen())names.sample(time);
      doorPrompt();
      if(mask&1){
        if(fountain.tick(time,c))dirty=true;
@@ -544,12 +574,13 @@ async function start(){
  function pause(focus=false){
    if(!active())return;
    document.body.dataset.state='paused';
+   conversation.close('pause');
    leaveChapel();leavePrison();orbSince=null;hideCaption();names.clear();
    touchEquipment.clear();input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();
    if(focus) action.focus({preventScroll:true});
  }
  const input=bindPlayerInput({
-   canvas,pad:$('stick'),jumpButton:$('jump'),player,active,pause:()=>pause(!document.hidden && document.hasFocus()),
+   canvas,pad:$('stick'),jumpButton:$('jump'),player,active:controls,pause:()=>pause(!document.hidden && document.hasFocus()),
    refresh,mode:value=>{
      document.body.dataset.input=value;
      touchEquipment.update();

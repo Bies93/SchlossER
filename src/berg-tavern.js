@@ -240,7 +240,7 @@ export function addBergTavern(T,scene,world){
     ['bergWirt',-.30,-4.10,0,false,0x994538,0xc19758],
     ['bergLeni',3.65,-2.36,-.63,false,0x2c6360,0xc8bc8f],
     ['bergDora',-4.22,1.78,Math.PI,true,0x6e3a50,0xe2b982],
-    ['bergFritz',-3.94,-.82,0,true,0x425445,0xc8a377],
+    ['bergFritz',-3.94,-.82,0,true,0xa1453d,0xc8a377],
     ['bergUdo',5.66,.03,-Math.PI/2,false,0x4c476a,0xc4ad78],
   ];
   const cast=people.map(([id,x,z,yaw,seated,vest,trim],i)=>{
@@ -252,7 +252,7 @@ export function addBergTavern(T,scene,world){
     let prop,handR,handL;
     if(i===0||i===1||i===3){
       prop=new T.Group();prop.userData.noSceneQuery=true;root.add(prop);
-      prop.name=i===0?'Wischtuch':i===1?'Serviertablett':'Fritz’ Maß';
+      prop.name=i===0?'Wischtuch':i===1?'Serviertablett':'Bons’ Maß';
       const v=carpentry(T,prop,mat);
       if(i===0){
         v.box('linen',0,-.014,0,.133,.025,.090);v.box('rind',-.029,-.001,0,.009,.004,.082);
@@ -263,8 +263,9 @@ export function addBergTavern(T,scene,world){
       }else tankard(v,0,0,0,'green',0);
       v.flush(prop.name);handR=rig.grip('r').socket;
     }
-    const aState={rig,a,t:i*1.52+1,speech:0,seated,bellows,prop,handR,handL};
+    const aState={rig,a,t:i*1.52+1,speech:0,seated,bellows,prop,handR,handL,weepAt:-Infinity};
     rig.npcInfo.speak=(s=5.7)=>{aState.speech=s;};
+    if(i===3)rig.npcInfo.react=kind=>{if(kind==='sob'){aState.weepAt=performance.now();aState.speech=0;}};
     return aState;
   });
   const acc={t:0},A=new T.Vector3(),B0=new T.Vector3();
@@ -278,13 +279,17 @@ export function addBergTavern(T,scene,world){
       if(a.prop)a.prop.visible=a.rig.alive()&&!(preview&&i===0);
       if(!a.rig.controllable())continue;
       a.t+=step;a.speech=Math.max(0,a.speech-step);
-      const off=Math.atan2(p.x-a.a.position.x,p.z-a.a.position.z)-a.a.rotation.y,
+      const crying=(performance.now()-a.weepAt)*.001,
+        sob=i===3?ease(crying/.49)*ease((5.78-crying)/.98):0,
+        off=Math.atan2(p.x-a.a.position.x,p.z-a.a.position.z)-a.a.rotation.y,
         glance=a.speech>0?clamp(Math.atan2(Math.sin(off),Math.cos(off)),-.77,.77):0,
         talk=a.speech>0?.28+.28*Math.abs(Math.sin(a.t*16)):0,silence=1-Math.min(1,a.speech),
-        s=a.t%8.3,w=a.t%11.8,sip=ease((s-2.75)/.66)*ease((4.65-s)/.61)*silence,
+        s=a.t%8.3,w=a.t%11.8,
+        sip=(i===3&&crying<8.4?ease((crying-5.98)/.77)*ease((8.35-crying)/.66):
+          ease((s-2.75)/.66)*ease((4.65-s)/.61))*(1-sob)*silence,
         wipe=ease((w-2.1)/.62)*ease((8.6-w)/.74)*silence,
         t=beat??a.t,push=(.51+.49*Math.sin(t*Math.PI/1.35))*ease(silence+.12);
-      a.rig.tavernPose(a.t,i,{waving:preview,glance,talk,sip,wipe,push,beat:t});
+      a.rig.tavernPose(a.t,i,{waving:preview,glance,talk,sip,sob,wipe,push,beat:t});
       a.bellows?.(push);
       if(a.prop?.visible){
         a.handR.getWorldPosition(A);
@@ -331,14 +336,14 @@ function dress(T,rig,mat,vest,trim,i){
     }
     W.box('trim',0,hip+.015,.177,.319,.028,.025);
   }
-  if(i===0||i===3||i===4){
-    const h=i===0?1.705:i===3?1.699:1.746;
+  if(i===0||i===4){
+    const h=i===0?1.705:1.746;
     H.oval(i===4?'vest':'green',0,h,.037,.117,.013,.117);
     H.oval(i===4?'vest':'green',0,h+.028,.028,.089,.047,.088);
     H.ring('trim',0,h+.013,.028,.084,.085,.07,-Math.PI/2);
     H.tube('trim',[[.07,h+.024,.027],[.088,h+.070,.008],[.066,h+.111,-.018]],.0041,7);
     for(let j=0;j<5;j++)H.oval('trim',.083-Math.max(0,j-1)*.004,h+.054+j*.012,.019-j*.009,.011,.014,.006);
-  }else{
+  }else if(i===1||i===2){
     H.oval('vest',-.079,hy+.014,-.017,.014,.027,.016);
     H.oval('trim',-.084,hy+.005,-.022,.008,.016,.010);
   }

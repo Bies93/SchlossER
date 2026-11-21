@@ -216,29 +216,30 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     if(!npcVoice)return;
     const {at,amp,pan}=npcVoice,a=listener(),x=at.x-a.x,z=at.z-a.z,d=Math.hypot(x,z);
     if(d>5.5||Math.abs(at.y+1.4-a.y)>1.95){stopNpc();return;}
-    const time=ctx.currentTime,level=1.12/(1+(Math.max(0,d-.85)/3.1)**2);
+    const time=ctx.currentTime,level=1.12*npcVoice.trim/(1+(Math.max(0,d-.85)/3.1)**2);
     if(Math.abs(level-npcVoice.level)>.012){npcVoice.level=level;amp.gain.setTargetAtTime(level,time,.045);}
     if(pan){
       const balance=Math.max(-.66,Math.min(.66,(x*a.rightX+z*a.rightZ)/Math.max(d,1)));
       if(Math.abs(balance-npcVoice.balance)>.015){npcVoice.balance=balance;pan.pan.setTargetAtTime(balance,time,.06);}
     }
   }
-  async function playNpc(id,at,started){
-    const url=npcUrls[id];
+  async function playNpc(id,at,started,finished,clip=id,stillValid){
+    const url=npcUrls[clip];
     if(!url||!at||!playing||!enabled||npcTalking(id)||(!ctx&&!setup()))return;
     stopNpc();stopRadio();
     const request={id};npcRequest=request;
     try{
       const [,buffer]=await Promise.all([ctx.resume(),prepareClip(url)]);
-      if(npcRequest!==request||!live())return;
+      if(npcRequest!==request||!live()||stillValid&&!stillValid())return;
       const a=listener();
       if(Math.hypot(at.x-a.x,at.z-a.z)>4.0||Math.abs(at.y+1.4-a.y)>1.95)return;
       const node=ctx.createBufferSource(),pan=ctx.createStereoPanner?.(),amp=gain(sfx,0);
       node.buffer=buffer;if(pan){node.connect(pan);pan.connect(amp);}else node.connect(amp);
-      const entry={id,at,node,pan,amp,level:-1,balance:0};npcVoice=entry;
+      const trim=clip==='jakeNaeher'?.77:clip==='gardenHannes'?1.25:clip==='bonsSchluchzen'?1.37:1;
+      const entry={id,at,node,pan,amp,level:-1,balance:0,trim};npcVoice=entry;
       node.onended=()=>{
         node.disconnect();pan?.disconnect();amp.disconnect();
-        if(npcVoice===entry){npcVoice=null;mix();}
+        if(npcVoice===entry){npcVoice=null;mix();finished?.();}
       };
       node.start();updateNpc();mix();started?.(buffer.duration);
     }catch{/* The subtitle remains available if a recording cannot play. */}

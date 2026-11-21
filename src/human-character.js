@@ -19,7 +19,7 @@ const wear={
   bergWirt:{palette:[0x49372d,0xc2ac8b,0xe2cbb0],bodice:0x994538,hair:0x94775d,weather:.22},
   bergLeni:{palette:[0x514041,0xbbb99f,0xe3cfb4],bodice:0x266050,hair:0x684031,weather:.09},
   bergDora:{palette:[0x4a3044,0x917b9d,0xc5a995],bodice:0x75384a,hair:0xada39c,weather:.17},
-  bergFritz:{palette:[0x523b30,0xa59171,0xb79e73],bodice:0x425545,hair:0xb0a399,weather:.31},
+  bergFritz:{palette:[0x3b342d,0xaa342d,0xf1e6d5],hair:0xe0c182,weather:.17},
   bergUdo:{palette:[0x353238,0x847b8e,0xbea786],bodice:0x3e375c,hair:0x756044,weather:.18},
   gardenHannes:{cloth:0x97a28b,hair:0xb39370,palette:[0x605645,0x576b53,0x806b52],weather:.16},
   hubert:{skin:0xb5b8aa,weather:.96},
@@ -73,6 +73,7 @@ function personalize(T,lib,id,base,eyeY){
     field=id==='hubert'&&/^(?:Cloth|Shoes|Pocket|Field|LinenBand|Helmet)/.test(m.name),
     formal=cloth&&(id==='niklas'||id==='orbPriest'),staff=cloth&&id.startsWith('lab'),
     copperHair=id==='niklas'&&(hair||brow),freckles=id==='niklas'&&skin,
+    blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,
     ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
     visitor=cloth&&p.palette,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
@@ -86,9 +87,9 @@ function personalize(T,lib,id,base,eyeY){
     if(!m.map)m.color.setHex(0x3c2c27);
   }
   if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
-  if(skin||cloth||field||ritual||copperHair){
+  if(skin||cloth||field||ritual||copperHair||blondHair){
     m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
-      (field||formal||ritual||staff||visitor||copperHair?'-'+id+m.name:(skin&&p.decay)||freckles?'-'+id:'-'+(p.weather??0));
+      (field||formal||ritual||staff||visitor||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -139,9 +140,28 @@ function personalize(T,lib,id,base,eyeY){
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.53,.32,.16),piping*(.53+.41*stitch));
           `:''}
         `:''}
+        ${bonsShirt?`
+          float bonsUpper=max(smoothstep(.91,1.04,castP.y),
+            smoothstep(.178,.234,abs(castP.x))*smoothstep(.72,.86,castP.y));
+          float checkX=cos((castP.x+abs(castP.z)*.39)*196.),checkY=cos((castP.y+sin(castP.x*12.)*.009)*198.);
+          float feather=max(.13,1.-smoothstep(.001,.016,castD));
+          vec3 garnet=vec3(.38,.038,.035),chalk=vec3(.82,.76,.65),weave=vec3(.65,.28,.24);
+          float A=smoothstep(-.13,.13,checkX),B=smoothstep(-.13,.13,checkY);
+          vec3 checked=mix(mix(garnet,weave,A),mix(weave,chalk,A),B);
+          checked=mix(weave,checked,feather);
+          float hem=(1.-smoothstep(.009,.021,abs(castP.x+.004)))*step(.053,castP.z);
+          checked=mix(checked,vec3(.61,.503,.445),hem*.79);
+          float baseTone=dot(diffuseColor.rgb,vec3(.21,.72,.07));
+          diffuseColor.rgb=mix(diffuseColor.rgb,checked*(.69+.82*baseTone),bonsUpper);
+        `:''}
         ${copperHair?`
           float gingerShade=smoothstep(.0,.42,pow(dot(diffuseColor.rgb,vec3(.213,.715,.072)),.55));
           diffuseColor.rgb=mix(vec3(.058,.011,.005),vec3(.37,.121,.039),gingerShade);
+        `:''}
+        ${blondHair?`
+          float straw=smoothstep(.012,.33,sqrt(max(0.,dot(diffuseColor.rgb,vec3(.2126,.7152,.0722)))));
+          float strand=castNoise(castP*vec3(175.,36.,155.));
+          diffuseColor.rgb=mix(vec3(.102,.063,.024),vec3(.66,.479,.236),clamp(straw*.80+strand*.21+.097,0.,1.));
         `:''}
         ${freckles?`
           vec2 fP=(castP.xy-vec2(0.,${eyeY.toFixed(4)}))*512.;
@@ -279,7 +299,7 @@ export function createHuman(T,id='base'){
   }
   const size=proto.userData.size??1,groundedY=y=>y+.003-(proto.userData.soleY??0)*size;
   const anchorA={},anchorB={},ankleGoal=V();
-  function walk(t,distance,route,floorY,look,stopBlend){
+  function walk(t,distance,route,floorY,look,stopBlend,talk=0){
     // Ground anchors are sampled on the actual route, including the curves.
     const L=1.04,motion=1-stopBlend,phase=distance/L,w=phase*tau;
     const drop=.028+.013*cos(2*w)*motion;
@@ -301,7 +321,7 @@ export function createHuman(T,id='base'){
       solve(LIMB[s].arm,sign*(.208+.018*motion),hipsY-.160+motion*.036*Math.abs(sin(w)),.024-.113*sign*sin(w)*motion,sign*.65,-.45,-.72);
       curl(s,.36);
     }
-    face(t,2.34,0,0,.05,look);
+    face(t,2.34,talk,0,.05,look);
   }
   function grip(side){
     const n='hand_'+side,w=bones.get(n),joint=f=>read(f+'_01_'+side);
@@ -473,13 +493,18 @@ export function createHuman(T,id='base'){
     face(t,job.length+.44,talk*.29*(.31+.69*Math.abs(sin(t*13.5))),prayer?.12:0,
       quiet?.075:smoke?.11:.015,glance);
   }
-  function tavernPose(t,role,{waving=false,glance=0,talk=0,sip=0,push=0,wipe=0,beat=t}={}){
+  const tavernEye=V();
+  function tavernPose(t,role,{waving=false,glance=0,talk=0,sip=0,sob=0,push=0,wipe=0,beat=t}={}){
     const seated=role===2||role===3,home=seated?(.495+.106)/size:hipsY-.023;
     const working=1-Math.min(1,talk*2),shift=sin(t*(seated?.77:1.07)),stir=sin(t*1.64),
       wave=waving?.56+.42*sin(t*3.8):0,joke=role===2?(Math.max(0,sin(t*.93-.8))**5)*.24+talk*.22:0;
-    torso(shift*(seated?.012:.024),home-hipsY+sin(t*1.5)*.007,seated?.024:.012,
-      .035+(role===0?wipe*.095:role===3?-.10*sip:.026),shift*.092+(role===2?joke*.31:0),
-      .026*sin(t*.91),t,glance+(role===2?.12:0),role===3?-.19*sip:role===1?.052:.009);
+    const drunk=role===3,rock=drunk?sin(t*1.13)*.014+cos(t*.59)*.012:0,
+      heave=sob*(.55+.45*sin(t*8.8)**2);
+    torso(shift*(seated?.012:.024)+rock,home-hipsY+sin(t*1.5)*.007+heave*.014,seated?.024+sob*.065:.012,
+      .035+(role===0?wipe*.095:drunk?-.10*sip+sob*.26:.026),shift*.092+(role===2?joke*.31:0)+rock*2.13,
+      .026*sin(t*.91)+rock*2.56,t,glance+(role===2?.12:0),drunk?-.19*sip+sob*.29:role===1?.052:.009);
+    // The wrist targets follow the posed face, not its standing bind pose.
+    if(drunk)bones.get('eye_l').getWorldPosition(tavernEye).applyMatrix4(worldInverse);
     for(const [i,side] of ['l','r'].entries()){
       const s=i===0?1:-1,ankle=read('foot_'+side);
       solve(LIMB[side].leg,s*(seated?.123:.106),ankle.y,ankle.z+(seated?.283:s*.031),s*.145,-.04,1);
@@ -496,8 +521,12 @@ export function createHuman(T,id='base'){
       }else if(role===2){
         x+=s*joke*.10;y+=joke*(i===1?1:.51);z+=joke*.46;rotX=.27-joke*.9;close=.31+joke*.32;
       }else if(role===3&&i===1){
-        x=mix(-.191,-.087,sip);y=mix(home+.173,home+.743,sip);z=mix(.303,.236,sip);
+        x=mix(-.191,-.087,sip);y=mix(home+.173,tavernEye.y-.154,sip);z=mix(.303,tavernEye.z+.150,sip);
         rotX=.18-.42*sip;close=.80;
+      }else if(drunk){
+        const wipeEye=sob*(.88+.12*sin(t*5.7));
+        x=mix(.194,tavernEye.x+.018,wipeEye);y=mix(home+.129,tavernEye.y-.102,wipeEye);
+        z=mix(.26,tavernEye.z+.097,wipeEye);rotX=mix(.10,-.46,wipeEye);close=mix(.41,.43,wipeEye);
       }else if(role===4){
         const trill=.012*sin(beat/.45*Math.PI*2+i);
         x=s*(.215+(i===1?push*.066:push*.018));y=home+.106+trill;
@@ -507,7 +536,8 @@ export function createHuman(T,id='base'){
       rot('hand_'+side,rotX,(role===4?.20:.12)*s,(waving&&i===1?.64*sin(t*6.7):.115)*s);
       curl(side,close);
     }
-    face(t,role*1.121+.65,talk*(.52+.28*Math.abs(sin(t*14.7))),.022,role===2?.063:.027,glance);
+    face(t,role*1.121+.65,talk*(.52+.28*Math.abs(sin(t*14.7)))+heave*.24,.022+sob*.27,
+      (role===2?.063:role===0?.092:.027)*(1-sob),glance,sob*.65);
   }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);

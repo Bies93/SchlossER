@@ -30,14 +30,15 @@ export function addGardenMeditation(T,scene,world,heightAt){
   const p=place(0,.030,.085);
   npcInfo.shadow=contactShadow(T,seat,...p,.91,.72);
   world.circle(x,z,.34,p=>Math.abs(p.y-y)<.65&&rig.alive());
-  let t=3.11,acc=0,say=0,attention=0,glance=0;
-  npcInfo.speak=(seconds=1.65)=>{say=seconds+.20;};
+  let t=3.11,acc=0,say=0,attention=0,glance=0,listening=false;
+  npcInfo.listen=on=>{listening=on;};
+  npcInfo.speak=(seconds=1.65)=>{say=seconds?seconds+.20:0;};
   rig.meditate(t);
   return {update(dt,p,surface){
     if(!surface||!rig.controllable()||Math.abs(p.y-y)>2.3||(p.x-x)**2+(p.z-z)**2>16**2){acc=0;say=0;return false;}
     acc+=dt;if(acc<.052)return false;
     const step=Math.min(acc,.10);acc=0;t+=step;say=Math.max(0,say-step);
-    const target=say>0?1:0,angle=Math.atan2(p.x-x,p.z-z)-yaw;
+    const target=listening||say>0?1:0,angle=Math.atan2(p.x-x,p.z-z)-yaw;
     attention+=(target-attention)*Math.min(1,step*4.8);
     glance+=((target?Math.max(-.91,Math.min(.91,Math.atan2(Math.sin(angle),Math.cos(angle)))):0)-glance)*Math.min(1,step*4.2);
     rig.meditate(t,attention,glance,say>0?attention*(.23+.19*Math.abs(Math.sin(t*15))):0);

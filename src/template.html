@@ -151,6 +151,16 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #ghoul-notice[data-kind=won]{border-color:#a1a673}
 #moosfunk-caption{position:absolute;z-index:2;left:50%;bottom:calc(clamp(128px,21%,187px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(580px,calc(100% - 30px));width:max-content;padding:10px 15px;border:1px solid #8e8367;border-radius:6px;background:#151b19f5;color:var(--ink);font-size:.92rem;line-height:1.42;text-align:center;pointer-events:none}
 #npc-name{position:absolute;z-index:2;left:50%;bottom:calc(clamp(24px,5.4%,59px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100% - 28px);width:max-content;padding:7px 14px;background:#151b19ed;border:1px solid #82765b;border-radius:6px;color:#e9dfc7;font-size:.89rem;line-height:1.35;font-weight:650;letter-spacing:.015em;text-align:center;pointer-events:none}
+#npc-dialogue{width:min(510px,calc(100vw - 28px));max-height:calc(100dvh - 26px);margin:auto auto max(16px,env(safe-area-inset-bottom));padding:15px 16px 13px;border:1px solid #8e8367;border-top:2px solid var(--accent);border-radius:8px;background:#151d1bf7;color:var(--ink)}
+#npc-dialogue::backdrop{background:#11191429}
+#npc-dialogue h2{font-size:1.33rem;margin-right:44px;color:var(--accent)}
+#npc-dialogue p{font-size:1rem;margin:10px 0 14px;color:var(--ink)}
+#npc-dialogue section{display:grid;gap:6px}
+#npc-dialogue button[data-answer]{display:flex;align-items:center;gap:10px;text-align:left;min-height:42px;padding:7px 10px;width:100%}
+#npc-dialogue button:disabled{opacity:.50;cursor:default}
+#npc-dialogue [data-dialogue-close]{position:absolute;right:12px;top:10px;min-width:34px;min-height:34px;padding:3px}
+#npc-dialogue small{display:block;color:var(--muted);font-size:.72rem;margin-top:9px}
+body[data-dialogue=open] :is(#touch-controls,#stick,#touch-reticle,#npc-name){visibility:hidden}
 body:not([data-state=playing]) :is(#moosfunk-caption,#npc-name){display:none}
 body:not([data-state=playing]) #ghoul-notice{display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
@@ -302,6 +312,16 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
   <div id="ghoul-notice" role="status" hidden></div>
   <div id="moosfunk-caption" role="status" hidden></div>
   <div id="npc-name" role="status" hidden></div>
+  <dialog id="npc-dialogue" aria-labelledby="npc-speaker" aria-describedby="npc-utterance">
+    <button type="button" data-dialogue-close aria-label="Gespräch beenden" autofocus>×</button>
+    <h2 id="npc-speaker"></h2>
+    <p id="npc-utterance"></p>
+    <section aria-label="Spielerantworten">
+      <button type="button" data-answer aria-keyshortcuts="J" disabled><kbd aria-hidden="true">J</kbd><span></span></button>
+      <button type="button" data-answer aria-keyshortcuts="N" disabled><kbd aria-hidden="true">N</kbd><span></span></button>
+    </section>
+    <small data-dialogue-hint role="status"></small>
+  </dialog>
   <div id="stick" aria-hidden="true"><span></span></div>
   <div id="touch-reticle" aria-hidden="true" hidden></div>
   <div id="touch-controls" role="group" aria-label="Touch-Steuerung">

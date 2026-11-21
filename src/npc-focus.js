@@ -61,7 +61,8 @@ export function npcFocus(T,scene,camera,body,element,visibleLayers,query){
     const ent=selected;
     if(ent?.id!==id||!ent.alive||!ent.line||ent.existing||now<(cooling.get(id)??0))return null;
     cooling.set(id,now+2700);ent.speak?.();
-    return {id:ent.id,name:ent.name,line:ent.line,at:ent.actor.position,speakFor:ent.speak};
+    return {id:ent.id,name:ent.name,line:ent.line,at:ent.actor.position,choices:ent.choices,
+      speakFor:ent.speak,listen:ent.listen,react:ent.react,alive:()=>ent.alive};
   }
   return {sample,target,use,clear(){next=0;show(null);}};
 }
