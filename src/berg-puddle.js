@@ -74,7 +74,7 @@ export function addBergPuddle(T,scene,world,heightAt,tavern){
   const exit={id:'berg-return',action:'berg-portal',label:'Durch das Wasser zurück in den Garten'};
   const entry={id:'berg-pool',action:'berg-portal',label:'In die Pfütze steigen'};
   function wideEnough(p,look,x,Y,z,h,dot){
-    const dx=x-p.x,dy=Y-(p.y+1.67),dz=z-p.z,d=Math.hypot(dx,dy,dz);
+    const dx=x-p.x,dy=Y-(p.y+(p.eyeHeight??1.67)),dz=z-p.z,d=Math.hypot(dx,dy,dz);
     return d<h&&(dx*look.x+dy*look.y+dz*look.z)>d*dot;
   }
   return {root:surface,async prepare(r){

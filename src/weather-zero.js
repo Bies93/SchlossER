@@ -96,7 +96,7 @@ export function addWeatherZero(T,scene,world,heightAt,audio){
     const reach=(.21-front)/along;
     if(reach>r)return false;
     const u=(x+reach*look.x)*normal.z-(z+reach*look.z)*normal.x,
-      v=p.y+1.67+reach*look.y-ground;
+      v=p.y+(p.eyeHeight??1.67)+reach*look.y-ground;
     return Math.abs(u)<.53&&v>1.0&&v<1.71;
   }
   return {async prepare(r,neighbors){

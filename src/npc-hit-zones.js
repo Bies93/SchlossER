@@ -3,7 +3,7 @@
 export function hitZoneQuery(T){
   const origin=new T.Vector3(),direction=new T.Vector3();
   return (zones,ray,limit,result)=>{
-    let best=Infinity,head=false;
+    let best=Infinity,head=false,region='body';
     for(const zone of zones){
       origin.copy(ray.origin).applyMatrix4(zone.inverse);
       direction.copy(ray.origin).add(ray.direction).applyMatrix4(zone.inverse).sub(origin);
@@ -17,9 +17,9 @@ export function hitZoneQuery(T){
       if(d>limit||!(d<best||!head&&zone.head&&d<=best+.014))continue;
       // Give the jaw priority only in the narrow overlap with the neck.
       if(head&&!zone.head&&best-d<.014)continue;
-      best=d;head=zone.head;
+      best=d;head=zone.head;region=zone.region??(head?'head':'body');
     }
     if(best===Infinity)return false;
-    result.distance=best;result.head=head;return true;
+    result.distance=best;result.head=head;result.region=region;return true;
   };
 }

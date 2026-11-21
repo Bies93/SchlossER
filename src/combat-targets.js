@@ -18,12 +18,12 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath,ravens){
       if(!ray.intersectsSphere(broad)||ray.origin.distanceToSquared(broad.center)>(best+1.62)**2)continue;
       if(n.hitEpoch!==epoch){n.hitEpoch=epoch;n.hitCache=n.rig.hitShapes();}
       if(trace(n.hitCache,ray,best,zone)&&zone.distance<best){
-        best=zone.distance;hit={actor:n,distance:best,point:ray.at(best,point).clone(),head:zone.head};
+        best=zone.distance;hit={actor:n,distance:best,point:ray.at(best,point).clone(),head:zone.head,region:zone.region};
       }
     }
     return hit;
   }
-  function damage(n,value,color,at,spec,headShare=0,incoming){
+  function damage(n,value,color,at,spec,headShare=0,incoming,region){
     if(!Number.isFinite(value)||value<=0)return false;
     if(ravens?.owns(n))return ravens.damage(n,at,incoming);
     const kind=spec.kind,body=kind==='bow'?50:kind==='rifle'?35:kind==='pistol'?34:Math.min(55,Math.max(34,Math.round(value*.61)));
@@ -33,7 +33,7 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath,ravens){
     if(!n.alive)return false;
     n.hp=Math.max(0,n.hp-amount);
     n.alive=n.hp>0;
-    if(n.alive)n.rig.reaction(at,null,incoming);
+    if(n.alive)n.rig.reaction(at,null,incoming,region);
     else{
       n.rig.reaction(at,planCollapse(n.actor,at,incoming,world,floorAt),incoming);
       if(n.shadow)n.shadow.visible=false;onDeath?.(n.id);

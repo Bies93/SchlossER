@@ -3,7 +3,7 @@ import {WC_LAYER} from './park-stair.js';
 import {CHAPTER_LAYER} from './chapter-layout.js';
 import {GALLERY_PISTOL} from './south-gallery.js';
 
-export function weaponPickups(T,vm,wc,chapter,query,scene){
+export function weaponPickups(T,vm,wc,chapter,query,scene,floorHeight,world){
   const items=[],ray=new T.Ray(),v=new T.Vector3(),point=new T.Vector3();
   function add(index,label,at,rotation,scale,layer,attach,focus,placement){
     const group=new T.Group(),model=vm.pickupModel(index);
@@ -46,6 +46,27 @@ export function weaponPickups(T,vm,wc,chapter,query,scene){
     g=>chapter.attach('chapter',g),[9.75,chapter.floor+.61,-37.72]);
   add(3,'Alma 09 · Kompaktpistole',GALLERY_PISTOL,[0,.15,Math.PI*.5],.91,0,
     g=>scene.add(g),null,'surface');
+  // One predictable resupply point at the existing practice range.
+  const box=new T.Group(),x=55.12,z=47.18,y=floorHeight(x,z);
+  const green=new T.MeshStandardMaterial({color:0x515944,roughness:.77});
+  const dark=new T.MeshStandardMaterial({color:0x383b34,roughness:.67,metalness:.30});
+  const small=(w,h,d,X,Y,Z,m)=>{
+    const part=new T.Mesh(new T.BoxGeometry(w,h,d),m);part.position.set(X,Y,Z);box.add(part);
+  };
+  small(.69,.32,.43,0,.16,0,green);small(.713,.072,.451,0,.321,0,dark);
+  for(const X of [-.247,.247])small(.055,.112,.029,X,.256,.222,dark);
+  const label=document.createElement('canvas');label.width=256;label.height=64;
+  const ctx=label.getContext('2d');ctx.fillStyle='#d6c599';ctx.fillRect(0,0,256,64);
+  ctx.fillStyle='#252a21';ctx.font='bold 26px monospace';ctx.textAlign='center';ctx.fillText('MUNITION',128,41);
+  const map=new T.CanvasTexture(label);map.colorSpace=T.SRGBColorSpace;
+  const sign=new T.Mesh(new T.PlaneGeometry(.31,.0775),new T.MeshBasicMaterial({map}));
+  sign.position.set(0,.17,.216);box.add(sign);
+  box.name='Übungsstand · Munitionskiste';box.userData.noSceneQuery=true;
+  box.position.set(x,y,z);scene.add(box);
+  world.platform(x-.36,z-.228,x+.36,z+.228,y+.357);
+  const supply={id:'gear-ammo',layer:0,group:box,targets:[new T.Vector3(x,y+.25,z+.15)],action:'gear-pickup',
+    label:'Munition auffüllen',index:0,refill:true};
+  items.push(supply);
   function target(camera,mask){
     camera.getWorldPosition(ray.origin);camera.getWorldDirection(v);
     let winner=null,best=.36;
@@ -64,6 +85,7 @@ export function weaponPickups(T,vm,wc,chapter,query,scene){
     return winner;
   }
   function collect(item,touch=false){
+    if(item?.refill)return vm.restock()?'Munitionsreserve am Übungsstand aufgefüllt.':'Deine Munitionsreserve ist bereits voll.';
     if(!item?.group.visible||!vm.collect(item.index))return null;
     item.group.visible=false;return item.notice+(touch?' Mit „Waffe wechseln“ auswählen.':' Mit dem Mausrad auswählen.');
   }

@@ -126,7 +126,7 @@ export function wcCameraMode(pos){
   // From farther away the only possible view in is over the open cut and
   // under the return lintel. Project both lintel ends onto garden grade.
   if(v<0&&pos.y>=base-.25){
-    const k=(base-ceiling)/(pos.y+1.67-ceiling);
+    const k=(base-ceiling)/(pos.y+(pos.eyeHeight??1.67)-ceiling);
     if(v*k>=back-.16&&roomLeft*(1-k)+u*k<=W+.16&&W*(1-k)+u*k>=-.16)return 'threshold';
   }
   return 'surface';

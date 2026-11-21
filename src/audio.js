@@ -280,13 +280,15 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     n.onended=()=>{n.disconnect();g.disconnect();bus.close()};n.start();return true;
   }
   let shotIndex=0;
-  function shot(kind,indoors=false){
+  function shot(kind,space='outdoor'){
     if(!live())return;
     const t=ctx.currentTime+.005,v=.95+random()*.10;
     const n=shotIndex++;
     const rifleSound=kind==='rifle'||kind==='pistol';
     const file=kind==='bow'?'bow_fire_0'+(1+n%3):rifleSound?'rifle_field_'+(1+n%2):'shotgun_field';
-    if(sample(file,kind==='bow'?.43:kind==='rifle'?.65:kind==='pistol'?.51:.72,v*(kind==='pistol'?1.13:1),0,indoors?.26:.07))return;
+    const wet=space==='cellar'?.36:space==='hall'?.24:.07;
+    if(kind!=='bow')grit(sfx,t,.027,kind==='shotgun'?.086:.055,1050,5200,{attack:.001,pan:.08,wet:wet*.55,rate:v});
+    if(sample(file,kind==='bow'?.43:kind==='rifle'?.57:kind==='pistol'?.49:.72,v*(kind==='pistol'?1.13:1),0,wet))return;
     const knock=(at,hz,len,vol,pan=0)=>tone(sfx,t+at,hz*v,len,vol,{attack:.0015,end:hz*.93*v,wet:.09,pan});
     if(kind==='bow'){
       grit(sfx,t,.018,.25,920,4880,{attack:.0012,wet:.075,rate:v});
@@ -308,8 +310,17 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function weaponAction(kind,phase){
     if(!live())return;
     const t=ctx.currentTime+.007,open=phase==='open',bow=kind==='bow',v=.93+.14*random();
-    const id=phase==='equip'||phase==='holster'?'weapon_'+phase:bow?'bow_reload_'+phase:'shotgun_pump_'+phase;
-    if(sample(id,phase==='equip'||phase==='holster'?.25:.35,v,.075,.10))return;
+    const id=phase==='equip'||phase==='holster'?'weapon_'+phase:phase==='open'||phase==='close'?
+      bow?'bow_reload_'+phase:'shotgun_pump_'+phase:null;
+    if(id&&sample(id,phase==='equip'||phase==='holster'?.25:.35,v,.075,.10))return;
+    if(phase==='dry'||phase==='mag-out'||phase==='mag-in'||phase==='shell'||phase==='charge'){
+      const dry=phase==='dry',hard=phase==='mag-in'||phase==='charge';
+      grit(sfx,t,dry?.019:hard?.064:.048,dry?.103:hard?.166:.125,hard?535:1070,hard?4750:3380,
+        {attack:.0015,pan:.10,wet:.09,rate:v});
+      tone(sfx,t+.004,(dry?713:hard?269:495)*v,hard?.047:.027,hard?.078:.046,{attack:.001,wet:.10});
+      if(phase==='charge')grit(sfx,t+.047,.034,.093,700,3600,{attack:.001,pan:.10,wet:.10,rate:v});
+      return;
+    }
     grit(sfx,t,open?.083:.030,bow?.11:.18,open?480:880,bow?2520:4500,
       {attack:open?.008:.0015,wet:.12,rate:v});
     grit(sfx,t+(open?.075:.023),.031,bow?.085:.12,740,4100,{attack:.002,wet:.12,rate:v});
@@ -319,10 +330,10 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     if(!live())return;
     const a=listener(),dx=p.x-a.x,dz=p.z-a.z,d=Math.hypot(dx,dz);
     const vol=1/(1+(d/9)**1.45),pan=Math.max(-.85,Math.min(.85,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
-    if(sample('impact_'+(material==='surface'?'stone':material),vol*(material==='soft'?.37:.40),.94+random()*.12,pan,.13))return;
+    if(material!=='wood'&&sample('impact_'+(material==='surface'?'stone':material),vol*(material==='soft'?.37:.40),.94+random()*.12,pan,.13))return;
     const t=ctx.currentTime+.006,soft=material==='soft',metal=material==='metal',
-      f=metal?1110:soft?107:kind==='bow'?218:415;
-    grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft?156:575,soft?1230:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
+      f=metal?1110:soft?107:material==='wood'?204:kind==='bow'?218:415;
+    grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft||material==='wood'?156:575,soft?1230:material==='wood'?2580:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
     tone(sfx,t+.003,f,metal?.121:.052,(metal?.069:.061)*vol,{end:f*.93,attack:.002,pan,wet:.18});
   }
   function foot(kind,power=1,impact=false,side=1){

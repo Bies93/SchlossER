@@ -41,7 +41,7 @@ export function bindNpcDialogue({element,play,stop,onOpen,onClose,onReply}){
     close('answer',i);
   }
   for(const [i,b] of buttons.entries())b.addEventListener('click',()=>choose(i));
-  element.querySelector('[data-dialogue-close]').addEventListener('click',()=>close());
+  element.querySelector('[data-dialogue-close]').addEventListener('click',()=>close('dismiss'));
   element.addEventListener('cancel',event=>{event.preventDefault();close()});
   window.addEventListener('keydown',event=>{
     if(!conversation||event.ctrlKey||event.metaKey||event.altKey)return;

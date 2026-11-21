@@ -6,7 +6,6 @@ export function bowCharge(age){
   if(age<.115)return 1-ramp(0,.115,age);
   return ramp(.46,1.02,age);
 }
-export const bowSeat=1.08;
 export const pumpShift=age=>.047*(ramp(.17,.37,age)-ramp(.40,.67,age));
 
 export function buildWeapon(T,spec,assembly,m,loadedBolt){
@@ -110,8 +109,8 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     for(const s of [-1,1]){
       const string=new T.Mesh(g,m.string);root.add(string);strands.push({o:string,side:s,hinge:limbs[s<0?0:1]});
     }
-    return {root,left,animate(age){
-      const c=bowCharge(age),z=-.480+.330*c;
+    return {root,left,animate(age,{reload=-1,loaded=true}={}){
+      const c=reload>=0?ramp(.27,.72,reload):loaded?1:age<.115?bowCharge(age):0,z=-.480+.330*c;
       const twang=age<.22?Math.sin(age*122)*Math.exp(-age*22)*.011:0;
       pin.set(0,.052+twang*.31,z+twang);
       for(const {o,hinge,side} of strands){
@@ -121,15 +120,15 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
         o.position.copy(a).lerp(pin,.5);v.subVectors(pin,a);o.scale.set(.0018,v.length(),.0018);
         o.quaternion.setFromUnitVectors(up,v.normalize());
       }
-      mounted.visible=age>=bowSeat;
-      incoming.visible=age>.65&&age<bowSeat;
+      mounted.visible=loaded||reload>=.87;
+      incoming.visible=reload>=.48&&reload<.87;
       if(incoming.visible){
-        const q=ramp(.68,bowSeat,age);
+        const q=ramp(.48,.87,reload);
         incoming.position.set(-.143*(1-q),.055+.069*(1-q),-.281+.115*(1-q));
         incoming.rotation.set(.09*(1-q),.55*(1-q),-.24*(1-q));
       }
-      left.set(-.034*(ramp(.35,.68,age)-ramp(.99,1.30,age)),.162*(ramp(.43,.82,age)-ramp(1.06,1.29,age)),
-        .146*(ramp(.43,.83,age)-ramp(1.07,1.29,age)));
+      const reach=ramp(.18,.55,reload)-ramp(.88,1,reload);
+      left.set(-.045*reach,.162*reach,.146*reach);
     }};
   }
   if(type==='rifle'){
@@ -161,7 +160,7 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     sculpt(m.carbon,[[.104,.051,.032,.028],[.118,.064,.036,.037],[.170,.062,.034,.038],[.223,.058,.031,.038],
       [.250,.049,.028,.038],[.268,.038,.026,.031]],{power:.59,side:.07});
     profile(m.rubber,[[.281,.024],[.306,.013],[.309,-.072],[.287,-.093],[.270,-.083]],.076,0,.0063);
-    const mag=assembly('Vesper · Magazinattrappe');
+    const mag=assembly('Vesper · Wechselmagazin');
     mag.profile(m.carbon,[[-.109,-.064],[-.220,-.069],[-.228,-.124],[-.243,-.170],[-.264,-.215],
       [-.252,-.239],[-.179,-.248],[-.149,-.228],[-.139,-.191],[-.118,-.141]],.072,0,.005);
     for(const s of [-1,1])for(let i=0;i<4;i++){
@@ -198,8 +197,12 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     const slide=assembly('Vesper · Plaque latérale');
     slide.box(m.raw,[.055,.003,-.201],[.005,.019,.071],.0018);
     slide.box(m.coat,[.059,.004,-.166],[.008,.015,.018],.0016);
-    const root=A.build(),flag=slide.build();root.add(mag.build(),flag);
-    return {root,left,animate(age){flag.position.z=.018*(ramp(0,.038,age)-ramp(.060,.169,age));}};
+    const root=A.build(),flag=slide.build(),magazine=mag.build();root.add(magazine,flag);
+    return {root,left,animate(age,{reload=-1}={}){
+      animateMagazine(magazine,left,reload,.184,-.132,-.172);
+      flag.position.z=.018*(ramp(0,.019,age)-ramp(.041,.094,age))+
+        .024*(ramp(.79,.86,reload)-ramp(.87,.97,reload));
+    }};
   }
   if(type==='pistol'){
     // Fictional compact handgun: exterior silhouettes and screen cosmetics.
@@ -238,7 +241,9 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
       .043,0,.003,[[[-.128,-.052],[-.132,-.071],[-.114,-.090],[-.069,-.094],[-.045,-.079],[-.043,-.052]]]);
     profile(m.coat,[[-.079,-.048],[-.061,-.048],[-.064,-.068],[-.078,-.083],[-.089,-.079],[-.078,-.068]],
       .008,0,.0012);
-    profile(m.coat,[[-.006,-.158],[.059,-.150],[.068,-.171],[.050,-.183],[.007,-.182],[-.011,-.174]],
+    const M=assembly('Alma · Wechselmagazin');
+    M.profile(m.coat,[[-.001,-.060],[.048,-.060],[.055,-.157],[.001,-.165]],.039,0,.003);
+    M.profile(m.coat,[[-.006,-.158],[.059,-.150],[.068,-.171],[.050,-.183],[.007,-.182],[-.011,-.174]],
       .055,0,.0024);
     for(const s of [-1,1]){
       profile(m.rubber,[[-.010,-.045],[.041,-.036],[.063,-.061],[.058,-.135],[.045,-.156],[.012,-.159],[-.007,-.132]],
@@ -251,8 +256,13 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
       bolt([s*.031,-.036,.040],.0032,m.coat);
       bolt([s*.030,-.018,-.155],.0033,m.raw);
     }
-    const root=A.build(),slide=S.build();root.add(slide);
-    return {root,left,animate(age){slide.position.z=.024*(ramp(0,.019,age)-ramp(.033,.094,age));}};
+    const root=A.build(),slide=S.build(),magazine=M.build();root.add(slide,magazine);
+    return {root,left,animate(age,{reload=-1,loaded=true}={}){
+      animateMagazine(magazine,left,reload,.031,-.047,-.125);
+      const lock=loaded?0:age<.022?ramp(0,.022,age):1-ramp(.83,.93,reload);
+      slide.position.z=.024*Math.max(lock,ramp(0,.019,age)-ramp(.033,.094,age));
+      if(reload>=.83)slide.position.z*=1-ramp(.88,.97,reload);
+    }};
   }
   // Amber: sculpted wood silhouette, longitudinal flutes, top and lower
   // decorative tubes on the same centerline. No interior geometry.
@@ -298,6 +308,26 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
   P.turned(m.wood,ridges,[0,-.040,0],'z',[1.10,.82,1],30);
   P.bezel(m.blue,[0,-.040,-.526],.035,.024,.014);
   P.bezel(m.coat,[0,-.040,-.310],.038,.025,.012);
-  const root=A.build(),pump=P.build();root.add(pump);
-  return {root,left,animate(age){pump.position.z=pumpShift(age);left.z=pump.position.z;}};
+  const root=A.build(),pump=P.build(),shell=new T.Group();
+  const hull=new T.Mesh(new T.CylinderGeometry(.009,.009,.043,10),
+    new T.MeshStandardMaterial({color:0x8f4234,roughness:.67}));
+  const head=new T.Mesh(new T.CylinderGeometry(.0096,.010,.016,10),m.brass);
+  hull.position.y=.008;head.position.y=-.019;shell.add(hull,head);
+  root.add(pump,shell);
+  return {root,left,animate(age,{reload=-1}={}){
+    pump.position.z=pumpShift(age);
+    const reach=ramp(0,.36,reload)-ramp(.73,1,reload),insert=ramp(.31,.67,reload);
+    left.set(-.059*reach,-.069*reach,pump.position.z+.262*reach);
+    shell.visible=reload>=0&&reload<.67;
+    shell.position.set(-.104*(1-insert),-.176+.11*insert,-.064-.062*insert);
+    shell.rotation.x=1.25+insert*.32;
+  }};
+}
+
+function animateMagazine(mesh,left,p,z,y,drop){
+  const pull=ramp(.19,.47,p)-ramp(.53,.77,p),grip=ramp(.03,.22,p)-ramp(.77,.99,p);
+  mesh.visible=p<.43||p>=.52;
+  mesh.position.set(-.055*pull,drop*pull,.027*pull);
+  mesh.rotation.set(.12*pull,0,-.29*pull);
+  left.set(-.044*grip+mesh.position.x,grip*y+mesh.position.y,z*grip+mesh.position.z);
 }

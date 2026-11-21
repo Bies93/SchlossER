@@ -137,7 +137,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     const key=cell+region;
     if(key===lightCell&&Math.hypot(p.x-lightX,p.y-lightY,p.z-lightZ)<.14)return changed||animated||membersMoved;
     lightCell=key;lightX=p.x;lightY=p.y;lightZ=p.z;
-    const visible=portalSight(ports,cell,p.x,p.z,null,openingHeights,p.y+1.67);
+    const visible=portalSight(ports,cell,p.x,p.z,null,openingHeights,p.y+(p.eyeHeight??1.67));
     for(const [id,group] of objects)group.visible=visible.has(id);
     const pool=[...visible].flatMap(id=>(sources[id]??[]).map(a=>[a,Math.hypot(p.x-a[0],p.z-a[2])+(id===cell?-3:0)])).sort((a,b)=>a[1]-b[1]);
     if(cell==='duel'){

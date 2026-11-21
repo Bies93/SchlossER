@@ -663,7 +663,9 @@ export function createHuman(T,id='base'){
     const b=bones.get(bone),join=rest.get(bone),inverse=join.axis.clone().invert();
     const local=new T.Matrix4().compose(center.clone().sub(join.at).applyQuaternion(inverse),
       inverse.clone().multiply(orientation),V(x,y,z));
-    shapes.push({b,local,head:bone==='head',inverse:new T.Matrix4()});
+    const region=bone==='head'?'head':/arm_|hand_/.test(bone)?'arm_'+bone.at(-1):
+      /thigh_|calf_|foot_/.test(bone)?'leg_'+bone.at(-1):'body';
+    shapes.push({b,local,head:bone==='head',region,inverse:new T.Matrix4()});
   };
   const eyeCenter=read('eye_l').clone().lerp(read('eye_r'),.5);
   // Fit to the eye line in bind space, not the head bone's local +Y.
@@ -692,9 +694,11 @@ export function createHuman(T,id='base'){
     return shapes;
   }
   const flinchBones=['spine_02','spine_03','neck_01'].map(name=>[bones.get(name),Q()]);
+  const limbReactions={arm_l:bones.get('upperarm_l'),arm_r:bones.get('upperarm_r'),
+    leg_l:bones.get('thigh_l'),leg_r:bones.get('thigh_r')},limbBase=Q();
   // Allocate only on the first fall for a rig. This is a short, articulated
   // animation with floor contacts, not a physics simulation left running.
-  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0;
+  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0,flinchRegion='body',flinchLimb=null;
   const isReacting=()=>reacting;
   const setReacting=value=>{reacting=value;if(npcInfo)npcInfo.reacting=value;};
   const progress=(a,b,t)=>{const k=clamp((t-a)/(b-a));return k*k*(3-2*k);};
@@ -730,12 +734,15 @@ export function createHuman(T,id='base'){
     rot('neck_01',brace?.11:fore*.08,-side*.18);
     rot('head',brace?-.13:fore*.09,side*.275,side*.14+(brace?.02:.07));
   }
-  function reaction(point,fall,incoming){
+  function reaction(point,fall,incoming,region='body'){
     setReacting(true);clock=0;
     const fromX=point.x-actor.position.x,fromZ=point.z-actor.position.z;
     side=fromX*cos(actor.rotation.y)-fromZ*sin(actor.rotation.y)<0?1:-1;
     flinchPitch=(incoming?.x??-fromX)*sin(actor.rotation.y)+(incoming?.z??-fromZ)*cos(actor.rotation.y);
     if(!fall){
+      if(flinchLimb&&flinchLimb!==limbReactions[region])flinchLimb.quaternion.copy(limbBase);
+      flinchRegion=region;flinchLimb=limbReactions[region];
+      if(flinchLimb)limbBase.copy(flinchLimb.quaternion);
       if(falling)falling.active=false;
       for(const [b,out] of flinchBones)if(b)out.copy(b.quaternion);
       return;
@@ -798,9 +805,13 @@ export function createHuman(T,id='base'){
     clock+=dt;
     const f=falling;
     if(!f?.active){
-      const k=clamp(clock/.28),p=sin(Math.PI*k);
-      for(const [j,[b,base]] of flinchBones.entries())if(b)
-        b.quaternion.copy(base).multiply(q.setFromEuler(e.set(flinchPitch*.13*p,side*p*(.17-j*.028),side*p*.10)));
+      const head=flinchRegion==='head',k=clamp(clock/(head?.24:flinchLimb?.32:.28)),p=sin(Math.PI*k);
+      for(const [j,[b,base]] of flinchBones.entries())if(b){
+        const weight=head?(j===2?1.75:.48):flinchLimb?.48:1;
+        b.quaternion.copy(base).multiply(q.setFromEuler(e.set((flinchPitch*.13+(head&&j===2?-.12:0))*p*weight,side*p*(.17-j*.028)*weight,side*p*.10*weight)));
+      }
+      if(flinchLimb)flinchLimb.quaternion.copy(limbBase).multiply(q.setFromEuler(e.set(
+        p*(flinchRegion.startsWith('arm')?-.24:.14),0,p*side*.11)));
       if(k>=1)setReacting(false);
       return visible;
     }

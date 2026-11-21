@@ -14,9 +14,9 @@ const element={querySelector:s=>({'h2':name,'p':line,'[data-dialogue-hint]':hint
   querySelectorAll:()=>buttons,showModal(){this.isOpen=true;},close(){this.isOpen=false;},
   addEventListener:(ev,fn)=>listeners.set(ev,fn)};
 globalThis.window={addEventListener:(ev,fn)=>keyEvents.set(ev,fn)};
-const actions=[],plays=[],attention=[];
+const actions=[],plays=[],attention=[],closed=[];
 let finish,alive=true;
-const ui=bindNpcDialogue({element,play(s,a,f){plays.push(s.id);finish=f;},stop(){},onOpen(){},onClose(){},
+const ui=bindNpcDialogue({element,play(s,a,f){plays.push(s.id);finish=f;},stop(){},onOpen(){},onClose(reason){closed.push(reason);},
   onReply(s,r){actions.push([s.id,r.clip,r.reaction]);}});
 const open=id=>ui.open({id,...NPCS[id],listen:on=>attention.push([id,on]),alive:()=>alive});
 function key(code){keyEvents.get('keydown')({code,preventDefault(){},stopImmediatePropagation(){}});}
@@ -40,6 +40,8 @@ for(const b of buttons){
 assert.equal(actions.length,6);assert.equal(plays.length,6);
 assert.ok(open('bergFritz'));finish();
 listeners.get('cancel')({preventDefault(){}});assert.equal(actions.length,6);
+assert.ok(open('bergFritz'));clicks.get('click')();assert.equal(closed.at(-1),'dismiss');
+assert.equal(actions.length,6);
 assert.ok(open('bergFritz'));finish();alive=false;key('KeyJ');assert.equal(actions.length,6);
 assert.ok(!ui.pending()&&!element.isOpen);
 assert.deepEqual(attention.filter(([id])=>id==='niklas'),[['niklas',true],['niklas',false],['niklas',true],['niklas',false]]);

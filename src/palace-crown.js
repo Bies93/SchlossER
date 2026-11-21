@@ -439,7 +439,7 @@ export function dressCrown(T,root,world){
   anim.open=0;
 
   function target(p,look,blocked){
-    const eye=p.y+1.67;
+    const eye=p.y+(p.eyeHeight??1.67);
     let best=null,score=.42;
     for(const o of targets){
       if(o.id==='engine'&&!s.crypt)continue;

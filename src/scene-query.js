@@ -8,6 +8,12 @@ export function sceneQuery(T,scene,player){
   let tree=null,revision=0;
   const byGeometry=new WeakMap(),intersect=triangleIntersection(T);
   const seen=o=>{for(let a=o;a;a=a.parent){if(!a.visible)return false;if(a===scene)return true;}return false;};
+  function impact(o){
+    const name=o.material.name+' '+o.name;
+    if(/wood|oak|holz|diel|latte|walnut|parkett/i.test(name))return 'wood';
+    if(/metal|iron|stahl|guss|stahlblech|stahlgitter/i.test(name)||o.material.metalness>.49)return 'metal';
+    return 'surface';
+  }
   function build(){
     fixed.length=moving.length=0;scene.updateMatrixWorld(true);
     function visit(o,dynamic=false){
@@ -22,7 +28,7 @@ export function sceneQuery(T,scene,player){
           const bounds=local.clone().applyMatrix4(o.matrixWorld);
           if(Number.isFinite(bounds.min.x)){
             if(!byGeometry.has(g))byGeometry.set(g,triangleQuery(T,g));
-            (dynamic?moving:fixed).push({o,bounds,local,triangles:byGeometry.get(g)});
+          (dynamic?moving:fixed).push({o,bounds,local,triangles:byGeometry.get(g),impact:impact(o)});
           }
         }
       }
@@ -40,7 +46,7 @@ export function sceneQuery(T,scene,player){
     };
     tree=part(fixed);
   }
-  function trace(ray,max,mask,near=.02,any=false){
+  function trace(ray,max,mask,near=.02,any=false,surface){
     if(max<=near)return Infinity;
     caster.ray.copy(ray);caster.near=near;caster.far=max;
     let nearest=Infinity;
@@ -55,12 +61,12 @@ export function sceneQuery(T,scene,player){
       if(!touches(bounds))return false;
       if(entry.triangles){
         const d=intersect(entry.triangles,ray,o.matrixWorld,near,caster.far,any);
-        if(d!==Infinity){caster.far=nearest=d;return true;}
+        if(d!==Infinity){caster.far=nearest=d;if(surface)surface.material=entry.impact;return true;}
         return false;
       }
       probe.geometry=o.geometry;probe.matrixWorld.copy(o.matrixWorld);
       hits.length=0;probe.raycast(caster,hits);
-      for(const h of hits)if(h.distance<nearest)caster.far=nearest=h.distance;
+      for(const h of hits)if(h.distance<nearest){caster.far=nearest=h.distance;if(surface)surface.material=entry.impact;}
       return hits.length>0;
     }
     for(const e of moving)if(mesh(e,true)&&any)return nearest;

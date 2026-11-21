@@ -1,10 +1,10 @@
 import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
-import {bowSeat} from './ego-weapon-models.js';
 import {makeEgoBody} from './ego-body.js';
 import {weaponWorld} from './ego-projectiles.js';
+import {recoilSpring,weaponAction} from './weapon-action.js';
 
 export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,
-  creatures=null,onFire=()=>{},onContact=()=>{},onAction=()=>{},query,context){
+  creatures=null,onFire=()=>{},onContact=()=>{},onAction=()=>{},query,context,hud){
   const stage=new T.Scene(),eye=new T.PerspectiveCamera(53,1,.045,6);
   const h=new T.HemisphereLight(0xe6eaf0,0x839098,1.24),key=new T.DirectionalLight(0xf7dcac,1.38),
     rim=new T.DirectionalLight(0xb5c8dc,.62);
@@ -31,30 +31,78 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const face=mesh(rangeObjects,new T.IcosahedronGeometry(.123,1),surface,x,center.y,z);
     return {face,timer:0,sphere:new T.Sphere(center,.14)};
   });
-  const fx=weaponWorld(T,rangeObjects,world,floorHeight,creatures,rig.bolt,anchors,onContact,query,context);
+  const fx=weaponWorld(T,rangeObjects,world,floorHeight,creatures,rig.bolt,anchors,onContact,query,context,hitFeedback);
   const flash=new T.Group();held.add(flash);
   const shine=new T.MeshBasicMaterial({color:0xe9a33b,transparent:true,depthWrite:false,
     blending:T.AdditiveBlending,toneMapped:false});
   const spark=mesh(flash,new T.IcosahedronGeometry(1,0),shine,0,0,-.023);
   const sparkSide=mesh(flash,new T.IcosahedronGeometry(1,0),shine,0,0,-.013);
   flash.visible=false;
+  const brass=new T.MeshStandardMaterial({color:0xb99a56,metalness:.68,roughness:.40});
+  const casing=new T.CylinderGeometry(.0048,.0063,.028,9);
+  const tube=new T.CylinderGeometry(.0048,.006,.022,9);
+  const spentHull=new T.MeshStandardMaterial({color:0x884032,roughness:.62});
+  const cases=Array.from({length:8},()=>{
+    const o=new T.Group(),head=mesh(o,casing,brass),hull=mesh(o,tube,spentHull,0,.004,0);
+    stage.add(o);o.visible=false;
+    return {o,head,hull,v:V(),age:1};
+  });
+  let caseCursor=0;
+  function eject(n){
+    if(reduced)return;
+    const c=cases[caseCursor++%cases.length],big=n.kind==='shotgun';
+    c.age=0;c.o.visible=true;c.o.scale.set(big?1.7:1,big?2:n.kind==='pistol'?.65:1,big?1.7:1);
+    c.hull.visible=big;c.head.scale.y=big?.24:1;c.head.position.y=big?-.010:0;
+    c.o.position.set(big?.064:.043,.027,n.kind==='pistol'?-.092:-.172);
+    c.o.position.applyQuaternion(held.quaternion).add(held.position);
+    c.o.rotation.set(.8,0,-.4);c.v.set(.77,.44+(serial%3)*.055,.14);
+  }
   const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
   const relax=(v,d,k,dt)=>v+(d-v)*(1-Math.exp(-k*dt));
-  const clockAt=style.map(()=>-10),readyAt=style.map(()=>-Infinity),heard=style.map(()=>0),
-    previous=player.body.position.clone(),deltaPos=V();
-  const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),projected=V(),sightAnchor=V();
+  const states=style.map(weaponAction),previous=player.body.position.clone(),deltaPos=V();
+  const kickback=recoilSpring(20),tiltSpring=recoilSpring(17),pitchSpring=recoilSpring(15),
+    yawSpring=recoilSpring(17),rollSpring=recoilSpring(19);
+  const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),sightAnchor=V();
   const screen=new T.Vector2(),aimScreen=new T.Vector2();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0],
     names=style.map(n=>n.label.split(' · ').at(-1));
-  let selected=-1,pending=-1,swap=null,aiming=false,ads=0,kick=0,t0=null,step=0,clock=0;
+  let selected=-1,pending=-1,swap=null,aiming=false,ads=0,t0=null,step=0,clock=0;
   let moving=0,running=0,strafe=0,inertia=0,previousYaw=player.body.rotation.y,wheel=0,wheelAt=0,wheelStepAt=-1000;
-  let wasPermitted=false,serial=0,leftHeld=false,touchHeld=false;
+  let wasPermitted=false,serial=0,leftHeld=false,touchHeld=false,burst=0,lastShot=-Infinity,dryLatched=false;
+  let wall=0,nextWall=-Infinity,wallDistance=Infinity,hitUntil=0,hitType='',noticeUntil=0,notice='';
+  function hitFeedback(kind){
+    if(clock<hitUntil&&hitType!=='body'&&kind==='body')return;
+    hitType=kind;hitUntil=clock+(kind==='body'?.145:.22);
+  }
+  function setData(el,key,value){
+    if(value===null){if(key in el.dataset)delete el.dataset[key];}
+    else if(el.dataset[key]!==value)el.dataset[key]=value;
+  }
+  function paintHud(isArmed,visual,action){
+    if(!hud)return;
+    setData(hud.root,'armed',isArmed?'yes':null);
+    setData(hud.root,'aim',ads>.7?'yes':null);
+    setData(hud.root,'hit',clock<hitUntil?hitType:null);
+    setData(hud.root,'state',isArmed?visual.phase:null);
+    setData(hud.root,'wall',wallDistance<.36?'yes':null);
+    if(!isArmed)return;
+    const message=clock<noticeUntil?notice:visual.phase==='reloading'?(style[selected].kind==='bow'?'Wird gespannt':'Wird nachgeladen'):
+      visual.phase==='empty'?(action.reserve?'R · Nachladen':'Keine Reserve'):wallDistance<.36?'Mündung blockiert':'';
+    const assign=(el,v)=>{if(el.textContent!==v)el.textContent=v;};
+    assign(hud.weapon,names[selected]);assign(hud.rounds,String(action.rounds));assign(hud.reserve,String(action.reserve));
+    assign(hud.status,message);
+    const p=visual.reload<0?0:visual.reload;
+    const value=p.toFixed(3);
+    if(hud.root.style.getPropertyValue('--reload')!==value)hud.root.style.setProperty('--reload',value);
+  }
+  function clearRecoil(){for(const s of [kickback,tiltSpring,pitchSpring,yawSpring,rollSpring])s.clear();burst=0;}
   function display(n){
     selected=n;devices.forEach((d,i)=>{d.root.visible=rig.hands[i].group.visible=i===n;});
   }
   function select(n){
     if(!swap&&selected===n)return;
-    leftHeld=touchHeld=false;
+    leftHeld=touchHeld=dryLatched=false;
+    states[selected]?.cancel();
     if(n<0)aiming=false;
     pending=n;
     onAction(style[n>=0?n:selected]?.kind,n<0?'holster':'equip');
@@ -62,26 +110,46 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     else if(swap.shown)swap={at:clock,shown:false,down:.080,up:n<0?0:.160};
     // A change while still lowering replaces the destination only.
     else swap.up=n<0?0:.176;
-    kick=0;flash.visible=false;refresh();
+    clearRecoil();wall=0;wallDistance=Infinity;nextWall=-Infinity;noticeUntil=0;flash.visible=false;refresh();
   }
   display(selected);
   function syncProjection(){
     const fov=(camera.aspect<.8?61:54)-ads*4;
     if(eye.fov!==fov||eye.aspect!==camera.aspect){eye.aspect=camera.aspect;eye.fov=fov;eye.updateProjectionMatrix();}
+    const base=camera.userData.baseFov;
+    if(base){
+      const worldFov=base*(1-ads*(selected===0?.20:.15));
+      if(Math.abs(camera.fov-worldFov)>.045){camera.fov=worldFov;camera.updateProjectionMatrix();}
+    }
   }
-  function fire(now,heldShot=false){
-    if(!isActive()||selected<0||swap||!equipmentAllowed()||now<readyAt[selected]-.10)return false;
-    const n=style[selected],delay=1000*n.recovery,due=readyAt[selected];
-    // Honor the cadence across normal frame jitter, never burst to catch up.
-    readyAt[selected]=(heldShot&&now-due<delay*.50?due:now)+delay;
-    clockAt[selected]=clock;heard[selected]=0;serial++;kick=n.recoil;
+  function measureWall(n){
+    if(!query)return Infinity;
+    projector.setFromCamera(aimScreen.set(0,0),camera);
+    return query.trace(projector.ray,n.kind==='pistol'?.70:.94,context?.().mask??1,.065);
+  }
+  function fire(){
+    if(!isActive()||selected<0||swap||!equipmentAllowed())return false;
+    const n=style[selected],weapon=states[selected];
+    if(!weapon.rounds&&dryLatched)return false;
+    camera.updateWorldMatrix(true,false);
+    wallDistance=measureWall(n);
+    if(wallDistance<.36){notice='Mündung blockiert';noticeUntil=clock+.23;return false;}
+    const result=weapon.fire(clock);
+    if(result==='dry'){
+      dryLatched=true;onAction(n.kind,'dry');notice=weapon.reserve?'Leer · Nachladen':'Keine Reserve';noticeUntil=clock+.58;refresh();
+    }
+    if(result!=='fire')return false;
+    if(clock-lastShot>.28)burst=0;
+    lastShot=clock;serial++;burst++;
+    const side=n.automatic?[.08,.24,.36,.63,.32,-.54,-.72,-.36][Math.min(burst-1,7)]*(burst>8?Math.cos((burst-8)*.49):1):
+      (serial%2?.45:-.42);
+    const brace=(1-ads*.24)*(1-(player.motion.crouch??0)*.17);
+    kickback.push(n.recoil*52*brace);tiltSpring.push(n.recoil*48*brace);
+    pitchSpring.push(n.recoil*(n.kind==='shotgun'?24:19)*brace);yawSpring.push(n.recoil*11*side*brace);
+    rollSpring.push(n.recoil*16*side*brace);
     onFire(n.kind);
     syncProjection();camera.updateWorldMatrix(true,false);camera.getWorldPosition(origin);
     aimScreen.set(0,0);
-    if(ads>.25){
-      projected.fromArray(n.sight).applyQuaternion(held.quaternion).add(held.position).applyMatrix4(eye.projectionMatrix);
-      aimScreen.set(projected.x,projected.y);
-    }
     projector.setFromCamera(aimScreen,camera);
     if(n.kind==='bow'){
       // Convert viewmodel muzzle pixels to world space at the same camera depth.
@@ -92,11 +160,13 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       fx.launch(origin,muzzle,projector.ray.direction,n);
       flash.visible=false;
     }else{
+      if(n.kind!=='shotgun')eject(n);
       flash.position.fromArray(n.emit);flash.visible=true;flash.rotation.z=(serial*2.39996)%6.28318;
       fx.beginVolley();let nearest=Infinity,material;
       for(let i=0;i<n.pattern;i++){
         const az=(i-1)*Math.PI*.5+serial*2.39996,
-          fan=(n.pattern===1?.56:i===0?0:i%2?.82:1)*n.spread*(1-ads*.20);
+          fan=(n.pattern===1?.56:i===0?0:i%2?.82:1)*n.spread*(1-ads*.55)*
+            (1+.71*running-.22*(player.motion.crouch??0)+(n.automatic?Math.min(burst-1,9)*.13:0));
         screen.set(aimScreen.x+Math.cos(az)*fan,aimScreen.y+Math.sin(az)*fan*camera.aspect);
         projector.setFromCamera(screen,camera);
         const hit=fx.pellet(projector.ray,n);
@@ -107,6 +177,11 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     refresh();return true;
   }
+  function reload(){
+    if(!isActive()||selected<0||swap||!equipmentAllowed())return false;
+    if(!states[selected].reload(clock))return false;
+    dryLatched=false;noticeUntil=0;refresh();return true;
+  }
   function cycle(direction=1){
     if(!isActive()||!equipmentAllowed())return;
     const current=swap?pending:selected;
@@ -114,9 +189,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   const touchReady=()=>isActive()&&selected>=0&&!swap&&equipmentAllowed();
   function touchTrigger(pressed){
-    if(!pressed){touchHeld=false;return false;}
+    if(!pressed){touchHeld=false;dryLatched=false;return false;}
     if(touchHeld||!touchReady())return false;
-    touchHeld=true;fire(performance.now());
+    touchHeld=true;dryLatched=false;fire();
     return true;
   }
   const relevant=e=>isActive()&&(document.pointerLockElement===canvas||e.target===canvas);
@@ -124,10 +199,14 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     if(e.sourceCapabilities?.firesTouchEvents||document.body.dataset.input==='touch'||!relevant(e)||!equipmentAllowed())return;
     if(e.button===2&&selected>=0){e.preventDefault();aiming=true;refresh();}
     else if(e.button===0&&!leftHeld){
-      leftHeld=selected>=0&&!swap;fire(performance.now());
+      leftHeld=selected>=0&&!swap;dryLatched=false;fire();
     }
   });
   window.addEventListener('mouseup',e=>{if(e.button===0)leftHeld=false;if(e.button===2){aiming=false;refresh();}});
+  window.addEventListener('keydown',e=>{
+    if(e.code==='KeyR'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&isActive()&&
+      !e.target.closest?.('button,input,select,textarea,a')){e.preventDefault();reload();}
+  });
   window.addEventListener('pointercancel',()=>{leftHeld=aiming=false;refresh();});
   window.addEventListener('blur',()=>{leftHeld=touchHeld=aiming=false;});
   document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement!==canvas)leftHeld=aiming=false;});
@@ -143,7 +222,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     wheel=0;wheelStepAt=now;cycle(sign);
   },{passive:false});
   function update(now){
-    const elapsed=t0===null?0:Math.max(0,(now-t0)/1000),dt=Math.min(.05,elapsed);t0=now;clock+=dt;
+    const elapsed=t0===null?0:Math.max(0,(now-t0)/1000),dt=Math.min(.05,elapsed);t0=now;clock+=Math.min(.12,elapsed);
     deltaPos.subVectors(player.body.position,previous);previous.copy(player.body.position);
     const delta=Math.hypot(deltaPos.x,deltaPos.z),speed=player.motion?.speed??delta/Math.max(dt,.001),yaw=player.body.rotation.y;
     const grounded=player.motion?.grounded??true,landing=player.motion?.land??0;
@@ -165,31 +244,46 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       else holster=age<swap.down?smooth(age/swap.down):1-smooth((age-swap.down)/swap.up);
     }
     const index=Math.max(0,selected),n=style[index],device=devices[index],pose=rig.hands[index];
-    let age=clock-clockAt[index];
-    const handling=n.kind==='bow'?smooth((age-.22)/.20)*(1-smooth((age-1.11)/.19)):
-      n.kind==='shotgun'?.69*smooth((age-.12)/.18)*(1-smooth((age-.59)/.16)):0;
+    const action=states[index],armed=selected>=0&&permitted&&isActive();
+    if(armed){
+      action.update(clock,cue=>{
+        onAction(n.kind,cue);
+        if(cue==='open'&&n.kind==='shotgun')eject(n);
+      });
+      if(clock>=nextWall){
+        nextWall=clock+.085;camera.updateWorldMatrix(true,false);wallDistance=measureWall(n);
+      }
+    }
+    const visual=action.visual(clock);
+    let age=visual.age;
+    const loading=visual.reload>=0?smooth(visual.reload/.16)*(1-smooth((visual.reload-.83)/.17)):0;
+    const handling=loading||(n.kind==='shotgun'?.57*smooth((age-.12)/.18)*(1-smooth((age-.59)/.16)):0);
+    wall=relax(wall,armed?1-smooth((wallDistance-.25)/.57):0,17,dt);
     const oldAds=ads,aim=aiming&&permitted&&!swap&&selected>=0?1:0;
-    ads=relax(ads,aim*(1-handling*.79),aim?17:12,dt);
-    if(Math.abs(ads-aim*(1-handling*.79))<.00005)ads=aim*(1-handling*.79);
-    const oldKick=kick;kick*=Math.exp(-dt*(n.kind==='shotgun'?10:19));
+    const targetAds=aim*(1-handling*.94)*(1-running*.67)*(1-wall);
+    ads=relax(ads,targetAds,aim?17:12,dt);
+    if(Math.abs(ads-targetAds)<.00005)ads=targetAds;
+    const kick=kickback.step(dt),rise=tiltSpring.step(dt),punch=pitchSpring.step(dt),yawKick=yawSpring.step(dt),roll=rollSpring.step(dt);
     const comfort=reduced?.20:1,rest=1-ads,
       sway=Math.sin(step)*moving*(1-ads*.95)*n.weight,bob=Math.cos(step*2)*moving*(1-ads*.95)*n.weight;
     const breath=Math.sin(clock*2.04)*.0035*comfort*(1-.90*ads);
     const lookDown=smooth((-camera.parent.rotation.x-.78)/.52)*rest;
-    camera.position.y=(bob*.013*(1+running*.35)-landing*.035)*comfort;camera.rotation.z=strafe*.007*comfort;
+    camera.position.y=(bob*.013*(1+running*.35)-landing*.035)*comfort;
+    camera.rotation.set(punch*comfort,yawKick*comfort,strafe*.007*comfort+roll*.32*comfort);
+    syncProjection();
     if(selected>=0){
-    held.rotation.set(-.039*rest+sway*.020*comfort+kick*1.45-holster*.74-lookDown*.26-handling*.141+breath,
-      n.yaw*rest+inertia*.008*rest+sway*.011*comfort+.069*handling,
-      -strafe*.037*rest+holster*.23+running*.083*rest-.025*rest-.068*handling);
+    held.rotation.set(-.039*rest+sway*.020*comfort+rise*1.31-holster*.74-lookDown*.26-handling*.141+breath-wall*.48,
+      n.yaw*rest+inertia*.008*rest+sway*.011*comfort+.069*handling+yawKick*1.7+wall*.12,
+      -strafe*.037*rest+holster*.23+running*.105*rest-.025*rest-.12*handling+roll*1.3);
     sightAnchor.fromArray(n.sight).applyQuaternion(held.quaternion);
     held.position.set((n.hold[0]+running*.042)*rest+sway*.013*comfort*rest-inertia*.005*rest-sightAnchor.x*ads,
       n.hold[1]*rest-sightAnchor.y*ads+(bob*.012*comfort-landing*.020*comfort-(grounded?0:.032))*rest-
-      running*.041*rest-holster*.41-lookDown*.19+breath*.8,
-      n.hold[2]+ads*.052+kick+holster*.020);
-      device.animate(age);
+      running*.070*rest-holster*.41-lookDown*.19+breath*.8-wall*.071,
+      n.hold[2]+ads*.052+kick+holster*.020+wall*.08);
+      device.animate(age,visual);
       const support=pose.nodes[0];
       support.position.fromArray(n.fore).add(device.left);
-      support.rotation.set(n.kind==='bow'?-.38*handling:0,0,n.kind==='bow'?-.29*handling:0);
+      support.rotation.set(-.34*handling,.16*handling,-.29*handling);
       for(const [i,a] of arms.entries()){
         const node=pose.nodes[i];
         a.wrist.copy(pose.wrists[i]).applyQuaternion(node.quaternion).add(node.position).applyQuaternion(held.quaternion).add(held.position);
@@ -199,27 +293,31 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
         a.wrap.scale.set(.082,.074,.073);a.wrap.quaternion.copy(a.forearm.quaternion);
       }
     }
-    const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x});
+    const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x,crouch:player.motion.crouch});
     let effect=permitted&&fx.tick(dt);
-    if((leftHeld||touchHeld)&&n.automatic&&fire(now,true)){age=0;effect=true;}
+    if((leftHeld||touchHeld)&&n.automatic&&visual.phase!=='cycling'&&visual.phase!=='reloading'&&fire()){age=0;effect=true;}
+    for(const c of cases){
+      if(!c.o.visible)continue;
+      c.age+=dt;effect=true;
+      if(c.age>.33){c.o.visible=false;continue;}
+      c.v.y-=4.7*dt;c.o.position.addScaledVector(c.v,dt);
+      c.o.rotation.x+=dt*14;c.o.rotation.z-=dt*19;
+    }
     if(flash.visible){
       effect=true;
       const width=n.kind==='shotgun'?.053:n.kind==='pistol'?.026:.034,fade=1-age/(n.kind==='shotgun'?.059:.041),k=Math.max(0,fade);
       if(fade<=0)flash.visible=false;
       else{
-        spark.scale.set(width*k*.51,width*k*.41,width*k*1.18);
+        spark.scale.set(width*k*.51,width*k*.41,width*k*(n.kind==='rifle'?1.92:1.18));
         sparkSide.scale.set(width*k,width*k*.35,width*k*.41);sparkSide.rotation.z=age*103;
-        shine.opacity=.81*k;shine.color.setHex(n.kind==='shotgun'?0xe5a245:0xf5d495);
+        shine.opacity=.81*k;shine.color.setHex(n.kind==='shotgun'?0xe5a245:n.kind==='pistol'?0xffb55d:0xffdfa1);
       }
     }
-    if(selected>=0&&permitted&&isActive()&&age<n.recovery){
-      effect=true;
-      const a=n.kind==='bow'?.54:n.kind==='shotgun'?.22:Infinity,b=n.kind==='bow'?bowSeat:n.kind==='shotgun'?.58:Infinity;
-      if(age>=a&&heard[index]===0){heard[index]=1;if(age-a<.10)onAction(n.kind,'open');}
-      if(age>=b&&heard[index]===1){heard[index]=2;if(age-b<.10)onAction(n.kind,'close');}
-    }
+    paintHud(armed,action.visual(clock),action);
+    if(armed&&(age<n.recovery||visual.reload>=0||wall>.001))effect=true;
     const breatheFrame=permitted&&selected>=0&&!reduced&&Math.floor(clock*24)!==Math.floor((clock-dt)*24);
-    return changingBody||delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||oldKick>.0001||effect||
+    return changingBody||delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||
+      Math.abs(kick)+Math.abs(rise)+Math.abs(punch)+Math.abs(yawKick)+Math.abs(roll)>.0001||effect||
       transition||breatheFrame;
   }
   function draw(renderer){
@@ -236,7 +334,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   function stop(){
     leftHeld=touchHeld=aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
-    camera.position.y=camera.rotation.z=0;flash.visible=false;refresh();
+    states[selected]?.cancel();clearRecoil();noticeUntil=hitUntil=0;dryLatched=false;
+    for(const c of cases)c.o.visible=false;
+    camera.position.y=0;camera.rotation.set(0,0,0);syncProjection();flash.visible=false;refresh();
   }
   function collect(index){
     if(!style[index]||owned.includes(index))return false;
@@ -250,17 +350,24 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const vp=r.getViewport(new T.Vector4()),sc=r.getScissor(new T.Vector4()),test=r.getScissorTest(),meshes=[];
     for(const d of devices)d.root.visible=true;
     for(const p of rig.hands)p.group.visible=true;
-    flash.visible=true;stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
+    flash.visible=true;cases[0].o.visible=true;stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
     try{
       await r.compileAsync(stage,eye);
       r.setViewport(0,0,32,32);r.setScissor(0,0,32,32);r.setScissorTest(true);r.render(stage,eye);
     }finally{
-      display(selected);flash.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
+      display(selected);flash.visible=false;cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
       r.setViewport(vp);r.setScissor(sc);r.setScissorTest(test);
     }
   }
   update(performance.now());
-  return {update,draw,preset,stop,collect,pickupModel,prepare,cycle,touchTrigger,touchReady,
+  return {update,draw,preset,stop,collect,pickupModel,prepare,cycle,touchTrigger,touchReady,reload,
+    canReload:()=>touchReady()&&!states[selected].isLoading&&states[selected].rounds<states[selected].capacity&&states[selected].reserve>0,
+    restock(){
+      let count=0;
+      for(const i of owned)if(i>=0)count+=states[i].restock();
+      if(count){onAction(style[selected]?.kind,'equip');notice='Reserve aufgefüllt';noticeUntil=clock+1.2;refresh();}
+      return count>0;
+    },
     selectionName:()=>names[swap?pending:selected]??'Ohne Waffe',
     clearShots:fx.clear,showPrewarmShots:fx.showPrewarm,bodyLayer:body.layer};
 }

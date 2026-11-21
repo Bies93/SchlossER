@@ -147,19 +147,19 @@ export function makeEgoBody(T,parent){
     const o=new T.Mesh(geo,pants);o.frustumCulled=false;body.add(o);
     return {side,geo,positions,boot:boot(side)};
   });
-  let layer=0,lastStep=NaN,lastMoving=0,lastRunning=0,lastStrafe=0,lastLand=0,lastGrounded=true;
-  function update({step,moving,running,strafe,grounded,landing,pitch}){
+  let layer=0,lastStep=NaN,lastMoving=0,lastRunning=0,lastStrafe=0,lastLand=0,lastGrounded=true,lastCrouch=0;
+  function update({step,moving,running,strafe,grounded,landing,pitch,crouch=0}){
     const before=body.visible;body.visible=pitch<-.52;
     if(!body.visible)return before;
     if(before&&Math.abs(step-lastStep)<.0003&&Math.abs(moving-lastMoving)<.0005&&Math.abs(running-lastRunning)<.001&&
-      Math.abs(strafe-lastStrafe)<.001&&Math.abs(landing-lastLand)<.0005&&grounded===lastGrounded)return false;
-    lastStep=step;lastMoving=moving;lastRunning=running;lastStrafe=strafe;lastLand=landing;lastGrounded=grounded;
+      Math.abs(strafe-lastStrafe)<.001&&Math.abs(landing-lastLand)<.0005&&grounded===lastGrounded&&Math.abs(crouch-lastCrouch)<.0005)return false;
+    lastStep=step;lastMoving=moving;lastRunning=running;lastStrafe=strafe;lastLand=landing;lastGrounded=grounded;lastCrouch=crouch;
     for(const l of legs){
       const a=step+(l.side<0?0:pi),stride=Math.cos(a)*moving,heel=Math.max(0,Math.sin(a))*moving,
         climb=heel*(.102+running*.046),air=grounded?0:1,x=l.side*.114,
-        hip=[x,.947-landing*.029,.089],
-        knee=[x+strafe*.024,.509+climb*.52+air*.053,-.167-stride*.105-air*.09],
-        ankle=[x+strafe*.051,.134+climb+air*.035,-.159-stride*(.197+running*.077)+air*.025];
+        hip=[x,.947-landing*.029-crouch*.45,.089+crouch*.12],
+        knee=[x+strafe*.024,.509+climb*.52+air*.053-crouch*.232,-.167-stride*.105-air*.09-crouch*.17],
+        ankle=[x+strafe*.051,.134+climb+air*.035,-.159-stride*(.197+running*.077)+air*.025+crouch*.08];
       for(let i=0;i<legsProfile.length;i++){
         const [t,r,d]=legsProfile[i],mid=.52,lo=t<=mid?hip:knee,hi=t<=mid?knee:ankle,f=t<=mid?t/mid:(t-mid)/(1-mid);
         const cx=lo[0]+(hi[0]-lo[0])*f,cy=lo[1]+(hi[1]-lo[1])*f,cz=lo[2]+(hi[2]-lo[2])*f;

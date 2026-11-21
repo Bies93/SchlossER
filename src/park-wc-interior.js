@@ -267,7 +267,7 @@ export function addWcInterior(T,scene,world,quest){
     const attending=visitors.get(id)?.(dt,pos);
     if(id===prev&&Math.hypot(u-lastU,pos.y-lastY,v-lastV)<.18&&!changed)return Boolean(pulsing||acting||attending);
     prev=id;lastU=u;lastV=v;lastY=pos.y;
-    const visible=portalSight(portals,id,u,v,l=>activeLinks.get(l),openingHeights,pos.y+1.67,.11);
+    const visible=portalSight(portals,id,u,v,l=>activeLinks.get(l),openingHeights,pos.y+(pos.eyeHeight??1.67),.11);
     for(const [key,room] of layers){changed||=room.visible!==visible.has(key);room.visible=visible.has(key);}
     const near=lampSites.filter(l=>visible.has(lightRoom(l))).map(l=>{
       const key=lightRoom(l),bias=key!==id&&(isAnnex(key)||isAnnex(id)||isDeep(key)||isDeep(id))

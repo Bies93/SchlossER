@@ -39,18 +39,39 @@ body[data-state=paused] .ready-copy{display:none}
 body[data-state=playing][data-input=drag] #drag-hint{display:block}
 body[data-state=playing][data-input=touch] #stick{display:grid;place-items:center}
 #touch-controls{display:none;position:absolute;z-index:3;right:max(12px,env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom));
-  grid-template-areas:". weapon" "fire jump";align-items:end;justify-items:end;gap:7px;pointer-events:none}
+  grid-template-areas:"reload weapon" "fire jump";align-items:end;justify-items:end;gap:7px;pointer-events:none}
 body[data-state=playing][data-input=touch] #touch-controls{display:grid}
 #touch-controls button{pointer-events:auto;touch-action:none;user-select:none;-webkit-touch-callout:none}
 #touch-weapon{grid-area:weapon;min-height:49px;min-width:96px;padding:5px 7px;font-size:12px;line-height:1.16;background:#19201de8}
 #touch-weapon-name{display:block;margin-top:3px;font-size:10px;color:#dbd2b9}
+#touch-reload{grid-area:reload;min-height:44px;padding-inline:8px;font-size:11px}
 #jump{grid-area:jump;min-height:44px;min-width:44px;padding:0 8px;border-radius:22px;background:#19201de8;font-size:11px}
 #touch-fire{grid-area:fire;width:clamp(64px,13vmin,82px);aspect-ratio:1;padding:0;border-radius:50%;border-color:#c39873;background:#4b2923ed;font-size:12px;font-weight:650}
 #touch-fire:disabled{opacity:.47;cursor:default}
 #touch-fire[data-held]{background:#805040;border-color:#e0b487}
-#touch-reticle{display:none;position:absolute;z-index:1;top:50%;left:50%;width:13px;height:13px;transform:translate(-50%,-50%);pointer-events:none;
-  background:linear-gradient(#fff8e2,#fff8e2) center/1px 100% no-repeat,linear-gradient(#fff8e2,#fff8e2) center/100% 1px no-repeat;filter:drop-shadow(0 0 1.5px #000)}
-body[data-state=playing][data-input=touch] #touch-reticle{display:block}
+#combat-hud{display:none;position:absolute;inset:0;z-index:1;pointer-events:none;color:#f7edd9;font-variant-numeric:tabular-nums}
+body[data-state=playing]:not([data-dialogue=open]) #combat-hud[data-armed]{display:block}
+.aim-dot,.hit-mark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 1px 2px #000)}
+.aim-dot{width:16px;height:16px;fill:none;stroke:#fff8e5;stroke-width:1.4;opacity:.84}
+#combat-hud[data-aim] .aim-dot{opacity:.36}
+#combat-hud[data-wall] .aim-dot{stroke:#e69862;opacity:.51}
+.hit-mark{display:none;width:30px;height:30px;fill:none;stroke:#fff7ed;stroke-width:2;stroke-linecap:round}
+#combat-hud[data-hit] .hit-mark{display:block}
+#combat-hud[data-hit=head] .hit-mark{stroke:#fbd388}
+#combat-hud[data-hit=down] .hit-mark{stroke:#ff946d;stroke-width:2.7}
+#ammo-readout{position:absolute;right:max(17px,env(safe-area-inset-right));bottom:calc(17px + env(safe-area-inset-bottom));
+  min-width:136px;padding:9px 12px 8px;text-align:right;background:#121a18d9;border-right:2px solid #bd9c6c;border-radius:4px 0 0 4px}
+#ammo-weapon{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#d7c6a7}
+#ammo-rounds{font-size:30px;line-height:1.08;font-weight:710}
+#ammo-reserve{color:#d1c9b6;font-size:15px}
+#ammo-status{color:#ffe0b1;font-size:11px}
+#ammo-status:empty{display:none}
+#combat-hud[data-state=empty] #ammo-rounds{color:#ffad7e}
+#ammo-reload-meter{display:none;height:2px;margin-top:5px;background:#6a6558;overflow:hidden}
+#ammo-reload-meter span{display:block;width:100%;height:100%;background:#edc993;transform:scaleX(var(--reload,0));transform-origin:left}
+#combat-hud[data-state=reloading] #ammo-reload-meter{display:block}
+body[data-input=touch] #ammo-readout{top:max(9px,env(safe-area-inset-top));right:max(57px,calc(env(safe-area-inset-right) + 48px));bottom:auto}
+body[data-input=touch] #ammo-rounds{font-size:22px}
 main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 body[data-state=loading] #canvas{visibility:hidden}
@@ -126,7 +147,8 @@ body[data-state=paused] .panel .ghoul-option{display:none}
 .primary:hover{background:#f3deb6}
 .shortcuts{font-size:12px}
 kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;padding:1px 4px}
-#drag-hint{position:absolute;bottom:calc(12px + env(safe-area-inset-bottom));right:max(12px,env(safe-area-inset-right));background:#141d1bf5;border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--ink);font-size:12px;pointer-events:none}
+#drag-hint{position:absolute;z-index:2;bottom:calc(12px + env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));background:#141d1bf5;border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--ink);font-size:12px}
+body[data-dialogue=open] #drag-hint{display:none}
 #portal-action{position:absolute;z-index:2;left:50%;bottom:calc(clamp(74px,12%,130px) + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;min-height:40px;max-width:calc(100% - 24px);width:max-content;padding:7px 12px;background:#151e1cef;border-color:#7c7a64;color:var(--ink);box-shadow:0 8px 28px #0006}
 #portal-action kbd{color:var(--accent);border-color:#a39577}
 #portal-action:disabled{cursor:default}#portal-action:disabled kbd{display:none}
@@ -145,7 +167,7 @@ kbd{font:inherit;color:var(--ink);border:1px solid #59675e;border-radius:4px;pad
 #npc-dialogue button:disabled{opacity:.50;cursor:default}
 #npc-dialogue [data-dialogue-close]{position:absolute;right:12px;top:10px;min-width:34px;min-height:34px;padding:3px}
 #npc-dialogue small{display:block;color:var(--muted);font-size:.72rem;margin-top:9px}
-body[data-dialogue=open] :is(#touch-controls,#stick,#touch-reticle,#npc-name){visibility:hidden}
+body[data-dialogue=open] :is(#touch-controls,#stick,#npc-name){visibility:hidden}
 body:not([data-state=playing]) :is(#moosfunk-caption,#npc-name){display:none}
 body:not([data-state=playing]) #ghoul-notice{display:none}
 #stick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:clamp(70px,18vmin,104px);aspect-ratio:1;border:1px solid #e7e7db80;border-radius:50%;background:#1016159e;touch-action:none}
@@ -200,7 +222,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
     <h2 class="paused-copy">Pausiert</h2>
     <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
-    <p class="desktop-copy shortcuts"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Leertaste</kbd> springen<br><kbd>E</kbd> interagieren · Mausrad Waffe wechseln oder wegstecken · <kbd>Esc</kbd> Pause</p>
+    <p class="desktop-copy shortcuts"><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Strg&nbsp;links</kbd> knien · <kbd>Leertaste</kbd> springen<br><kbd>E</kbd> interagieren · Mausrad Waffe wechseln · <kbd>R</kbd> nachladen · <kbd>Esc</kbd> Pause / Vollbild verlassen</p>
     <p class="touch-copy shortcuts">Links gehen, rechts umsehen. „Waffe wechseln“ wählt die nächste Waffe oder steckt sie weg; „Schießen“ feuert.</p>
     <label class="ghoul-option"><input id="with-ghouls" type="checkbox"> Mit Ghouls?</label>
     <fieldset class="light-switch" id="lighting">
@@ -239,7 +261,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <p id="error-text" role="alert">Die 3D-Szene konnte nicht geladen werden. Prüfe, ob alle Projektdateien erreichbar sind, und versuche es erneut.</p>
     <button class="primary" type="button" onclick="location.reload()">Erneut versuchen</button>
   </section>
-  <div id="drag-hint">Zum Umsehen ziehen oder Pfeiltasten nutzen</div>
+  <button type="button" id="drag-hint" title="Alternativ zum Umsehen ziehen oder Pfeiltasten nutzen">Maussteuerung aktivieren</button>
   <button id="portal-action" type="button" hidden><kbd aria-hidden="true">E</kbd><span id="portal-text">Tür öffnen</span></button>
   <div id="ghoul-notice" role="status" hidden></div>
   <div id="moosfunk-caption" role="status" hidden></div>
@@ -255,18 +277,27 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <small data-dialogue-hint role="status"></small>
   </dialog>
   <div id="stick" aria-hidden="true"><span></span></div>
-  <div id="touch-reticle" aria-hidden="true" hidden></div>
+  <div id="combat-hud">
+    <svg class="aim-dot" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1v5m0 8v5M1 10h5m8 0h5"/></svg>
+    <svg class="hit-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="m5 5 6 6m10 10 6 6M27 5l-6 6M11 21l-6 6"/></svg>
+    <div id="ammo-readout" aria-label="Munition">
+      <div id="ammo-weapon"></div>
+      <div><span id="ammo-rounds"></span> <span aria-hidden="true">/</span> <span id="ammo-reserve"></span></div>
+      <div id="ammo-status"></div><div id="ammo-reload-meter" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
   <div id="touch-controls" role="group" aria-label="Touch-Steuerung">
     <button type="button" id="touch-weapon">Waffe wechseln<span id="touch-weapon-name">Ohne Waffe</span></button>
+    <button type="button" id="touch-reload" hidden>Nachladen</button>
     <button type="button" id="touch-fire" disabled>Schießen</button>
     <button type="button" id="jump">Sprung</button>
   </div>
 </main>
 <dialog id="about" aria-labelledby="help-title">
   <h2 id="help-title">So erkundest du das Schloss</h2>
-  <p><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Leertaste</kbd> springen · Maus umsehen.</p>
-  <p><kbd>E</kbd> interagieren / aufheben · Mausrad wechseln / wegstecken · Rechtsklick zielen · Linksklick schießen (Sturmgewehr: halten).</p>
-  <p><kbd>Esc</kbd> Pause · <kbd>M</kbd> Ton. Touch: links gehen, rechts umsehen; „Waffe wechseln“, „Schießen“ und „Sprung“ rechts. Beim Sturmgewehr zum Dauerfeuer gedrückt halten.</p>
+  <p><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Strg links</kbd> / <kbd>C</kbd> knien · <kbd>Leertaste</kbd> springen.</p>
+  <p><kbd>E</kbd> interagieren / aufheben · Mausrad wechseln / wegstecken · Rechtsklick zielen · Linksklick schießen (Sturmgewehr: halten) · <kbd>R</kbd> nachladen.</p>
+  <p><kbd>Esc</kbd> Pause und Vollbild verlassen · <kbd>M</kbd> Ton. Touch: links gehen, rechts umsehen; „Waffe wechseln“, „Schießen“, „Nachladen“ und „Sprung“ rechts.</p>
   <p><strong>Viel Spaß wünscht Bies!</strong></p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>

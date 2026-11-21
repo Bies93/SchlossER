@@ -3,6 +3,7 @@ import {PLAYER, SPAWN} from './world-layout.js';
 const WALK_KEYS = new Set(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','ArrowLeft','ArrowRight','ArrowUp','ArrowDown']);
 const STEP = 1 / 120, MAX_PITCH = Math.PI * 85 / 180;
 const GRAVITY=18.5, JUMP_SPEED=6.74, JUMP_BUFFER=.145, COYOTE=.088, DOWN_SNAP=.103;
+const KNEEL_EYE=.89,KNEEL_SPEED=1.38;
 const clamp = (v, max) => Math.min(max, Math.max(-max, v));
 
 export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceilingHeight=()=>Infinity,
@@ -18,7 +19,10 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
   let yaw = SPAWN.yaw, pitch = SPAWN.pitch;
   let lastTime=null,accumulator=0,vx=0,vz=0,vy=0,buffer=0,coyote=COYOTE,stepDistance=.29,foot=1,grounded=true;
   let groundY=y,baseY=y,px=x,py=y,pz=z;
-  const motion={grounded:true,speed:0,land:0,climbing:false};
+  const motion={grounded:true,speed:0,land:0,climbing:false,crouch:0};
+  // Keep the feet position unchanged for layer collision; portal queries can use the real eye.
+  const eyeHeight=h=>{look.position.y=body.position.eyeHeight=h;return h;};
+  eyeHeight(PLAYER.eye);
   body.position.set(x, y, z);
   function aim(dx, dy) {
     yaw = (yaw - dx) % (2 * Math.PI);
@@ -34,7 +38,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
       px=x;py=groundY=baseY=y;pz=z;
       lastTime=null;accumulator=vx=vy=vz=buffer=stepDistance=0;
       grounded=true;coyote=COYOTE;
-      Object.assign(motion,{grounded:true,speed:0,land:0,climbing:false});
+      Object.assign(motion,{grounded:true,speed:0,land:0,climbing:false,crouch:0});eyeHeight(PLAYER.eye);
       Object.assign(safe,{x,y,z,base:y});body.position.set(x,y,z);aim(0,0);
     },
     jump(){buffer=JUMP_BUFFER},
@@ -51,7 +55,15 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         if (turn || tilt) { aim(turn * STEP * 1.48, tilt * STEP * 1.18); moved = true; }
         const east = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + stick.x;
         const forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) - stick.y;
-        const intent=Math.hypot(east, forward), pace=keys.has('ShiftLeft') || keys.has('ShiftRight') || stick.run ? PLAYER.run : PLAYER.speed;
+        const kneeling=!motion.climbing&&((grounded&&(keys.has('ControlLeft')||keys.has('KeyC')))||
+          (motion.crouch>.01&&ceilingHeight(x,z,baseY)<y+PLAYER.eye+.12));
+        const c0=motion.crouch,desired=Number(kneeling);
+        motion.crouch+=(desired-c0)*(1-Math.exp(-STEP*(kneeling?15:13)));
+        if(Math.abs(desired-motion.crouch)<.0005)motion.crouch=desired;
+        const eye=eyeHeight(PLAYER.eye+(KNEEL_EYE-PLAYER.eye)*motion.crouch);
+        if(Math.abs(c0-motion.crouch)>.00001)moved=true;
+        const intent=Math.hypot(east, forward),
+          pace=kneeling?KNEEL_SPEED:keys.has('ShiftLeft') || keys.has('ShiftRight') || stick.run ? PLAYER.run : PLAYER.speed;
         const sin=Math.sin(yaw),cos=Math.cos(yaw),scale=pace/Math.max(1,intent);
         const tx=(east*cos-forward*sin)*scale,tz=(-east*sin-forward*cos)*scale;
         if(traverse){
@@ -59,6 +71,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
           const state=traverse(next,forward,tz,STEP);
           motion.climbing=state===1;
           if(state){
+            motion.crouch=0;eyeHeight(PLAYER.eye);
             x=next.x;y=baseY=groundY=next.y;z=next.z;
             vx=vz=vy=buffer=coyote=stepDistance=0;grounded=state===2;
             motion.grounded=grounded;motion.speed=0;motion.land=0;
@@ -69,7 +82,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
           }
         }
         coyote=grounded?COYOTE:Math.max(0,coyote-STEP);
-        if(buffer>0&&coyote>0){
+        if(buffer>0&&coyote>0&&!kneeling){
           vy=JUMP_SPEED;grounded=false;buffer=coyote=0;stepDistance=0;
           onStep({kind:'jump',x,y,z,power:.56,foot});
         }else buffer=Math.max(0,buffer-STEP);
@@ -84,7 +97,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
           if(Math.abs(dx)+Math.abs(dz)<1e-6){vx=vz=0}
           else{
             const h=floorHeight(next.x,next.z,baseY);
-            const headLimit=(y>baseY+.14||!grounded)?ceilingHeight(next.x,next.z,h)-PLAYER.eye-.105:Infinity;
+            const headLimit=(y>baseY+.14||!grounded||motion.crouch>.01)?ceilingHeight(next.x,next.z,h)-eye-.105:Infinity;
             const floor=collision.standingHeight?.(next,h,Math.min(headLimit,y+(grounded?PLAYER.maxStep:.03)))??h;
             if(Number.isFinite(floor)&&floor<=y+(grounded?PLAYER.maxStep:.052)&&y<=headLimit+.04){
               x=next.x;z=next.z;baseY=h;groundY=floor;
@@ -100,7 +113,7 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         else{
           vy-=GRAVITY*STEP;
           y+=vy*STEP;
-          const headLimit=ceilingHeight(x,z,baseY)-PLAYER.eye-.11;
+          const headLimit=ceilingHeight(x,z,baseY)-eye-.11;
           if(y>headLimit){y=Math.max(groundY,headLimit);vy=Math.min(0,vy);}
           if(vy<=0){
             next.x=x;next.z=z;next.y=baseY;
@@ -121,10 +134,10 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
         if(grounded){
           Object.assign(safe,{x,y,z,base:baseY});
           stepDistance+=distance;
-          const stride=pace===PLAYER.run?.93:.68;
+          const stride=kneeling?.47:pace===PLAYER.run?.93:.68;
           if(motion.speed>.42&&stepDistance>=stride){
             stepDistance-=stride;foot=-foot;
-            onStep({kind:'step',x,y,z,power:Math.min(1.18,.33+motion.speed*.118),foot});
+            onStep({kind:'step',x,y,z,power:Math.min(1.18,.33+motion.speed*.118)*(kneeling?.55:1),foot});
           }
         }else stepDistance=0;
         if(distance>1e-6||Math.abs(y-py)>1e-6||motion.land>.005)moved=true;
@@ -166,6 +179,7 @@ export function bindPlayerInput({canvas, pad, jumpButton, player, active, pause,
   function start({touch, lock}) {
     mode(touch ? 'touch' : 'drag');
     canvas.focus({preventScroll: true});
+    if (!touch && locked()){awaitingLock=false;mode('mouse');return;}
     if (!touch && lock && canvas.requestPointerLock) {
       awaitingLock = true;
       try { canvas.requestPointerLock()?.catch(fallback); }
@@ -177,14 +191,19 @@ export function bindPlayerInput({canvas, pad, jumpButton, player, active, pause,
       awaitingLock = false;
       if (active()) mode('mouse');
       else document.exitPointerLock();
-    } else if (active() && document.body.dataset.input === 'mouse') pause();
+    } else if (!awaitingLock&&active()&&document.body.dataset.input==='mouse') pause('unlock');
   });
   document.addEventListener('pointerlockerror', fallback);
-  window.addEventListener('blur', pause);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  window.addEventListener('blur',()=>pause('blur'));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause('hidden'); });
   window.addEventListener('keydown', event => {
-    if (!active() || event.ctrlKey || event.altKey || event.metaKey) return;
-    if (event.code === 'Escape') { pause(); return; }
+    if (!active() || event.altKey || event.metaKey) return;
+    if (event.code === 'Escape') { event.preventDefault();pause('escape');return; }
+    if(event.code==='ControlLeft'||event.code==='KeyC'&&!event.ctrlKey){
+      if(event.target.closest?.('button,input,select,textarea,a'))return;
+      event.preventDefault();keys.add(event.code);return;
+    }
+    if(event.ctrlKey&&!keys.has('ControlLeft'))return;
     if(event.code==='Space'&&!event.target.closest?.('button, input, select, textarea, a')){
       event.preventDefault();if(!event.repeat)player.jump();return;
     }

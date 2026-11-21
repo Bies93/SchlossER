@@ -1,4 +1,4 @@
-export function bindTouchEquipment({fireButton,switchButton,weaponName,reticle,viewmodel,enabled}){
+export function bindTouchEquipment({fireButton,switchButton,reloadButton,weaponName,viewmodel,enabled}){
   let pointer=null;
   function clear(){
     if(pointer===null)return;
@@ -12,13 +12,15 @@ export function bindTouchEquipment({fireButton,switchButton,weaponName,reticle,v
     const label=viewmodel.selectionName(),ready=viewmodel.touchReady();
     if(weaponName.textContent!==label)weaponName.textContent=label;
     if(fireButton.disabled!==!ready)fireButton.disabled=!ready;
-    if(reticle.hidden!==!ready)reticle.hidden=!ready;
+    reloadButton.hidden=!ready;
+    reloadButton.disabled=!viewmodel.canReload();
     if(!ready)clear();
   }
   switchButton.addEventListener('click',()=>{
     if(!enabled())return;
     clear();viewmodel.cycle();update();
   });
+  reloadButton.addEventListener('click',()=>{if(enabled())viewmodel.reload();});
   fireButton.addEventListener('pointerdown',e=>{
     if(!enabled()||e.button!==0||pointer!==null||!viewmodel.touchReady())return;
     e.preventDefault();

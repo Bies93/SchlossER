@@ -249,12 +249,13 @@ async function start(){
  },ravens);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,controls,refresh,
    undefined,targets,
-   kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0||hallFloor(p.x,p.z)!==null);},
-   audio.shotContact,audio.weaponAction,geometryQuery,activeLayers);
+   kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0?'cellar':hallFloor(p.x,p.z)!==null?'hall':'outdoor');},
+   audio.shotContact,audio.weaponAction,geometryQuery,activeLayers,{root:$('combat-hud'),weapon:$('ammo-weapon'),
+     rounds:$('ammo-rounds'),reserve:$('ammo-reserve'),status:$('ammo-status')});
  const isTouch=()=>document.body.dataset.input==='touch';
- const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),
-   weaponName:$('touch-weapon-name'),reticle:$('touch-reticle'),viewmodel,enabled:()=>controls()&&isTouch()});
- const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s);
+ const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),reloadButton:$('touch-reload'),
+   weaponName:$('touch-weapon-name'),viewmodel,enabled:()=>controls()&&isTouch()});
+ const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s,floorHeight,world);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
  const names=npcFocus(T,s,c,player.body,$('npc-name'),()=>activeLayers().mask,geometryQuery);
@@ -299,7 +300,7 @@ async function start(){
    },
    onClose(reason){
      delete document.body.dataset.dialogue;
-     if(active())input.start({touch:resumeTouch,lock:resumeMouse&&reason==='answer'});
+     if(active())input.start({touch:resumeTouch,lock:resumeMouse&&(reason==='answer'||reason==='dismiss')});
      resumeMouse=resumeTouch=false;doorPrompt();refresh();
    },
    onReply(speech,reply){
@@ -577,13 +578,30 @@ async function start(){
    touchEquipment.clear();input.clear();fountain.stop?.();viewmodel.stop();round.stop();audio.pause();lastDoorTime=null;doorPrompt();
    if(focus) action.focus({preventScroll:true});
  }
+ function leaveFullscreen(){
+   if(document.fullscreenElement)document.exitFullscreen()?.catch(()=>{});
+ }
  const input=bindPlayerInput({
-   canvas,pad:$('stick'),jumpButton:$('jump'),player,active:controls,pause:()=>pause(!document.hidden && document.hasFocus()),
+   canvas,pad:$('stick'),jumpButton:$('jump'),player,active:controls,pause:reason=>{
+     pause(!document.hidden&&document.hasFocus());
+     if(reason==='escape'||reason==='unlock')leaveFullscreen();
+   },
    refresh,mode:value=>{
      document.body.dataset.input=value;
      touchEquipment.update();
    }
  });
+ $('drag-hint').onclick=()=>{if(controls()&&!isTouch())input.start({touch:false,lock:true});};
+ let hadFullscreen=Boolean(document.fullscreenElement);
+ document.addEventListener('fullscreenchange',()=>{
+   const now=Boolean(document.fullscreenElement);
+   if(hadFullscreen&&!now&&active()&&!isTouch())pause(true);
+   hadFullscreen=now;
+ });
+ window.addEventListener('keydown',event=>{
+   if(event.code!=='Escape'||!active()||!document.fullscreenElement)return;
+   event.preventDefault();pause(true);leaveFullscreen();
+ },true);
  function warmGhouls(){
    ghoulsWarming??=Promise.resolve().then(()=>round.prepare(r,c))
      .catch(error=>console.warn('Ghoul-Vorbereitung fehlgeschlagen; die Szene wird bei Bedarf geladen.',error))
@@ -591,16 +609,17 @@ async function start(){
  }
  ghoulOption.addEventListener('change',()=>{if(!started&&ghoulOption.checked)warmGhouls();});
  action.onclick=event=>{
+   const first=!started, touch=event.pointerType==='touch'||event.pointerType!=='mouse'&&coarse.matches;
    if(!started){
      started=true;ghoulsEnabled=firstRound=ghoulOption.checked;audio.mode(ghoulsEnabled);
      if(ghoulsEnabled)warmGhouls();
    }
    audio.play();
    document.body.dataset.state='playing';
-   input.start({
-     touch:event.pointerType==='touch'||event.pointerType!=='mouse'&&coarse.matches,
-     lock:event.detail>0
-   });
+   // Fullscreen consumes the click's activation; start pointer lock first.
+   input.start({touch,lock:!touch&&event.isTrusted});
+   if(first&&document.fullscreenEnabled&&!document.fullscreenElement)
+     document.documentElement.requestFullscreen().catch(()=>{});
    schedule();
  };
  $('pause').onclick=()=>pause(true);
@@ -658,7 +677,7 @@ async function start(){
    if(!w||!h)return;
    r.setSize(w,h,false);c.aspect=w/h;
    // Keep useful peripheral vision on narrow phones without changing the pose.
-   c.fov=T.MathUtils.clamp(T.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI*24/180)/c.aspect)),65,82);
+   c.fov=c.userData.baseFov=T.MathUtils.clamp(T.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI*24/180)/c.aspect)),65,82);
    c.updateProjectionMatrix();refresh();
  }
  showLoadingStep(2,'Licht und Materialien …');
