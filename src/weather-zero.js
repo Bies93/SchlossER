@@ -3,11 +3,16 @@ import {bergMaterials,carpentry,storyCard} from './berg-props.js';
 
 export function addWeatherZero(T,scene,world,heightAt,audio){
   const g=new T.Group(),ground=heightAt(W.x,W.z);g.name='Wetterstation 0 · Amt für Restzweifel';
-  g.position.set(W.x,ground,W.z);g.rotation.y=W.yaw;scene.add(g);
+  g.position.set(W.x,ground,W.z);g.rotation.y=W.yaw;g.scale.x=.80;scene.add(g);
   const m=bergMaterials(T),k=carpentry(T,g,m);
   const {box,cyl,ring}=k;
-  box('rock',0,.075,0,.41,.15,.42);box('paint',0,.565,0,.125,1.02,.123);
-  box('iron',0,.35,0,.15,.075,.14);box('iron',0,.88,0,.156,.078,.152);
+  // Anchored into the blank end pier, clear of the window casing and path.
+  for(const x of [-.405,.405]){
+    box('iron',x,1.326,-.402,.149,.717,.056);
+    box('paint',x,1.326,-.249,.10,.55,.284);
+    for(const y of [1.021,1.630])cyl('brass',x,y,-.364,.020,.024,Math.PI/2);
+  }
+  box('iron',-.41,.84,-.413,.032,.405,.046);
   box('paint',0,1.335,0,1.23,.66,.25);box('iron',0,1.69,0,1.322,.068,.375);
   box('dark',0,1.33,.134,1.172,.598,.030);box('paint',0,1.327,.158,1.149,.578,.021);
   box('iron',0,1.09,.179,.50,.069,.048);box('dark',0,1.096,.205,.408,.020,.019);
@@ -16,7 +21,7 @@ export function addWeatherZero(T,scene,world,heightAt,audio){
   box('iron',0,1.809,0,.93,.179,.073);
   for(const x of [-.363,0,.363])ring('brass',x,1.374,.202,.135,.135,.29);
   k.flush('Gehäuse · emailliertes Blech und Messblenden');
-  world.circle(W.x,W.z,.39,p=>Math.abs(p.y-ground)<1.4);
+  world.box(W.x-.28,W.z-.53,W.x+.196,W.z+.53,p=>Math.abs(p.y-ground)<1.56);
 
   function gauge(x,label,min,max,needleColor){
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
@@ -55,7 +60,7 @@ export function addWeatherZero(T,scene,world,heightAt,audio){
     if(reach>r)return false;
     const u=(x+reach*look.x)*normal.z-(z+reach*look.z)*normal.x,
       v=p.y+1.67+reach*look.y-ground;
-    return Math.abs(u)<.65&&v>1.0&&v<1.71;
+    return Math.abs(u)<.53&&v>1.0&&v<1.71;
   }
   return {update(dt,p,look,surface){
     const old=value,prev=receipt;

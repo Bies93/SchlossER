@@ -1,4 +1,4 @@
-import {BERG_POOL as P,BERG_LAYER,BERG_FLOOR as F,bergInside} from './berg-layout.js';
+import {BERG_POOL as P,BERG_CHAIRS,BERG_LAYER,BERG_FLOOR as F,bergInside} from './berg-layout.js';
 import {bergArrival,bergReturn} from './berg-tavern.js';
 import {bergMaterials,carpentry,storyCard} from './berg-props.js';
 
@@ -37,7 +37,7 @@ export function addBergPuddle(T,scene,world,heightAt,tavern){
   `});
   const puddle=new T.Mesh(new T.PlaneGeometry(P.rx*2.20,P.rz*2.20),material);
   puddle.position.copy(at);puddle.rotation.x=-Math.PI/2;surface.add(puddle);puddle.userData.noSceneQuery=true;
-  for(const [i,[dx,dz,yaw]] of [[-2.64,-1.02,.69],[2.48,-1.09,-.55],[-2.67,1.0,1.37]].entries()){
+  for(const [i,[dx,dz,yaw]] of BERG_CHAIRS.entries()){
     const g=new T.Group(),t=carpentry(T,g,m);g.position.set(P.x+dx,heightAt(P.x+dx,P.z+dz),P.z+dz);g.rotation.y=yaw;surface.add(g);
     for(let j=0;j<4;j++)t.box(i===1?'rock':'oak',0,.424,(j-1.5)*.117,.49,.044,.109);
     for(const a of [-.218,.218])for(const b of [-.194,.194])t.box('iron',a,b<0?.409:.195,b,.032,b<0?.818:.39,.033);
