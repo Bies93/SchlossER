@@ -3,7 +3,7 @@
 const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
 const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
-  festZwanni:{name:'Zwanni',template:'guestJona',line:'Iiiich bin ein Goooottkönig!',choices:[
+  festZwanni:{name:'Zwanni',template:'guestJona',line:'Ich bin dein Gottkönig! Aahhh!',choices:[
     {label:'Leck mich!'},
     {label:'Was willst du, Gottkönig?',reply:{clip:'festZwanniEier',line:'Ich brauche Eier zum lutschen!'}}
   ]},
