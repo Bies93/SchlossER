@@ -14,6 +14,7 @@ const names=['sandstone_facade','sandstone_trim','fountain_stone','oak_door','pl
 const refs={model:'assets/schloss.glb',sculptures:'assets/skulpturen.glb',music:'assets/moorlicht.mp3',clubMusic:'assets/schlosskeller-2099.mp3',
   galleryPoster:'assets/galerie-bies.webp',galleryChoir:'assets/galerie-chor.mp3',orbVoice:'assets/orb-stimme.wav',
   prisonerVoice:'assets/kammer-07.wav',lodgeSeal:'assets/logensiegel.svg',humans:'assets/human-cast.glb',maps:{},
+  ravenCall:'assets/sfx/raven-grand-teton.mp3',
   npcVoices:Object.fromEntries(Object.entries(NPC_VOICE_FILES).map(([id,file])=>[id,'assets/npc-voices/'+file])),
   weaponSounds:Object.fromEntries(Object.entries(WEAPON_SFX).map(([id,file])=>[id,'assets/sfx/'+file]))};
 for(const n of names)refs.maps[n]=Object.fromEntries(['albedo','normal'].map(type=>[type,'assets/'+n+'_'+type+'.webp']));

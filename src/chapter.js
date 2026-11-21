@@ -3,6 +3,7 @@ import {CHAPTER_BENCH,CHAPTER_CUT,CHAPTER_STEP as S,CHAPTER_LINKS,CHAPTER_LAYER,
 import {chapterInterior} from './chapter-interior.js';
 import {chapterMaterials} from './chapter-art.js';
 import {architectureKit} from './architecture-kit.js';
+import {chapterMembers} from './chapter-members.js';
 
 export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   const [x,z,yaw]=CHAPTER_BENCH,[xa,xb,za,zb]=CHAPTER_CUT;
@@ -81,6 +82,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
   world.box(xa-.034,za,xa+.03,zb,p=>passable()&&p.y>=grade-.43&&p.y<grade+.90);
   world.box(xb-.020,za,xb+.023,zb,p=>progress>.05&&!passable()&&p.y>grade-.15&&p.y<grade+1.12);
   const {objects,prisoner,gate}=chapterInterior(T,room,world,material,grade,isBelow);
+  const members=chapterMembers(T,objects,world,floor,isBelow);
   const ambient=new T.HemisphereLight(0xcad3de,0x886655,.70);room.add(ambient);
   const lights=Array.from({length:3},()=>{const l=new T.PointLight(0xffffff,0,0,2);room.add(l);return l;});
   const sources={
@@ -124,9 +126,10 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
     room.visible=Boolean(cell);
     if(!cell){lightCell=null;return changed;}
     const animated=dt>0&&(cell==='lowerHall'||cell==='prison')&&prisoner.turn(dt,p);
+    const membersMoved=dt>0&&mode(p)==='inside'&&members.update(dt,p);
     const region=cell==='duel'?p.z<-53.3?2:p.z<-52.8?1:0:cell==='lowerHall'&&p.z>-65?1:0;
     const key=cell+region;
-    if(key===lightCell&&p.x===lightX&&p.z===lightZ)return changed||animated;
+    if(key===lightCell&&p.x===lightX&&p.z===lightZ)return changed||animated||membersMoved;
     lightCell=key;lightX=p.x;lightZ=p.z;
     const visible=new Set([cell]),adjacent=new Set();
     for(const [a,b] of CHAPTER_LINKS)if(a===cell||b===cell)adjacent.add(a===cell?b:a);
@@ -156,7 +159,7 @@ export function addChapter(T,scene,world,{bench,benchCover,heightAt}){
       const a=pool[i]?.[0];l.intensity=a?.[4]??0;
       if(a){l.position.set(a[0],a[1],a[2]);l.color.setHex(a[3]);l.distance=a[5];}
     }
-    return changed||animated;
+    return changed||animated||membersMoved;
   }
   return {mode,visible:()=>room.visible,isBelow,update,
     floor,attach(id,prop){objects.get(id).add(prop);prop.traverse(o=>o.layers.set(CHAPTER_LAYER));},

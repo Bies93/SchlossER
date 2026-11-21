@@ -44,6 +44,9 @@ const wear={
   plazaEberwin:{palette:[0x332e32,0x533c42,0xb38b57],hair:0x7f7872,weather:.18},
   plazaIsolde:{palette:[0x51453f,0x888d84,0xd5c1ac],hair:0x584d46,weather:.36},
   plazaAnton:{palette:[0x393933,0x485047,0xa99979],hair:0x655342,weather:.23},
+  chapterOskar:{palette:[0x282530,0x442533,0xc8ac65],hair:0xbfb2a3,weather:.10},
+  chapterMatthias:{palette:[0x332d26,0x535844,0xba985f],hair:0x735742,weather:.19},
+  chapterKonrad:{palette:[0x282b30,0x2b414c,0xba8e54],hair:0x574d48,weather:.27},
 };
 function personalize(T,lib,id,base,eyeY){
   const key=id+':'+base.uuid;if(lib.materials.has(key))return lib.materials.get(key);
@@ -364,6 +367,21 @@ export function createHuman(T,id='base'){
     face(t,job.length+.44,talk*.29*(.31+.69*Math.abs(sin(t*13.5))),prayer?.12:0,
       quiet?.075:smoke?.11:.015,glance);
   }
+  function chairPose(t,seat,weight,glance=0,talk=0){
+    const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);
+    torso(.007*sin(t*1.2),home-hipsY+.003*sin(t*1.65),.07*rise,.028+.21*rise,
+      .022*sin(t*.78),.015*sin(t*.46),t,glance,-.012-.075*rise);
+    for(const [i,s] of ['l','r'].entries()){
+      const side=i===0?1:-1,ankle=read('foot_'+s);
+      solve(LIMB[s].leg,side*mix(.094,.116,weight),ankle.y,
+        ankle.z+mix(side*.031,.243,weight),side*.14,0,1);
+      foot('foot_'+s,0,side*.08);
+      solve(LIMB[s].arm,side*mix(.181,.215,weight),mix(hipsY-.155,home+.16,weight),mix(.047,.276,weight),
+        side*.76,-.5,-.71);
+      rot('hand_'+s,.056+.272*weight,side*.14,side*.10);curl(s,.39+.10*weight);
+    }
+    face(t,6.58,talk*(.44+.56*Math.abs(sin(t*17.6))),.017,.026,glance);
+  }
   function pose(t,phase,motion,attack,hit,fall,seed,speech=0,look=0,purse=0){
     body.rotation.set(fall*1.41,0,fall*(isGhoul?.67:0));body.position.y=fall*.16;
     const w=phase*tau,b=sin(t*2.2+seed),lean=isGhoul?.15:hubert?.095:.016;
@@ -491,7 +509,15 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,visitorPose,factoryPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,visitorPose,factoryPose,chairPose,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
+    // Fits authored costume overlays in the model's rest space, then carries
+    // them with the selected bone. No assumptions about the bone's local axes.
+    costumeMount(name){
+      const bind=rest.get(name),mount=new T.Group();
+      mount.quaternion.copy(bind.axis).invert();mount.position.copy(bind.at).negate().applyQuaternion(mount.quaternion);
+      bones.get(name).add(mount);return mount;
+    },
+    restPoint(name){return read(name).clone();},
     joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
   if(npcInfo)npcInfo.rig=rig;
   return rig;

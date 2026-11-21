@@ -204,6 +204,7 @@ export function dressChapter(T,{room,k,box:B,hit,platform,F,id,print,cloth}){
     craft.sideTable(25.17,-42.21,2.39,.89,.916,'velvetBlue');
     props.folio(24.82,F+.941,-42.15,.39,.273,.41,0,{loose:true,thickness:.014});
     props.folio(25.73,F+.941,-42.31,.371,.246,2.87,2,{loose:false,thickness:.038});
+    props.folio(24.94,F+.006,-42.12,.29,.22,-.36,2,{loose:false,thickness:.036});
     candle(24.23,.94,-42.40,.174);candle(25.86,.94,-42.40,.118);
     cylinder('brass',25.46,1.019,-42.269,.046,.14);
     cylinder('soot',25.46,1.085,-42.269,.028,.012);

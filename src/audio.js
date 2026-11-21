@@ -5,7 +5,7 @@ const sound={
   wood:[156,724,2450,.105]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={},weaponUrls={}) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={},weaponUrls={},ravenUrl) {
   const weapons=weaponBank(weaponUrls);
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
@@ -13,6 +13,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   const spokenClips=new Map();
   let choirRequest,choirVoice,choirFailed=false;
   let npcRequest,npcVoice;
+  let ravenToken=0,ravenNode=null;
   let radioVoice,radioAt;
   let levels={music:.48,sfx:.72};
   try{
@@ -123,6 +124,25 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       .catch(error=>{spokenClips.delete(url);throw error;}));
     return spokenClips.get(url);
   }
+  function stopRaven(){
+    ravenToken++;
+    if(ravenNode){ravenNode.stop();ravenNode=null;}
+  }
+  async function raven(at){
+    if(!live()||!ravenUrl)return;
+    stopRaven();const token=ravenToken;
+    try{
+      const buffer=await prepareClip(ravenUrl);
+      if(!live()||ravenToken!==token)return;
+      const a=listener(),x=at.x-a.x,z=at.z-a.z,d=Math.hypot(x,z);
+      if(d>16||Math.abs(at.y-a.y)>3.1)return;
+      const pan=Math.max(-.65,Math.min(.65,(x*a.rightX+z*a.rightZ)/Math.max(d,1)));
+      const bus=route(sfx,pan,.014),amp=gain(bus.node,.86/(1+(d/8)**2));
+      const node=ctx.createBufferSource();node.buffer=buffer;node.connect(amp);ravenNode=node;
+      node.onended=()=>{node.disconnect();amp.disconnect();bus.close();if(ravenNode===node)ravenNode=null;};
+      node.start();
+    }catch{/* Outdoor ambience is optional. */}
+  }
   function stopChoir(){
     choirRequest=null;
     if(!choirVoice)return;
@@ -225,16 +245,17 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     try{
       if(!enabled||(!ctx&&!setup()))return;
       weapons.decode(ctx);
+      if(ravenUrl)prepareClip(ravenUrl).catch(()=>{});
       mix();ctx.resume().then(startTrack,()=>{});
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
   function pause(){
-    playing=false;club(0);stopTrack();stopChoir();stopRadio();stopNpc();mix();
+    playing=false;club(0);stopTrack();stopChoir();stopRadio();stopNpc();stopRaven();mix();
   }
   function toggle(){
     enabled=!enabled;store();mix();
     if(enabled&&playing)play();
-    else{club(0);stopTrack();stopChoir();stopRadio();stopNpc();}
+    else{club(0);stopTrack();stopChoir();stopRadio();stopNpc();stopRaven();}
     return enabled;
   }
   function sample(id,volume,rate=1,pan=0,wet=0){
@@ -427,7 +448,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
   return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
-    playNpc,npcTalking,stopNpc,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
+    playNpc,npcTalking,stopNpc,raven,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},

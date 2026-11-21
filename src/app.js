@@ -7,6 +7,7 @@ import {addPerimeter} from './perimeter.js';
 import {addBackdrop} from './backdrop.js';
 import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
+import {addPalaceRavens} from './palace-ravens.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
@@ -123,7 +124,8 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds);
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall);
+ const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const weaponAudioReady=audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
@@ -385,6 +387,7 @@ async function start(){
      if(chapter.update(dt,player.body.position)){
        dirty=true;if(chapter.mode(player.body.position)!=='inside')r.shadowMap.needsUpdate=true;
      }
+     if(ravens.update(dt,player.body.position,activeLayers().layer===0))dirty=true;
      geometryQuery.invalidateMoving();
      prisonerCue(time,player.body.position);
      if(state.shadow)r.shadowMap.needsUpdate=true;

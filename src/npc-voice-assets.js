@@ -12,5 +12,8 @@ export const NPC_VOICE_FILES=Object.freeze({
   plazaVroni:'plaza-vroni.mp3',
   plazaEberwin:'plaza-eberwin.mp3',
   plazaIsolde:'plaza-isolde.mp3',
-  plazaAnton:'plaza-anton.mp3'
+  plazaAnton:'plaza-anton.mp3',
+  chapterOskar:'chapter-oskar.mp3',
+  chapterMatthias:'chapter-matthias.mp3',
+  chapterKonrad:'chapter-konrad.mp3'
 });
