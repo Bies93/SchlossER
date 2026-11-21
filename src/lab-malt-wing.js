@@ -1,5 +1,6 @@
 import {LAB,LAB_CELLS} from './lab-layout.js';
 import {cellDoor,wardDoor} from './lab-cell-doors.js';
+import {CELL_BAYS,CELL_COT} from './lab-ward-layout.js';
 
 const {floor:Y,ceiling:C}=LAB;
 const pi=Math.PI,flat=-pi/2;
@@ -8,7 +9,7 @@ export const MALT_ROOMS={
   brewery:{name:'Sudwerk 05',palette:['archiveWall','copperDark'],tiles:['concrete','gray'],tile:.92},
   beerLab:{name:'Nachprüfung · Reihe B/F',palette:['labTileWall','green'],tiles:['porcelain','gray'],tile:.63},
   ward:{name:'Verwahrung · Aufnahme',palette:['concrete','gunmetal'],tiles:['concrete','gasket'],tile:.76},
-  cells:{name:'Verwahrung · Trakt F',palette:['vaultWall','iron'],tiles:['vaultWall','concrete'],tile:.91}
+  cells:{name:'Verwahrung · Trakt F',palette:['cellCoat','gunmetal'],tiles:['concrete','labFloorPatch'],tile:.78}
 };
 
 export const MALT_LIGHTS={
@@ -16,7 +17,8 @@ export const MALT_LIGHTS={
   brewery:[[-23.5,25.1,0xffd8a0,32,9.8],[-20.2,28.7,0xffbc7f,17,7.2],[-17.91,24.2,0xdddfbb,11,6.5]],
   beerLab:[[-13.42,25.28,0xbce1db,28,8.0],[-11.37,27.42,0xffe6ba,15,6.9]],
   ward:[[-18.55,31.67,0xdca486,17,6.8]],
-  cells:[[-21.95,34.84,0xd2d2bc,21,7.6],[-21.67,38.26,0xc5dcce,23,6.4],[-17.35,39.31,0xef8b71,9,5.4]]
+  cells:[[-21.95,34.84,0xd2d2bc,21,7.6],[-21.67,38.26,0xc5dcce,23,6.4],[-17.35,39.31,0xef8b71,9,5.4],
+    [-24.19,34.29,0xefddba,3.6,3.25,2.09]]
 };
 
 // Pure scene dressing; fixtures and collider footprints use the same local
@@ -263,20 +265,98 @@ export function fitMaltWing(T,kit,id,doors){
     }
   }else if(id==='cells'){
     luminaire(-21.95,34.84,'ivory');luminaire(-21.67,38.26,'cold');luminaire(-17.35,39.31,'red');
-    const front=-21.34,wall=-24.47;
+    const front=-21.34,wall=x0,bolts=dress.fastener;
     overhead('iron',-19.22,33.30,39.87,2.96,.068);
     overhead('copperDark',-23.85,33.33,39.86,2.94,.053);
+    const bowl=turned([[0,0],[.10,0],[.117,.023],[.164,.096],[.181,.150],[.178,.168],
+      [.152,.170],[.142,.148],[.127,.105],[.086,.058],[0,.057]],28);
+    const cup=turned([[0,0],[.033,0],[.041,.011],[.048,.079],[.047,.086],[.042,.086],[.039,.012],[0,.012]],18);
+    function cot(x,z,i){
+      for(const s of [-1,1]){
+        const zz=z+s*.303;
+        line('green',x-.866,.442,zz,x+.868,.442,zz,.030);
+        line('gunmetal',x-.843,.222,zz,x+.843,.222,zz,.017);
+        for(const side of [-1,1]){
+          const xx=x+side*.827,h=side<0?.875:.748;
+          cylinder('gasket',xx,Y+.034,zz,.041,.057);
+          line('edge',xx,.057,zz,xx,h,zz,.026);
+          cylinder('edge',xx,Y+h,zz,.030,.031);
+          for(const y of [.226,.441])line('wardSteel',xx,y,zz+s*.023,xx,y,zz+s*.042,.012);
+          line('iron',xx,.265,zz,xx-side*.246,.417,zz,.012);
+        }
+      }
+      for(const side of [-1,1]){
+        const xx=x+side*.827,h=side<0?.875:.748;
+        for(const t of [-.18,0,.18])line('green',xx,.455,z+t,xx,h,z+t,.016);
+        line('edge',xx,h,z-.312,xx,h,z+.312,.025);
+      }
+      for(let s=0;s<10;s++)solid('iron',x-.745+s*.164,.468,z,.059,.030,.592);
+      solid('cellTick',x,.519,z,1.624,.108,.570);
+      for(const side of [-1,1]){
+        const zz=z+side*.284;
+        line('infSheet',x-.754,.558,zz,x+.754,.558,zz,.007);
+        line('infSheet',x-.754,.487,zz,x+.754,.487,zz,.006);
+        for(let j=0;j<9;j++){
+          const xx=x-.643+j*.155;
+          line('infPad',xx,.498,zz+side*.002,xx+.012,.546,zz+side*.002,.002);
+        }
+      }
+      solid(i===1?'cellTick':'infSheet',x-.594,.621,z-.009,.354,.108,.454,(i-1)*.10);
+      // Folded blanket sits only at the foot; the near edge remains a usable seat.
+      const fold=(u,v)=>{
+        const r=v*2-1,ripple=Math.sin(u*23+i)*.008+Math.sin(u*41+v*5)*.005;
+        return [x+.260+u*.513,Y+.589+ripple-(Math.max(0,Math.abs(r)-.85)**1.1)*.46,z+r*(.312+.026*u)];
+      };
+      for(let a=0;a<10;a++)for(let b=0;b<8;b++){
+        k.quad(i===2?'slateBlue':'cellBlanket',fold(a/10,b/8),fold(a/10,(b+1)/8),
+          fold((a+1)/10,(b+1)/8),fold((a+1)/10,b/8),.34);
+      }
+      for(const b of [.05,.95])for(let a=0;a<10;a++)rod('cellTick',fold(a/10,b),fold((a+1)/10,b),.0035);
+      const near=z-.302;
+      plaque('F · '+(78+i),[],x+.56,.407,near-.021,.111,.039,pi,'blue',0,false);
+      hit(x-.899,x+.902,z-.335,z+.336);
+      kit.world.support([[x-.81,z-.28],[x+.81,z-.28],[x+.81,z+.28],[x-.81,z+.28]],
+        Y+CELL_COT.deck,p=>Math.abs(p.y-Y)<1.05);
+    }
+    function drainCorner(x,z,i){
+      cylinder('gunmetal',x,Y+.087,z,.090,.174);cylinder('wardEnamel',x,Y+.192,z,.125,.180);
+      obj('wardEnamel',bowl,x,Y+.245,z,1,1,1);
+      cylinder('gasket',x,Y+.308,z,.059,.008);
+      line('green',wall+.05,.22,z,wall+.05,.76,z,.032);
+      line('edge',wall+.05,.268,z,x-.035,.268,z,.023);
+      solid('gunmetal',wall+.142,.96,z,.240,.037,.385);
+      line('iron',wall+.038,.79,z,wall+.219,.946,z,.012);
+      obj(i===2?'wardSteel':'wardEnamel',cup,wall+.187,Y+.982,z+.060,1,1,1);
+      solid('cellTick',wall+.124,.989,z-.102,.12,.016,.14,.05*i);
+      hit(x-.181,x+.181,z-.185,z+.185);
+    }
     function grate(a,b){
       const f=(u,v,d)=>[front+d,Y+v,b-u],L=b-a;
-      for(const e of [0,L])k.box('gunmetal',f,e-.033,e+.033,.047,2.429,-.045,.045);
-      for(const v of [.085,.916,2.378])k.box('gunmetal',f,.006,L-.006,v-.028,v+.028,-.038,.039);
-      for(let u=.127;u<L-.079;u+=.165)rod('iron',f(u,.094,0),f(u,2.389,0),.019);
+      for(const e of [0,L]){
+        k.box('gunmetal',f,e-.032,e+.032,.047,2.429,-.045,.045);
+        k.box('edge',f,e-.045,e+.045,.041,.163,-.059,.058);
+        k.box('edge',f,e-.045,e+.045,2.32,2.424,-.059,.058);
+        for(const y of [.128,2.356])bolts(f,e,y,.060,.013,true);
+      }
+      for(const v of [.085,.916,2.378])k.box('gunmetal',f,.035,L-.035,v-.029,v+.029,-.038,.039);
+      for(let u=.127;u<L-.079;u+=.165){
+        rod('iron',f(u,.094,0),f(u,2.389,0),.019);
+        for(const y of [.916,2.349])rod('edge',f(u,y-.036,0),f(u,y+.037,0),.023);
+      }
     }
-    for(const [i,a,b] of [[0,33.38,35.47],[1,35.63,37.63],[2,37.79,39.81]]){
+    for(const [i,[a,b]] of CELL_BAYS.entries()){
       const z=(a+b)/2,open=i===0,gap=1.04;
-      solid('gunmetal',-22.925,2.667,z,3.085,.437,b-a+.011);
       const partition=i===0?z0:a-.157;
-      box('concrete',wall,front+.025,Y,Y+3.35,partition,a);
+      box('concrete',wall+.001,front+.025,Y,Y+3.35,partition,a);
+      for(const face of [a+.004,partition-.004]){
+        if(face<z0)continue;
+        solid('cellCoat',(wall+front)*.5,.402,face,front-wall-.038,.689,.006);
+        solid('edge',(wall+front)*.5,.751,face,front-wall-.038,.021,.011);
+      }
+      solid('gunmetal',-22.91,2.462,a+.029,3.13,.118,.171);
+      solid('edge',front+.002,2.486,z,.122,.139,b-a-.014);
+      solid('gunmetal',front-.004,.047,z,.204,.084,b-a-.016);
+      for(let u=a+.12;u<b-.06;u+=.18)solid('edge',front+.045,.091,u,.066,.009,.022);
       hit(wall,front+.025,partition,a);
       grate(a,a+.19);
       grate(a+.19+gap,b);
@@ -286,36 +366,28 @@ export function fitMaltWing(T,kit,id,doors){
       doors.push(cellDoor(T,kit.root,kit.world,kit.materials,front,a+.19,gap,letters[i],open));
       solid('gunmetal',front,2.57,z,.18,.32,.65);
       plaque('ZELLE '+letters[i],['VERWAHRUNG'],front+.096,2.58,z,.503,.22,pi/2,i===2?'red':'cream');
-      // Empty cell furnishings: open metal frame, bedding and site-specific evidence.
-      const px=-23.29,pz=z+.345;
-      edgePosts(px,.254,pz,1.70,.44,.60);
-      solid('edge',px,.473,pz,1.75,.087,.65);
-      for(let s=0;s<8;s++)solid('iron',px-.71+s*.202,.52,pz,.055,.037,.598);
-      solid(i===2?'leather':'cloth',px,.567,pz,1.64,.105,.55);
-      solid('canvas',px-.58,.644,pz,.38,.105,.458,i===2?.07:0);
-      const tx=-24.18,tz=z-.55;
-      cylinder('iron',tx,Y+.197,tz,.062,.355);cylinder('porcelain',tx,Y+.35,tz,.191,.086);
-      cylinder('gasket',tx,Y+.399,tz,.153,.015);
-      line('edge',tx-.045,.351,tz+.13,wall+.027,.43,tz+.13,.026);
-      hit(px-.895,px+.895,pz-.327,pz+.327);hit(tx-.19,tx+.19,tz-.19,tz+.19);
+      const px=CELL_COT.x,pz=z+CELL_COT.offset;
+      cot(px,pz,i);drainCorner(-24.20,z-.57,i);
+      solid('wardSteel',wall+.127,2.104,z-.263,.23,.109,.47);
+      solid(i===2?'cold':'ivory',wall+.237,2.104,z-.263,.018,.067,.385);
+      for(let n=0;n<4;n++)solid('iron',wall+.252,2.104,z-.43+n*.108,.014,.084,.014);
       for(let j=0;j<5+i;j++){
         const hh=Y+1.47,zz=z-.29+j*.071;
-        k.quad('gasket',[wall-.074,hh-.087,zz],[wall-.074,hh+.071+j%2*.043,zz+.028],
-          [wall-.074,hh+.058+j%2*.046,zz+.038],[wall-.074,hh-.105,zz+.014]);
+        k.quad('gasket',[wall+.008,hh-.087,zz],[wall+.008,hh+.071+j%2*.043,zz+.028],
+          [wall+.008,hh+.058+j%2*.046,zz+.038],[wall+.008,hh-.105,zz+.014]);
       }
       stain(x0+.012,1.29,z-.41,.65,1.98,pi/2,i===2?1:0);
       if(i===0){
-        solid('canvas',px+.39,.638,pz+.04,.57,.05,.453,.21);
-        mug(px-.17,.624,pz-.10,pi*.11);
-        paper(-23.65,.03,z-.36,'PERSONALBUCH',['Ablage: Wachdienst.'],'cream',pi/2);
+        plaque('BECK · K.',['F 078 / KEIN ENTLASSUNGSDATUM'],x0+.022,1.70,z+.44,.49,.234,pi/2,'cream');
+        paper(-23.06,.014,z-.46,'DURCHSCHLAG',['Vergehen: 0,0 % vol.'],'cream',pi/2);
       }else if(i===1){
-        for(const y of [1.23,1.76])line('iron',wall-.069,y,z-.356,wall+.077,y,z-.356,.021);
-        solid('rust',wall-.047,1.462,z-.365,.075,.602,.071);
+        for(const y of [1.23,1.76])line('iron',wall+.006,y,z-.356,wall+.096,y,z-.356,.021);
+        solid('rust',wall+.027,1.462,z-.365,.045,.602,.071);
         plaque('KEIN NACHTRAG',['Eintrag entfernt.'],x0+.033,1.804,z+.35,.55,.245,pi/2,'cream');
       }else{
-        solid('rust',px+.22,.628,pz,.42,.033,.466,-.15);
-        props.folio(px+.35,Y+.648,pz+.071,.24,.34,pi*.29,6,{thickness:.028});
-        for(let q=0;q<3;q++)line('rust',wall-.060,1.58-q*.111,z-.175,wall-.060,1.13-q*.060,z-.094,.010);
+        solid('rust',px+.37,.607,pz,.32,.027,.402,-.11);
+        props.folio(px+.39,Y+.627,pz+.015,.20,.30,pi*.29,6,{thickness:.023});
+        for(let q=0;q<3;q++)line('rust',wall+.019,1.58-q*.111,z-.175,wall+.019,1.13-q*.060,z-.094,.010);
       }
     }
     const endCell=39.81;

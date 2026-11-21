@@ -1,15 +1,12 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {weaponSwatch} from './weapon-finishes.js';
 
 // Each palm is local to its own contact, also used by the forearm rig.
 export function gripHands(T,specs){
   const v=(...p)=>new T.Vector3(...p);
-  const leather=new T.MeshStandardMaterial({color:0x675849,roughness:.92,...weaponSwatch(T,'leather')});
-  leather.normalScale.setScalar(.98);
-  const pads=new T.MeshStandardMaterial({color:0x7b735d,roughness:.99,...weaponSwatch(T,'twill')});
-  pads.normalScale.setScalar(.78);
-  const stitching=new T.MeshStandardMaterial({color:0x92846a,roughness:.95});
-  const ellipsoid=new T.SphereGeometry(1,14,10);
+  const skin=new T.MeshStandardMaterial({color:0xd69e87,roughness:.63,vertexColors:true});
+  const nails=new T.MeshStandardMaterial({color:0xd8a594,roughness:.45});
+  const ellipsoid=new T.SphereGeometry(1,20,14);
+  const neutral=new T.Color(1,1,1),flush=new T.Color(1,.79,.74);
   const poses=specs.map(spec=>{
     const pistol=spec.kind==='pistol',group=new T.Group(),nodes=[],wrists=[
       pistol?v(-.077,-.050,.093):v(-.107,-.035,.083),v(.055,-.043,.094)];
@@ -17,69 +14,95 @@ export function gripHands(T,specs){
     for(const [hand,w] of wrists.entries()){
       const node=new T.Group();node.position.fromArray(hand===0?spec.fore:spec.grip);
       group.add(node);nodes.push(node);
-      const wrist=w.toArray();
+      const wrist=w.toArray(),bow=spec.kind==='bow';
       const bins=new Map();
       function add(material,geo){
+        if(material===skin&&!geo.hasAttribute('color')){
+          const colors=new Float32Array(geo.attributes.position.count*3).fill(1);
+          geo.setAttribute('color',new T.BufferAttribute(colors,3));
+        }
         if(!bins.has(material))bins.set(material,[]);
         bins.get(material).push(geo);
       }
       function oval(material,p,s,angle=0){
         const g=ellipsoid.toNonIndexed();g.scale(...s);g.rotateX(angle);g.translate(...p);add(material,g);
       }
-      function form(points,radii,material=leather,flat=.87){
+      function form(points,radii,flat=.89,finger=false,out=null){
         // One smooth, tapered mesh per finger, with no disconnected joints.
-        const curve=new T.CatmullRomCurve3(points.map(p=>v(...p))),count=points.length*4,segments=9;
+        const curve=new T.CatmullRomCurve3(points.map(p=>v(...p))),count=points.length*6,segments=14;
         const g=new T.TubeGeometry(curve,count,1,segments,false),a=g.attributes.position;
-        const p=new T.Vector3(),q=new T.Vector3();
+        const p=v(),q=v(),tint=new T.Color(),colors=new Float32Array(a.count*3);
         for(let j=0;j<=count;j++){
           curve.getPointAt(j/count,p);
-          const u=j/count, r=u<.5?T.MathUtils.lerp(radii[0],radii[1],u*2)
-            :T.MathUtils.lerp(radii[1],radii[2],((u-.5)*2)**2.6);
+          const u=j/count,knot=Math.sin(u*Math.PI),tip=Math.max(0,(u-.85)/.15);
+          const taper=finger?Math.sqrt(Math.max(.000484,1-tip*tip)):1;
+          const r=(T.MathUtils.lerp(radii[0],radii[2],u)+
+            (radii[1]-(radii[0]+radii[2])*.5)*knot)*taper;
+          tint.copy(neutral).lerp(flush,finger?.56*u+.31*Math.exp(-((u-.34)**2)*220):.07*u);
           for(let k=0;k<=segments;k++){
             const t=k/segments*Math.PI*2;
             q.copy(p).addScaledVector(g.normals[j],-Math.cos(t)*r)
               .addScaledVector(g.binormals[j],Math.sin(t)*r*flat);
-            a.setXYZ(j*(segments+1)+k,q.x,q.y,q.z);
+            const idx=j*(segments+1)+k;
+            a.setXYZ(idx,q.x,q.y,q.z);tint.toArray(colors,idx*3);
           }
         }
-        // Retain the analytical normals from the tube so there is no UV seam.
-        const smooth=g.toNonIndexed();add(material,smooth);g.dispose();
+        g.setAttribute('color',new T.BufferAttribute(colors,3));
+        // Smooth across the duplicate seam while preserving the rounded end.
+        g.computeVertexNormals();
+        const n=g.attributes.normal;
+        for(let j=0;j<=count;j++){
+          const a=j*(segments+1),b=a+segments;
+          p.fromBufferAttribute(n,a).add(q.fromBufferAttribute(n,b)).normalize();
+          n.setXYZ(a,p.x,p.y,p.z);n.setXYZ(b,p.x,p.y,p.z);
+        }
+        const smooth=g.toNonIndexed();add(skin,smooth);g.dispose();
+        if(!out)return;
+        const t=.874,across=v(),normal=v(...out);
+        curve.getPointAt(t,p);curve.getTangentAt(t,q);
+        normal.addScaledVector(q,-normal.dot(q)).normalize();
+        across.crossVectors(q,normal).normalize();
+        const gN=ellipsoid.toNonIndexed(),m=new T.Matrix4().makeBasis(across,q,normal);
+        const radius=T.MathUtils.lerp(radii[0],radii[2],t);
+        gN.scale(radius*.63,Math.min(.008,curve.getLength()*.085),.0015);
+        p.addScaledVector(normal,radius*.91);m.setPosition(p);gN.applyMatrix4(m);add(nails,gN);
       }
+      const finger=(points,r,out)=>form(points,r,.94,true,out);
       if(hand===1){
-        form([wrist,[.051,-.032,.072],[.043,.005,.027]], [.028,.030,.010]);
-        oval(leather,[.041,-.005,.023],[.017,.043,.032],-.39);
-        oval(pads,[.054,-.007,.027],[.006,.031,.026],-.31);
+        form([wrist,[.050,-.030,.072],[.042,.001,.030]], [.024,.026,.013]);
+        oval(skin,[.041,-.003,.025],[.018,.039,.034],-.38);
         for(let k=0;k<4;k++){
-          const y=.040-k*.023;
+          const y=.033-k*.020,end=[-.020,-.027,-.024,-.012][k],r=k===3?.007:.009;
           const points=k===0
-            ? [[.047,y,.019],[.045,y+.011,-.012],[.035,y+.012,-.059],[.032,y+.007,-.080]]
-            : [[.047,y,.016],[.044,y,-.018],[.027,y+.002,-.035],[.003,y+.004,-.038],[-.020,y+.003,-.033]];
-          form(points,[.012,.0105,.0045]);
+            ? [[.043,y,.021],[.045,y+.012,-.011],[.039,y+.016,-.044],[.032,y+.013,-.066]]
+            : [[.043,y,.017],[.043,y,-.016],[.026,y+.003,-.036],[.006,y+.005,-.042],[end,y+.004,-.033]];
+          finger(points,[r+.002,r+.001,r*.81],k===0?[1,0,.1]:[0,0,-1]);
         }
-        form([[.042,.015,.057],[.023,.042,.066],[-.001,.049,.064],[-.023,.046,.057]], [.016,.013,.0045]);
-        for(let k=0;k<6;k++)oval(stitching,[.057,-.022+k*.007,.045+k*.0014],[.0014,.0022,.0017]);
+        finger([[.042,.015,.054],[.028,.034,.058],[.006,.044,.058],[-.018,.042,.048]],
+          [.014,.012,.009],[0,.8,.6]);
       } else if(pistol){
-        form([wrist,[-.048,-.032,.062],[-.020,-.013,.046],[-.005,-.001,.029]], [.029,.029,.013]);
-        oval(leather,[-.021,-.013,.035],[.023,.036,.033],-.37);
-        oval(pads,[-.037,-.023,.037],[.007,.026,.024],-.39);
+        form([wrist,[-.053,-.034,.069],[-.023,-.013,.045],[-.005,-.001,.029]], [.024,.026,.012]);
+        oval(skin,[-.021,-.013,.035],[.023,.031,.033],-.37);
         for(let k=0;k<4;k++){
-          const y=.018-k*.018;
-          form([[-.018,y,.027],[-.018,y+.010,.007],[.002,y+.012,-.014],
-            [.025,y+.009,-.014],[.042,y+.004,-.006]], [.0105,.0098,.0043]);
+          const y=.017-k*.017,r=k===3?.007:.0085,end=[.033,.046,.042,.034][k];
+          finger([[-.026,y,.028],[-.021,y+.009,.006],[.001,y+.010,-.015],
+            [.021,y+.009,-.018],[end,y+.004,-.006]],[r+.002,r+.001,r*.88],[0,0,-1]);
         }
-        form([[-.035,.008,.058],[-.025,.034,.049],[-.018,.055,.018],[-.016,.061,-.012]], [.014,.011,.0048]);
-        for(let i=0;i<5;i++)oval(stitching,[-.040,-.017+i*.007,.044-i*.003],[.0015,.0017,.0015]);
+        finger([[-.035,.008,.058],[-.025,.034,.047],[-.018,.050,.018],[-.016,.052,-.010]],
+          [.014,.011,.008],[-1,.4,0]);
       } else {
-        const wide=spec.kind==='shotgun',w=wide?.052:.039;
-        form([wrist,[-.066,-.028,.042],[-.029,-.018,.012]], [.030,.030,.012]);
-        oval(leather,[-.023,-.014,.011],[.039,.017,.044],-.14);
-        oval(pads,[-.030,-.030,.020],[.029,.006,.023]);
+        const w=spec.kind==='shotgun'?.051:bow?.043:.047;
+        form([wrist,[-.072,-.035,.049],[-.039,-.021,.020],[-.023,-.015,.007]], [.024,.025,.012]);
+        oval(skin,[-.027,-.019,.014],[.037,.018,.042],-.15);
+        oval(skin,[-.005,-.012,.034],[.023,.017,.027],.15);
         for(let k=0;k<4;k++){
-          const z=-.030+k*.023;
-          form([[-.032,-.018,z+.008],[-w,-.002,z+.005],[-w-.008,.020,z],[-w+.003,.041+(k%2)*.004,z-.005]], [.012,.010,.0042]);
+          const z=-.028+k*.020,reach=[.030,.041,.038,.027][k],r=k===3?.0075:.009;
+          finger([[-.041,-.021,z+.008],[-w-.012,-.008,z+.005],
+            [-w-.015,.016,z+.002],[-w-.008,reach*.85,z],[-w+(bow?.009:.001),reach,z-.005]],
+            [r+.002,r+.0008,r*.88],[-1,.25,0]);
         }
-        form([[.006,-.019,.050],[w*.63,-.007,.044],[w+.009,.010,.030],[w+.002,.032,.018]], [.016,.012,.0045]);
-        for(let k=0;k<7;k++)oval(stitching,[-.054+k*.0013,-.020,.044-k*.0085],[.0017,.00155,.00125]);
+        finger([[-.005,-.016,.048],[w*.56,-.015,.045],[w+.006,.005,.035],[w+.005,.026,.022]],
+          [.014,.012,.009],[1,.25,0]);
       }
       for(const [material,list] of bins){
         node.add(new T.Mesh(mergeGeometries(list),material));list.forEach(g=>g.dispose());

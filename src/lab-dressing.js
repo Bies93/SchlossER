@@ -2,7 +2,7 @@ import {LAB} from './lab-layout.js';
 import {randomSource} from './surface-detail.js';
 
 const p=(x,y,z)=>[x,y,z],Y=LAB.floor;
-const wTile=256,hTile=144,cols=6,rows=14;
+const wTile=256,hTile=144,cols=6,rows=16;
 const fillBlock=(c,x,y,w,h,s)=>{c.fillStyle=s;c.fillRect(x,y,w,h);};
 
 // One atlas for hand-authored room signs, instrument faces and documents.

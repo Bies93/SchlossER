@@ -211,7 +211,7 @@ async function start(){
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
    if(id==='hubert')leavePrison();
    names.sample(performance.now(),true);
- });
+ },ravens);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
    undefined,targets,
    kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0||hallFloor(p.x,p.z)!==null);},
@@ -415,6 +415,7 @@ async function start(){
      }
      const dt=lastDoorTime===null?0:Math.min(.065,(time-lastDoorTime)*.001);lastDoorTime=time;
      const state=hall.update(dt,player.body.position,audio.clubPhase());
+     if(caption.hidden)npcDialogue(hall.takeWardCue());
      if(state.changed)dirty=true;
      if(wc.update(dt,player.body.position))dirty=true;
      if(upper.update(time,player.body.position))dirty=true;

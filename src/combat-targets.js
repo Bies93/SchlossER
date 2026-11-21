@@ -4,12 +4,14 @@ import {planCollapse} from './npc-collapse.js';
 
 // One target resolver for the game. Garden enemies keep their own AI and
 // existing damage rules; both casts share the same posed hit zones.
-export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath){
+export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath,ravens){
   const point=new T.Vector3(),broad=new T.Sphere(new T.Vector3(),1.61);
   const trace=hitZoneQuery(T),zone={};
   let epoch=1;
   function nearest(ray,limit,mask){
     let hit=(mask&1)?ghouls.nearest(ray,limit):null,best=hit?.distance??limit;
+    const bird=(mask&1)?ravens?.nearest(ray,best):null;
+    if(bird){hit=bird;best=bird.distance;}
     for(const n of namedHumans(T)){
       const actor=n.actor;if(!n.alive||!(actor.layers.mask&mask)||!visibility.seen(actor))continue;
       broad.center.copy(actor.position);broad.center.y+=.77;
@@ -23,6 +25,7 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath){
   }
   function damage(n,value,color,at,spec,headShare=0,incoming){
     if(!Number.isFinite(value)||value<=0)return false;
+    if(ravens?.owns(n))return ravens.damage(n,at,incoming);
     const kind=spec.kind,body=kind==='bow'?50:kind==='rifle'?35:kind==='pistol'?34:Math.min(55,Math.max(34,Math.round(value*.61)));
     const factor=kind==='bow'?2.75:kind==='rifle'?2.6:kind==='pistol'?2.45:2.35;
     const amount=Math.round(body*(1+(factor-1)*headShare));

@@ -29,6 +29,9 @@ const wear={
   orbPriest:{skin:0xc3b6a1,hair:0xb8adb0,weather:.59},
   niklas:{skin:0xf7ece3},
   labAuer:{weather:.12},labHedwig:{weather:.08},labSepp:{weather:.27},
+  labPrisoner:{palette:[0x53534a,0x8c795a,0xa18c65],hair:0x53483f,weather:.49},
+  labPatient:{palette:[0x626e65,0x899e94,0xc1cbb4],hair:0x998470,weather:.25},
+  labOrderly:{palette:[0x333d3c,0x536b61,0xb6b49a],hair:0x433931,weather:.11},
   guestBruno:{palette:[0x454b52,0x757460,0xc7ba9d],hair:0xbbb5a6,weather:.17},
   guestMarlene:{palette:[0x4b4b52,0x566477,0xd8cba9],hair:0x6c4e3b,weather:.09},
   guestSabine:{palette:[0x453f42,0x923f57,0xbba2a1],hair:0xa05a49,weather:.08},
@@ -338,6 +341,49 @@ export function createHuman(T,id='base'){
     }
     face(t,job.length,speech,.08,0,glance);
   }
+  function chartPose(pencil){
+    const left=grip('l'),right=grip('r'),target=V(),wrist=V(),y=V(0,.66,.75).normalize(),x=V(1,0,0);
+    const penQ=Q().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,V().crossVectors(x,y)));
+    const pageQ=Q().setFromRotationMatrix(new T.Matrix4().makeBasis(V(0,1,0),V(0,0,1),V(1,0,0)));
+    const nib=V(0,-.089*size,0).applyQuaternion(penQ);
+    right.socket.add(pencil);
+    return (t,chart,glance=0,talk=0)=>{
+      const stroke=(t%5.4)/1.8,writing=1-clamp(talk*2.5),line=Math.floor(stroke),p=stroke-line;
+      const sweep=clamp(p/.78),back=clamp((p-.78)/.22),reset=back*back*(3-2*back);
+      const cursorX=mix(-.027,.037,sweep)-.064*reset;
+      const cursorZ=.027-mix(line,(line+1)%3,reset)*.038+sin(t*19)*.005*(1-back);
+      const lift=Math.sin(back*Math.PI)*.039;
+      torso(.006*sin(t),-.017,.026,.19-.075*(1-writing),.011*sin(t*.66),-.03,t,glance,.21*writing);
+      for(const s of ['l','r']){
+        const side=s==='l'?1:-1,ankle=read('foot_'+s);
+        solve(LIMB[s].leg,ankle.x*.95,ankle.y,ankle.z+side*.028,side*.16,0,1);foot('foot_'+s,0,side*.10);
+        const l=s==='l',socket=l?left:right,desired=l?pageQ:penQ;
+        if(l)target.set(chart.x-.091,chart.y+.013,chart.z+.055);
+        else target.set(chart.x+cursorX*writing,chart.y+.006+lift+(1-writing)*.047,
+          chart.z+cursorZ*writing+.035*(1-writing)).sub(nib);
+        socket.wristAt(target,desired,wrist).applyMatrix4(worldInverse);
+        solve(LIMB[s].arm,wrist.x,wrist.y,wrist.z,side*.68,-.56,-.42);
+        socket.hold(desired,l?.075:.63);
+      }
+      face(t,4.18,talk,.022,0,glance);
+    };
+  }
+  function wardSeat(t,seat,glance=0,talk=0,patient=false){
+    const home=(seat+.108)/size,pulse=patient?clamp(talk):0,breath=sin(t*2.3);
+    torso(.006*breath,home-hipsY+.003*breath,patient?-.039:.007,
+      patient?.007-.22*pulse:.14,.021*sin(t*.78),pulse*.026*breath,t,glance,patient?.020-.24*pulse:.194-.14*talk);
+    for(const [i,s] of ['l','r'].entries()){
+      const side=i===0?1:-1,ankle=read('foot_'+s);
+      solve(LIMB[s].leg,side*(patient?.136:.116)/size,ankle.y,
+        ankle.z+(patient?.31:.338)+side*.023,side*.19,0,1);
+      foot('foot_'+s,0,side*.13);
+      const up=patient?pulse*.014:talk*.011;
+      solve(LIMB[s].arm,side*(patient?.324:.147)/size,
+        (patient?seat+.333+up:seat+.164+up)/size,(patient?.111:.262)/size,side*.74,-.48,-.61);
+      rot('hand_'+s,patient?.18:.40,side*.14,side*.10);curl(s,patient?.47+pulse*.44:.39);
+    }
+    face(t,patient?5.86:4.81,talk,.02,0,glance,pulse*.37);
+  }
   function factoryPose(t,role,glance=0,speech=0){
     if(role==='repair'){deskWork(t,'registry',glance,speech);return;}
     const tutor=role==='trainer',waiting=role==='cadet',interval=(t+2.7)%13;
@@ -646,7 +692,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,visitorPose,factoryPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

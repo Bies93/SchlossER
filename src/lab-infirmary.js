@@ -1,18 +1,19 @@
 import {LAB,LAB_CELLS} from './lab-layout.js';
 import {wardEvidence} from './lab-ward-evidence.js';
+import {WARD_CHAIR,WARD_CHART} from './lab-ward-layout.js';
 
 const {floor:Y,ceiling:C}=LAB,pi=Math.PI;
 export const INFIRMARY={name:'Behandlungsstation',palette:['labTileWall','green'],tiles:['concrete','labFloorPatch'],tile:.71};
 export const INFIRMARY_LIGHTS=[
   [-18.96,41.93,0xd2b69c,11,6.8],[-23.44,45.25,0xa2bfad,15.5,7.4],
-  [-16.79,46.30,0xc4d5cb,15,6.9],[-24.02,49.90,0xb95b49,11,5.9],
+  [-16.79,46.30,0xc4d5cb,15,6.9],[-24.02,49.90,0xe5bca5,14.5,5.9],
   [-18.44,51.3,0xe3d8b9,17,6.8]
 ];
 
 // Fictional scene props. All devices are inert and exist only as silhouettes,
 // surface details and disconnected, unpowered set dressing.
 export function addInfirmary(T,kit){
-  const {k,box,hit,cylinder,luminaire,grille,dress,props}=kit;
+  const {k,hit,cylinder,luminaire,grille,dress,props,obj}=kit;
   const {housing,rod,plaque,plane,grill,dial,stain,fastener}=dress;
   const evidence=wardEvidence(T,kit);
   const [x0,x1,z0,z1]=LAB_CELLS.infirmary;
@@ -31,10 +32,16 @@ export function addInfirmary(T,kit){
       const X=x+a*(w*.5-.052),Z=z+b*(d*.5-.052);
       vertical(X,Z,.009,.101,.042);
       put('edge',X,top*.52,Z,.045,top*.79,.045);
+      put('gunmetal',X,top-.102,Z,.082,.124,.079);
+      line('gray',X,top-.084,Z+b*.041,X,top-.084,Z+b*.054,.012);
     }
     put('gunmetal',x,.218,z,w-.04,.064,d-.04);
+    put('green',x,.255,z,w-.103,.015,d-.109);
     put('edge',x,top-.025,z,w,.053,d);
     put(m,x,top+.008,z,w-.051,.032,d-.047);
+    for(const side of [-1,1]){
+      line('wardSteel',x-w*.47,top-.008,z+side*d*.487,x+w*.47,top-.008,z+side*d*.487,.007);
+    }
     hit(x-w*.5,x+w*.5,z-d*.5,z+d*.5);
   }
   function foldLine(A,B,material,phase){
@@ -68,11 +75,63 @@ export function addInfirmary(T,kit){
     foldLine([x,z2-1.23],[x,z2-.09],m,z2);
     foldLine([Math.min(x,end)+.19,z2],[Math.max(x,end)-.13,z2],m,z2+.73);
   }
-  function bottle(x,y,z,i){
-    cylinder(i%2?'beerGlass':'green',x,Y+y+.070,z,.037,.14);
-    cylinder('paper',x,Y+y+.063,z,.038,.046);
-    cylinder('iron',x,Y+y+.149,z,.025,.024);
-    cylinder('edge',x,Y+y+.164,z,.026,.009);
+  const lathe=profile=>new T.LatheGeometry(profile.map(([r,y])=>new T.Vector2(r,y)),24);
+  const bottleShape=lathe([[0,0],[.034,0],[.043,.008],[.044,.016],[.044,.109],
+    [.041,.125],[.029,.136],[.020,.148],[.019,.183],[.022,.187],[.022,.192],[0,.192]]);
+  const panShape=lathe([[0,0],[.093,0],[.111,.008],[.129,.034],[.143,.05],[.142,.058],
+    [.132,.058],[.125,.045],[.109,.022],[.089,.012],[0,.012]]);
+  function bottle(x,y,z,i,angle=Math.PI){
+    const kind=i%4,jar=kind===2,capped=kind===3,s=1+(i%3-1)*.12;
+    if(jar||capped){
+      const r=jar?.055:.042,h=jar?.098:.146;
+      put('wardSteel',x,y+.007,z,r*2,.014,r*2);
+      cylinder(jar?'wardEnamel':'gray',x,Y+y+h/2,z,r,h-.008);
+      for(const a of [h-.031,h-.023,h-.014])cylinder('wardSteel',x,Y+y+a,z,r+.0009,.003);
+      cylinder('edge',x,Y+y+h+.005,z,r+.002,.014);
+      cylinder('gunmetal',x,Y+y+h+.015,z,r*.84,.008);
+    }else{
+      obj(kind===0?'beerGlass':'wardGlass',bottleShape,x,Y+y,z,s,s,s);
+      const h=y+.193*s;
+      cylinder(kind===0?'edge':'wardSteel',x,Y+h+.004,z,.023*s,.027);
+      cylinder('gasket',x,Y+h-.009,z,.0235*s,.004);
+      for(let n=0;n<10;n++){
+        const a=n*pi*.20,X=x+.023*s*Math.cos(a),Z=z+.023*s*Math.sin(a);
+        line('gray',X,h-.003,Z,X,h+.013,Z,.0014);
+      }
+    }
+    const f=point(x,z,angle),r=(jar?.055:capped?.042:.044*s)+.001;
+    const [X,,Z]=f(0,0,r),h=y+(jar?.055:.074*s);
+    plaque(['SALZLÖSUNG','PROBE · F','VERBAND','MUSTER'][kind],
+      [['NACHTDIENST'],['04 · VERSIEGELT'],['STERIL'],['OHNE FREIGABE']][kind],
+      X,h,Z,jar?.071:.059,.043,angle,kind===1?'blue':kind===3?'red':'cream',0,false);
+  }
+  function instrumentTray(x,y,z,w=.385,d=.245,a=0){
+    const f=point(x,z,a),block=(m,L,R,B,H,N,F)=>frameBox(m,f,L,R,B,H,N,F),hw=w/2,hd=d/2;
+    block('wardSteel',-hw,hw,y,y+.016,-hd,hd);
+    block('infSheet',-hw+.019,hw-.019,y+.0165,y+.019,-hd+.019,hd-.019);
+    for(const u of [-hw+.007,hw-.007])rod('wardSteel',f(u,y+.022,-hd+.010),f(u,y+.022,hd-.010),.008);
+    for(const v of [-hd+.007,hd-.007])rod('wardSteel',f(-hw+.009,y+.022,v),f(hw-.009,y+.022,v),.008);
+    // Decorative, blunt medical implements: an oval mirror, tweezers and a
+    // capped instrument, laid in shallow felt channels.
+    function tool(offset,twist,kind){
+      const g=(u,y,z)=>f(offset+u*Math.cos(twist)+z*Math.sin(twist),y,-u*Math.sin(twist)+z*Math.cos(twist));
+      const r=(m,u,v,d,D,s)=>rod(m,g(u,y+.027,v),g(d,y+.027,D),s);
+      if(kind===0){
+        r('wardSteel',0,-.081,0,.043,.005);
+        const [X,H,Z]=g(0,y+.029,.058);
+        cylinder('wardSteel',X,H,Z,.022,.008);cylinder('glassDark',X,H+.006,Z,.017,.004);
+        for(let j=0;j<4;j++)r('edge',-.006,-.065+j*.008,.006,-.065+j*.008,.002);
+      }else if(kind===1){
+        for(const s of [-1,1]){
+          r('wardSteel',0,-.075,s*.011,.009,.0033);
+          r('wardSteel',s*.011,.009,s*.005,.066,.0027);
+        }
+      }else{
+        r('edge',0,-.078,0,.033,.007);r('wardEnamel',0,.033,0,.067,.009);
+        for(let j=0;j<7;j++)r('wardSteel',0,-.062+j*.008,0,-.059+j*.008,.0082);
+      }
+    }
+    tool(-w*.28,.13,0);tool(0,-.12,1);tool(w*.27,.13,2);
   }
   function bed(x,z,{angle=0,variant=0}={}){
     const p=point(x,z,angle);
@@ -141,13 +200,13 @@ export function addInfirmary(T,kit){
   }
   function screenChair(x,z,other=false){
     const p=point(x,z,(other?-1:1)*pi*.5),block=(m,a,b,l,h,c,d)=>frameBox(m,p,a,b,l,h,c,d);
-    block('iron',-.478,.478,.02,.14,-.66,.54);
-    block('gunmetal',-.36,.36,.14,.56,-.43,.37);
-    block('infPad',-.327,.327,.55,.651,-.45,.367);
+    block('iron',-.478,.478,.02,.14,-.66,other?.54:.187);
+    block('gunmetal',-.36,.36,.14,.56,-.43,other?.37:.205);
+    block('infPad',-.327,.327,.55,.651,-.45,other?.367:.219);
     block(other?'rust':'green',-.346,.346,.59,1.68,-.46,-.347);
     block('infPad',-.29,.29,.707,1.60,-.356,-.274);
     block('infPad',-.19,.19,1.493,1.747,-.345,-.204);
-    evidence.surface(other?'cloth':'wipe',(u,v)=>p((u-.5)*.571,.655,-.035-(v-.5)*.655));
+    evidence.surface(other?'cloth':'wipe',(u,v)=>p((u-.5)*.571,.655,other?-.035-(v-.5)*.655:-.097-(v-.5)*.589));
     evidence.surface('spray',(u,v)=>p((u-.5)*.506,.75+v*.66,-.27));
     for(const a of [-.326,.326]){
       rod('edge',p(a,.52,.262),p(a,.914,.262),.027);
@@ -155,11 +214,33 @@ export function addInfirmary(T,kit){
       rod('iron',p(a,.19,-.51),p(a,1.515,-.452),.037);
       const f=(u,y,d)=>p(a+u,y,d);
       fastener(f,0,1.41,-.472,.018,true);
+      rod('wardSteel',p(a,.911,-.253),p(a,.911,-.206),.043);
+      rod('wardSteel',p(a,.911,.267),p(a,.911,.307),.041);
+      block('infPad',a-.038,a+.038,.906,.955,-.201,.253);
+      rod('cellTick',p(a-.033,.952,-.172),p(a-.033,.952,.224),.004);
+      rod('cellTick',p(a+.033,.952,-.172),p(a+.033,.952,.224),.004);
+      for(const d of [-.50,other?.309:.111]){
+        const [X,,Z]=p(a,.116,d);
+        cylinder('iron',X,Y+.023,Z,.068,.041);cylinder('wardSteel',X,Y+.052,Z,.053,.022);
+      }
+      for(const y of [.787,1.498])rod('wardSteel',p(a,y,-.465),p(a,y,-.512),.023);
+    }
+    for(const a of [-.291,.291]){
+      rod('cellTick',p(a,.654,-.341),p(a,.654,other?.31:.182),.005);
+      rod('cellTick',p(a,.754,-.270),p(a,1.485,-.270),.005);
+    }
+    block('green',-.313,.313,.515,.55,-.450,other?.409:.235);
+    if(other){
+      block('iron',-.225,.225,.09,.16,.404,.665);
+      block('wardSteel',-.217,.217,.146,.179,.425,.64);
+      for(let j=-4;j<=4;j++)rod('gasket',p(j*.040,.181,.468),p(j*.040,.181,.602),.004);
+    }else{
+      block('wardSteel',-.266,.266,.180,.229,.183,.204);
+      for(const u of [-.21,.21])rod('iron',p(u,.205,.205),p(u,.205,.224),.014);
     }
     // Blank, closed housings and a cut service lead suggest a decommissioned
     // apparatus without depicting operating circuitry or active effects.
     block('copperDark',-.312,.312,1.754,1.895,-.507,-.25);
-    block('iron',-.225,.225,.09,.16,.404,.665);
     const s=other?1:-1;
     line('gasket',x+s*.41,.15,z+.18,x+s*.69,.045,z+.39,.025);
     line('gasket',x+s*.69,.045,z+.39,x+s*.87,.009,z+.29,.023);
@@ -195,14 +276,18 @@ export function addInfirmary(T,kit){
   props.folio(-23.73,Y+.99,41.64,.37,.381,.23,1,{thickness:.029});
   props.folio(-23.30,Y+.99,41.78,.23,.30,-.20,7,{loose:true,thickness:.011});
   put('gasket',-22.81,1.048,41.56,.405,.108,.297);
-  put('green',-22.81,1.116,41.56,.320,.031,.215);
+  put('green',-22.81,1.116,41.56,.393,.029,.285);
+  plaque('BESTAND',['F / NACHT'], -22.81,1.053,41.401,.260,.067,pi,'blue',0,false);
+  for(const x of [-22.97,-22.65])line('wardSteel',x,1.038,41.399,x,1.117,41.399,.012);
+  obj('wardEnamel',panShape,-24.18,Y+.987,41.73,1,1,1);
   plaque('AUFNAHME',['BEHANDLUNGSSTATION · INTERN','Der Nachtzugang bleibt geschlossen.'],-23.53,1.95,z0+.04,1.84,.79,0,'blue');
   plaque('STATION',['ZURÜCK ZUR VERWAHRUNG'],-18.30,2.752,z0+.201,1.45,.306,0,'blue');
 
   bed(-24.70,44.94);
   monitor(-26.43,45.52,{label:'KONTROLLE'});
   stand(-26.23,43.26,.86,.61,.907,'green');
-  for(const [i,x] of [-26.46,-26.27,-26.09].entries())bottle(x,.938,43.30,i);
+  for(const [i,x] of [-26.48,-26.32,-26.14].entries())bottle(x,.932,43.37,i+1,pi*.5);
+  instrumentTray(-26.22,.932,43.11,.405,.232,pi*.52);
   plaque('BEHANDLUNG A',['PRITSCHE / BEOBACHTUNG'],-27.612,1.79,44.32,1.05,.48,pi/2,'blue');
 
   bed(-15.30,44.91,{variant:1});
@@ -219,18 +304,24 @@ export function addInfirmary(T,kit){
   hit(iv-.19,iv+.20,sz-.19,sz+.24);
   plaque('BEHANDLUNG B',['GERÄTE ABGESCHALTET'],x1-.036,1.96,43.65,1.11,.53,-pi/2,'red');
 
-  screenChair(-24.77,49.41);
-  plaque('ANWENDUNGSRAUM',['STILLGELEGT / NICHT BENUTZEN'],x0+.039,1.91,49.42,1.34,.54,pi/2,'red');
+  screenChair(WARD_CHAIR.x,WARD_CHAIR.z);
+  plaque('ANWENDUNGSRAUM',['STILLGELEGT / NICHT BENUTZEN'],x0+.039,2.06,48.04,1.34,.54,pi/2,'red');
   monitor(-26.41,50.31,{label:'STROM GETRENNT',green:false});
-  stand(-23.42,50.15,.81,.66,.924,'gunmetal');
-  put('copperDark',-23.66,.974,50.19,.286,.044,.36,.19);
-  props.folio(-23.66,Y+.997,50.19,.238,.284,pi*.55,6,{loose:true,thickness:.012});
-  put('canvas',-23.23,.954,50.08,.267,.021,.263,.13);
-  evidence.skull(-23.23,.954,50.08,1.92);
+  stand(WARD_CHART.x,WARD_CHART.z,.88,.66,WARD_CHART.top,'gunmetal');
+  put('fileKraft',WARD_CHART.pageX,.952,WARD_CHART.pageZ,.258,.012,.268);
+  props.folio(WARD_CHART.pageX,Y+.961,WARD_CHART.pageZ,.225,.239,pi,6,{loose:true,thickness:.009});
+  put('wardSteel',WARD_CHART.pageX,.972,WARD_CHART.pageZ+.120,.096,.014,.028);
+  line('gunmetal',WARD_CHART.pageX-.028,.983,WARD_CHART.pageZ+.120,
+    WARD_CHART.pageX+.028,.983,WARD_CHART.pageZ+.120,.005);
+  instrumentTray(-23.47,.950,49.96,.370,.192,pi*.96);
+  obj('wardEnamel',panShape,-23.12,Y+.948,50.003,.66,.84,.66);
+  put('infSheet',-23.74,.951,50.020,.186,.014,.172,.08);
+  evidence.skull(-23.74,.961,50.020,1.92);
 
   screenChair(-15.61,49.45,true);
   stand(-14.61,50.46,.62,.63,.930,'green');
-  for(let i=0;i<3;i++)bottle(-14.77+i*.147,.958,50.48,i);
+  for(let i=0;i<3;i++)bottle(-14.77+i*.147,.955,50.54,i,-pi/2);
+  obj('wardSteel',panShape,-14.64,Y+.955,50.29,.69,.67,.69);
   plaque('MATERIAL',['KONTROLLE / RESERVE'],x1-.039,1.82,49.39,1.11,.45,-pi/2);
 
   // The new staff passage owns the opening between the last cabinet run
@@ -245,10 +336,20 @@ export function addInfirmary(T,kit){
       for(const [row,y] of [.25,.75,1.24].entries())for(let j=0;j<6;j++){
         if(row===1&&j===4)continue;
         const h=.25+(j%3)*.032,u=x-.391+j*.149,v=z-.020+(j%2)*.06;
-        put(j%3===1?'leather':j%3===2?'rust':'darkWood',u,y+h*.5,v,.105,h,.408);
-        put('paper',u,y+.154,v-.207,.065,.074,.009);
-        put('gasket',u,y+.148,v-.214,.043,.006,.005);
-        put('gasket',u,y+.166,v-.214,.043,.006,.005);
+        const cover=['bookC','bookB','fileLinen'][j%3],d=.408-j%4*.034,w=.093+(j%3)*.013,F=v-d*.5;
+        put('leafEdge',u,y+h*.50,v,w-.011,h-.017,d-.019);
+        for(const s of [-1,1])put(cover,u+s*(w*.5-.006),y+h*.5,v,.012,h,d);
+        put(cover,u,y+h*.50,F+.005,w,h,.016);
+        for(const l of [.037,h-.043])put('brass',u,y+l,F-.004,w*.86,.007,.005);
+        put('paper',u,y+.146,F-.004,w*.63,.063,.005);
+        for(let l=0;l<3;l++)put('gasket',u+(l===1?.003:0),y+.129+l*.015,F-.008,w*(.25+.07*l),.003,.004);
+        line('gunmetal',u,y+.083,F-.004,u,y+.083,F-.011,.011);
+      }
+      for(const [u,h,w,d] of [[-.29,1.741,.315,.348],[.25,1.74,.32,.38]]){
+        put('fileKraft',x+u,h+.044,z,w,.086,d);
+        put('fileLinen',x+u,h+.094,z,w+.014,.026,d+.013);
+        put('wardSteel',x+u,h+.046,z-d*.512,.115,.061,.012);
+        put('paper',x+u,h+.046,z-d*.533,.090,.037,.004);
       }
       put('gunmetal',x,1.911,z-.291,1.006,.313,.109);
       plaque('STERBEAKTEN',['ABGESCHLOSSENE FÄLLE'],x,1.911,z-.371,.91,.253,pi,'red');
@@ -260,12 +361,17 @@ export function addInfirmary(T,kit){
       put('gunmetal',x,y,z-.352,1.011,.473,.055);
       line('brass',x-.17,y+.046,z-.394,x+.16,y+.046,z-.394,.018);
       grill('edge',x,y-.065,z-.389,.447,.127,pi);
+      const f=plane(x,Y+y,z-.388,pi);
+      for(const s of [-1,1])for(const h of [-.181,.181])fastener(f,s*.433,h,.010,.014,true);
     }
     hit(x-.561,x+.561,z-.407,z+.354);
   }
   stand(-19.74,52.82,2.53,.92,.967,'darkWood');
-  props.folio(-20.41,Y+.993,52.74,.31,.38,pi-.21,4,{thickness:.028});
-  for(let i=0;i<4;i++)bottle(-19.20+i*.135,.998,52.95,i);
+  for(let i=0;i<3;i++)props.folio(-20.47+i*.039,Y+.998+i*.029,52.66-i*.022,.31,.38,pi-.21+.12*i,4+i,{thickness:.028,loose:i===2});
+  for(let i=0;i<4;i++)bottle(-19.23+i*.154,.994,52.96,i+1);
+  instrumentTray(-19.67,.994,52.69,.37,.24,pi*.12);
+  obj('wardSteel',panShape,-18.79,Y+.994,52.57,1.06,1,1.06);
+  props.folio(-19.84,Y+.998,53.015,.331,.346,pi+.42,5,{loose:true,thickness:.012});
   dress.flag('wardRecords',-19.75,2.10,z1-.039,2.10,1.11,pi);
   plaque('PERSONALWEG',['HERKUNFTSSTELLE · INTERN'],-17.24,2.748,z1-.207,1.61,.329,pi,'blue');
   put('darkWood',-19.75,1.517,z1-.102,2.08,.050,.147);
@@ -273,4 +379,5 @@ export function addInfirmary(T,kit){
     put('wardBone',x,1.548,z1-.132,.085,.017,.018,angle);
   for(const [x,z] of [[-18.6,41.02],[-18.25,42.47],[-20.01,51.64]])stain(x,.006,z,.49,.83,0,3,-pi*.5);
   evidence.finish();
+  bottleShape.dispose();panShape.dispose();
 }

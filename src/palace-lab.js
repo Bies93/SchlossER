@@ -83,6 +83,11 @@ export function addPalaceLab(T,root,world,M,moosfunk){
     labFloorPatch:plain(0x747b6f,.91,sharedSet(T,'plaster',256)),
     infCloth:plain(0x667b75,1,{...fabric,side:T.DoubleSide}),infClothPale:plain(0xa8ad91,1,{...fabric,side:T.DoubleSide}),
     infSheet:plain(0xb3b19a,.94,fabric),infPad:plain(0x4f6054,.77,fabric),
+    wardSteel:plain(0x9baba9,.37,{metalness:.61,normalMap:enamel.normalMap,normalScale:new T.Vector2(.22,.22)}),
+    wardEnamel:plain(0xb8bcb0,.51,{...enamel,metalness:.12,normalScale:new T.Vector2(.39,.39)}),
+    wardGlass:plain(0x425c53,.27,{metalness:.20}),
+    cellTick:plain(0x8f8c73,.94,fabric),cellBlanket:plain(0x727663,.96,{...fabric,side:T.DoubleSide}),
+    cellCoat:plain(0x383f3a,.96,sharedSet(T,'plaster',256)),
     wardBone:plain(0xb4a789,.93,sharedSet(T,'plaster',256)),
     copper:plain(0xa86945,.78,{...enamel,metalness:.53}),copperDark:plain(0x694538,.91,{...enamel,metalness:.35}),
     porcelain:plain(0xbab4a2,.64),beerGlass:plain(0x784b22,.30,{metalness:.20}),
@@ -175,7 +180,7 @@ export function addPalaceLab(T,root,world,M,moosfunk){
       const dx=gateX-p.x,dz=centre-p.z,dist=Math.hypot(dx,dz);
       return p.y>-.20&&p.x<left-.035&&dist<2.02&&dx*look.x+dz*look.z>dist*.40?d:null;
     },
-    usable,staffTalk:deck.talk,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
+    usable,staffTalk:deck.talk,takeWardCue:deck.takeCue,visible:deck.visible,prepare:(renderer,scene)=>deck.prepare(renderer,scene,shaft),
     update(dt,p,lodgeShown=false,beat=null){
       let changed=false;
       if(d.progress!==d.target){

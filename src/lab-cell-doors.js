@@ -59,7 +59,14 @@ function swingDoor(T,root,world,M,x,z,span,{id,label,open,solid=false,utility=fa
   }else{
     for(const e of [0,span])box('edge',e-.032,e+.032,.05,2.425,-.045,.045);
     for(const y of [.086,.928,2.374])box('edge',.006,span-.006,y-.025,y+.025,-.038,.038);
-    for(let u=.124;u<span-.070;u+=.161)box('iron',u-.015,u+.015,.091,2.384,-.015,.015);
+    for(let u=.124;u<span-.070;u+=.161){
+      box('iron',u-.016,u+.016,.091,2.384,-.016,.016);
+      for(const y of [.928,2.369])box('gunmetal',u-.023,u+.023,y-.038,y+.038,-.022,.022);
+    }
+    for(const u of [.022,span-.022])for(const y of [.149,2.321]){
+      box('gunmetal',u-.025,u+.025,y-.049,y+.049,-.049,.049);
+      for(const depth of [-.055,.050])box('wardSteel',u-.011,u+.011,y-.010,y+.010,depth,depth+.005);
+    }
   }
   for(const y of (utility?[.34,1.68]:[.30,1.98]))box('brass',-.042,.078,y-.063,y+.063,utility?-.043:solid?-.118:-.052,utility?.043:solid?.118:.052);
   const latch=span-.127;

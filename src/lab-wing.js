@@ -494,7 +494,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     const id=seesHatch?'southStair':labCellAt(p.x,p.z,.015,p.y)||(opened&&p.x>=LAB_CUT.left-1.4&&p.x<LAB_CUT.left&&p.z>=LAB_CUT.back&&p.z<=LAB_CUT.front?'stairs':null);
     const active=!!id&&(labCameraMode(p)!=='surface'||opened&&id==='stairs'||seesHatch);
     let changed=deck.visible!==active;deck.visible=active;
-    if(!active){last='';phase=0;dim=1;return changed;}
+    if(!active){staff.update(null,p,0);last='';phase=0;dim=1;return changed;}
     for(const door of doors)changed=door.update(dt,p)||changed;
     changed=staff.update(id,p,dt)||changed;
     phase=(phase+dt)%7.2;
@@ -531,7 +531,7 @@ export function makeLabDeck(T,parent,world,materials,buildChamber){
     }
     return changed;
   };
-  return {update,target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,visible:()=>deck.visible,prepare(renderer,scene,shaft){
+  return {update,target:(p,look)=>cellDoorTarget(doors,p,look)??staff.target(p,look),talk:staff.talk,takeCue:staff.takeCue,visible:()=>deck.visible,prepare(renderer,scene,shaft){
     return preparation??=prewarm(renderer,scene,shaft);
   }};
 }
