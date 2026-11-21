@@ -5,6 +5,7 @@ import {BASIN,layParkPaths,woodlandDensity} from '../src/park-plan.js';
 import {planBeds} from '../src/parterre.js';
 import {CHAPTER_BAY_PATH} from '../src/chapter-layout.js';
 import {BERG_POOL} from '../src/berg-layout.js';
+import {FESTIVAL,festivalClear} from '../src/festival-layout.js';
 import {GARDEN_GATES,insidePerimeter} from '../src/world-layout.js';
 const net=pathNetwork(T),plan=layParkPaths(net);
 net.add(CHAPTER_BAY_PATH,1.66,'compact');
@@ -25,6 +26,10 @@ for(const {gate,path} of plan.approaches){
 for(const {path} of Object.values(GARDEN_GATES))assert.ok(net.edge(...path.at(-1))<-.8);
 assert.ok(net.edge(0,-21)<-1.8);
 assert.ok(net.edge(BERG_POOL.x,BERG_POOL.z)>.75);
+for(let x=-FESTIVAL.halfX;x<=FESTIVAL.halfX;x+=.27)for(let z=-FESTIVAL.halfZ;z<=FESTIVAL.halfZ;z+=.27){
+  const X=FESTIVAL.x+x,Z=FESTIVAL.z+z;
+  assert.ok(insidePerimeter(X,Z)&&festivalClear(X,Z,.02)&&net.edge(X,Z)>.23);
+}
 assert.ok(woodlandDensity(-6.15,-164.1)<.27);
 assert.ok(Math.abs(plan.ring.curve.getPointAt(0).x-BASIN.rx)<.04);
 console.log(b.strips.length+' Beete mit freien Übergängen, Toranschlüsse und Parkstandorte geprüft.');

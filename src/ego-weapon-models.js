@@ -264,6 +264,55 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
       if(reload>=.83)slide.position.z*=1-ramp(.88,.97,reload);
     }};
   }
+  if(type==='archive'){
+    // Fictional long-gun silhouette for the viewmodel. Closed, non-functional
+    // shells only; all coordinates are authored for first-person framing.
+    sculpt(m.darkWood,[[-.738,.017,-.026,.025],[-.612,.018,-.042,.031],[-.453,.025,-.053,.036],
+      [-.292,.032,-.056,.043],[-.138,.038,-.071,.043],[-.046,.024,-.084,.040],
+      [.033,.005,-.104,.034],[.103,-.010,-.119,.038],[.180,.008,-.136,.049],
+      [.263,.028,-.133,.061],[.326,.022,-.127,.055],[.345,.010,-.117,.046]],{power:.68,side:.10});
+    sculpt(m.wood,[[-.699,.032,.018,.024],[-.445,.043,.012,.030],[-.276,.047,.012,.036],
+      [-.128,.044,.013,.037]],{power:.71,side:.06,openEnd:true});
+    turned(m.blue,[[0,-.881],[.011,-.881],[.014,-.871],[.014,-.78],[.020,-.46],[.025,-.172],[.025,-.131],[0,-.131]],[0,.034,0]);
+    bezel(m.raw,[0,.034,-.877],.013,.008,.006);cyl(m.recess,[0,.034,-.875],.008,.0018);
+    const dressBand=z=>{
+      const r=z<-.60?.63:.85;
+      profile(m.blue,[[z+.021,-.045*r],[z+.021,.052],[z-.022,.054],[z-.023,-.043*r]],.064*r,0,.004);
+      pins([[.032*r,.006,z,.004]]);
+    };
+    dressBand(-.716);dressBand(-.531);
+    profile(m.blue,[[.072,.047],[.082,.026],[.039,-.017],[-.225,-.010],[-.245,.016],[-.228,.063],
+      [-.065,.075],[.036,.067]],.080,0,.0048);
+    profile(m.raw,[[.047,.069],[-.049,.080],[-.201,.077],[-.226,.062],[-.195,.057],[.031,.052]],.031,0,.0025);
+    profile(m.coat,[[.053,-.052],[.070,-.081],[.050,-.136],[-.062,-.146],[-.103,-.126],
+      [-.109,-.083],[-.078,-.061]],.052,0,.003,[[[.041,-.071],[.055,-.086],[.037,-.119],
+        [-.060,-.129],[-.084,-.115],[-.084,-.087],[-.064,-.076]]]);
+    profile(m.raw,[[.319,.013],[.342,.010],[.365,-.006],[.358,-.135],[.330,-.135],[.319,-.119]],.093,0,.0033);
+    box(m.raw,[0,.065,-.404],[.038,.018,.118],.0022);
+    profile(m.blue,[[-.783,.045],[-.797,.070],[-.833,.071],[-.848,.044]],.024,0,.0018);
+    iron(-.407,.087,true);iron(-.815,.091);
+    for(const z of [-.238,.121,.289])pins([[.038,-.022,z,.0055]]);
+    for(const s of [-1,1]){
+      stamp('FALKENRIED',s*.0426,.012,-.118,.123,.024);
+      profile(m.wood,[[.298,-.018],[.319,-.037],[.313,-.076],[.282,-.081],[.241,-.061],[.247,-.033]],.006,s*.052,.002);
+    }
+    const control=assembly('Falkenried · bewegliche Ziermechanik');
+    control.cyl(m.blue,[0,0,0],.012,.142,'z');
+    control.box(m.coat,[.033,-.015,.039],[.058,.018,.030],.003,[0,0,-.43]);
+    control.cyl(m.raw,[.067,-.029,.039],.011,.025,'z');
+    const root=A.build(),slide=control.build();
+    const token=new T.Mesh(new T.CylinderGeometry(.0065,.0078,.030,10),m.brass);
+    root.add(slide,token);
+    return {root,left,animate(age,{reload=-1,loaded=true}={}){
+      const open=ramp(.10,.25,reload)-ramp(.79,.93,reload),
+        reach=ramp(.02,.21,reload)-ramp(.85,1,reload),seat=ramp(.45,.66,reload);
+      slide.position.set(0,.044,-.013+.081*open);slide.rotation.z=.78*open;
+      token.visible=reload>=.42&&reload<.66;
+      token.position.set(-.084*(1-seat),.078+.052*(1-seat),-.082+.115*(1-seat));
+      token.rotation.x=Math.PI*.49;
+      left.set(-.061*reach,.100*reach,.348*reach);
+    }};
+  }
   // Amber: sculpted wood silhouette, longitudinal flutes, top and lower
   // decorative tubes on the same centerline. No interior geometry.
   // The grip panel is part of the walnut shader on this one shell. The

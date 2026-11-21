@@ -1,5 +1,6 @@
 // Model/dialogue ID -> local, bundled recording.
 export const NPC_VOICE_FILES=Object.freeze({
+  festZwanni:'festZwanni.mp3',festAnni:'festAnni.mp3',festKalle:'festKalle.mp3',festRudi:'festRudi.mp3',
   bergWirt:'dialog-michi-kerwa.mp3',bergLeni:'bergLeni.mp3',bergDora:'bergDora.mp3',
   bergFritz:'dialog-bons-fcn.mp3',bonsSchluchzen:'dialog-bons-schluchzen.mp3',bergUdo:'bergUdo.mp3',
   guestBruno:'bruno_reiter.mp3',guestMarlene:'marlene_vogel.mp3',guestSabine:'sabine_roth.mp3',

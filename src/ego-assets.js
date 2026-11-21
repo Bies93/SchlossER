@@ -16,7 +16,10 @@ export const EQUIPMENT=[
     fore:[0,-.077,-.397],grip:[0,-.119,.049],recovery:.752,recoil:.061,pattern:5,impact:25,range:43,spread:.036,weight:1.13},
   {kind:'pistol',label:'Alma 09 · Kompaktpistole',color:0x788082,
     sight:[0,.090,-.237],emit:[0,.033,-.272],hold:[.156,-.152,-.443],yaw:.164,
-    fore:[-.020,-.120,.002],grip:[0,-.100,.029],recovery:.205,recoil:.026,pattern:1,impact:38,range:70,spread:.0066,weight:.77}
+    fore:[-.020,-.120,.002],grip:[0,-.100,.029],recovery:.205,recoil:.026,pattern:1,impact:38,range:70,spread:.0066,weight:.77},
+  {kind:'archive',label:'Falkenried · Archivgewehr',color:0x99734e,
+    sight:[0,.087,-.403],emit:[0,.030,-.881],hold:[.185,-.160,-.555],yaw:.213,
+    fore:[0,-.072,-.448],grip:[0,-.121,.058],recovery:.47,recoil:.074,pattern:1,impact:89,range:158,spread:.0032,weight:1.21}
 ];
 
 export function egoAssets(T){

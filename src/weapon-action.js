@@ -3,7 +3,8 @@ export const LOADOUT={
   bow:{capacity:1,reserve:24,reload:1.36,cues:[[.50,'open'],[1.17,'close']]},
   rifle:{capacity:30,reserve:120,reload:1.64,cues:[[.54,'mag-out'],[1.17,'mag-in'],[1.41,'charge']]},
   shotgun:{capacity:6,reserve:36,reload:.62,cues:[[.41,'shell']],cycle:[[.27,'open'],[.62,'close']]},
-  pistol:{capacity:15,reserve:75,reload:1.24,cues:[[.31,'mag-out'],[.90,'mag-in'],[1.06,'charge']]}
+  pistol:{capacity:15,reserve:75,reload:1.24,cues:[[.31,'mag-out'],[.90,'mag-in'],[1.06,'charge']]},
+  archive:{capacity:1,reserve:24,reload:1.68,cues:[[.35,'archive-open'],[.91,'archive-seat'],[1.42,'archive-close']]}
 };
 
 export function weaponAction(spec){

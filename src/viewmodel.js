@@ -160,7 +160,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       fx.launch(origin,muzzle,projector.ray.direction,n);
       flash.visible=false;
     }else{
-      if(n.kind!=='shotgun')eject(n);
+      if(n.kind!=='shotgun'&&n.kind!=='archive')eject(n);
       flash.position.fromArray(n.emit);flash.visible=true;flash.rotation.z=(serial*2.39996)%6.28318;
       fx.beginVolley();let nearest=Infinity,material;
       for(let i=0;i<n.pattern;i++){
@@ -248,7 +248,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     if(armed){
       action.update(clock,cue=>{
         onAction(n.kind,cue);
-        if(cue==='open'&&n.kind==='shotgun')eject(n);
+        if((cue==='open'&&n.kind==='shotgun')||cue==='archive-open')eject(n);
       });
       if(clock>=nextWall){
         nextWall=clock+.085;camera.updateWorldMatrix(true,false);wallDistance=measureWall(n);
@@ -305,7 +305,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     if(flash.visible){
       effect=true;
-      const width=n.kind==='shotgun'?.053:n.kind==='pistol'?.026:.034,fade=1-age/(n.kind==='shotgun'?.059:.041),k=Math.max(0,fade);
+      const width=n.kind==='shotgun'?.053:n.kind==='archive'?.046:n.kind==='pistol'?.026:.034,
+        fade=1-age/(n.kind==='shotgun'||n.kind==='archive'?.059:.041),k=Math.max(0,fade);
       if(fade<=0)flash.visible=false;
       else{
         spark.scale.set(width*k*.51,width*k*.41,width*k*(n.kind==='rifle'?1.92:1.18));

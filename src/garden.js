@@ -16,6 +16,8 @@ import {ORANGERY_CENTER,orangeryWing,ORANGERY_PAVILION_X} from './orangery-plan.
 import {layParkPaths,woodlandDensity} from './park-plan.js';
 import {addGateApproaches} from './garden-approach.js';
 import {addPathVerge} from './path-verge.js';
+import {addParkFestival} from './park-festival.js';
+import {festivalClear} from './festival-layout.js';
 
 // Garden on the east side of the palace. Ground plan in metres, east is -Z.
 export function addGarden(T, scene, world, finish) {
@@ -45,7 +47,7 @@ export function addGarden(T, scene, world, finish) {
   const beds=planBeds(layout,network,(x,z)=>!noBergProps(x,z,1)&&insidePerimeter(x,z)&&!parkFacadeClearance(x,z,1.03)&&
     Math.hypot(Math.max(0,Math.abs(x)-4.75),z+47)>10.40);
   function tree(x,z,h,species,hero,mapped=false,infill=false,tone){
-    if(noBergProps(x,z,1.1))return;
+    if(noBergProps(x,z,1.1)||festivalClear(x,z,3.7))return;
     if(z>-18||(!mapped&&x<-21&&z>-88)||parkFacadeClearance(x,z,2)||monumentClear(x,z,1.3))return;
     if(!insidePerimeter(x,z)||distanceToPerimeter(x,z)<(infill?1.78:3.50)||network.edge(x,z)<1.23||beds.atBed(x,z,.25))return;
     if(!mapped&&Math.abs(x)<23&&z>-78)return;
@@ -113,7 +115,7 @@ export function addGarden(T, scene, world, finish) {
     [64,-190,7,5],[11,-124,3.8,4],[56,-58,3.6,3]]){
     for(let j=0;j<n;j++){
       const a=j*2.399,norm=spread*Math.sqrt((j+.4)/n),X=x+Math.cos(a)*norm,Z=z+Math.sin(a)*norm;
-      if(network.edge(X,Z)<1.58||!insidePerimeter(X,Z)||distanceToPerimeter(X,Z)<1.65
+      if(festivalClear(X,Z,.92)||network.edge(X,Z)<1.58||!insidePerimeter(X,Z)||distanceToPerimeter(X,Z)<1.65
         ||parkFacadeClearance(X,Z,1.4)||monumentClear(X,Z,.8))continue;
       shrubs.push([X,Z,range(.71,1.23)]);
     }
@@ -154,17 +156,19 @@ export function addGarden(T, scene, world, finish) {
     const wall=z<-247||Math.abs(x)>68?distanceToPerimeter(x,z):8;
     const formal=(Math.abs(x)<29&&z>-74)||(x< -33&&x> -60&&z> -84&&z< -32);
     const verge=Math.max(.25,Math.min(1,(edge+.04)*2.37));
-    return (formal?.92+patch*.07:.78+patch*.20)*verge*(wall<1.4?.68:1);
+    const tread=festivalClear(x,z,-.45)?.66:1;
+    return (formal?.92+patch*.07:.78+patch*.20)*verge*(wall<1.4?.68:1)*tread;
   },terrain.height,shrubs);
   const flowers=addBeds(T,group,terrain.height,beds);
-  const verge=addPathVerge(T,group,network,terrain.height,(x,z)=>!noBergProps(x,z,.34)&&!beds.atBed(x,z,.14)&&
+  const verge=addPathVerge(T,group,network,terrain.height,(x,z)=>!noBergProps(x,z,.34)&&!festivalClear(x,z,.24)&&!beds.atBed(x,z,.14)&&
     !chapterContains(CHAPTER_CUT,x,z,.35)&&!monumentClear(x,z,.20)&&!parkFacadeClearance(x,z,.15));
   const bench=addBenches(T,group,world,terrain.height);
   const orangery=addOrangery(T,group,world,finish);
   addParkArchitecture(T,group,world,finish);
   addParkMonuments(T,group,world,terrain.height,finish);
+  const festival=addParkFestival(T,scene,world,terrain.height);
   return {
-    floors,bench,benchCover,orangery, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
+    floors,bench,benchCover,orangery,festival, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
     surfaceAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?(network.edge(x,z)<.17?'gravel':'lawn'):approaches.surfaceAt(x,z),
     update:(position,time,quality)=>{plants(position,time,quality);flowers(position,quality);verge(position)}
   };

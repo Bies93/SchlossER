@@ -3,6 +3,10 @@
 const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
 const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
+  festZwanni:{name:'Zwanni',template:'guestJona',line:"Der Boden fällt nach links ab. Die Scheibe hängt zu weit rechts. An mir liegt’s jedenfalls nicht."},
+  festAnni:{name:'Anni · Theke',template:'guestSabine',line:"In Uehlfeld ist besser. Da fragt wenigstens keiner, ob wir das Bier auch warm haben."},
+  festKalle:{name:'Kalle · Playlist',template:'clubNiko',line:"Die Playlist läuft auf meinem alten Laptop. Seit da Bier drin ist, spielt er nur noch Stimmungsmusik."},
+  festRudi:{name:'Rudi · Schreiber',template:'guestBruno',line:"Der Zwanni wird seit fünfzehn Jahren nicht besser. Aber beim Ausredenwerfen ist er Bezirksmeister."},
   bergWirt:{name:'Kerwas Michi',template:'labSepp',line:'Halb besoffen ist rausgeschmissenes Geld!'},
   bergLeni:{name:"Leni Beck · Schankkellnerin",template:'guestSabine',line:"Früher hat mei Mutter die Maß ohne Strich ausg’schenkt. Der Strich war am Deckel. Schau, der da is noch von vor der Flut."},
   bergDora:{name:"Dora Pfister · Stammgast",template:'guestMarlene',line:"Alla, früher ham mer für die letzte Runde a Bleim g’sunga. Heut sing mer’s nimmer. Sonst könnt’s ja wirklich die letzte sei."},

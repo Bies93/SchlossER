@@ -46,6 +46,16 @@ export function weaponPickups(T,vm,wc,chapter,query,scene,floorHeight,world){
     g=>chapter.attach('chapter',g),[9.75,chapter.floor+.61,-37.72]);
   add(3,'Alma 09 · Kompaktpistole',GALLERY_PISTOL,[0,.15,Math.PI*.5],.91,0,
     g=>scene.add(g),null,'surface');
+  const archiveX=54.03,archiveZ=48.47,archiveY=floorHeight(archiveX,archiveZ);
+  add(4,'Falkenried · Archivgewehr',[archiveX+.062,archiveY+.76,archiveZ+.26],[0,.24,Math.PI*.49],1.05,0,
+    g=>scene.add(g),null,'surface');
+  const stand=new T.Group(),timber=new T.MeshStandardMaterial({color:0x69523c,roughness:.86});
+  stand.position.set(archiveX,archiveY,archiveZ);stand.name='Übungsstand · Ablage für das Archivgewehr';
+  for(const [x,y,z,w,h,d] of [[0,.716,0,.86,.088,1.26],[0,.086,0,.88,.062,1.25],
+    [-.32,.39,-.45,.092,.69,.095],[.32,.39,-.45,.092,.69,.095],[-.32,.39,.45,.092,.69,.095],[.32,.39,.45,.092,.69,.095]]){
+    const p=new T.Mesh(new T.BoxGeometry(w,h,d),timber);p.position.set(x,y,z);p.receiveShadow=true;p.castShadow=true;stand.add(p);
+  }
+  scene.add(stand);world.platform(archiveX-.44,archiveZ-.63,archiveX+.44,archiveZ+.63,archiveY+.76);
   // One predictable resupply point at the existing practice range.
   const box=new T.Group(),x=55.12,z=47.18,y=floorHeight(x,z);
   const green=new T.MeshStandardMaterial({color:0x515944,roughness:.77});

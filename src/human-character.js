@@ -16,6 +16,10 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
+  festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x3c2a22,weather:.15,bulk:1.30,mess:.93},
+  festAnni:{palette:[0x534752,0xbc7773,0xd1ac89],hair:0x715443,weather:.13,bulk:1.10,mess:.64},
+  festKalle:{palette:[0x303a4a,0xd18a55,0xd1a881],hair:0x624337,weather:.11,bulk:1.18,mess:.87},
+  festRudi:{palette:[0x51483d,0x7b89ac,0xc7af8b],hair:0x8e714f,weather:.18,bulk:1.25,mess:.76},
   bergWirt:{palette:[0x49372d,0xc2ac8b,0xe2cbb0],bodice:0x994538,hair:0x94775d,weather:.22},
   bergLeni:{palette:[0x514041,0xbbb99f,0xe3cfb4],bodice:0x266050,hair:0x684031,weather:.09},
   bergDora:{palette:[0x4a3044,0x917b9d,0xc5a995],bodice:0x75384a,hair:0xada39c,weather:.17},
@@ -221,15 +225,16 @@ export function createHuman(T,id='base'){
   const lib=libraries.get(T);if(!lib)throw Error('Human GLB not loaded');
   const proto=lib.models.get(id);if(!proto)throw Error('Unknown human: '+id);
   const actor=new T.Group(),body=clone(proto),bones=new Map(),faces=[],meshes=[];
+  const style=wear[id],bulk=style?.bulk??(id==='gardenHannes'?1:0);
   actor.name=id;actor.add(body);body.scale.multiplyScalar(proto.userData.size??1);
   const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
   body.traverse(o=>{
     if(id.startsWith('berg')&&/^(Insignia|Bortenstreifen|Messinganhänger|Besatz|Stoff)/.test(o.name))o.visible=false;
     if(o.isBone)bones.set(o.userData.name??o.name,o);
     if(o.isSkinnedMesh){
-      if(id==='gardenHannes'){
+      if(bulk){
         const type=o.material.name??'';
-        if(/^Hair/.test(type)){o.visible=false;return;}
+        if(id==='gardenHannes'&&/^Hair/.test(type)){o.visible=false;return;}
         if(/^Cloth/.test(type)){
           // A heavier build in bind space: the clothes stay on the normal animated skeleton.
           const g=o.geometry.clone(),p=g.attributes.position,sm=T.MathUtils.smoothstep;
@@ -237,7 +242,23 @@ export function createHuman(T,id='base'){
             const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
             const belly=sm(y,.80,.99)*(1-sm(y,1.19,1.43))*(1-sm(Math.abs(x),.22,.36));
             const thighs=sm(y,.40,.59)*(1-sm(y,.84,.97));
-            p.setXYZ(i,x*(1+.30*belly+.12*thighs),y,z*(1+.48*belly+.14*thighs)+.051*belly*sm(z,-.012,.10));
+            p.setXYZ(i,x*(1+bulk*(.32*belly+.15*thighs)),y,
+              z*(1+bulk*(.49*belly+.14*thighs))+.056*bulk*belly*sm(z,-.012,.10));
+          }
+          g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;
+        }
+        if(style?.mess&&/^Hair/.test(type)){
+          // Tussle the existing hair cards together in bind space, so there
+          // are no new meshes/materials to draw on any of the four heads.
+          const g=o.geometry.clone(),p=g.attributes.position,sm=T.MathUtils.smoothstep;
+          g.computeBoundingBox();
+          const {min,max}=g.boundingBox,cx=(min.x+max.x)*.5,cz=(min.z+max.z)*.5,band=max.y-min.y;
+          for(let i=0;i<p.count;i++){
+            const x=p.getX(i),y=p.getY(i),z=p.getZ(i),u=x-cx,v=z-cz;
+            const a=Math.atan2(v,u),tuft=Math.sin(a*7+z*25)*.55+Math.sin(a*11+x*30)*.45;
+            const r=style.mess*sm(y,min.y+band*.21,min.y+band*.78);
+            p.setXYZ(i,cx+u*(1+r*(.25+.18*tuft))+.016*r*Math.sin(a*3),y+r*(.042+.034*tuft),
+              cz+v*(1+r*(.21+.15*tuft))+.008*r*Math.cos(a*4));
           }
           g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;
         }
@@ -561,6 +582,29 @@ export function createHuman(T,id='base'){
     face(t,role*1.121+.65,talk*(.52+.28*Math.abs(sin(t*14.7)))+heave*.24,.022+sob*.27,
       (role===2?.063:role===0?.092:.027)*(1-sob),glance,sob*.65);
   }
+  function festivalPose(t,role,phase,look=0,talk=0){
+    const zw=role===0,bar=role===1,stage=role===2,weight=sin(t*1.09),
+      draw=(progress(.12,.43,phase)-progress(.47,.54,phase))*(talk>0?0:1),
+      throwOut=(progress(.43,.55,phase)-progress(.61,.79,phase))*(talk>0?0:1),
+      gesture=talk*.68*(.7+.3*sin(t*4.9)),
+      wipe=bar?(.5+.5*sin(t*1.58))*(1-talk):0;
+    torso(weight*.015,-.022-.024*throwOut,0,.038+.194*throwOut+(bar?.074:0),
+      .125*(throwOut-draw)+weight*.038,.014*weight,t,look,zw?-.048*draw+.075*throwOut:stage?-.04:.036);
+    for(const [i,s] of ['l','r'].entries()){
+      const sign=i===0?1:-1,a=read('foot_'+s);
+      solve(LIMB[s].leg,a.x*1.07,a.y,a.z+(zw?sign*.112:sign*.026),sign*.19,-.045,1);
+      foot('foot_'+s,0,sign*.08);
+      let x=sign*(.232+.071*gesture),y=hipsY-.14+.32*gesture,z=.057+gesture*.17;
+      if(zw&&i===1){x=-.206+.072*throwOut;y+=.685*draw+.56*throwOut;z+=.235*draw+.58*throwOut;}
+      if(bar){x+=wipe*.112;y+=.36;z+=.25+.078*wipe;}
+      if(stage){y+=.29+.016*sin(t*5+i);z+=.26+(i===1?.065:.045)*sin(t*2.23+i)-.12*gesture;}
+      if(role===3){y+=.25;z+=.26+.032*sin(t*2.5+i);}
+      solve(LIMB[s].arm,x,y,z,sign*.76,-.45,-.48);
+      rot('hand_'+s,.08+.38*draw-.29*throwOut+.21*wipe-(stage?.24:0),sign*.19,.13*sign);
+      curl(s,zw&&i===1?.55+.43*draw-.31*throwOut:bar?.26:.39);
+    }
+    face(t,5.4+role,talk,.056,stage?.036:0,look);
+  }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);
     torso(.007*sin(t*1.2),home-hipsY+.003*sin(t*1.65),.07*rise,.028+.21*rise,
@@ -835,7 +879,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

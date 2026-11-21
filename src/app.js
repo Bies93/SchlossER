@@ -173,7 +173,7 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall,payload.bergMusic);
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall,payload.bergMusic,payload.festivalMusic);
  // Audio owns the URLs it can still request. Do not pin a second copy of the
  // finished GLBs/textures as base64 strings in the standalone version.
  payload=null;
@@ -551,10 +551,12 @@ async function start(){
      if(chapter.shadowMoved())r.shadowMap.needsUpdate=true;
      const {layer,mask}=activeLayers();
      audio.berg(layer===BERG_LAYER,tavern.musicianAlive());
+     audio.festival(layer===0?player.body.position:null);
      if(puddle.update(dt,player.body.position,layer===0,c,audio.bergPhase()))dirty=true;
      if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
+     if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      geometryQuery.invalidateMoving();
      if(prisonerCaption!==null&&(prisonerCaption!==captionId||!chapter.prisonerAt(player.body.position)))leavePrison();
      if(state.shadow)r.shadowMap.needsUpdate=true;
@@ -693,7 +695,7 @@ async function start(){
  await viewmodel.prepare(r);
  const parkWarmup=performance.now();
  await puddle.prepare(r);
- await weather.prepare(r,[puddle.root,garden.orangery]);
+ await weather.prepare(r,[puddle.root,garden.orangery,garden.festival.root]);
  performance.measure('schlosser: Orangerie und Pfütze',{start:parkWarmup,end:performance.now()});
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
