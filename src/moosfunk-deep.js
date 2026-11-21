@@ -43,7 +43,7 @@ export function deepMaterials(T,{painted,stone,cloth,wood}){
     deepRose:lamp(0xf09d97,0xee797d,.67),deepBlue:lamp(0xa9ccd2,0x81bbcb,.74),
     violetGlass:lamp(0xb1a0c9,0xa180e4,.60),orbStone:grain(0x414747,.65,.79),
     oldGilt:m(0xc39c59,.49,{...painted,metalness:.43}),blackBasalt:grain(0x55464b,.83,.73),
-    relicBone:grain(0xbda781,.31,.88),boneShade:m(0x382c28,.95)
+    relicBone:grain(0xbda781,.31,.88),relicEnamel:m(0xb6a07d,.66)
   };
 }
 

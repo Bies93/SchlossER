@@ -1,4 +1,5 @@
 import {p,DEEP_FLOOR as floor} from './park-wc-layout.js';
+import {skullProp} from './skull-prop.js';
 
 // Faceted cast leaves and pierced arches give these ritual pieces a silhouette
 // at the door as well as legible engraving at arm's length. Static geometry
@@ -76,17 +77,10 @@ export function shrineCraft(T,m,{B,pipe,ball,drum,disk,line,hit,votive,stamp}){
         A(x+.030,h-.002,z+.007),'deepCopper','oldGilt');
     }
   }
-  function skull(U,y,V,s,angle=0){
-    const P=(x,h,z)=>[U+s*(x*Math.cos(angle)-z*Math.sin(angle)),y+h*s,V+s*(z*Math.cos(angle)+x*Math.sin(angle))];
-    const oval=(mat,x,h,z,a,b,c)=>ball(mat,...P(x,h,z),a*s,b*s,c*s,-angle);
-    oval('relicBone',0,.133,0,.108,.127,.131);
-    oval('relicBone',0,.069,.066,.089,.059,.080);
-    for(const sign of [-1,1]){
-      oval('boneShade',sign*.049,.120,.104,.033,.034,.022);
-      oval('relicBone',sign*.082,.080,.092,.018,.016,.027);
-      for(let j=0;j<4;j++)oval('relicBone',sign*(.009+j*.015),.039,.139-j*.004,.009,.013,.007);
-    }
-    oval('boneShade',0,.080,.142,.013,.018,.007);
+  function skull(U,y,V,s,angle=0,variant=0){
+    // On the jawless specimen the upper row sits just above the shelf.
+    skullProp(T,m.k,{at:p(U,floor+y-(variant===3?.043*s:0),V),yaw:-Math.PI/2-angle,scale:s,
+      bone:'relicBone',enamel:'relicEnamel',variant});
   }
   function charnel(U,V){
     const shelfU=-24.41,shelfV=-7.89;
@@ -113,7 +107,7 @@ export function shrineCraft(T,m,{B,pipe,ball,drum,disk,line,hit,votive,stamp}){
       }
     }
     for(const [i,[h,z]] of [[.28,-.41],[.28,.20],[.83,-.42],[.83,.04],[.83,.39]].entries())
-      skull(shelfU+.05,h,shelfV+z,.91+i*.045,-1.86+i*.14);
+      skull(shelfU+.05,h,shelfV+z,.91+i*.045,-1.86+i*.14,[1,0,3,2,1][i]);
     for(let j=0;j<9;j++){
       const z=shelfV-.54+(j%5)*.20,x=shelfU-.15+.032*(j%3),h=.327+(j>4?.068:0);
       const a=[x,h,z],b=[x+.28,h+.018,z+.08*Math.sin(j*11)];
@@ -142,7 +136,7 @@ export function shrineCraft(T,m,{B,pipe,ball,drum,disk,line,hit,votive,stamp}){
     const cu=U+.86,cv=V-.24;
     profile('deepCopper',cu,cv,[[0,1.025],[.105,1.025],[.088,1.066],[.137,1.108],[.178,1.209],[.171,1.220],[.157,1.207],[.115,1.115],[.063,1.089],[0,1.088]],24);
     drum('wine',cu,1.106,cv,.093,.005);
-    skull(U-.84,1.023,V+.22,.98,.16);
+    skull(U-.84,1.023,V+.22,1.03,.16,2);
     for(let i=0;i<7;i++){
       const x=U-.91+.293*i,h=.943,z=V+.582;
       relief([[x-.10,h,z],[x,h+.047,z],[x+.10,h,z],[x,h-.047,z]],[x,h,z+.019],'deepCopper','blackBasalt');

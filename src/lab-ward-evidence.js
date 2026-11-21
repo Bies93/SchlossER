@@ -1,5 +1,6 @@
 import {LAB} from './lab-layout.js';
 import {randomSource} from './surface-detail.js';
+import {skullProp} from './skull-prop.js';
 
 const TAU=2*Math.PI,marks=['cloth','pool','spray','wipe'];
 
@@ -66,27 +67,7 @@ export function wardEvidence(T,{root:room,k,dress}){
     const mesh=new T.Mesh(g,mat);mesh.name='Behandlungsstation · alte Blutflecken';room.add(mesh);
   }
   function skull(x,y,z,angle){
-    const geo=new T.SphereGeometry(1,16,10),m=new T.Matrix4(),s=new T.Vector3();
-    const f=dress.plane(x,LAB.floor+y,z,angle);
-    const part=(mat,u,v,d,a,b,c)=>{
-      m.makeRotationY(angle).scale(s.set(a,b,c));m.setPosition(...f(u,v,d));k.geometry(mat,geo,m);
-    };
-    part('wardBone',0,.149,-.029,.097,.097,.100);
-    part('wardBone',0,.178,.026,.087,.055,.056);
-    part('wardBone',0,.084,.038,.072,.045,.055);
-    for(const side of [-1,1]){
-      part('wardBone',side*.065,.103,.038,.033,.019,.048);
-      part('gasket',side*.038,.132,.079,.029,.028,.016);
-      part('wardBone',side*.063,.064,.029,.023,.042,.053);
-    }
-    part('gasket',0,.087,.085,.015,.020,.010);
-    part('wardBone',0,.141,.083,.011,.025,.016);
-    part('wardBone',0,.033,.060,.062,.022,.041);
-    for(let i=0;i<6;i++){
-      const x=(i-2.5)*.014,z=.079+(.017-.003*Math.abs(i-2.5));
-      k.box('wardBone',f,x-.005,x+.005,.047,.068,z-.015,z+.006);
-    }
-    geo.dispose();
+    skullProp(T,k,{at:[x,LAB.floor+y,z],yaw:angle,bone:'wardBone',enamel:'wardBoneEnamel'});
   }
   return {surface,mark,finish,skull};
 }

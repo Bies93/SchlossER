@@ -89,6 +89,7 @@ export function addPalaceLab(T,root,world,M,moosfunk){
     cellTick:plain(0x8f8c73,.94,fabric),cellBlanket:plain(0x727663,.96,{...fabric,side:T.DoubleSide}),
     cellCoat:plain(0x383f3a,.96,sharedSet(T,'plaster',256)),
     wardBone:plain(0xb4a789,.93,sharedSet(T,'plaster',256)),
+    wardBoneEnamel:plain(0xbfb193,.57),
     copper:plain(0xa86945,.78,{...enamel,metalness:.53}),copperDark:plain(0x694538,.91,{...enamel,metalness:.35}),
     porcelain:plain(0xbab4a2,.64),beerGlass:plain(0x784b22,.30,{metalness:.20}),
     gasket:plain(0x252c2b),brass:plain(0xad8960,.59,{metalness:.51}),

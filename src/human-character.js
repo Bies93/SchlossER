@@ -296,16 +296,23 @@ export function createHuman(T,id='base'){
       const direction=rest.has(next)?read(next).clone().sub(read(name)):read(name).clone().sub(read(f+'_0'+(i-1)+'_'+side));
       const bq=rest.get(name).axis.clone().invert();
       const axis=V().crossVectors(direction,palm).applyQuaternion(bq).normalize();
-      curls.push({b,name,axis,angle:f==='thumb'?[.33,.48,.30][i-1]:[.77,1.09,.68][i-1]});
+      curls.push({b,name,f,axis,angle:f==='thumb'?[.33,.48,.30][i-1]:[.77,1.09,.68][i-1]});
     }
     const socketInv=socket.quaternion.clone().invert(),parentQ=Q(),curlQ=Q(),wristQ=Q(),offset=V();
-    return {socket,wristAt(point,desired,out){
+    const palmSign=Math.sign(palm.dot(x));
+    return {socket,palmSign,orient(back,toward){
+      const Y=back.normalize(),X=toward.addScaledVector(Y,-toward.dot(Y)).normalize().multiplyScalar(palmSign);
+      return Q().setFromRotationMatrix(new T.Matrix4().makeBasis(X,Y,V().crossVectors(X,Y)));
+    },wristAt(point,desired,out){
       wristQ.copy(desired).multiply(socketInv);
       return out.copy(point).sub(offset.copy(socket.position).applyQuaternion(wristQ).multiplyScalar(size));
     },hold(desired,tension=1){
       w.parent.getWorldQuaternion(parentQ).invert();
       w.quaternion.copy(parentQ).multiply(desired).multiply(socketInv);
-      for(const {b,name,axis,angle} of curls)b.quaternion.copy(rest.get(name).q).multiply(curlQ.setFromAxisAngle(axis,angle*tension));
+      for(const {b,name,f,axis,angle} of curls){
+        const weight=typeof tension==='number'?tension:tension[f];
+        b.quaternion.copy(rest.get(name).q).multiply(curlQ.setFromAxisAngle(axis,angle*weight));
+      }
     }};
   }
   function archivePose(){
@@ -342,10 +349,14 @@ export function createHuman(T,id='base'){
     face(t,job.length,speech,.08,0,glance);
   }
   function chartPose(pencil){
-    const left=grip('l'),right=grip('r'),target=V(),wrist=V(),y=V(0,.66,.75).normalize(),x=V(1,0,0);
-    const penQ=Q().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,V().crossVectors(x,y)));
-    const pageQ=Q().setFromRotationMatrix(new T.Matrix4().makeBasis(V(0,1,0),V(0,0,1),V(1,0,0)));
-    const nib=V(0,-.089*size,0).applyQuaternion(penQ);
+    const left=grip('l'),right=grip('r'),target=V(),wrist=V();
+    const penQ=right.orient(V(.27,.33,.90),V(-.52,-.85,.06));
+    const pageQ=left.orient(V(-.08,.25,.96),V(0,-1,0));
+    const pinch={index:.46,middle:.53,ring:.86,pinky:.91,thumb:.74};
+    const shaft=V(.38,.69,.61).normalize(),penLocal=shaft.clone().applyQuaternion(penQ.clone().invert());
+    pencil.quaternion.setFromUnitVectors(V(0,1,0),penLocal);
+    pencil.position.set(right.palmSign*.008,-.025,.025);
+    const nib=pencil.position.clone().applyQuaternion(penQ).addScaledVector(shaft,-.089).multiplyScalar(size);
     right.socket.add(pencil);
     return (t,chart,glance=0,talk=0)=>{
       const stroke=(t%5.4)/1.8,writing=1-clamp(talk*2.5),line=Math.floor(stroke),p=stroke-line;
@@ -358,12 +369,12 @@ export function createHuman(T,id='base'){
         const side=s==='l'?1:-1,ankle=read('foot_'+s);
         solve(LIMB[s].leg,ankle.x*.95,ankle.y,ankle.z+side*.028,side*.16,0,1);foot('foot_'+s,0,side*.10);
         const l=s==='l',socket=l?left:right,desired=l?pageQ:penQ;
-        if(l)target.set(chart.x-.091,chart.y+.013,chart.z+.055);
+        if(l)target.set(chart.x-.091,chart.y+.023,chart.z+.055);
         else target.set(chart.x+cursorX*writing,chart.y+.006+lift+(1-writing)*.047,
           chart.z+cursorZ*writing+.035*(1-writing)).sub(nib);
         socket.wristAt(target,desired,wrist).applyMatrix4(worldInverse);
         solve(LIMB[s].arm,wrist.x,wrist.y,wrist.z,side*.68,-.56,-.42);
-        socket.hold(desired,l?.075:.63);
+        socket.hold(desired,l?.075:pinch);
       }
       face(t,4.18,talk,.022,0,glance);
     };

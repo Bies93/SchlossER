@@ -8,13 +8,13 @@ export function gripHands(T,specs){
   const ellipsoid=new T.SphereGeometry(1,20,14);
   const neutral=new T.Color(1,1,1),flush=new T.Color(1,.79,.74);
   const poses=specs.map(spec=>{
-    const pistol=spec.kind==='pistol',group=new T.Group(),nodes=[],wrists=[
-      pistol?v(-.077,-.050,.093):v(-.107,-.035,.083),v(.055,-.043,.094)];
+    const pistol=spec.kind==='pistol',bow=spec.kind==='bow',group=new T.Group(),nodes=[],wrists=[
+      pistol?v(-.077,-.050,.093):bow?v(-.092,-.044,.089):v(-.107,-.035,.083),v(.055,-.043,.094)];
     group.name='Griffpose · '+spec.kind;
     for(const [hand,w] of wrists.entries()){
       const node=new T.Group();node.position.fromArray(hand===0?spec.fore:spec.grip);
       group.add(node);nodes.push(node);
-      const wrist=w.toArray(),bow=spec.kind==='bow';
+      const wrist=w.toArray();
       const bins=new Map();
       function add(material,geo){
         if(material===skin&&!geo.hasAttribute('color')){
@@ -90,15 +90,28 @@ export function gripHands(T,specs){
         }
         finger([[-.035,.008,.058],[-.025,.034,.047],[-.018,.050,.018],[-.016,.052,-.010]],
           [.014,.011,.008],[-1,.4,0]);
+      } else if(bow){
+        // Palm cradles the stock. From the camera side only the thumb
+        // crosses the visible wood; the other digits close on the far side.
+        form([wrist,[-.062,-.035,.060],[-.034,-.028,.035],[.008,-.024,.014]], [.024,.025,.013]);
+        oval(skin,[.006,-.023,.015],[.042,.018,.043],-.09);
+        oval(skin,[-.032,-.015,.032],[.021,.021,.029],-.34);
+        for(let i=0;i<4;i++){
+          const z=-.028+i*.020,L=[.034,.039,.036,.028][i],r=i===3?.0075:.009;
+          finger([[.024,-.024,z+.009],[.047,-.014,z+.004],[.055,.007,z],
+            [.052,L*.74,z-.002],[.043,L,z-.006]],[r+.002,r+.001,r*.9],[1,.25,0]);
+        }
+        finger([[-.036,-.021,.045],[-.049,-.007,.030],[-.049,.012,.015],[-.043,.031,.000],[-.034,.039,-.013]],
+          [.015,.012,.0095],[-1,.18,-.19]);
       } else {
-        const w=spec.kind==='shotgun'?.051:bow?.043:.047;
+        const w=spec.kind==='shotgun'?.051:.047;
         form([wrist,[-.072,-.035,.049],[-.039,-.021,.020],[-.023,-.015,.007]], [.024,.025,.012]);
         oval(skin,[-.027,-.019,.014],[.037,.018,.042],-.15);
         oval(skin,[-.005,-.012,.034],[.023,.017,.027],.15);
         for(let k=0;k<4;k++){
           const z=-.028+k*.020,reach=[.030,.041,.038,.027][k],r=k===3?.0075:.009;
           finger([[-.041,-.021,z+.008],[-w-.012,-.008,z+.005],
-            [-w-.015,.016,z+.002],[-w-.008,reach*.85,z],[-w+(bow?.009:.001),reach,z-.005]],
+            [-w-.015,.016,z+.002],[-w-.008,reach*.85,z],[-w+.001,reach,z-.005]],
             [r+.002,r+.0008,r*.88],[-1,.25,0]);
         }
         finger([[-.005,-.016,.048],[w*.56,-.015,.045],[w+.006,.005,.035],[w+.005,.026,.022]],

@@ -354,9 +354,12 @@ function ceramic(s){
         [x+Math.cos(a+.08)*r*.996,.047+h*.475,z+Math.sin(a+.08)*r*.996],.0019);
     }
   }
-  panel('blueFelt',.706,.052,.504,.648);
+  // This insert sits on top of the linen panel. A second panel() would
+  // place both finish surfaces at exactly .031 and fight for the depth buffer.
+  box('binding',.706,.028,.052,.519,.009,.661);
+  box('blueFelt',.706,.033,.052,.504,.006,.648);
   for(const [i,[x,z,w,h]] of [[.605,-.114,.206,.227],[.771,.086,.176,.208],[.649,.243,.121,.119]].entries()){
-    const y=.058+i*.005;
+    const y=.039+i*.006;
     put(i%2?'buffClay':'redClay','potFragment',x,y,z,w,h,.016,-pi/2+.095*i,.63*i);
     if(i===0)put('potterySlip','ring',x-.027,y+.020,z+.010,.045,.033,.035,-pi/2);
   }

@@ -16,7 +16,7 @@ export function addPalaceRavens(T,scene,floor,onCall){
     const y=floor(x,z),size=i?.947:1.045,sign=i?1:-1,bearing=i?.52:-.67;
     bird.scale.setScalar(size);bird.position.set(x,y,z);bird.rotation.y=yaw;
     const shade=contactShadow(T,root,x,y+.005,z,.50,.48);
-    return {bird,body,head,tail,jaw,shade,x,y,z,yaw,sign,bearing,size,flinch:0,feathers:[],
+    return {bird,body,head,tail,jaw,shade,x,y,z,yaw,sign,bearing,size,alive:true,fall:null,feathers:[],
       wings:body.children.filter(n=>n.name==='Flügelschulter'),
       folds:body.children.filter(n=>n.name==='Gefalteter Flügel'),
       feet:body.children.filter(n=>n.name==='Fänge')};
@@ -39,7 +39,7 @@ export function addPalaceRavens(T,scene,floor,onCall){
     if(!root.visible||phase==='gone')return null;
     let best=null;
     for(const b of flock){
-      if(!b.bird.visible||ray.origin.distanceToSquared(b.bird.position)>(limit+.7)**2)continue;
+      if(!b.alive||!b.bird.visible||ray.origin.distanceToSquared(b.bird.position)>(limit+.7)**2)continue;
       b.body.updateWorldMatrix(true,false);
       matrix.multiplyMatrices(b.body.matrixWorld,hull);inverse.copy(matrix).invert();
       local.copy(ray).applyMatrix4(inverse);
@@ -52,14 +52,44 @@ export function addPalaceRavens(T,scene,floor,onCall){
     return best;
   }
   function damage(b,at,direction){
-    if(b.flinch>.19||!b.bird.visible)return false;
-    b.flinch=.33;
+    if(!b.alive||!b.bird.visible)return false;
+    b.alive=false;
     if(phase==='perched'){phase='flight';age=0;}
     impact.set(0,0,0);if(direction)impact.copy(direction).normalize();
+    const from=b.bird.position,air=from.y-floor(from.x,from.z);
+    const glide=air>.16?2.2:0;
+    b.fall={t:0,landed:null,side:b.sign,roll:b.body.rotation.z,pitch:b.body.rotation.x,
+      vx:impact.x*.61+Math.sin(b.bird.rotation.y)*glide,
+      vz:impact.z*.61+Math.cos(b.bird.rotation.y)*glide,vy:air>.16?.23:.13};
     for(const [i,f] of b.feathers.entries()){
       const a=i*2.399963+clock,s=.60+(i%4)*.22;
       f.time=.70+i*.031;f.roll=a;
       f.p.copy(at??b.bird.position);f.v.set(Math.cos(a)*s,.51+(i%5)*.18,Math.sin(a)*s).addScaledVector(impact,.39);
+    }
+    return true;
+  }
+  function fallTick(b,dt){
+    const f=b.fall;
+    if(!f)return false;
+    f.t+=dt;
+    const p=b.bird.position;
+    if(f.landed===null){
+      f.vy-=9.3*dt;p.x+=f.vx*dt;p.z+=f.vz*dt;p.y+=f.vy*dt;
+      const ground=floor(p.x,p.z);
+      if(p.y<=ground){p.y=ground;f.landed=f.t;b.shade.visible=false;}
+    }else if(f.t-f.landed>.52){b.fall=null;return true;}
+    const settle=f.landed===null?0:ease((f.t-f.landed)/.43),tip=ease(f.t/.36);
+    b.body.rotation.set(f.pitch*(1-tip)-.08*tip,0,f.roll*(1-tip)+f.side*1.32*tip);
+    // Sink the centre of mass as the feet fold; keep the shoulder above the paving.
+    b.body.position.y=-.13*tip-.046*settle;
+    b.head.rotation.set(.31*tip,-.27*f.side*tip,.34*f.side*tip);
+    b.jaw.rotation.x=.06*tip;b.tail.rotation.set(.24*tip,0,-.11*f.side*tip);
+    for(const [j,wing] of b.wings.entries()){
+      const s=j===0?-1:1,open=(1-settle)*Math.sin(tip*pi*.63);
+      wing.visible=settle<.96;b.folds[j].visible=settle>=.96;
+      wing.rotation.set(.07*s*tip,s*.08,s*(.22+.61*open));
+      wing.children[0].rotation.set(0,s*.19*tip,s*(-.22-.85*settle));
+      b.feet[j].rotation.x=-.69*tip;
     }
     return true;
   }
@@ -113,21 +143,20 @@ export function addPalaceRavens(T,scene,floor,onCall){
       }
       b.feet[j].rotation.x=flying?-1.45*ease(a/.35):-.075*crouch;
     }
-    body.rotation.z+=b.sign*b.flinch*(.63+.21*Math.sin(b.flinch*36));
-    body.rotation.x-=b.flinch*.42;
   }
   for(const [i,b] of flock.entries())pose(b,i,{x:0,z:20},0);
   return {nearest,damage,owns:b=>flock.includes(b),update(dt,p,surface){
     if(!dt||!surface)return false;
-    const effects=featherTick(dt);
-    for(const b of flock)b.flinch=Math.max(0,b.flinch-dt);
+    let effects=featherTick(dt);
+    for(const b of flock)if(!b.alive)effects=fallTick(b,dt)||effects;
+    if(!flock.some(b=>b.alive))return effects;
     const distance=Math.min(Math.hypot(p.x-flock[0].x,p.z-flock[0].z),Math.hypot(p.x-flock[1].x,p.z-flock[1].z));
     const near=distance<25&&Math.abs(p.y-flock[0].y)<2.0;
     if(phase==='gone'){
       reset+=dt;
       if(reset<26||distance<15)return effects;
       phase='perched';clock=alarm=age=0;
-      for(const [i,b] of flock.entries())pose(b,i,p,0);
+      for(const [i,b] of flock.entries())if(b.alive)pose(b,i,p,0);
       return true;
     }
     if(phase==='perched'){
@@ -138,16 +167,16 @@ export function addPalaceRavens(T,scene,floor,onCall){
         clock+=dt;alarm+=dt;
         if(alarm<.064)return false;
         alarm=0;
-        for(const [i,b] of flock.entries())pose(b,i,p,0);
+        for(const [i,b] of flock.entries())if(b.alive)pose(b,i,p,0);
         return true;
       }
     }
     const before=age;age+=dt;clock+=dt;
     if(before<=.10&&age>.10){
-      const bird=flock[0];
+      const bird=flock.find(b=>b.alive);
       onCall({x:bird.x,y:bird.y+.34,z:bird.z});
     }
-    for(const [i,b] of flock.entries())pose(b,i,p,age);
+    for(const [i,b] of flock.entries())if(b.alive)pose(b,i,p,age);
     if(age>=flightLength+.26){phase='gone';reset=0;}
     return true;
   }};
