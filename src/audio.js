@@ -559,6 +559,31 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     grit(sfx,t,.038,.073*vol,440,2480,{attack:.002,wet:.065,pan});
     tone(sfx,t+.002,319,.045,.044*vol,{end:172,attack:.002,wet:.070,pan});
   }
+  function greyCue(kind,at){
+    if(!live())return;
+    const a=listener(),dx=at.x-a.x,dz=at.z-a.z,d=Math.hypot(dx,dz);
+    const max=kind==='burst'?44:12;
+    if(d>max||Math.abs(at.y-a.y)>6)return;
+    const f=(1-d/max)/(1+(d/(kind==='burst'?10:3.2))**2);
+    const pan=Math.max(-.86,Math.min(.86,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    const t=ctx.currentTime+.004;
+    if(kind==='shake'){
+      grit(sfx,t,.38,.17*f,570,4830,{attack:.043,wet:.09,pan});
+      for(let i=0;i<5;i++)tone(sfx,t+i*.078,306+i*34,.063,.065*f,{end:158,attack:.005,pan});
+    }else if(kind==='spark'){
+      for(let i=0;i<4;i++){
+        grit(sfx,t+i*.076,.032,.13*f,1360,6270,{attack:.001,pan,wet:.09});
+        tone(sfx,t+i*.076,897+i*219,.055,.04*f,{end:513+i*108,attack:.003,pan});
+      }
+    }else{
+      grit(sfx,t,.16,.88*f,192,5100,{attack:.002,pan,wet:.18});
+      grit(sfx,t+.033,.89,.46*f,75,698,{attack:.008,pan,wet:.30});
+      tone(sfx,t,92,.54,.66*f,{end:28,attack:.006,pan,wet:.22});
+      for(let i=0;i<5;i++)
+        tone(sfx,t+.093+i*.046,1435+i*444,.14,.068*f,{end:1120+i*367,attack:.002,wet:.21,pan});
+      grit(sfx,t+.32,1.03,.155*f,880,4710,{attack:.062,pan,wet:.19});
+    }
+  }
   function crownCue(kind,at,voice=''){
     if(!live())return;
     const t=ctx.currentTime+.009,pan=tapePan(at);
@@ -582,7 +607,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   }
   return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,berg,festival,
     bergPhase:()=>bergNode&&bergPlaying?ctx.currentTime-bergStart:null,puddleCue,weatherCue,crownCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
-    playNpc,npcTalking,stopNpc,raven,festivalDart,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
+    playNpc,npcTalking,stopNpc,raven,festivalDart,greyCue,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),
     stopPrisoner(){if(prisonerUrl&&(choirRequest?.url===prisonerUrl||choirVoice?.url===prisonerUrl))stopChoir();},

@@ -16,6 +16,7 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
+  grey:{bulk:.23,weather:.14},
   festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x412e27,weather:.15,bulk:.47,mess:.47},
   festAnni:{palette:[0x534752,0xbc7773,0xd1ac89],hair:0x715443,weather:.13,bulk:.14},
   festKalle:{palette:[0x303a4a,0xd18a55,0xd1a881],hair:0x624337,weather:.11,bulk:.21},
@@ -80,6 +81,7 @@ function personalize(T,lib,id,base,eyeY){
     blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,jakeScalp=id==='gardenHannes'&&skin,
     ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
     hoodie=id==='festZwanni',team=cloth&&id.startsWith('fest'),
+    grey=id==='grey',
     visitorPalette=cloth&&!team?p.palette:null,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
   const visitorColors=visitorPalette?.map(vec);
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
@@ -92,10 +94,11 @@ function personalize(T,lib,id,base,eyeY){
     m.alphaTest=m.map?.isTexture?(brow?.36:.43):0;m.transparent=false;m.depthWrite=true;m.side=T.DoubleSide;
     if(!m.map)m.color.setHex(0x3c2c27);
   }
+  if(grey&&cloth){m.map=null;m.color.setHex(0xffffff);m.roughness=.91;}
   if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
-  if(skin||cloth||field||ritual||copperHair||blondHair){
+  if(skin||cloth||field||ritual||copperHair||blondHair||grey&&(hair||brow)){
     m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
-      (field||formal||ritual||staff||visitorColors||team||hoodie||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
+      (field||formal||ritual||staff||visitorColors||team||hoodie||grey||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -109,6 +112,34 @@ function personalize(T,lib,id,base,eyeY){
         float castD=max(length(dFdx(castP)),length(dFdy(castP)));
         float castFine=(castNoise(castP*${skin?'545.':'360.'})-.5)*(1.-smoothstep(.001,.010,castD));
         float castDirt=smoothstep(.38,.75,castNoise(castP*vec3(21.,17.,24.))*.63+castNoise(castP*vec3(72.,52.,89.))*.37)*${(p.weather??0).toFixed(3)};
+        ${grey&&cloth?`
+          float u=abs(castP.x),h=castP.y;
+          float sleeve=smoothstep(.304,.316,u)*smoothstep(1.03,1.18,h);
+          float top=smoothstep(.91,1.007,h);
+          float fibers=1.+(castNoise(castP*vec3(112.,196.,82.))-.5)*.10;
+          float band=(1.-smoothstep(.003,.012,abs(h-.993)))+
+            (1.-smoothstep(.004,.012,abs(u-.299)))*step(1.15,h);
+          vec3 fabric=vec3(.112,.139,.137)*fibers*(1.-min(1.,band)*.18);
+          float soft=castNoise(castP*vec3(17.,25.,21.));
+          vec3 armSkin=vec3(.55,.345,.238)*(.90+.15*soft);
+          diffuseColor.rgb=mix(vec3(.055,.068,.076)*fibers,mix(fabric,armSkin,sleeve),top);
+        `:''}
+        ${grey&&(hair||brow)?`
+          float silver=castNoise(castP*vec3(236.,42.,126.));
+          diffuseColor.rgb=mix(vec3(.105,.112,.115),vec3(.43,.422,.397),.235+.50*silver);
+        `:''}
+        ${grey&&skin?`
+          vec2 q=vec2(abs(castP.x),castP.y-${eyeY.toFixed(4)});
+          float skinFront=smoothstep(.06,.115,castP.z);
+          float crease=exp(-abs(q.y+.029+(q.x-.030)*.32)*172.)*smoothstep(.033,.063,q.x)*(1.-smoothstep(.071,.095,q.x));
+          float socket=exp(-distance(q,vec2(.044,-.025))*82.);
+          float beard=(1.-smoothstep(-.114,-.085,q.y))*smoothstep(-.183,-.146,q.y);
+          float crow=exp(-abs(q.y+.009-(q.x-.058)*.37)*214.)*smoothstep(.056,.067,q.x)*(1.-smoothstep(.087,.105,q.x));
+          float nasolabial=exp(-abs(q.x-(.044+max(0.,-q.y-.078)*.25))*179.)*smoothstep(-.132,-.111,q.y)*(1.-smoothstep(-.066,-.052,q.y));
+          float browFold=exp(-abs(q.y-.060+q.x*q.x*6.)*169.)*(1.-smoothstep(.061,.081,q.x));
+          diffuseColor.rgb*=1.-skinFront*(crease*.17+socket*.28+crow*.16+nasolabial*.14+browFold*.12);
+          diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.69,.76,.81),beard*skinFront*.43);
+        `:''}
         ${jakeScalp?`
           float crown=castP.y-${eyeY.toFixed(4)};
           float hairline=mix(.018,.093,smoothstep(-.012,.097,castP.z))+.009*sin(castP.x*32.);
@@ -675,6 +706,31 @@ export function createHuman(T,id='base'){
     }
     face(t,5.4+role,talk,.032+release*.04,(dj?.106:.04)*(1-gesture)-sip*.07,look);
   }
+  const vialGrip=id==='grey'?grip('r'):null,vialWrist=V(),vialPoint=V(),vialQuat=Q();
+  function greyPose(t,{tread=null,look=0,talk=0,show=0,shake=0,spark=0}={}){
+    if(tread)walk(t,tread.distance,tread.route,tread.floor,look,tread.stop,talk);
+    else {
+      torso(.010*sin(t*1.17),-.022-.006*shake,.013+.021*show,.045+.087*show,
+        -.04*show+.027*sin(t*1.28),-.018+.013*sin(t*.94),t,look,.06+.106*show);
+      for(const [j,s] of ['l','r'].entries()){
+        const sign=j===0?1:-1,a=read('foot_'+s);
+        solve(LIMB[s].leg,a.x*1.16,a.y,a.z+sign*.074,sign*.17,0,1);
+        foot('foot_'+s,0,sign*.10);
+      }
+    }
+    const twitch=shake*sin(t*26.4),raise=show*(.27+.028*cos(t*3.2));
+    vialPoint.set(-.219+.072*show+.054*twitch,1.175+raise+.063*twitch+.014*sin(t*2.4),.323+.115*show+.026*twitch);
+    body.localToWorld(vialPoint);
+    vialQuat.setFromEuler(e.set(-Math.PI/2+.24*twitch,actor.rotation.y,.08-.22*twitch));
+    vialGrip.wristAt(vialPoint,vialQuat,vialWrist).applyMatrix4(worldInverse);
+    solve(LIMB.r.arm,vialWrist.x,vialWrist.y,vialWrist.z,-.77,-.54,-.48);
+    vialGrip.hold(vialQuat,.88);
+    if(!tread){
+      solve(LIMB.l.arm,mix(.211,-.073,spark),mix(hipsY-.14,1.41,spark),.071+.343*spark,.84,-.46,-.53);
+      rot('hand_l',.14-.30*spark,.13,.069);curl('l',.38+.31*spark);
+    }
+    face(t,8.21,talk,.046,.074*show,look);
+  }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);
     torso(.007*sin(t*1.2),home-hipsY+.003*sin(t*1.65),.07*rise,.028+.21*rise,
@@ -965,7 +1021,7 @@ export function createHuman(T,id='base'){
     return Number.isFinite(nearest)?nearest*side:null;
   }
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

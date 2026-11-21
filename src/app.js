@@ -9,6 +9,7 @@ import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
 import {addGarden} from './garden.js';
 import {addPalaceRavens} from './palace-ravens.js';
 import {addGardenMeditation} from './garden-meditation.js';
+import {addGardenGrey} from './garden-grey.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
@@ -181,6 +182,7 @@ async function start(){
  const weather=addWeatherZero(T,s,world,garden.heightAt,audio);
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
+ const grey=addGardenGrey(T,s,world,(x,z)=>floorHeight(x,z),audio);
  // Optional effects still prefetch, but slow audio cannot hold up Start.
  void audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
@@ -306,6 +308,9 @@ async function start(){
      resumeMouse=resumeTouch=false;doorPrompt();refresh();
    },
    onReply(speech,reply){
+     if(speech.id==='grey'&&reply.action==='grey-show'){
+       names.clear();grey.accept();doorPrompt();refresh();return;
+     }
      if(reply.reaction)speech.react?.(reply.reaction);
      else speech.speakFor?.(2);
      npcDialogue({...speech,...reply,choices:undefined});
@@ -564,6 +569,7 @@ async function start(){
      if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
+     if(grey.update(dt,player.body.position,layer===0))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      geometryQuery.invalidateMoving();
      if(prisonerCaption!==null&&(prisonerCaption!==captionId||!chapter.prisonerAt(player.body.position)))leavePrison();
@@ -704,7 +710,7 @@ async function start(){
  const parkWarmup=performance.now();
  await puddle.prepare(r);
  garden.festival.prepare(r);
- await weather.prepare(r,[puddle.root,garden.orangery,garden.festival.root]);
+ await weather.prepare(r,[puddle.root,garden.orangery,garden.festival.root,grey.root]);
  performance.measure('schlosser: Orangerie und Pfütze',{start:parkWarmup,end:performance.now()});
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
  wc.update(0,player.body.position);chapter.update(0,player.body.position);

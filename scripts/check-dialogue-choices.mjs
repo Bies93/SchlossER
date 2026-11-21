@@ -14,10 +14,10 @@ const element={querySelector:s=>({'h2':name,'p':line,'[data-dialogue-hint]':hint
   querySelectorAll:()=>buttons,showModal(){this.isOpen=true;},close(){this.isOpen=false;},
   addEventListener:(ev,fn)=>listeners.set(ev,fn)};
 globalThis.window={addEventListener:(ev,fn)=>keyEvents.set(ev,fn)};
-const actions=[],plays=[],attention=[],closed=[];
+const actions=[],plays=[],attention=[],closed=[],greyReplies=[];
 let finish,alive=true;
 const ui=bindNpcDialogue({element,play(s,a,f){plays.push(s.id);finish=f;},stop(){},onOpen(){},onClose(reason){closed.push(reason);},
-  onReply(s,r){actions.push([s.id,r.clip,r.reaction]);}});
+  onReply(s,r){if(s.id==='grey')greyReplies.push(r.action);else actions.push([s.id,r.clip,r.reaction]);}});
 const open=id=>ui.open({id,...NPCS[id],listen:on=>attention.push([id,on]),alive:()=>alive});
 function key(code){keyEvents.get('keydown')({code,preventDefault(){},stopImmediatePropagation(){}});}
 for(const id of ['niklas','gardenHannes','bergFritz','bergWirt']){
@@ -54,4 +54,8 @@ assert.ok(open('festZwanni'));finish();key('KeyJ');
 assert.equal(actions.length,6);assert.equal(closed.at(-1),'answer');assert.ok(!ui.pending());
 assert.ok(open('festZwanni'));finish();key('KeyN');
 assert.deepEqual(actions.at(-1),['festZwanni','festZwanniEier',undefined]);
-console.log('Acht Dialogzweige, Intro-Sperre, stille Antwort, Abbruch und Audiozuordnung geprüft.');
+assert.ok(open('grey'));key('KeyJ');assert.equal(greyReplies.length,0);
+finish();key('KeyN');assert.equal(greyReplies.length,0);assert.ok(!ui.pending());
+assert.ok(open('grey'));finish();key('KeyJ');
+assert.deepEqual(greyReplies,['grey-show']);assert.ok(!ui.pending());
+console.log('Zehn Dialogzweige, Intro-Sperre, stille Antwort, Abbruch und Audiozuordnung geprüft.');

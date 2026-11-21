@@ -3,6 +3,9 @@
 const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
 const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
+  grey:{name:'Grey',template:'clubNiko',line:'Soll ich dir was zeigen?',choices:[
+    {label:'Ja, zeig!',reply:{action:'grey-show'}},{label:'Verpiss dich!'}
+  ]},
   festZwanni:{name:'Zwanni',template:'guestJona',line:'Ich bin dein Gottkönig! Aahhh!',choices:[
     {label:'Leck mich!'},
     {label:'Was willst du, Gottkönig?',reply:{clip:'festZwanniEier',line:'Ich brauche Eier zum lutschen!'}}
