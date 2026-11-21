@@ -1,11 +1,11 @@
-// The garden's gameplay colliders remain authoritative. A bolt queries only
-// the segment it actually traverses this frame; its visible tip owns the hit.
+// Sweep the bolt between frames on the reticle trajectory. The drawn bolt
+// leaves the viewmodel barrel and converges on that path near the player.
 export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onContact,query,context=()=>({mask:1,layer:0})){
   const V=()=>new T.Vector3(),from=V(),next=V(),point=V(),heading=V(),sample=V(),ray=new T.Ray(),
     shotPoint=V(),axis=new T.Vector3(0,0,-1);
   const bolts=Array.from({length:3},()=>{
     const mesh=boltMesh.clone();mesh.visible=false;root.add(mesh);
-    return {mesh,position:V(),velocity:V(),state:0,age:0,range:0,spec:null};
+    return {mesh,position:V(),velocity:V(),offset:V(),state:0,age:0,range:0,travel:0,spec:null};
   });
   const dustMat=new T.MeshStandardMaterial({color:0xa29179,roughness:1});
   const dust=new T.InstancedMesh(new T.IcosahedronGeometry(.010,0),dustMat,24);
@@ -56,35 +56,29 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
     if(contact.actor){
       const close=spec.kind==='shotgun'?1-.52*(contact.distance/spec.range)**1.35:1;
       const amount=spec.impact*close,old=strike.get(contact.actor);
-      if(old){old.amount+=amount;if(contact.head){old.head+=amount;old.point=contact.point;}}
-      else strike.set(contact.actor,{amount,head:contact.head?amount:0,point:contact.point});
+      if(old){old.amount+=amount;if(contact.head){old.head+=amount;old.point=contact.point;old.direction.copy(r.direction);}}
+      else strike.set(contact.actor,{amount,head:contact.head?amount:0,point:contact.point,direction:r.direction.clone()});
     }
     if(!contact.solid&&!contact.actor&&!contact.marker)return null;
     sampleHit.distance=contact.distance;sampleHit.material=contact.actor?'soft':contact.marker?'metal':'surface';
     return sampleHit;
   }
   function endVolley(spec){
-    for(const [actor,hit] of strike)creatures.damage(actor,Math.round(hit.amount),spec.color,hit.point,spec,hit.head/hit.amount);
+    for(const [actor,hit] of strike)creatures.damage(actor,Math.round(hit.amount),spec.color,hit.point,spec,hit.head/hit.amount,hit.direction);
     strike.clear();
   }
-  function launch(eye,muzzle,sight,spec){
-    // Cover between camera and the displayed start blocks the shot too.
-    const {mask,layer}=context();heading.subVectors(muzzle,eye);const d=heading.length();
-    if(d>1e-6){
-      ray.set(eye,heading.multiplyScalar(1/d));const obstruction=wall(ray,d,mask);
-      if(obstruction!==Infinity){
-        ray.at(obstruction,point);dustAt(point,ray.direction,layer);onContact(point,spec.kind,'surface');return;
-      }
-    }
+  function launch(eye,muzzle,aim,spec){
+    const {mask,layer}=context();
     const b=bolts.find(p=>p.state===0)??bolts.reduce((a,c)=>a.age>c.age?a:c);
-    b.position.copy(muzzle);b.velocity.subVectors(sight,muzzle).normalize().multiplyScalar(58);
-    b.age=0;b.range=spec.range;b.spec=spec;b.state=1;b.mesh.visible=true;b.layer=layer;b.mask=mask;
+    b.position.copy(eye);b.offset.subVectors(muzzle,eye);b.velocity.copy(aim).multiplyScalar(58);
+    b.age=b.travel=0;b.range=spec.range;b.spec=spec;b.state=1;b.mesh.visible=true;b.layer=layer;b.mask=mask;
     b.mesh.traverse(o=>o.layers.set(layer));pose(b);
   }
   function pose(b){
     heading.copy(b.velocity).normalize();
     b.mesh.quaternion.setFromUnitVectors(axis,heading);
     b.mesh.position.copy(b.position).addScaledVector(heading,-.156);
+    if(b.travel<1.12)b.mesh.position.addScaledVector(b.offset,(1-b.travel/1.12)**2);
   }
   function tick(dt){
     let changed=false;
@@ -106,18 +100,18 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
       ray.set(from,heading.normalize());
       const hit=pick(ray,d,b.mask);
       if(hit.marker||hit.actor||hit.solid){
-        ray.at(hit.distance,b.position);pose(b);
+        ray.at(hit.distance,b.position);b.travel=1.12;pose(b);
         if(hit.actor){
           // Leaving state 1 here prevents a second hit from this same bolt.
           b.state=0;b.mesh.visible=false;
-          creatures.damage(hit.actor,b.spec.impact,b.spec.color,hit.point,b.spec,hit.head?1:0);
+          creatures.damage(hit.actor,b.spec.impact,b.spec.color,hit.point,b.spec,hit.head?1:0,ray.direction);
         }else{
           b.state=2;b.age=0;
           if(hit.marker)mark(hit.marker);else dustAt(b.position,ray.direction,b.layer);
         }
         onContact(b.position,b.spec.kind,hit.actor?'soft':hit.marker?'metal':'surface');
       }else{
-        ray.at(d,b.position);pose(b);b.range-=d;
+        ray.at(d,b.position);b.travel+=d;pose(b);b.range-=d;
         if(b.range<=.001){b.state=0;b.mesh.visible=false;}
       }
     }

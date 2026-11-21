@@ -480,73 +480,173 @@ export function createHuman(T,id='base'){
     }
     face(t,1.98,.18*attention,.33*attention,0,look);
   }
-  const shapes=[];
-  const add=(bone,child,t,r)=>{
-    const b=bones.get(bone);if(!b)return;
-    const p=child?rest.get(child).p.clone().multiplyScalar(t):V(0,t,0);
-    shapes.push({b,p,base:r,head:bone==='head',sphere:new T.Sphere()});
+  const shapes=[],bind=new T.Quaternion();
+  const ellipsoid=(bone,center,x,y,z,orientation=bind)=>{
+    const b=bones.get(bone),join=rest.get(bone),inverse=join.axis.clone().invert();
+    const local=new T.Matrix4().compose(center.clone().sub(join.at).applyQuaternion(inverse),
+      inverse.clone().multiply(orientation),V(x,y,z));
+    shapes.push({b,local,head:bone==='head',inverse:new T.Matrix4()});
   };
-  add('head',null,.078,.116);add('head',null,.128,.079);add('spine_03',null,.04,.205);add('spine_02',null,.02,.158);add('pelvis',null,0,.15);
+  const eyeCenter=read('eye_l').clone().lerp(read('eye_r'),.5);
+  // Fit to the eye line in bind space, not the head bone's local +Y.
+  // The lower face and upper skull move with the actual posed head.
+  ellipsoid('head',eyeCenter.clone().add(V(0,.014,-.074)),.097,.104,.114);
+  ellipsoid('head',eyeCenter.clone().add(V(0,-.058,-.021)),.080,.058,.077);
+  const neck=read('neck_01'),chest=read('spine_03'),waist=read('spine_02');
+  ellipsoid('neck_01',neck.clone().lerp(read('head'),.32).add(V(0,-.004,.005)),.063,.095,.069);
+  ellipsoid('spine_03',chest.clone().lerp(neck,.43).add(V(0,0,.025)),.222,(neck.y-chest.y)*.58+.020,.151);
+  ellipsoid('spine_02',waist.clone().add(V(0,.013,.024)),.171,.155,.133);
+  ellipsoid('pelvis',read('pelvis').clone().add(V(0,-.046,.010)),.177,.139,.132);
+  const linkZone=(bone,child,t,r,w=r)=>{
+    const a=read(bone),b=read(child),axis=b.clone().sub(a),length=axis.length();
+    ellipsoid(bone,a.clone().lerp(b,t),w,length*.53+r*.58,r,Q().setFromUnitVectors(V(0,1,0),axis.normalize()));
+  };
   for(const s of ['l','r']){
-    for(const [a,b,r] of [['upperarm_','lowerarm_',.081],['lowerarm_','hand_',.070],
-      ['thigh_','calf_',.096],['calf_','foot_',.079]])add(a+s,b+s,.47,r);
-    add('hand_'+s,null,-.04,.047);add('foot_'+s,'ball_'+s,.56,.070);
+    for(const [a,b,r,w] of [['upperarm_','lowerarm_',.080,.077],['lowerarm_','hand_',.065,.060],
+      ['thigh_','calf_',.098,.091],['calf_','foot_',.082,.071]])linkZone(a+s,b+s,.47,r,w);
+    linkZone('hand_'+s,'middle_02_'+s,.44,.046,.042);
+    linkZone('foot_'+s,'ball_'+s,.56,.057,.061);
   }
   function hitShapes(){
-    const scale=(proto.userData.size??1)*actor.scale.x;
-    for(const {b,p,base,sphere} of shapes){b.updateWorldMatrix(true,false);sphere.center.copy(p).applyMatrix4(b.matrixWorld);sphere.radius=base*scale;}
+    for(const {b,local,inverse} of shapes){
+      b.updateWorldMatrix(true,false);inverse.multiplyMatrices(b.matrixWorld,local).invert();
+    }
     return shapes;
   }
   const flinchBones=['spine_02','spine_03','neck_01'].map(name=>[bones.get(name),Q()]);
-  const bonesArray=[...bones.values()],initial=bonesArray.map(()=>Q()),settled=bonesArray.map(()=>Q());
-  const pelvis0=V(),pelvisEnd=V(),at0=V(),bodyAt=V(),body0=Q(),bodyEnd=Q();
-  const turn=new T.Euler(),ease=t=>t*t*(3-2*t);
-  let clock=0,collapse=false,side=1,heading0=0,heading1=0,ground=0,travel=0,short=false;
-  function reaction(point,dying,fall,grade){
-    if(!npcInfo)return;
-    npcInfo.reacting=true;clock=0;collapse=!!dying;
-    side=(point.x-actor.position.x)*Math.cos(actor.rotation.y)-(point.z-actor.position.z)*sin(actor.rotation.y)<0?1:-1;
-    if(!collapse){for(const [b,out] of flinchBones)if(b)out.copy(b.quaternion);return;}
-    bonesArray.forEach((b,i)=>initial[i].copy(b.quaternion));
-    pelvis0.copy(pelvis.position);body0.copy(body.quaternion);bodyAt.copy(body.position);at0.copy(actor.position);
-    heading0=actor.rotation.y;
-    heading1=Math.atan2(sin(fall.x-heading0),cos(fall.x-heading0));
-    ground=grade;travel=fall.y>.67?Math.min(.24,(fall.y-.67)*.27):0;short=fall.y<1.22;
-    pose(0,.19,0,0,0,0,side>0?1.6:2.4);
-    rot('thigh_l',short?-.58:-.10,.11,.12);rot('thigh_r',short?-.40:-.18,-.13,-.20);
-    rot('calf_l',short?.86:.24);rot('calf_r',short?.70:.41);
-    face(0,0,0,0,0,0);
-    for(const list of channels)for(const [dest,i,k] of list)if(k===0||k===1)dest[i]=.93;
-    bonesArray.forEach((b,i)=>{settled[i].copy(b.quaternion);b.quaternion.copy(initial[i]);});
-    pelvisEnd.copy(pelvis.position);pelvis.position.copy(pelvis0);
-    bodyEnd.setFromEuler(turn.set(short?-1.43:-Math.PI*.5,0,side*(short?.18:.07),'YXZ'));
-    body.quaternion.copy(body0);body.position.copy(bodyAt);
+  // Allocate only on the first fall for a rig. This is a short, articulated
+  // animation with floor contacts, not a physics simulation left running.
+  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0;
+  const isReacting=()=>reacting;
+  const setReacting=value=>{reacting=value;if(npcInfo)npcInfo.reacting=value;};
+  const progress=(a,b,t)=>{const k=clamp((t-a)/(b-a));return k*k*(3-2*k);};
+  function fallState(){
+    const joints=[...bones.entries()].map(([name,b])=>({b,start:Q(),brace:Q(),rested:Q(),
+      delay:/hand|arm|_0[123]_[lr]$/.test(name)?.033+(name.endsWith('_l')?.067:0):name==='head'?.071:0}));
+    const contact=[];
+    for(const s of ['l','r']){
+      contact.push({chain:LIMB[s].arm,b:bones.get('hand_'+s),pad:.041,side:s==='l'?1:-1,leg:false},
+        {chain:LIMB[s].leg,b:bones.get('foot_'+s),pad:.058,side:s==='l'?1:-1,leg:true});
+    }
+    return {joints,contact,m:new T.Matrix4(),startHip:V(),hip:V(),point:V(),pelvis:V(),up:V(),dir:V(),axis:V(),
+      bodyAt:V(),bodyQ:Q(),turnQ:Q(),ankleQ:Q(),offset:V(),active:false};
   }
+  function fallKey(f,brace){
+    const fore=f.dir.z,side=f.dir.x,fold=f.fold;
+    pose(0,.2,0,0,0,0,1);
+    for(const [i,s] of ['l','r'].entries()){
+      const sign=i===0?1:-1,strong=sign*side>0||Math.abs(side)<.23&&i===0;
+      const bend=brace?(strong?.59:.80):(strong?.14:.35)+fold*.54;
+      rot('thigh_'+s,-bend,sign*(strong?.07:.16),sign*(strong?.11:.26));
+      rot('calf_'+s,brace?(strong?1.14:.94):(strong?.27:.66)+fold*.64);
+      rot('foot_'+s,brace?-.27:-.08,sign*.20,sign*(strong?.055:.18));
+      const reach=brace?(strong?.415:.323):(strong?.405:.27)-fold*.067;
+      solve(LIMB[s].arm,sign*reach,hipsY+(brace?(strong?.18:.275):(strong?.028:.126)),
+        brace?fore*.17+(strong?.27:.15):.073+.20*fore,
+        sign*.83,-.40,-.34);
+      rot('hand_'+s,(brace?-.36:.11)+fore*.12,sign*.18,sign*(strong?.21:.37));curl(s,brace?.39:.14);
+    }
+    rot('spine_01',brace?.219:fore*.047,side*(brace?.13:.22),-side*.09);
+    rot('spine_02',brace?.18:fore*.042,side*.122,side*.051);
+    rot('spine_03',brace?.14:fore*.025,side*.12,-side*.063);
+    rot('neck_01',brace?.11:fore*.08,-side*.18);
+    rot('head',brace?-.13:fore*.09,side*.275,side*.14+(brace?.02:.07));
+  }
+  function reaction(point,fall,incoming){
+    setReacting(true);clock=0;
+    const fromX=point.x-actor.position.x,fromZ=point.z-actor.position.z;
+    side=fromX*cos(actor.rotation.y)-fromZ*sin(actor.rotation.y)<0?1:-1;
+    flinchPitch=(incoming?.x??-fromX)*sin(actor.rotation.y)+(incoming?.z??-fromZ)*cos(actor.rotation.y);
+    if(!fall){
+      if(falling)falling.active=false;
+      for(const [b,out] of flinchBones)if(b)out.copy(b.quaternion);
+      return;
+    }
+    const f=falling??=fallState();
+    f.active=true;f.floor=fall.floor;f.fold=clamp((.94-fall.space)/.71);
+    f.angle=mix(Math.PI*.493,.80,f.fold);f.recoil=Math.min(.28,Math.max(0,fall.space-.82)*.66);
+    actor.updateWorldMatrix(true,false);f.m.copy(actor.matrixWorld).invert();
+    const m=f.m.elements;f.actorScale=1/Math.hypot(m[4],m[5],m[6]);
+    f.dir.set(fall.dx,0,fall.dz).transformDirection(f.m);
+    f.dx=fall.dx;f.dz=fall.dz;f.heels=fall.heels;
+    f.toe=Math.atan2(-fall.dx,-fall.dz);
+    f.axis.set(f.dir.z,0,-f.dir.x);
+    f.base=f.point.set(actor.position.x,fall.floor,actor.position.z).applyMatrix4(f.m).y;
+    pelvis.getWorldPosition(f.startHip).applyMatrix4(f.m);
+    f.pelvis.copy(pelvis.position);f.bodyAt.copy(body.position);f.bodyQ.copy(body.quaternion);
+    f.duration=f.startHip.y-f.base<.46?1.09:1.33;
+    for(const j of f.joints)j.start.copy(j.b.quaternion);
+    fallKey(f,true);for(const j of f.joints)j.brace.copy(j.b.quaternion);
+    fallKey(f,false);for(const j of f.joints){j.rested.copy(j.b.quaternion);j.b.quaternion.copy(j.start);}
+    pelvis.position.copy(f.pelvis);body.position.copy(f.bodyAt);body.quaternion.copy(f.bodyQ);
+  }
+  function keepContacts(f,amount,settle){
+    body.updateWorldMatrix(true,true);
+    // Core support prevents the head or ribs from ending below the floor.
+    const shoulder=bones.get('spine_03').matrixWorld,head=bones.get('head').matrixWorld;
+    const headSupport=f.point.copy(eyeCenter).sub(read('head')).applyQuaternion(headBind).applyMatrix4(head).y;
+    const lift=Math.max(0,f.floor+.115*size-shoulder.elements[13],f.floor+.085*size-headSupport);
+    if(lift>.001){body.position.y+=lift/f.actorScale;body.updateWorldMatrix(true,true);}
+    if(amount<.001)return;
+    worldInverse.copy(body.matrixWorld).invert();
+    f.up.set(0,1,0).transformDirection(worldInverse);
+    for(const {chain,b,pad,side,leg} of f.contact){
+      f.point.setFromMatrixPosition(b.matrixWorld);
+      const clearance=(pad+(leg&&side>0?.022:0))*size;
+      const def=f.floor+clearance-f.point.y;
+      let tuck=0;
+      if(leg){
+        const behind=(f.point.x-actor.position.x)*f.dx+(f.point.z-actor.position.z)*f.dz;
+        tuck=Math.max(0,-behind-f.heels-.19)*settle;
+        f.point.x+=tuck*f.dx;f.point.z+=tuck*f.dz;
+      }
+      f.point.y+=def*(def>0?amount:settle);
+      f.point.applyMatrix4(worldInverse);
+      if(tuck>.004||Math.abs(def)>.008&&(def>0||settle>.001)){
+        const up=leg?.99:.21;
+        solve(chain,f.point.x,f.point.y,f.point.z,side*(leg?.26:.86)+f.up.x*up,
+          f.up.y*up,f.up.z*up+(leg?.17:-.21));
+      }
+      if(leg&&settle>.001){
+        b.parent.updateWorldMatrix(true,false);matrixQ(b.parent,inv).invert();
+        f.ankleQ.copy(inv).multiply(q.setFromEuler(e.set(.035*side,f.toe+side*.24,.15*side)));
+        b.quaternion.slerp(f.ankleQ,settle*.89);
+      }
+    }
+  }
+  const headBind=rest.get('head').axis.clone().invert();
   function reactionTick(dt,visible){
-    if(!npcInfo?.reacting||!dt)return false;
+    if(!reacting||!dt)return false;
     clock+=dt;
-    if(!collapse){
-      const k=clamp(clock/.26),p=sin(Math.PI*k);
+    const f=falling;
+    if(!f?.active){
+      const k=clamp(clock/.28),p=sin(Math.PI*k);
       for(const [j,[b,base]] of flinchBones.entries())if(b)
-        b.quaternion.copy(base).multiply(q.setFromEuler(e.set(-.095*p,side*p*(.18-j*.028),side*p*.087)));
-      if(k>=1)npcInfo.reacting=false;
+        b.quaternion.copy(base).multiply(q.setFromEuler(e.set(flinchPitch*.13*p,side*p*(.17-j*.028),side*p*.10)));
+      if(k>=1)setReacting(false);
       return visible;
     }
-    const k=clamp(clock/.91),roll=ease(clamp((k-.09)/.91)),brace=ease(clamp(k*1.36));
-    actor.rotation.y=heading0+heading1*ease(clamp(k*1.65));
-    actor.position.set(at0.x-sin(actor.rotation.y)*travel*roll,
-      mix(at0.y,ground,roll),at0.z-cos(actor.rotation.y)*travel*roll);
-    body.quaternion.copy(body0).slerp(bodyEnd,roll);
-    body.position.copy(bodyAt);body.position.y=mix(bodyAt.y,short?.18:.151,roll)-.064*sin(Math.PI*k);
-    pelvis.position.copy(pelvis0).lerp(pelvisEnd,brace);
-    for(let i=0;i<bonesArray.length;i++)bonesArray[i].quaternion.copy(initial[i]).slerp(settled[i],brace);
-    if(k>=1)npcInfo.reacting=false;
+    const t=Math.min(1,clock/f.duration),buckle=progress(.02,.37,t),drop=progress(.11,.71,t);
+    const contact=Math.max(0,(t-.66)/.34),rebound=sin(contact*Math.PI*3)*Math.exp(-contact*5)*(1-contact);
+    f.turnQ.setFromAxisAngle(f.axis,f.angle*drop+.068*rebound);
+    body.quaternion.copy(f.turnQ).multiply(f.bodyQ);body.position.copy(f.bodyAt);
+    pelvis.position.copy(f.pelvis).lerp(rest.get('pelvis').p,buckle);
+    const hipFloor=f.base+mix(.146,.236,f.fold)/f.actorScale;
+    f.hip.copy(f.startHip).addScaledVector(f.dir,(f.recoil*drop-.024*sin(buckle*Math.PI))/f.actorScale);
+    f.hip.y=mix(f.startHip.y,hipFloor,progress(.035,.70,t))+.026*rebound/f.actorScale;
+    for(const {b,start,brace,rested,delay} of f.joints){
+      b.quaternion.copy(start).slerp(brace,progress(0,.39,t)).slerp(rested,progress(.35+delay,.91+delay,t));
+    }
+    pelvis.getWorldPosition(f.point).applyMatrix4(f.m);body.position.add(f.offset.copy(f.hip).sub(f.point));
+    keepContacts(f,progress(.25,.68,t),progress(.59,.99,t));
+    face(clock,2,0,0,0,0,.96*progress(.32,.77,t));
+    if(t>=1){f.active=false;setReacting(false);}
     return visible;
   }
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,visitorPose,factoryPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,visitorPose,factoryPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

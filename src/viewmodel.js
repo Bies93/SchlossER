@@ -42,7 +42,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   const relax=(v,d,k,dt)=>v+(d-v)*(1-Math.exp(-k*dt));
   const clockAt=style.map(()=>-10),readyAt=style.map(()=>-Infinity),heard=style.map(()=>0),
     previous=player.body.position.clone(),deltaPos=V();
-  const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),sight=V(),projected=V(),sightAnchor=V();
+  const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),projected=V(),sightAnchor=V();
   const screen=new T.Vector2(),aimScreen=new T.Vector2();
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0],
     names=style.map(n=>n.label.split(' · ').at(-1));
@@ -89,7 +89,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       muzzle.x*=eye.projectionMatrix.elements[0]/camera.projectionMatrix.elements[0];
       muzzle.y*=eye.projectionMatrix.elements[5]/camera.projectionMatrix.elements[5];
       muzzle.applyQuaternion(camera.getWorldQuaternion(headQ)).add(origin);
-      projector.ray.at(n.range,sight);fx.launch(origin,muzzle,sight,n);
+      fx.launch(origin,muzzle,projector.ray.direction,n);
       flash.visible=false;
     }else{
       flash.position.fromArray(n.emit);flash.visible=true;flash.rotation.z=(serial*2.39996)%6.28318;

@@ -1,6 +1,8 @@
 import {createHuman} from './human-character.js';
 import {randomSource} from './surface-detail.js';
 import {insidePerimeter} from './world-layout.js';
+import {hitZoneQuery} from './npc-hit-zones.js';
+import {planCollapse} from './npc-collapse.js';
 
 export const GHOUL_COUNT=5;
 const anchors=[[-11.8,-30.2],[16.1,-33.6],[-24.7,-53.4],[22.5,-61.7],[31.0,-83.4]];
@@ -76,6 +78,7 @@ function gardenRoutes(world){
 export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
   const nav=gardenRoutes(world),root=new T.Group();root.name='Schlossgarten · Ghoule';root.userData.noSceneQuery=true;scene.add(root);
   const rng=randomSource(238019),V=(a,b,c)=>new T.Vector3(a,b,c),point=V(0,0,0);
+  const trace=hitZoneQuery(T),zone={};
   const dust=new T.SphereGeometry(1,6,4);
   const groundGeometry=new T.PlaneGeometry(1,1);groundGeometry.rotateX(-Math.PI/2);
   const shadowMat=new T.ShaderMaterial({
@@ -96,7 +99,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
       sparks.frustumCulled=false;sparks.visible=false;sparks.renderOrder=3;
       root.add(sparks);
       pool.push({rig,shadow,sparks,id:i,origin:[0,0],sparkOrigin:V(0,0,0),health:100,alert:false,mode:'roam',phase:rng(),
-        motion:0,v:0,flinch:0,tAttack:-1,lastAttack:-7,fall:0,vanished:false,cached:null,path:[],planAt:0,
+        motion:0,v:0,flinch:0,tAttack:-1,lastAttack:-7,vanished:false,cached:null,path:[],planAt:0,
         gait:.97+rng()*.08,seed:rng()*TAU,birth:0});
     }
   }
@@ -121,7 +124,7 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     state='running';standing=starts.length;cooldown=0;
     for(const [i,g] of pool.entries()){
       const [x,z]=starts[i];
-      g.origin=[x,z];g.health=100;g.alert=false;g.mode='emerge';g.motion=g.v=g.flinch=g.fall=0;
+      g.origin=[x,z];g.health=100;g.alert=false;g.mode='emerge';g.motion=g.v=g.flinch=0;
       g.planAt=clock+i*.18;g.birth=clock+i*.24;g.vanished=false;
       g.nextVoice=clock+1.9+i*.54;
       g.tAttack=-1;g.lastAttack=clock-6;g.attackDone=false;g.cached=null;g.impact=null;g.path.length=0;
@@ -139,17 +142,13 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
       if(g.health<=0||g.mode==='emerge'||!g.rig.actor.visible)continue;
       const a=g.rig.actor.position;
       if((ray.origin.x-a.x)**2+(ray.origin.z-a.z)**2>(limit+1.4)**2)continue;
-      for(const s of g.cached??=g.rig.hitShapes()){
-        if(!ray.intersectSphere(s.sphere,point))continue;
-        const distance=ray.origin.distanceTo(point);
-        if(distance<best){
-          best=distance;candidate={actor:g,distance,point:point.clone(),head:s.head};
-        }
+      if(trace(g.cached??=g.rig.hitShapes(),ray,best,zone)&&zone.distance<best){
+        best=zone.distance;candidate={actor:g,distance:best,point:ray.at(best,point).clone(),head:zone.head};
       }
     }
     return candidate;
   }
-  function damage(g,n,color,impactPoint){
+  function damage(g,n,color,impactPoint,incoming){
     if(state!=='running'||g.health<=0||g.mode==='emerge'||!Number.isFinite(n)||n<=0)return false;
     g.health=Math.max(0,g.health-n);g.alert=true;g.flinch=.26;g.planAt=clock;
     voice(g.health===0?'down':'hit',g.rig.actor.position);
@@ -157,7 +156,8 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     if(impactPoint)g.sparkOrigin.copy(impactPoint);
     else {g.sparkOrigin.copy(g.rig.actor.position);g.sparkOrigin.y+=1.18}
     if(g.health===0){
-      standing--;g.mode='down';g.fall=clock;g.tAttack=-1;g.v=0;
+      standing--;g.mode='down';g.tAttack=-1;g.v=0;
+      g.rig.reaction(g.sparkOrigin,planCollapse(g.rig.actor,g.sparkOrigin,incoming,world,floorHeight),incoming);
       if(standing===0){state='won';notify('Alle fünf Ghoule abgewehrt.','won')}
       else notify('Ghoul abgewehrt · '+(GHOUL_COUNT-standing)+' von '+GHOUL_COUNT,'progress');
     }else if(g.tAttack>=0){
@@ -198,10 +198,9 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
         g.shadow.position.copy(at);g.shadow.position.y+=.012;dirty=true;continue;
       }
       if(g.mode==='down'){
-        const t=clamp((clock-g.fall)/1.12,0,1);
         if(g.vanished)continue;
-        g.rig.pose(clock,g.phase,0,0,.30*(1-t),t*t,g.seed);
-        a.visible=true;g.shadow.visible=t<1;g.vanished=t>=1;
+        dirty=g.rig.reactionTick(dt,a.visible)||dirty;
+        a.visible=true;g.shadow.visible=false;g.vanished=!g.rig.isReacting();
         effect(g);dirty=true;continue;
       }
       if(!motionState){if(a.visible){a.visible=g.shadow.visible=g.sparks.visible=false;dirty=true}continue}
