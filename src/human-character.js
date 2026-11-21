@@ -80,7 +80,8 @@ function personalize(T,lib,id,base,eyeY){
     blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,jakeScalp=id==='gardenHannes'&&skin,
     ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
     hoodie=id==='festZwanni',team=cloth&&id.startsWith('fest'),
-    visitor=cloth&&p.palette&&!team,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
+    visitorPalette=cloth&&!team?p.palette:null,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
+  const visitorColors=visitorPalette?.map(vec);
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
   if(p.cloth&&cloth)m.color.multiply(new T.Color(p.cloth));
   if(p.hair&&(hair||brow))m.color.multiply(new T.Color(p.hair));
@@ -94,7 +95,7 @@ function personalize(T,lib,id,base,eyeY){
   if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
   if(skin||cloth||field||ritual||copperHair||blondHair){
     m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
-      (field||formal||ritual||staff||visitor||team||hoodie||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
+      (field||formal||ritual||staff||visitorColors||team||hoodie||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -132,15 +133,15 @@ function personalize(T,lib,id,base,eyeY){
           diffuseColor.rgb=mix(vec3(${id==='labHedwig'?'.077,.059,.056':'.053,.070,.072'}),
             vec3(${id==='labAuer'?'.58,.61,.56':id==='labHedwig'?'.18,.091,.094':'.33,.37,.29'}),labTop)*(.55+labShade*.96);
         `:''}
-        ${visitor?`
+        ${visitorColors?`
           float seamPhase=smoothstep(.83,1.04,castP.y);
           float shade=dot(diffuseColor.rgb,vec3(.213,.715,.072));
           float rib=.5+.5*sin(castP.y*${id==='guestJona'?'105.':'196.'}+sin(castP.x*61.)*.31);
           float plaid=smoothstep(.53,.72,rib)*(.5+.5*sin(castP.x*91.+castP.z*39.));
-          vec3 garment=mix(vec3(${visitor.map(vec)[0]}),vec3(${visitor.map(vec)[1]}),seamPhase);
+          vec3 garment=mix(vec3(${visitorColors[0]}),vec3(${visitorColors[1]}),seamPhase);
           float stripe=plaid*${id==='guestJona'?'.26':id==='guestLotte'?'.17':'.07'}*(1.-smoothstep(.001,.020,castD));
           float lapel=(1.-smoothstep(.024,.104,abs(castP.x)))*smoothstep(1.22,1.44,castP.y)*step(.078,castP.z)*smoothstep(.30,.72,shade);
-          diffuseColor.rgb=mix(garment,vec3(${visitor.map(vec)[2]}),clamp(stripe*seamPhase+lapel*.70,0.,1.))*(.55+shade*1.38);
+          diffuseColor.rgb=mix(garment,vec3(${visitorColors[2]}),clamp(stripe*seamPhase+lapel*.70,0.,1.))*(.55+shade*1.38);
           ${p.bodice?`
           float ax=abs(castP.x),chest=smoothstep(.88,1.09,castP.y)*(1.-smoothstep(1.33,1.48,castP.y));
           float lining=(1.-smoothstep(.144,.199,ax))*smoothstep(.028,.082,castP.z)*chest;
