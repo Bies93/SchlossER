@@ -79,7 +79,8 @@ function personalize(T,lib,id,base,eyeY){
     copperHair=id==='niklas'&&(hair||brow),freckles=id==='niklas'&&skin,
     blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,jakeScalp=id==='gardenHannes'&&skin,
     ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
-    visitor=cloth&&p.palette,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
+    hoodie=id==='festZwanni',team=cloth&&id.startsWith('fest'),
+    visitor=cloth&&p.palette&&!team,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
   if(p.cloth&&cloth)m.color.multiply(new T.Color(p.cloth));
   if(p.hair&&(hair||brow))m.color.multiply(new T.Color(p.hair));
@@ -93,7 +94,7 @@ function personalize(T,lib,id,base,eyeY){
   if(/Helm|Cap|RitualCloth|FieldBelt|FieldJacketHem|LabCoatSkirts|Apron/.test(m.name))m.side=T.DoubleSide;
   if(skin||cloth||field||ritual||copperHair||blondHair){
     m.customProgramCacheKey=()=> 'schlosser-humans-4-'+(skin?'skin':'cloth')+
-      (field||formal||ritual||staff||visitor||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
+      (field||formal||ritual||staff||visitor||team||hoodie||copperHair||blondHair?'-'+id+m.name:(skin&&p.decay)||freckles||jakeScalp?'-'+id:'-'+(p.weather??0));
     m.onBeforeCompile=sh=>{
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 castP;')
         .replace('#include <begin_vertex>','#include <begin_vertex>\ncastP=position;');
@@ -150,6 +151,44 @@ function personalize(T,lib,id,base,eyeY){
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${vec(p.bodice)})*(.62+shade*1.30),lining*cut);
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.53,.32,.16),piping*(.53+.41*stitch));
           `:''}
+        `:''}
+        ${team?`
+          float yy=castP.y, xx=abs(castP.x);
+          float jersey=max(smoothstep(.86,1.008,yy),smoothstep(.195,.225,xx)*smoothstep(.86,.99,yy));
+          float shade=clamp(dot(diffuseColor.rgb,vec3(.213,.715,.072)),.10,.72);
+          float cotton=1.+(castNoise(castP*vec3(57.,67.,48.))-.5)*.14;
+          vec3 pants=vec3(${vec(p.palette[0])})*(.82+.51*shade);
+          vec3 top=vec3(${vec(p.palette[1])})*(.78+.55*shade)*cotton;
+          ${hoodie?`
+            float forward=smoothstep(.033,.093,castP.z);
+            float open=.060+.030*smoothstep(1.07,1.43,yy)+.006*sin(yy*19.);
+            float insert=(1.-smoothstep(open-.006,open+.002,xx))*forward*smoothstep(.966,1.013,yy);
+            float band=(1.-smoothstep(.005,.011,abs(xx-open-.008)))*forward;
+            float detail=1.-smoothstep(.002,.010,castD);
+            float teeth=(1.-smoothstep(.0014,.0033,abs(xx-open-.004)))*forward;
+            float woven=.5+.5*cos(yy*1160.+sin(yy*52.)*.19);
+            float rib=1.-max(smoothstep(1.013,1.032,yy),smoothstep(.182,.218,xx));
+            float cuff=smoothstep(.535,.577,xx);
+            vec3 outer=vec3(.0185,.021,.024)*(.76+shade*.54)*cotton;
+            outer*=1.-(.18+.07*cos(castP.x*780.+castP.z*182.))*detail*clamp(rib+cuff,0.,1.);
+            float pocket=(1.-smoothstep(.0025,.006,abs(yy-1.027-(xx-.106)*.73)))
+              *smoothstep(.107,.119,xx)*(1.-smoothstep(.173,.187,xx))*forward;
+            outer=mix(outer,vec3(.047,.051,.055),pocket*.73+band*.22);
+            outer=mix(outer,vec3(.18,.181,.17),teeth*(.48+.52*woven)*.64);
+            float collar=1.-smoothstep(.002,.009,abs(yy-(1.445+xx*.213)));
+            vec3 tee=vec3(.42,.416,.39)*(.91+.09*shade)*cotton*(1.-.22*collar);
+            top=mix(outer,tee,insert);
+            jersey=smoothstep(.920,.983,yy);
+          `:''}
+          diffuseColor.rgb=mix(pants,top,jersey);
+        `:''}
+        ${hoodie&&skin?`
+          // Continue the crew-neck underneath the base mesh's open collar.
+          float xx=abs(castP.x),edge=1.445+xx*.213;
+          float collarCloth=(1.-smoothstep(.086,.103,xx))*smoothstep(.052,.090,castP.z)
+            *smoothstep(1.20,1.26,castP.y)*(1.-smoothstep(edge-.003,edge+.004,castP.y));
+          float hem=1.-smoothstep(.003,.010,abs(castP.y-edge));
+          diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.398,.395,.369)*(1.-hem*.24),collarCloth);
         `:''}
         ${bonsShirt?`
           float bonsUpper=max(smoothstep(.91,1.04,castP.y),
@@ -908,6 +947,22 @@ export function createHuman(T,id='base'){
   }
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
+  function costumeDepth(x,y,side=1){
+    // One-time fittings against the bind-space garment, never per-frame raycasts.
+    const ray=new T.Ray(V(x,y,side*2),V(0,0,-side));
+    const a=V(),b=V(),c=V(),hit=V();let nearest=-Infinity;
+    for(const mesh of meshes){
+      if(!/^Cloth/.test(mesh.material.name))continue;
+      const {attributes:{position:p},index}=mesh.geometry,length=index?.count??p.count;
+      for(let i=0;i<length;i+=3){
+        a.fromBufferAttribute(p,index?index.getX(i):i);
+        b.fromBufferAttribute(p,index?index.getX(i+1):i+1);
+        c.fromBufferAttribute(p,index?index.getX(i+2):i+2);
+        if(ray.intersectTriangle(a,b,c,false,hit))nearest=Math.max(nearest,side*hit.z);
+      }
+    }
+    return Number.isFinite(nearest)?nearest*side:null;
+  }
   pose(0,0,0,0,0,0,.2);
   const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
@@ -917,7 +972,7 @@ export function createHuman(T,id='base'){
       mount.quaternion.copy(bind.axis).invert();mount.position.copy(bind.at).negate().applyQuaternion(mount.quaternion);
       bones.get(name).add(mount);return mount;
     },
-    restPoint(name){return read(name).clone();},
+    restPoint(name){return read(name).clone();},costumeDepth,
     joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
   if(npcInfo)npcInfo.rig=rig;
   return rig;

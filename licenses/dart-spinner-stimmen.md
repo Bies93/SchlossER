@@ -7,7 +7,7 @@ passenden Antwort abgespielt. Format: MP3, 24 kHz, Mono, 64 kbit/s.
 
 | Datei in `assets/npc-voices/` | Katalogstimme und ID | Take-ID | Tempo | Dateidauer |
 | --- | --- | --- | ---: | ---: |
-| `festZwanni.mp3` | Albrecht – Calm & Trustworthy (`20cd33ab51e546009b390d207842580f`) | `c6cd8021dfef4369bb28d8a8c012c76b` | 0,96 | 2,28 s |
+| `festZwanni.mp3` | Albrecht – Calm & Trustworthy (`20cd33ab51e546009b390d207842580f`) | `695e41d80e714877b386ee32fdb893aa` | 0,96 | 3,17 s |
 | `festZwanniEier.mp3` | Albrecht – Calm & Trustworthy (`20cd33ab51e546009b390d207842580f`) | `c6cd8021dfef4369bb28d8a8c012c76b` | 0,96 | 1,65 s |
 | `festAnni.mp3` | Nele – Friendly & Natural (`194c5c7896e849139df58b34b05b6a7c`) | `dc7ba7d9e5cc4d2d9967b8d9377b5e69` | 0,98 | 5,02 s |
 | `festKalle.mp3` | Florian – Dynamic & Punchy (`be8d7bf8ce774bda8b6dd04541fb8623`) | `1c976a4378f840a89a8144dc045732b4` | 1,00 | 5,90 s |
@@ -15,12 +15,11 @@ passenden Antwort abgespielt. Format: MP3, 24 kHz, Mono, 64 kbit/s.
 
 Dateiformat, Laufzeiten und vollständige Dekodierung geprüft; keine Hörabnahme.
 
-Für Zwanni wurden „Iiiich bin ein Goooottkönig!“ und „Ich brauche Eier zum
-lutschen!“ mit einem Absatz Abstand, Sprache Deutsch und deaktivierter
-Textnormalisierung eingesprochen. Der gemeinsame Take wurde anhand der
-Zeitmarken und Stille ohne Tempo- oder Tonhöhenbearbeitung aufgeteilt:
-0,265–2,545 s (Einstieg) und 2,625–4,278 s (Antwort). Die Ablehnung hat
-absichtlich keine Sprachausgabe.
+Zwannis neuer Einstieg „Ich bin dein Gottkönig! Aahhh!“ ist ein unveränderter
+deutscher Take mit deaktivierter Textnormalisierung. „Aahhh“ ist laut
+Dienst-Zeitmarken ab 2,533 s enthalten. „Ich brauche Eier zum lutschen!“
+bleibt unverändert der Ausschnitt 2,625–4,278 s aus dem früheren Take.
+Die Ablehnung hat absichtlich keine Sprachausgabe.
 
 Die Musik `assets/zwannis-polka.mp3` ist eine eigene prozedurale Komposition
 aus `scripts/bake-festival-polka.py`. Keine verwendeten Fremdsamples.
