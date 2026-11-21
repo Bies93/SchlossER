@@ -5,11 +5,12 @@ const sound={
   wood:[156,724,2450,.105]
 };
 const FOOT_LEVEL=.34; // About -9.4 dB, applied to every layer of the step.
-export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={},weaponUrls={},ravenUrl) {
+export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,npcUrls={},weaponUrls={},ravenUrl,bergUrl) {
   const weapons=weaponBank(weaponUrls);
   let ctx,master,music,sfx,verb,noise,ac,playing=false,combat=false,enabled=true,bedTime=0;
   let track,loading,source,voice,started=0,offset=0;
   let danceBus,danceWet=0,danceBuffer,danceLoad,danceRetry=0,danceNode,danceStart=0,danceOffset=0;
+  let bergBus,bergWet=false,bergLoad,bergBuffer,bergNode,bergRetry=0;
   const spokenClips=new Map(),pendingClips=new Map();
   let clipBytes=0;const clipBudget=12*1024*1024;
   let choirRequest,choirVoice,choirFailed=false;
@@ -248,7 +249,8 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     const t=ctx.currentTime;
     master.gain.setTargetAtTime(playing&&enabled?.55:0,t,.038);
     const voiceDuck=Math.min(npcVoice?.58:1,choirVoice?(choirVoice.url===prisonerUrl?.66:.42):1);
-    music.gain.setTargetAtTime(levels.music*voiceDuck*(1-danceWet),t,voiceDuck<1?.085:.23);
+    music.gain.setTargetAtTime(levels.music*voiceDuck*(1-danceWet)*(bergWet?0:1),t,voiceDuck<1?.085:.23);
+    bergBus?.gain.setTargetAtTime(bergWet?levels.music*.51*voiceDuck:0,t,.13);
     danceBus?.gain.setTargetAtTime(levels.music*danceWet*.88*(npcVoice?.38:1),t,.12);
     sfx.gain.setTargetAtTime(levels.sfx,t,.046);
   }
@@ -262,12 +264,12 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     }catch{/* Audio is optional on browsers without Web Audio. */}
   }
   function pause(){
-    playing=false;club(0);stopTrack();stopChoir();stopRadio();stopNpc();stopRaven();mix();
+    playing=false;club(0);berg(false);stopTrack();stopChoir();stopRadio();stopNpc();stopRaven();mix();
   }
   function toggle(){
     enabled=!enabled;store();mix();
     if(enabled&&playing)play();
-    else{club(0);stopTrack();stopChoir();stopRadio();stopNpc();stopRaven();}
+    else{club(0);berg(false);stopTrack();stopChoir();stopRadio();stopNpc();stopRaven();}
     return enabled;
   }
   function sample(id,volume,rate=1,pan=0,wet=0){
@@ -456,10 +458,44 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     }
     if(Math.abs(danceWet-amount)>.005||amount===1&&danceWet!==1){danceWet=amount;mix();}
   }
+  function berg(on){
+    on=Boolean(on&&live()&&bergUrl);
+    if(on!==bergWet){bergWet=on;mix();}
+    if(!on){
+      if(bergNode){bergNode.stop(ctx.currentTime+.22);bergNode=null;}
+      return;
+    }
+    if(!bergBuffer){
+      if(!bergLoad&&ctx.currentTime>=bergRetry)bergLoad=fetch(bergUrl)
+        .then(r=>{if(!r.ok)throw Error('Wirtshausmusik fehlt');return r.arrayBuffer();})
+        .then(bytes=>ctx.decodeAudioData(bytes)).then(b=>{bergBuffer=b;})
+        .catch(()=>{bergRetry=ctx.currentTime+18;}).finally(()=>{bergLoad=null;});
+      return;
+    }
+    if(bergNode)return;
+    bergBus??=gain(master,0);
+    const node=ctx.createBufferSource();node.buffer=bergBuffer;node.loop=true;node.connect(bergBus);
+    node.onended=()=>node.disconnect();node.start();bergNode=node;mix();
+  }
+  function puddleCue(){
+    if(!live())return;
+    const t=ctx.currentTime+.004;
+    grit(sfx,t,.36,.28,255,1830,{wet:.27,attack:.045});
+    tone(sfx,t,147,.42,.125,{end:63,attack:.046,wet:.38});
+    for(let i=0;i<3;i++)tone(sfx,t+.16+i*.066,358+i*93,.095,.047,{end:240+i*61,wet:.27});
+  }
+  function weatherCue(print){
+    if(!live())return;
+    const t=ctx.currentTime+.004;
+    if(print){
+      tone(sfx,t,848,.12,.062,{end:742,wet:.07});
+      for(let i=0;i<6;i++)grit(sfx,t+.05+i*.060,.056,.093,450,5300,{attack:.003,rate:1.06-i*.04});
+    }else grit(sfx,t,.024,.061,900,4750,{attack:.001});
+  }
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
-  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
+  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,berg,puddleCue,weatherCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
     playNpc,npcTalking,stopNpc,raven,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),

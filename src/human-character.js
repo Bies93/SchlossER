@@ -16,6 +16,11 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
+  bergWirt:{palette:[0x49372d,0xc2ac8b,0xe2cbb0],bodice:0x994538,hair:0x94775d,weather:.22},
+  bergLeni:{palette:[0x514041,0xbbb99f,0xe3cfb4],bodice:0x266050,hair:0x684031,weather:.09},
+  bergDora:{palette:[0x4a3044,0x917b9d,0xc5a995],bodice:0x75384a,hair:0xada39c,weather:.17},
+  bergFritz:{palette:[0x523b30,0xa59171,0xb79e73],bodice:0x425545,hair:0xb0a399,weather:.31},
+  bergUdo:{palette:[0x353238,0x847b8e,0xbea786],bodice:0x3e375c,hair:0x756044,weather:.18},
   gardenHannes:{cloth:0x97a28b,hair:0xb39370,palette:[0x605645,0x576b53,0x806b52],weather:.16},
   hubert:{skin:0xb5b8aa,weather:.96},
   ghoulA:{skin:0xabb5a4,cloth:0x786d54,weather:1,decay:1.0},
@@ -113,6 +118,16 @@ function personalize(T,lib,id,base,eyeY){
           float stripe=plaid*${id==='guestJona'?'.26':id==='guestLotte'?'.17':'.07'}*(1.-smoothstep(.001,.020,castD));
           float lapel=(1.-smoothstep(.024,.104,abs(castP.x)))*smoothstep(1.22,1.44,castP.y)*step(.078,castP.z)*smoothstep(.30,.72,shade);
           diffuseColor.rgb=mix(garment,vec3(${visitor.map(vec)[2]}),clamp(stripe*seamPhase+lapel*.70,0.,1.))*(.55+shade*1.38);
+          ${p.bodice?`
+          float ax=abs(castP.x),chest=smoothstep(.88,1.09,castP.y)*(1.-smoothstep(1.33,1.48,castP.y));
+          float lining=(1.-smoothstep(.144,.199,ax))*smoothstep(.028,.082,castP.z)*chest;
+          float opening=.029+clamp((castP.y-1.17)*.30,0.,.055);
+          float cut=smoothstep(opening-.008,opening+.002,ax);
+          float piping=(1.-smoothstep(.0035,.009,abs(ax-opening-.007)))*lining;
+          float stitch=.50+.50*cos(castP.y*237.);
+          diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${vec(p.bodice)})*(.62+shade*1.30),lining*cut);
+          diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.53,.32,.16),piping*(.53+.41*stitch));
+          `:''}
         `:''}
         ${copperHair?`
           float gingerShade=smoothstep(.0,.42,pow(dot(diffuseColor.rgb,vec3(.213,.715,.072)),.55));
@@ -172,6 +187,7 @@ export function createHuman(T,id='base'){
   actor.name=id;actor.add(body);body.scale.multiplyScalar(proto.userData.size??1);
   const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
   body.traverse(o=>{
+    if(id.startsWith('berg')&&/^(Insignia|Bortenstreifen|Messinganhänger|Besatz|Stoff)/.test(o.name))o.visible=false;
     if(o.isBone)bones.set(o.userData.name??o.name,o);
     if(o.isSkinnedMesh){
       o.castShadow=false;o.receiveShadow=true;
@@ -447,6 +463,19 @@ export function createHuman(T,id='base'){
     face(t,job.length+.44,talk*.29*(.31+.69*Math.abs(sin(t*13.5))),prayer?.12:0,
       quiet?.075:smoke?.11:.015,glance);
   }
+  function tavernPose(t,role,waving=false,glance=0,talk=0){
+    factoryPose(t,'host',glance,talk);
+    const wave=waving?.60+.39*sin(t*3.7):0;
+    if(waving){
+      solve(LIMB.r.arm,-.38-.08*wave,1.27+.26*wave,.22,-.8,-.4,-.51);
+      rot('hand_r',-.37,.19,.72*sin(t*6.7));curl('r',.17);
+    }else if(role===1){
+      solve(LIMB.r.arm,-.20,1.015+.024*sin(t*2),.39,-.72,-.51,-.6);curl('r',.68);
+    }else if(role===4){
+      solve(LIMB.l.arm,.22,.92+.04*sin(t*3.4),.31,.72,-.51,-.61);
+      solve(LIMB.r.arm,-.23,.93+.04*sin(t*3.4+1),.29,-.72,-.51,-.61);
+    }
+  }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);
     torso(.007*sin(t*1.2),home-hipsY+.003*sin(t*1.65),.07*rise,.028+.21*rise,
@@ -703,7 +732,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

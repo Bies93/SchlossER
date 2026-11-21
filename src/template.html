@@ -113,6 +113,7 @@ canvas{touch-action:none;outline:none}
   .boot-process{margin-top:11px}.boot-view svg{max-height:37vh}
 }
 #upper-flash{position:absolute;inset:0;z-index:6;opacity:0;background:#fff;pointer-events:none}
+#berg-fade{position:absolute;inset:0;z-index:6;opacity:0;background:#0d2427;pointer-events:none}
 .panel{position:absolute;left:max(clamp(12px,4vw,60px),env(safe-area-inset-left));bottom:calc(clamp(12px,5vh,58px) + env(safe-area-inset-bottom));width:min(440px,calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))));
  max-height:calc(100% - 18px - env(safe-area-inset-bottom));overflow:auto;background:#141d1bf5;border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:8px;padding:clamp(15px,2.6vw,26px);box-shadow:0 16px 44px #0006}
 .eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
@@ -176,6 +177,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
 <main aria-label="Erlanger Schloss und Schlossgarten">
   <div id="canvas"></div>
   <div id="upper-flash" aria-hidden="true"></div>
+  <div id="berg-fade" aria-hidden="true"></div>
   <button class="tool" id="pause" type="button" aria-label="Rundgang pausieren" title="Pause">Ⅱ</button>
   <section class="boot" id="loading" aria-labelledby="loading-title">
     <div class="boot-frame">
@@ -276,6 +278,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
       <p>Parkwege und Lagepunkte © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>. Maßkontrolle: Bayerische Vermessungsverwaltung. Luftbilder: Reinhold Möller (CC BY-SA 4.0).</p>
       <p><a href="https://opengameart.org/content/gunshot-sounds">„Gunshot Sounds“</a>: Vincent Sevedge, gekürzte und abgemischte Aufnahmen, <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. Weitere Ton- und Modellcredits stehen im Ordner <code>licenses</code>.</p>
       <p><a href="https://www.nps.gov/subjects/sound/sounds-common-raven.htm">Kolkrabenruf aus dem Grand Teton National Park</a>: U.S. National Park Service (in den USA gemeinfrei).</p>
+      <p>„Der letzte Walzer“: eigener Wirtshaus-Loop mit <a href="https://freepats.zenvoid.org/Organ/accordion.html">Button Accordion HN</a> von FreePats (Aufnahmen: Jeff Stauffer; Samples: CC0 1.0).</p>
     </details>
   </section>
   <section class="panel" id="error" aria-labelledby="error-title">

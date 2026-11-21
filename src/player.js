@@ -29,6 +29,14 @@ export function createPlayer(T, camera, world, floorHeight, onStep=()=>{}, ceili
   aim(0, 0);
   return {
     body,aim,motion,
+    relocate(destination){
+      ({x,y,z,yaw,pitch}=destination);
+      px=x;py=groundY=baseY=y;pz=z;
+      lastTime=null;accumulator=vx=vy=vz=buffer=stepDistance=0;
+      grounded=true;coyote=COYOTE;
+      Object.assign(motion,{grounded:true,speed:0,land:0,climbing:false});
+      Object.assign(safe,{x,y,z,base:y});body.position.set(x,y,z);aim(0,0);
+    },
     jump(){buffer=JUMP_BUFFER},
     stop(){lastTime=null;accumulator=0;buffer=0;px=x;py=y;pz=z;},
     tick(time, keys, stick) {

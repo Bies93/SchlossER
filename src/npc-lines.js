@@ -1,6 +1,11 @@
 // Stable model/voice IDs. "existing" means the scene already owns the
 // interaction and must not get a second E prompt or duplicate playback.
 export const NPCS={
+  bergWirt:{name:"Bertl Kießling · Wirt",template:'labSepp',line:"Freili, früher war der Berch noch oben. Wie s’ uns zug’sperrt ham, simmer halt a Stockwerk tiefer. Hock di her."},
+  bergLeni:{name:"Leni Beck · Schankkellnerin",template:'guestSabine',line:"Früher hat mei Mutter die Maß ohne Strich ausg’schenkt. Der Strich war am Deckel. Schau, der da is noch von vor der Flut."},
+  bergDora:{name:"Dora Pfister · Stammgast",template:'guestMarlene',line:"Alla, früher ham mer für die letzte Runde a Bleim g’sunga. Heut sing mer’s nimmer. Sonst könnt’s ja wirklich die letzte sei."},
+  bergFritz:{name:"Fritz Gugel · Fassmacher",template:'guestBruno',line:"Das letzte Fass? Des ham mer neunzehnhundertsiebzich ang’stocha. Seitdem is bloß die Eich’n älter worn."},
+  bergUdo:{name:"Udo Heller · Musikant",template:'guestJona',line:"Früher ham mer am Berch bis zum Regen g’spielt. Jetzt spiel mer bis zum Trocknen. Des zieht si, wenn mer in einer Pfützn wohnt."},
   guestBruno:{name:'Bruno Reiter',line:'Heiliger Bies, erleuchte uns. Aber bitte nicht schon wieder mit dem Chor.'},
   guestMarlene:{name:'Marlene Vogel',line:'Ich suche die Chronik. Im Katalog steht: ausgeliehen, seit 1743.'},
   guestSabine:{name:'Sabine Roth',line:'Die Seife ist alle. Das Schild „Hygiene“ haben sie aber frisch geputzt.'},

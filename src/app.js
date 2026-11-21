@@ -39,6 +39,10 @@ import {combatTargets} from './combat-targets.js';
 import {weaponPickups} from './weapon-pickups.js';
 import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
 import {ATTIC_LAYER,ATTIC_WELL,ATTIC_FLOOR} from './palace-attic-layout.js';
+import {BERG_CEILING,BERG_FLOOR,BERG_LAYER,bergInside,bergPlan} from './berg-layout.js';
+import {addBergTavern} from './berg-tavern.js';
+import {addBergPuddle} from './berg-puddle.js';
+import {addWeatherZero} from './weather-zero.js';
 
 const $ = id => document.getElementById(id);
 const stage=document.querySelector('main');
@@ -108,7 +112,8 @@ async function start(){
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p)&&!chapter?.isBelow(p));
  const upperWorld=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
  const atticWorld=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter);
- const localWorld=p=>upper.insideAttic(p)?atticWorld:upper.inside(p)?upperWorld:world;
+ const bergWorld=collisionWorld(BOUNDS,PLAYER.radius,bergPlan);
+ const localWorld=p=>bergInside(p)?bergWorld:upper.insideAttic(p)?atticWorld:upper.inside(p)?upperWorld:world;
  addFixedColliders(world);
  const pauli=addPauli(T,s,world);
  const moosfunk=makeMoosfunk();
@@ -123,6 +128,7 @@ async function start(){
  s.updateMatrixWorld(true);
  const ray=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,3), hits=[];
  const floorHeight=(x,z,referenceY=0,allowChapter=true)=>{
+   if(bergInside({x,y:referenceY,z}))return BERG_FLOOR;
    const upstairs=upper?.floorAt(x,z,referenceY);
    if(upstairs!=null)return upstairs;
    if(allowChapter){
@@ -151,20 +157,23 @@ async function start(){
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
    return {x:e[12],y:e[13],z:e[14],rightX:e[0],rightZ:e[2]};
- },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall);
+ },payload.music,payload.galleryChoir,payload.orbVoice,payload.clubMusic,payload.prisonerVoice,payload.npcVoices,payload.weaponSounds,payload.ravenCall,payload.bergMusic);
  // Audio owns the URLs it can still request. Do not pin a second copy of the
  // finished GLBs/textures as base64 strings in the standalone version.
  payload=null;
+ const tavern=addBergTavern(T,s,bergWorld),puddle=addBergPuddle(T,s,world,garden.heightAt,tavern);
+ const weather=addWeatherZero(T,s,world,garden.heightAt,audio);
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
  // Optional effects still prefetch, but slow audio cannot hold up Start.
  void audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
    const {kind,x,y,z,foot,power}=event;
+   if(bergInside(event)){audio.foot('hall',power,kind==='land',foot);return;}
    if(kind==='climb'||upper.inside(event)){audio.foot('wood',power,kind==='land',foot);return;}
    const surface=chapter.isBelow(event)||hallFloor(x,z)!==null||Number.isFinite(Math.min(wcCeilingAt(x,z,y),labCeilingAt(x,z,y)))?'hall':garden.surfaceAt(x,z)??'stone';
    audio.foot(surface,power,kind==='land',foot);
- },(x,z,y)=>Math.min(chapter.ceilingAt(x,z,y),wcCeilingAt(x,z,y),labCeilingAt(x,z,y),upper.ceilingAt(x,z,y)),
+ },(x,z,y)=>bergInside({x,y,z})?BERG_CEILING:Math.min(chapter.ceilingAt(x,z,y),wcCeilingAt(x,z,y),labCeilingAt(x,z,y),upper.ceilingAt(x,z,y)),
    {moveWorld:localWorld,traverse:upper.step,stepDown:(x,z,y)=>upper.inside({x,y,z})?upper.downSnap(x,z):null});
  s.add(player.body);
  const canvas=r.domElement;
@@ -172,7 +181,7 @@ async function start(){
  canvas.setAttribute('aria-label','3D-Rundgang');
  const action=$('enter');
  const active=()=>document.body.dataset.state==='playing';
- const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER,ATTIC_LAYER];
+ const layerPasses=[0,LAB_LAYER,WC_LAYER,CHAPTER_LAYER,UPPER_LAYER,ATTIC_LAYER,BERG_LAYER];
  const coarse=matchMedia('(pointer: coarse)'),ghoulOption=$('with-ghouls');
  let started=false,ghoulsEnabled=false,firstRound=false,spawnCheck=0,ghoulsWarming=null,ghoulsReady=false;
  let frame=0, dirty=true,lastDoorTime=null,activePortal='';
@@ -190,6 +199,7 @@ async function start(){
  const geometryQuery=sceneQuery(T,s,player.body),layerContext={mask:1,layer:0};
  function activeLayers(){
    const p=player.body.position;
+   if(bergInside(p)){layerContext.layer=BERG_LAYER;layerContext.mask=1<<BERG_LAYER;return layerContext;}
    if(upper.insideAttic(p)){
      layerContext.layer=ATTIC_LAYER;layerContext.mask=(1<<ATTIC_LAYER)|(upper.stairLink(p)?1<<UPPER_LAYER:0);
      return layerContext;
@@ -292,6 +302,11 @@ async function start(){
  }
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
+   if(bergInside(pos))return puddle.target(pos,look,false);
+   if(pos.y>-.60&&pos.y<1.75){
+     const extra=puddle.target(pos,look,true)??weather.target(pos,look);
+     if(extra)return extra;
+   }
    const access=upper.target(pos,look);
    if(access?.action==='upper-unlock'&&names.target()?.id==='gardenHannes')return null;
    if(access||upper.inside(pos)||player.motion.climbing)return access??null;
@@ -302,7 +317,7 @@ async function start(){
  };
  function hallOrPerson(){
    if(player.motion.climbing)return null;
-   if(upper.inside(player.body.position))return names.target();
+   if(bergInside(player.body.position)||upper.inside(player.body.position))return names.target();
    const hallTarget=hall.targetFor(player,c);
    return hallTarget&&hallTarget.id!=='gallery-choir'?hallTarget:names.target()??hallTarget;
  }
@@ -326,6 +341,21 @@ async function start(){
    if(!active())return;
    const now=performance.now();names.sample(now,true);
    const local=localTarget();
+   if(local?.action==='berg-portal'){
+     const leaving=bergInside(player.body.position);
+     audio.stopNpc();names.clear();viewmodel.stop();
+     player.relocate(puddle.destination(leaving));
+     puddle.update(0,player.body.position,leaving);
+     audio.berg(!leaving);audio.puddleCue();
+     $('berg-fade').animate([{opacity:.95},{opacity:0}],{duration:matchMedia('(prefers-reduced-motion: reduce)').matches?185:630});
+     if(!leaving)showCaption('Zur letzten Einkehr · Bergkeller der Letzten Runde',4700);
+     else hideCaption();
+     doorPrompt();refresh();return;
+   }
+   if(local?.action==='weather-note'){
+     showCaption('Wetterstation 0 — „'+weather.read()+'“',5600);
+     doorPrompt();refresh();return;
+   }
    if(local?.action==='upper-unlock'){
      if(upper.unlock(now)){
        audio.upperReveal();
@@ -412,6 +442,7 @@ async function start(){
    }
    if(layer===ATTIC_LAYER&&!sees(atticShaft))mask&=~(1<<UPPER_LAYER);
    if(layer===UPPER_LAYER&&!sees(atticShaft))mask&=~(1<<ATTIC_LAYER);
+   if(layer===0)puddle.preview(r,c,p,performance.now());
    viewmodel.bodyLayer(layer);
    if(mask&1){
      lighting.update(p);garden.update(p,performance.now());
@@ -458,6 +489,9 @@ async function start(){
      if(chapter.update(dt,player.body.position,sees(benchShaft)))dirty=true;
      if(chapter.shadowMoved())r.shadowMap.needsUpdate=true;
      const {layer,mask}=activeLayers();
+     audio.berg(layer===BERG_LAYER);
+     if(puddle.update(dt,player.body.position,layer===0,c))dirty=true;
+     if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
      geometryQuery.invalidateMoving();

@@ -11,6 +11,7 @@ import {addParkMonuments,monumentClear} from './park-monuments.js';
 import {WC_CUT} from './park-stair.js';
 import {CHAPTER_CUT,CHAPTER_BAY_PATH,chapterContains} from './chapter-layout.js';
 import {UPPER_ENTRY} from './palace-openings.js';
+import {BERG_POOL,WEATHER_ZERO} from './berg-layout.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
 export function addGarden(T, scene, world, oldGravel, finish) {
@@ -39,6 +40,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   ribbon([[41,-79],[44,-107],[43,-145],[42,-166],[41,-198],[40,-220],[39,-239]],3.25);
   ribbon([[62,-79],[65,-96],[65,-117],[63,-144]],2.7);
   ribbon([[-40,-63],[-47,-69],[-51,-79]],2.8);
+  ribbon([[-42.4,-65],[-43.4,-63.25],[-43.2,-62.13]],1.13,'compact');
   ribbon([[42,-63],[53,-66],[62,-79],[60,-82]],2.7);
   ribbon([[37.1,-40],[47.8,-42],[57.8,-45.3],[59.6,-51.8],[58,-60],[54,-66.5]],2.6,'compact');
   // Bench bay runs parallel to the main path and blends into the verge.
@@ -73,7 +75,10 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     [wcSide,wcBack+2.055],[join,wcBack+2.055]],-.017,1),gravel);
   wcLink.name='Seitlicher Weg zum WC';wcLink.receiveShadow=true;group.add(wcLink);floors.push(wcLink);
   const sites=[];
+  const noBergProps=(x,z,pad=0)=>Math.hypot(x-BERG_POOL.x,z-BERG_POOL.z)<3.2+pad||
+    Math.hypot(x-WEATHER_ZERO.x,z-WEATHER_ZERO.z)<1.0+pad;
   function tree(x,z,h,species,hero,mapped=false){
+    if(noBergProps(x,z,1.1))return;
     if(z>-18||(!mapped&&x<-21&&z>-88)||parkFacadeClearance(x,z,2)||monumentClear(x,z,1.3))return;
     if(!insidePerimeter(x,z)||distanceToPerimeter(x,z)<3.5||network.edge(x,z)<1.25)return;
     if(!mapped&&Math.abs(x)<23&&z>-78)return;
@@ -132,6 +137,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     }
   }
   const plants=plantGarden(T,group,world,sites,(x,z)=>{
+    if(noBergProps(x,z))return 0;
     if(z>-17.35||!insidePerimeter(x,z)||x<-43&&z>-83||parkFacadeClearance(x,z,.5))return 0;
     if(atBed(x,z,.20)||monumentClear(x,z,.28)||Math.hypot(Math.max(0,Math.abs(x)-4.75),z+47)<10.05)return 0;
     if(chapterContains(CHAPTER_CUT,x,z,.48)||BENCH_SITES.some(([a,b])=>Math.abs(x-a)<1.14&&Math.abs(z-b)<1.14))return 0;
