@@ -151,7 +151,8 @@ export function addOrangery(T,parent,world,finish){
     const sill=.124,spring=hero?4.08:3.92,rear=-.29;
     box('foot',p,0,L,-.068,.10,-.30,.062);
     if(plain){box('plaster',p,0,L,.10,eave,rear,0);return;}
-    box('plaster',p,0,lo,.10,eave,rear,0);box('plaster',p,hi,L,.10,eave,rear,0);
+    const liner=hero?0:.043;
+    box('plaster',p,0,lo-liner,.10,eave,rear,0);box('plaster',p,hi+liner,L,.10,eave,rear,0);
     box('plaster',p,lo,hi,.10,sill,rear,0);
     box('dark',p,lo-.007,hi+.007,sill,spring+(hero?w:0)+.05,rear-.029,rear);
     if(hero){
@@ -171,8 +172,10 @@ export function addOrangery(T,parent,world,finish){
       box('stone',p,mid-.094,mid+.094,spring+w+.016,spring+w+.235,.059,.154);
       theCarvings.rosette(f,mid,spring+w+.166,.165,1.04);
     }else{
-      box('plaster',p,lo,hi,spring,eave,rear,0);
-      for(const [a,b] of [[lo-.029,lo],[hi,hi+.032]])box('shade',p,a,b,sill,spring,rear,.05);
+      box('plaster',p,lo-liner,hi+liner,spring,eave,rear,0);
+      // The jamb owns the inside reveal. Stacking its side face directly on
+      // the plaster aperture produced the striped overlap at grazing angles.
+      for(const [a,b] of [[lo-liner,lo],[hi,hi+liner]])box('shade',p,a,b,.10,spring,rear,.041);
       trimBay(p,lo,hi,sill,spring);
       // Blind fields are flush plaster with layered returns, not attic windows.
       const d=Math.min(.64,L*.29);

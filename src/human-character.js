@@ -463,18 +463,41 @@ export function createHuman(T,id='base'){
     face(t,job.length+.44,talk*.29*(.31+.69*Math.abs(sin(t*13.5))),prayer?.12:0,
       quiet?.075:smoke?.11:.015,glance);
   }
-  function tavernPose(t,role,waving=false,glance=0,talk=0){
-    factoryPose(t,'host',glance,talk);
-    const wave=waving?.60+.39*sin(t*3.7):0;
-    if(waving){
-      solve(LIMB.r.arm,-.38-.08*wave,1.27+.26*wave,.22,-.8,-.4,-.51);
-      rot('hand_r',-.37,.19,.72*sin(t*6.7));curl('r',.17);
-    }else if(role===1){
-      solve(LIMB.r.arm,-.20,1.015+.024*sin(t*2),.39,-.72,-.51,-.6);curl('r',.68);
-    }else if(role===4){
-      solve(LIMB.l.arm,.22,.92+.04*sin(t*3.4),.31,.72,-.51,-.61);
-      solve(LIMB.r.arm,-.23,.93+.04*sin(t*3.4+1),.29,-.72,-.51,-.61);
+  function tavernPose(t,role,{waving=false,glance=0,talk=0,sip=0,push=0,wipe=0,beat=t}={}){
+    const seated=role===2||role===3,home=seated?(.495+.106)/size:hipsY-.023;
+    const working=1-Math.min(1,talk*2),shift=sin(t*(seated?.77:1.07)),stir=sin(t*1.64),
+      wave=waving?.56+.42*sin(t*3.8):0,joke=role===2?(Math.max(0,sin(t*.93-.8))**5)*.24+talk*.22:0;
+    torso(shift*(seated?.012:.024),home-hipsY+sin(t*1.5)*.007,seated?.024:.012,
+      .035+(role===0?wipe*.095:role===3?-.10*sip:.026),shift*.092+(role===2?joke*.31:0),
+      .026*sin(t*.91),t,glance+(role===2?.12:0),role===3?-.19*sip:role===1?.052:.009);
+    for(const [i,side] of ['l','r'].entries()){
+      const s=i===0?1:-1,ankle=read('foot_'+side);
+      solve(LIMB[side].leg,s*(seated?.123:.106),ankle.y,ankle.z+(seated?.283:s*.031),s*.145,-.04,1);
+      foot('foot_'+side,seated?.023:0,s*.096);
+      let x=s*.181,y=home+(seated?.135:-.135),z=seated?.255:.068,rotX=.11,close=.37;
+      if(role===0){
+        if(i===1&&waving){x=-.40-.073*wave;y=1.29+.24*wave;z=.238;rotX=-.39;close=.13;}
+        else if(i===1){
+          x=-.175+wipe*(.062+.15*stir);y=mix(home-.125,1.106/size,wipe);
+          z=mix(.107,.465+.058*cos(t*1.64),wipe);rotX=.32*wipe;close=.30+wipe*.35;
+        }else{x=.198+talk*.055;y=home-.095+.35*talk;z=.146+talk*.13;close=.38;}
+      }else if(role===1){
+        x=s*.202+.015*shift;y=1.028+.015*sin(t*1.17)+(i===1?.006:0);z=.351+sin(t*.81)*.017;rotX=.11*s;close=.52;
+      }else if(role===2){
+        x+=s*joke*.10;y+=joke*(i===1?1:.51);z+=joke*.46;rotX=.27-joke*.9;close=.31+joke*.32;
+      }else if(role===3&&i===1){
+        x=mix(-.191,-.087,sip);y=mix(home+.173,home+.743,sip);z=mix(.303,.236,sip);
+        rotX=.18-.42*sip;close=.80;
+      }else if(role===4){
+        const trill=.012*sin(beat/.45*Math.PI*2+i);
+        x=s*(.215+(i===1?push*.066:push*.018));y=home+.106+trill;
+        z=.330+trill*.38;rotX=-.18;close=.36+.23*Math.max(0,sin(beat*12.2+i))*working;
+      }
+      solve(LIMB[side].arm,x,y,z,s*.78,-.51,-.62);
+      rot('hand_'+side,rotX,(role===4?.20:.12)*s,(waving&&i===1?.64*sin(t*6.7):.115)*s);
+      curl(side,close);
     }
+    face(t,role*1.121+.65,talk*(.52+.28*Math.abs(sin(t*14.7))),.022,role===2?.063:.027,glance);
   }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);

@@ -227,6 +227,7 @@ async function start(){
  const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
    if(id==='hubert')leavePrison();
+   if(id==='bergUdo')audio.berg(bergInside(player.body.position),false);
    names.sample(performance.now(),true);
  },ravens);
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,active,refresh,
@@ -346,7 +347,7 @@ async function start(){
      audio.stopNpc();names.clear();viewmodel.stop();
      player.relocate(puddle.destination(leaving));
      puddle.update(0,player.body.position,leaving);
-     audio.berg(!leaving);audio.puddleCue();
+     audio.berg(!leaving,tavern.musicianAlive());audio.puddleCue();
      $('berg-fade').animate([{opacity:.95},{opacity:0}],{duration:matchMedia('(prefers-reduced-motion: reduce)').matches?185:630});
      if(!leaving)showCaption('Zur letzten Einkehr · Bergkeller der Letzten Runde',4700);
      else hideCaption();
@@ -489,8 +490,8 @@ async function start(){
      if(chapter.update(dt,player.body.position,sees(benchShaft)))dirty=true;
      if(chapter.shadowMoved())r.shadowMap.needsUpdate=true;
      const {layer,mask}=activeLayers();
-     audio.berg(layer===BERG_LAYER);
-     if(puddle.update(dt,player.body.position,layer===0,c))dirty=true;
+     audio.berg(layer===BERG_LAYER,tavern.musicianAlive());
+     if(puddle.update(dt,player.body.position,layer===0,c,audio.bergPhase()))dirty=true;
      if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;

@@ -32,8 +32,8 @@ export function repeatSet(T,kind,size=512) {
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=noise(0,x,y)-.5,b=noise(1,x,y)-.5,c=noise(2,x,y)-.5,f=rng()-.5;
     if(kind==='lawn'){
-      const v=a*9+b*8+c*10+f*3, dry=clamp(.26+a*.44+b*.23,0,1);
-      write(x,y,73+v+dry*22,96+v+dry*5,42+v+dry*10,a*.15+b*.15+c*.15+f*.032,231+24*c);
+      const v=a*6+b*10+c*13+f*5, dry=clamp(.18+a*.46+b*.30,0,1);
+      write(x,y,75+v+dry*25,100+v+dry*5,44+v*.64+dry*9,a*.12+b*.19+c*.15+f*.018,234+14*c);
     } else if(kind==='grit'){
       const v=a*12+b*8+c*9+f*4;
       write(x,y,174+v,156+v,126+v,a*.13+b*.20+c*.22+f*.045,226+16*b);
@@ -114,13 +114,32 @@ export function repeatSet(T,kind,size=512) {
         lerp(91,111+v*.86,bevel),bevel*.24+c*.038+f*.012,240-bevel*31);
     }
   }
-  if(kind==='lawn'||kind==='grit'){
-    const blade=kind==='lawn';
-    for(let i=0;i<(blade?19000:8200);i++){
+  if(kind==='lawn'){
+    // Long tapered leaf impressions at world scale; center crests and
+    // shaded roots remain legible after the first few mip levels.
+    for(let i=0;i<22200;i++){
+      const x=(rng()*size)|0,y=(rng()*size)|0,len=7+(rng()*19|0);
+      const a=rng()*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a),b=(rng()-.5)*.28;
+      const gold=rng()<.084,tone=4+rng()*14,wide=rng()<.45;
+      for(let j=0;j<len;j++){
+        const t=j/(len-1),lean=b*j*t,xx=x+Math.round(dx*j-dy*lean),yy=y+Math.round(dy*j+dx*lean);
+        const n=((yy+size)%size)*size+(xx+size)%size,k=n*4,
+          v=(t-.26)*tone,crest=(.115+tone*.003)*Math.sin(t*Math.PI);
+        write(xx,yy,color[k]*.93+6+v+(gold?11:0),color[k+1]*.92+8+v*.84,
+          color[k+2]*.91+4+v*.53+(gold?7:0),Math.min(.25,lerp(height[n],crest,.62)+.024),rough[k]-1.9);
+        if(wide&&t>.14&&t<.72){
+          const sideX=xx-Math.round(dy),sideY=yy+Math.round(dx),n2=((sideY+size)%size)*size+(sideX+size)%size,k2=n2*4;
+          write(sideX,sideY,color[k2]+v*.35-3,color[k2+1]+v*.29-3,color[k2+2]+v*.18-1.7,
+            lerp(height[n2],crest*.56,.33),rough[k2]);
+        }
+      }
+    }
+  }else if(kind==='grit'){
+    for(let i=0;i<8200;i++){
       const x=(rng()*size)|0,y=(rng()*size)|0;
-      const l=blade?2+Math.floor(rng()*7):1+Math.floor(rng()*4);
+      const l=1+Math.floor(rng()*4);
       const angle=rng()*2*Math.PI,dx=Math.cos(angle),dy=Math.sin(angle);
-      const v=(rng()-.47)*(blade?19:33), golden=rng()<.13;
+      const v=(rng()-.47)*33, golden=rng()<.13;
       for(let j=0;j<l;j++){
         const xx=x+Math.round(dx*j),yy=y+Math.round(dy*j);
         const n=((yy+size)%size)*size+(xx+size)%size,i4=n*4;
@@ -129,7 +148,7 @@ export function repeatSet(T,kind,size=512) {
       }
     }
   }
-  const strength={lawn:1.21,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01,stairStone:2.22,soilCrumb:2.36,galleryStone:1.72,galleryLime:1.29,cutMetal:.95}[kind];
+  const strength={lawn:1.75,grit:1.68,bark:1.8,setts:2.7,plaster:1.02,wood:1.10,fineOak:.92,tile:1.4,enamel:1.45,labTile:1.25,canvas:1.19,bedrock:2.01,stairStone:2.22,soilCrumb:2.36,galleryStone:1.72,galleryLime:1.29,cutMetal:.95}[kind];
   const sample=(x,y)=>height[(y+size)%size*size+(x+size)%size];
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=(sample(x-1,y)-sample(x+1,y))*strength,b=(sample(x,y-1)-sample(x,y+1))*strength;
@@ -274,6 +293,9 @@ export function gardenMaterials(T,mask,ext) {
       float macro = smoothstep(.20,.81,erlNoise(erlWorld.xz*.18)*.73+erlNoise(erlWorld.xz*.39)*.27);
       // Low-frequency colour sits in world coordinates, never in the tile.
       diffuseColor.rgb *= mix(vec3(.94,.97,.93),vec3(1.12,1.04,.96),macro);
+      float parkCut=(1.-smoothstep(34.,67.,abs(erlWorld.x)))*(1.-smoothstep(75.,124.,-erlWorld.z));
+      float mow=smoothstep(-.48,.48,cos((erlWorld.x+erlWorld.z*.045)*.647+(macro-.5)*.18))-.5;
+      diffuseColor.rgb *= 1.+mow*(.050+parkCut*.068)*mix(.62,1.,macro)*(1.-verge)*(1.-bed);
       diffuseColor.rgb = mix(diffuseColor.rgb,vec3(.158,.118,.068), soil*(.40+.35*compact));
       diffuseColor.rgb = mix(diffuseColor.rgb,texture2D(erlGritAlbedo,fine).rgb*mix(1.0,.87,compact),verge);
       diffuseColor.rgb *= mix(vec3(1.0),vec3(.67,.75,.60),damp*.67);
@@ -282,9 +304,9 @@ export function gardenMaterials(T,mask,ext) {
       roughnessFactor = clamp(mix(roughnessFactor,texture2D(erlGritRough,fine).g,verge)-damp*.11-compact*.035,.61,1.0);
     `).replace('#include <normal_fragment_maps>',T.ShaderChunk.normal_fragment_maps.replace(
       'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
-      'vec3 mapN = mix(texture2D(normalMap,vNormalMapUv).xyz,texture2D(erlGritNormal,fine).xyz,verge)*2.0-1.0; mapN.xy *= (1.0 - compact*.28 - bed*.20);'
+      'vec3 mapN = mix(texture2D(normalMap,vNormalMapUv).xyz,texture2D(erlGritNormal,fine).xyz,verge)*2.0-1.0; mapN.xy *= mix(1.31,1.0,max(verge,bed))*(1.0 - compact*.28 - bed*.20);'
     ));
   };
-  ground.customProgramCacheKey=()=> 'erl-turf-mask-v2';
+  ground.customProgramCacheKey=()=> 'erl-turf-mask-v3';
   return {ground,gravel};
 }

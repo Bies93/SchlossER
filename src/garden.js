@@ -12,6 +12,7 @@ import {WC_CUT} from './park-stair.js';
 import {CHAPTER_CUT,CHAPTER_BAY_PATH,chapterContains} from './chapter-layout.js';
 import {UPPER_ENTRY} from './palace-openings.js';
 import {BERG_POOL,WEATHER_ZERO} from './berg-layout.js';
+import {ORANGERY_CENTER,orangeryWing,ORANGERY_PAVILION_X} from './orangery-plan.js';
 
 // Garden on the east side of the palace. Ground plan in metres, z points west.
 export function addGarden(T, scene, world, oldGravel, finish) {
@@ -74,6 +75,19 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     [wcSide,wcBack+2.055],[join,wcBack+2.055]],-.017,1),gravel);
   wcLink.name='Seitlicher Weg zum WC';wcLink.receiveShadow=true;group.add(wcLink);floors.push(wcLink);
   const sites=[];
+  const orangeOutline=Array.from({length:8},(_,i)=>orangeryWing(-1,i/7));
+  function orangeFront(z){
+    const d=Math.abs(z-ORANGERY_CENTER);
+    if(d<=6)return -59.10;
+    for(let i=1;i<orangeOutline.length;i++){
+      const [x,Z]=orangeOutline[i],D=ORANGERY_CENTER-Z;
+      if(d<=D){
+        const [a,A]=orangeOutline[i-1],lo=ORANGERY_CENTER-A;
+        return a+(x-a)*(d-lo)/(D-lo);
+      }
+    }
+    return d<36.22?ORANGERY_PAVILION_X:-Infinity;
+  }
   const noBergProps=(x,z,pad=0)=>Math.hypot(x-BERG_POOL.x,z-BERG_POOL.z)<3.2+pad||
     Math.hypot(x-WEATHER_ZERO.x,z-WEATHER_ZERO.z)<1.0+pad;
   function tree(x,z,h,species,hero,mapped=false){
@@ -136,18 +150,19 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     }
   }
   const plants=plantGarden(T,group,world,sites,(x,z)=>{
-    if(noBergProps(x,z))return 0;
-    if(z>-17.35||!insidePerimeter(x,z)||x<-43&&z>-83||parkFacadeClearance(x,z,.5))return 0;
+    const puddle=((x-BERG_POOL.x)/(BERG_POOL.rx+.24))**2+((z-BERG_POOL.z)/(BERG_POOL.rz+.24))**2;
+    if(puddle<1||Math.hypot(x-WEATHER_ZERO.x,z-WEATHER_ZERO.z)<.76)return 0;
+    if(z>-17.35||!insidePerimeter(x,z)||parkFacadeClearance(x,z,.5)||
+       x< -47.9&&x<orangeFront(z)+.39)return 0;
     if(atBed(x,z,.20)||monumentClear(x,z,.28)||Math.hypot(Math.max(0,Math.abs(x)-4.75),z+47)<10.05)return 0;
     if(chapterContains(CHAPTER_CUT,x,z,.48)||BENCH_SITES.some(([a,b])=>Math.abs(x-a)<1.14&&Math.abs(z-b)<1.14))return 0;
     const {edge,style}=network.sample(x,z);
     if(edge<(style==='trim'?.12:.25))return 0;
     const patch=.5+.5*Math.sin(x*.53+Math.cos(z*.37)*1.5)*Math.cos(z*.39);
     const wall=z<-247||Math.abs(x)>68?distanceToPerimeter(x,z):8;
-    const sheltered=sites.some(p=>!p.backdrop&&Math.abs(x-p.x)<4.8&&Math.abs(z-p.z)<4.8);
-    const formal=Math.abs(x)<23&&z>-72,verge=edge<1.65;
-    return (verge?(style==='compact'?.23:style==='trim'?.62:.45)+patch*.19:formal?.18+patch*.28:.10+patch*.24)
-       *(wall<1.4?.65:1)*(sheltered?1.22:1);
+    const formal=(Math.abs(x)<29&&z>-74)||(x< -33&&x> -60&&z> -84&&z< -32);
+    const verge=Math.max(.25,Math.min(1,(edge+.04)*2.37));
+    return (formal?.74+patch*.15:.57+patch*.19)*verge*(wall<1.4?.58:1);
   },terrain.height,shrubs);
   const beds=addBeds(T,group,terrain.height);
   const bench=addBenches(T,group,world,terrain.height);

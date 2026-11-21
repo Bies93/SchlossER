@@ -1,5 +1,6 @@
 import {randomSource, repeatSet} from './surface-detail.js';
 import {UPPER_ENTRY} from './palace-openings.js';
+import {plantParkTurf} from './park-turf.js';
 
 const TAU=Math.PI*2,CELL=32;
 function put(bins,x,z,record,size=CELL){
@@ -175,18 +176,17 @@ function batch(T,parent,list,g,mat,name,cast=false){
   mesh.name=name;mesh.castShadow=cast;mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);
   return mesh;
 }
-function fade(material,near,far,grass){
+function fade(material,near,far){
   material.onBeforeCompile=shader=>{
     shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying float erlDetail;')
       .replace('#include <begin_vertex>',`#include <begin_vertex>
         vec3 place = (modelMatrix * instanceMatrix * vec4(0,0,0,1)).xyz;
         erlDetail = 1.0 - smoothstep(${near.toFixed(1)},${far.toFixed(1)},distance(cameraPosition.xz,place.xz));
-        ${grass?'transformed *= erlDetail;':''}
       `);
-    if(!grass)shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying float erlDetail;')
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying float erlDetail;')
       .replace('#include <alphatest_fragment>','diffuseColor.a *= erlDetail;\n#include <alphatest_fragment>');
   };
-  material.customProgramCacheKey=()=> 'erl-fade-'+near+'-'+far+'-'+grass;
+  material.customProgramCacheKey=()=> 'erl-fade-leaf-'+near+'-'+far;
 }
 function airyLeaf(T,material,sway){
   const prior=material.onBeforeCompile,key=material.customProgramCacheKey();
@@ -294,10 +294,10 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
   const wood=new T.MeshStandardMaterial({...repeatSet(T,'bark',512),roughness:1,vertexColors:true});
   wood.normalScale.setScalar(.84);
   const nearLeaf=leaf.clone(),midLeaf=leaf.clone();
-  fade(nearLeaf,23,43,false);fade(midLeaf,58,86,false);
+  fade(nearLeaf,23,43);fade(midLeaf,58,86);
   const sway={value:0};
   for(const m of [leaf,nearLeaf,midLeaf])airyLeaf(T,m,sway);
-  const treeBins=new Map(),grassBins=new Map(),herbBins=new Map(),parts=[],roots=[];
+  const treeBins=new Map(),parts=[],roots=[];
   for(const {x,z,h,species,hero,backdrop=false} of treeSites){
     const i=hero?6+heroes.indexOf(hero):(species==='oak'?0:3)+Math.floor(rng()*3),s=h/(species==='oak'?14.1:16.8);
     const sx=s*(.84+rng()*.28),sz=s*(.86+rng()*.26);
@@ -334,44 +334,11 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
       batch(T,group,bin.records,g,leaf,'Parkrand · lockeres Unterholz')
     ]});
   }
-  const colors=['#6b7b41','#75874c','#859250','#687b3a','#89975a','#9a965c','#778145'].map(v=>new T.Color(v));
-  for(let z=-255;z<=-17;z+=.54)for(let x=-75;x<=75;x+=.54){
-    const a=x+(rng()-.5)*.65,b=z+(rng()-.5)*.65,rate=rng(),density=coverage(a,b);
-    if(!density||rate>density||roots.some(t=>Math.abs(t.x-a)<t.r&&Math.hypot(t.x-a,t.z-b)<t.r))continue;
-    const s=.77+rng()*.86,cut=Math.abs(a)<23&&b>-72;
-    put(grassBins,a,b,{x:a,y:height(a,b)-.005,z:b,sx:s,sy:(cut?.66:.79)+rng()*(cut?.58:.78),sz:s,yaw:rng()*TAU,tint:colors[colors.length*rng()|0]},16);
-    if(!cut&&density>.31&&rng()<.015)put(herbBins,a,b,{x:a,y:height(a,b),z:b,sx:s,sy:s,sz:s,yaw:rng()*TAU},16);
-  }
-  const blade=buffers();
-  for(let i=0;i<7;i++){
-    const a=i*2.39996+rng()*.57,stem=.026+rng()*.115,x=Math.cos(a)*stem,z=Math.sin(a)*stem,h=.046+.072*rng(),w=.0030+.0036*rng();
-    const dx=Math.cos(a)*w,dz=Math.sin(a)*w,bx=Math.sin(a)*(.017+rng()*.024),bz=-Math.cos(a)*(.017+rng()*.024);
-    const p=[[x-dx,0,z-dz],[x+dx,0,z+dz],[x+dx*.63+bx*.31,h*.65,z+dz*.63+bz*.31],
-      [x-dx*.63+bx*.31,h*.65,z-dz*.63+bz*.31],[x+bx,h,z+bz]];
-    for(const j of [0,1,2,0,2,3,3,2,4]){
-      blade.p.push(...p[j]);const v=[.68,.72,.90,1.02,1.10][j];blade.c.push(v,v,v*.97);
-      blade.n.push(-bx*.6,.98,-bz*.6);
-    }
-  }
-  const grass=new T.MeshLambertMaterial({side:T.DoubleSide,vertexColors:true});
-  fade(grass,12,23,true);const g=geometry(T,blade);
-  for(const bin of grassBins.values())parts.push({x:bin.x,z:bin.z,dist:36,meshes:[
-    batch(T,group,bin.records,g,grass,'Rasen · Halmbüschel')
-  ]});
-  const herbs=buffers();
-  for(let k=0;k<3;k++){
-    const u=Math.cos(k*2.4),v=Math.sin(k*2.4);
-    const points=[[0,.025,0],[u*.044-v*.014,.038,v*.044+u*.014],[u*.063,.053,v*.063],
-      [u*.044+v*.013,.038,v*.044-u*.013]];
-    for(const j of [0,1,2,0,2,3]){herbs.p.push(...points[j]);herbs.c.push(.15,.21,.084)}
-  }
-  const herbMesh=geometry(T,herbs);
-  for(const bin of herbBins.values())parts.push({x:bin.x,z:bin.z,dist:36,meshes:[
-    batch(T,group,bin.records,herbMesh,grass,'Saum · vereinzelte Kräuter')
-  ]});
+  const turf=plantParkTurf(T,group,coverage,height,roots);
   let lastX=Infinity,lastZ=Infinity;
   return (position,time)=>{
     sway.value=time*.001;
+    turf(position);
     if(Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
     lastX=position.x;lastZ=position.z;
     for(const p of parts){

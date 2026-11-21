@@ -11,6 +11,12 @@ export function bergMaterials(T){
     oak:m(0x64402c,'fineOak'),dark:m(0x36291f,'fineOak'),edge:m(0x986642,'fineOak'),iron:m(0x403f37,'enamel',.65,.47),
     brass:m(0xa58145,null,.43,.64),linen:m(0xdac6a0,'canvas'),red:m(0x863937,'canvas'),green:m(0x4e5939,'canvas'),
     clay:m(0xceaf83,null,.58),beer:m(0x9b4c24,null,.53),salt:m(0xe3d9be),paint:m(0x666f58,'enamel'),
+    leather:m(0x52432e,'fineOak'),slate:m(0x64736b,'galleryStone',.96),chalk:m(0xe1cfa5,'stairStone'),
+    glaze:m(0xa2a178,null,.37,.13),copper:m(0xaf7148,'enamel',.43,.62),wine:m(0x632b31,null,.33),
+    glass:new T.MeshPhysicalMaterial({color:0xc0d4c4,metalness:.13,roughness:.15,transparent:true,opacity:.38,
+      depthWrite:false,side:T.DoubleSide,clearcoat:.51}),
+    foam:m(0xe6d2a0,null,.81),rind:m(0xb58440,'canvas'),cheese:m(0xe1b764,null,.83),crust:m(0x8f5229,'stairStone'),
+    scarlet:new T.MeshStandardMaterial({color:0xb55533,emissive:0xdb501e,emissiveIntensity:.34,roughness:.87}),
     glow:new T.MeshStandardMaterial({color:0xffd296,emissive:0xffaa50,emissiveIntensity:.93,roughness:.8})
   };
 }
@@ -39,6 +45,14 @@ export function carpentry(T,parent,mats){
     quad:kit.quad,cyl:(m,x,y,z,r,h,rx=0)=>put(m,c,x,y,z,r,h,r,rx),
     oval:(m,x,y,z,w,h,d)=>put(m,sphere,x,y,z,w,h,d),
     ring:(m,x,y,z,w,h,depth=.25,rx=0,ry=0)=>put(m,t,x,y,z,w,h,depth,rx,ry),
+    profile(m,x,y,z,points,{segments=24,rx=0,ry=0,rz=0}={}){
+      const g=new T.LatheGeometry(points.map(([r,h])=>new T.Vector2(r,h)),segments);
+      put(m,g,x,y,z,1,1,1,rx,ry,rz);g.dispose();
+    },
+    tube(m,points,r,steps=16,radial=6){
+      const path=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));
+      const g=new T.TubeGeometry(path,steps,r,radial,false);put(m,g,0,0,0,1,1,1);g.dispose();
+    },
     flush(name){kit.flush(name);c.dispose();sphere.dispose();t.dispose();}
   };
 }

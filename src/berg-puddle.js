@@ -70,11 +70,11 @@ export function addBergPuddle(T,scene,world,heightAt,tavern){
     const dx=x-p.x,dy=Y-(p.y+1.67),dz=z-p.z,d=Math.hypot(dx,dy,dz);
     return d<h&&(dx*look.x+dy*look.y+dz*look.z)>d*dot;
   }
-  return {update(dt,p,surfaceLayer,c){
+  return {update(dt,p,surfaceLayer,c,beat=null){
     const inside=bergInside(p);tavern.root.visible=inside;
     const close=surfaceLayer&&(p.x-P.x)**2+(p.z-P.z)**2<16**2&&(!c||inView(c));
     if(close!==near){near=close;material.uniforms.shown.value=near&&targetTexture?1:0;}
-    const anim=inside?tavern.animate(dt,p):near&&tavern.animate(dt,p,true);
+    const anim=inside?tavern.animate(dt,p,false,beat):near&&tavern.animate(dt,p,true);
     if(near){
       material.uniforms.clock.value+=dt;
       if((p.x-P.x)**2+(p.z-P.z)**2>.09)material.uniforms.azimuth.value.set(p.x-P.x,p.z-P.z).normalize();
