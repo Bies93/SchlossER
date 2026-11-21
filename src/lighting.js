@@ -1,25 +1,25 @@
 import {addFixtures} from './street-light.js';
 import {randomSource} from './surface-detail.js';
+import {bakeMoon,bakeStars} from './sky-maps.js';
 
 export const DEFAULT_LIGHT='dusk';
 export const LIGHTING = {
-  dusk:{sky:0x52739e,horizon:0xe6a67f,fog:0xb29d94,cloud:0xf2ceb3,fogDensity:.0027,
-    direction:[-.85,.29,.54],disc:0xffc278,angular:.006,aura:.39,stars:0,clouds:.39,
-    key:0xffdabd,power:2.62,fill:0xc1d2ed,bounce:0x847977,hemi:1.03,
+  dusk:{sky:0x5076a1,horizon:0xe8a581,fog:0xb49f97,cloud:0xf3c9ae,fogDensity:.0027,
+    direction:[-.85,.29,.54],disc:0xffbd71,angular:.007,aura:.36,stars:0,clouds:.39,
+    key:0xffddc3,power:2.57,fill:0xc3d6ef,bounce:0x8a8571,hemi:1.10,
     exposure:1.02,env:'dusk',reflection:.64,lamps:.42,window:.28,shadow:[89,64,.049]},
-  night:{sky:0x162640,horizon:0x485375,fog:0x3f4962,cloud:0x465574,fogDensity:.0026,
-    direction:[-.46,.54,-.71],disc:0xecf1ff,angular:.0072,aura:.054,stars:1,clouds:.23,
-    key:0xc4d7ff,power:.51,fill:0xadbdeb,bounce:0x5e5d68,hemi:.62,
-    exposure:.94,env:'night',reflection:.30,lamps:1,window:.85,shadow:[73,71,.040]}
+  night:{sky:0x101c35,horizon:0x3a4c6c,fog:0x3a465f,cloud:0x586887,fogDensity:.0026,
+    direction:[-.46,.54,-.71],disc:0xeaf1ff,angular:.013,aura:.056,stars:1,clouds:.23,
+    key:0xb6cefc,power:.65,fill:0xa6b7e0,bounce:0x656272,hemi:.64,
+    exposure:.95,env:'night',reflection:.30,lamps:1,window:.85,shadow:[73,71,.040]}
 };
 
 const SKY = `
  varying vec3 ray;
  uniform vec3 topTint,horizonTint,cloudTint,discTint,celestial;
  uniform float discSize,aura,starLevel,cloudCover,skyTime;
- uniform sampler2D cloudField;
- float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
- float fbm(vec2 p){return texture2D(cloudField,p*.086).r;}
+ uniform sampler2D cloudField,starsMap,moonMap;
+ float clouds(vec2 p){return texture2D(cloudField,p*.086).r;}
  void main(){
    vec3 v=normalize(ray);
    float h=max(v.y,0.),toward=max(dot(v,celestial),0.),night=starLevel;
@@ -29,41 +29,39 @@ const SKY = `
    vec3 horizon=mix(away,horizonTint,pow(eastwest,.86));
    vec3 col=mix(horizon,topTint,pow(h,.51));
    float bank=exp(-h*6.4);
-   col+=discTint*aura*(pow(toward,mix(13.,27.,night))*.75+pow(eastwest,5.)*bank*.22);
+   float glow=exp2(-(1.-toward)*mix(29.,88.,night));
+   float coreGlow=exp2(-(1.-toward)*mix(185.,560.,night));
+   col+=discTint*aura*(glow*.73+coreGlow*mix(.89,.39,night)+pow(eastwest,5.)*bank*.22);
    col=mix(col,mix(horizon,topTint,night*.15),smoothstep(.015,.37,-v.y)*.91);
 
    // Lower banks are broad and lit on their sunward side. The high ice
    // wisps have a different scale, direction and much less opacity.
    vec2 drift=vec2(.018,-.009)*skyTime;
    vec2 p=(vec2(v.x+v.z*.31,v.z-v.x*.22)/max(.22,v.y+.31))*vec2(2.8,2.1)+drift;
-   float f=fbm(p+vec2(fbm(p*.76),fbm(p*.83+3.1))*.52),level=.59-cloudCover*.37;
+   float f=clouds(p+vec2(clouds(p*.76),clouds(p*.83+3.1))*.69),level=.59-cloudCover*.37;
    float coverage=smoothstep(level,level+.29,f)*smoothstep(.018,.16,h);
-   float rim=clamp((f-fbm(p+sunward*.156))*3.+.50,0.,1.);
-   vec3 under=mix(col*.48,topTint*.41,.29);
-   vec3 warm=cloudTint*mix(.62,.27,night)*(1.+toward*.30);
-   vec3 bankColor=mix(under,warm,mix(.36,.82,rim));
+   float rim=smoothstep(-.17,.20,f-clouds(p+sunward*.212));
+   vec3 under=mix(col*.56,topTint*.43,.38);
+   vec3 warm=mix(cloudTint,discTint,.14*glow)*mix(.64,.37,night)*(1.+glow*.51);
+   vec3 bankColor=mix(under,warm,mix(.24,.87,rim))+(coverage*.15+.03)*warm;
    vec2 hi=vec2(p.x*.95+p.y*.32,p.y*3.5)-drift*.54+31.;
-   float veil=smoothstep(.545,.79,fbm(hi))*smoothstep(.10,.38,h)*(1.-coverage*.82);
+   float veil=smoothstep(.535,.805,clouds(hi))*smoothstep(.10,.38,h)*(1.-coverage*.82);
    vec3 highColor=mix(topTint,cloudTint,mix(.36,.14,night));
 
-   if(night>.5){
+   if(night>.5&&v.y>.04){
      float longitude=atan(v.z,v.x)/6.2831853+.5;
-     vec2 star=vec2(longitude*394.,h*186.),id=floor(star);
-     vec2 delta=fract(star)-(.20+.60*vec2(hash(id+11.0),hash(id-8.1)));
-     float chance=hash(id+10.6),lum=hash(id+74.1);
-     float r=mix(.045,.185,lum*lum),aa=clamp(max(fwidth(star.x),fwidth(star.y))*.27,.009,.14);
-     float sparkle=(1.-smoothstep(r-aa,r+aa,length(delta)))*step(.985,chance)*lum;
-     col+=mix(vec3(.62,.76,1.),vec3(1.,.87,.69),hash(id-13.))*sparkle*.61
-       *smoothstep(.06,.34,h)*(1.-coverage*.92)*(1.-veil*.72);
+     col+=texture2D(starsMap,vec2(longitude,h)).rgb*.47*smoothstep(.04,.36,h)
+       *(1.-coverage*.94)*(1.-veil*.78)*(1.-coreGlow*.86);
    }
    col=mix(col,highColor,veil*mix(.38,.20,night));
    col=mix(col,bankColor,coverage*mix(.58,.60,night));
    vec3 du=normalize(cross(vec3(0.,1.,0.),celestial)),dv=cross(celestial,du);
    vec2 disk=vec2(dot(v,du),dot(v,dv))/discSize;
-   float radius=length(disk),body=(1.-smoothstep(.88,1.06,radius))*step(.0,dot(v,celestial));
+   float radius=length(disk),aa=clamp(fwidth(radius)*.65,.013,.28);
+   float body=(1.-smoothstep(1.-aa,1.+aa,radius))*step(.0,dot(v,celestial));
    if(body>0.){
-     float softMoon=night>.5?.56+.29*fbm(disk*3.2+5.9)+.14*sqrt(clamp(1.-radius*radius,0.,1.)):1.;
-     col+=discTint*body*mix(5.4,1.55*softMoon,night)*(1.-coverage*.89);
+     float surface=night>.5?.093+1.13*texture2D(moonMap,disk*.5+.5).r:3.7;
+     col+=discTint*body*surface*(1.-coverage*.94);
    }
    gl_FragColor=vec4(col,1.);
    #include <tonemapping_fragment>
@@ -116,18 +114,20 @@ export function makeLighting(T, renderer, scene, world, floorHeight){
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
   const reflections={};
+  const cloudField=cloudNoise(T);
   const uniforms={
     topTint:{value:new T.Color()},horizonTint:{value:new T.Color()},cloudTint:{value:new T.Color()},
     discTint:{value:new T.Color()},celestial:{value:new T.Vector3()},
     discSize:{value:0},aura:{value:0},starLevel:{value:0},cloudCover:{value:0},skyTime:{value:0},
-    cloudField:{value:cloudNoise(T)}
+    cloudField:{value:cloudField},starsMap:{value:cloudField},moonMap:{value:cloudField}
   };
   const sky=new T.Mesh(new T.SphereGeometry(860,36,24),new T.ShaderMaterial({
     side:T.BackSide,depthWrite:false,fog:false,uniforms,
-    vertexShader:'varying vec3 ray;void main(){ray=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    vertexShader:'varying vec3 ray;void main(){ray=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position.z=gl_Position.w;}',
     fragmentShader:SKY
   }));
-  sky.renderOrder=-100;sky.userData.noSceneQuery=true;
+  // Draw only where opaque geometry left the depth buffer clear.
+  sky.renderOrder=9000;sky.userData.noSceneQuery=true;
   const hemi=new T.HemisphereLight(), key=new T.DirectionalLight();
   key.castShadow=true;key.shadow.mapSize.set(2048,2048);
   scene.fog=new T.FogExp2();scene.add(sky,hemi,key,key.target);
@@ -140,6 +140,9 @@ export function makeLighting(T, renderer, scene, world, floorHeight){
     if(!Object.hasOwn(LIGHTING,name))return false;
     state=LIGHTING[name];id=name;needsAnchor=true;
     if(!reflections[state.env])reflections[state.env]=ambientMap(T,state);
+    if(state.stars&&uniforms.starsMap.value===cloudField){
+      uniforms.starsMap.value=bakeStars(T);uniforms.moonMap.value=bakeMoon(T);
+    }
     scene.environment=reflections[state.env];scene.environmentIntensity=state.reflection;
     renderer.toneMappingExposure=state.exposure;
     scene.fog.color.setHex(state.fog);scene.fog.density=state.fogDensity;
@@ -168,11 +171,17 @@ export function makeLighting(T, renderer, scene, world, floorHeight){
       // Snap in the light's projection, not in world coordinates alone.
       const [w,h]=state.shadow,snap=(v,n)=>Math.round(v/n)*n;
       const u=focus.dot(right),v=focus.dot(planeUp);
-      focus.addScaledVector(right,snap(u,2*w/2048)-u).addScaledVector(planeUp,snap(v,2*h/2048)-v);
+      const size=key.shadow.mapSize.x;
+      focus.addScaledVector(right,snap(u,2*w/size)-u).addScaledVector(planeUp,snap(v,2*h/size)-v);
       key.target.position.copy(focus);key.position.copy(focus).addScaledVector(axis,176);
       renderer.shadowMap.needsUpdate=true;needsAnchor=false;
     }
     fixtures.update(player);
   }
-  return {applyLighting,update,registerWindows(material){windows.push(material);material.emissiveIntensity=state.window;},get id(){return id}};
+  function setShadowSize(size){
+    if(key.shadow.mapSize.x===size)return;
+    key.shadow.map?.dispose();key.shadow.map=null;
+    key.shadow.mapSize.set(size,size);needsAnchor=true;
+  }
+  return {applyLighting,setShadowSize,update,registerWindows(material){windows.push(material);material.emissiveIntensity=state.window;},get id(){return id}};
 }

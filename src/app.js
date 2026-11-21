@@ -50,6 +50,9 @@ let payload=JSON.parse($('assets').textContent);
 $('assets').remove();
 const about=$('about');
 $('info').onclick=()=>about.showModal();
+const GRAPHICS={
+ fast:{dpr:1,shadow:1536},normal:{dpr:1.35,shadow:2048},high:{dpr:1.6,shadow:2048}
+};
 function showLoadingStep(index,text){
  $('loading-text').textContent=text;
  $('loading-counter').textContent=String(index+1).padStart(2,'0')+' / 04';
@@ -70,8 +73,15 @@ function paintLoadingStep(){
 }
 async function start(){
  const bootTime=performance.now();
+ const qualityControl=$('graphics-quality');
+ let quality='normal';
+ try{
+   const saved=localStorage.getItem('schlosser.graphics');
+   if(Object.hasOwn(GRAPHICS,saved))quality=saved;
+ }catch{}
+ qualityControl.value=quality;
  const r=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
- r.setPixelRatio(Math.min(devicePixelRatio,1.6));
+ r.setPixelRatio(Math.min(devicePixelRatio,GRAPHICS[quality].dpr));
  $('canvas').append(r.domElement);
  const s=new T.Scene(), c=new T.PerspectiveCamera(65,1,.08,1250);
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder),tl=new T.TextureLoader();
@@ -153,6 +163,7 @@ async function start(){
  };
  upper=addPalaceUpper(T,s,model,upperWorld,atticWorld,stonework,(x,z)=>floorHeight(x,z));
  const lighting=makeLighting(T,r,s,world,floorHeight);
+ lighting.setShadowSize(GRAPHICS[quality].shadow);
  lighting.registerWindows(perimeter.windows);
  const audio=makeAudio(()=>{
    c.updateWorldMatrix(true,false);const e=c.matrixWorld.elements;
@@ -446,7 +457,7 @@ async function start(){
    if(layer===0)puddle.preview(r,c,p,performance.now());
    viewmodel.bodyLayer(layer);
    if(mask&1){
-     lighting.update(p);garden.update(p,performance.now());
+     lighting.update(p);garden.update(p,performance.now(),quality);
    }
    // One transform update across all passes. At a hatch share depth, not
    // lights, so the existing lighting and material permutations stay intact.
@@ -585,6 +596,15 @@ async function start(){
  // Visitors with the retired setting fall back to sunset.
  if(!selectLight(last))selectLight(DEFAULT_LIGHT,true);
  for(const b of choices)b.onclick=()=>{if(selectLight(b.dataset.light,true))refresh()};
+ qualityControl.onchange=()=>{
+   const id=qualityControl.value;
+   if(!Object.hasOwn(GRAPHICS,id)||quality===id)return;
+   quality=id;
+   try{localStorage.setItem('schlosser.graphics',id)}catch{}
+   r.setPixelRatio(Math.min(devicePixelRatio,GRAPHICS[id].dpr));
+   lighting.setShadowSize(GRAPHICS[id].shadow);
+   refresh();
+ };
  function resize(){
    const w=stage.clientWidth,h=stage.clientHeight;
    if(!w||!h)return;

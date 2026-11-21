@@ -162,7 +162,7 @@ export function addGarden(T, scene, world, oldGravel, finish) {
     const wall=z<-247||Math.abs(x)>68?distanceToPerimeter(x,z):8;
     const formal=(Math.abs(x)<29&&z>-74)||(x< -33&&x> -60&&z> -84&&z< -32);
     const verge=Math.max(.25,Math.min(1,(edge+.04)*2.37));
-    return (formal?.74+patch*.15:.57+patch*.19)*verge*(wall<1.4?.58:1);
+    return (formal?.92+patch*.07:.78+patch*.20)*verge*(wall<1.4?.68:1);
   },terrain.height,shrubs);
   const beds=addBeds(T,group,terrain.height);
   const bench=addBenches(T,group,world,terrain.height);
@@ -172,6 +172,6 @@ export function addGarden(T, scene, world, oldGravel, finish) {
   return {
     floors,bench,benchCover, heightAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?terrain.height(x,z):null,
     surfaceAt:(x,z)=>z<=-17&&insidePerimeter(x,z)?(network.edge(x,z)<.17?'gravel':'lawn'):null,
-    update:(position,time)=>{plants(position,time);beds(position)}
+    update:(position,time,quality)=>{plants(position,time,quality);beds(position)}
   };
 }

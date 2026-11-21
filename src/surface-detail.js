@@ -32,8 +32,8 @@ export function repeatSet(T,kind,size=512) {
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const a=noise(0,x,y)-.5,b=noise(1,x,y)-.5,c=noise(2,x,y)-.5,f=rng()-.5;
     if(kind==='lawn'){
-      const v=a*6+b*10+c*13+f*5, dry=clamp(.18+a*.46+b*.30,0,1);
-      write(x,y,75+v+dry*25,100+v+dry*5,44+v*.64+dry*9,a*.12+b*.19+c*.15+f*.018,234+14*c);
+      const v=a*5+b*7+c*13+f*8,dry=clamp(.22+a*.56+b*.40,0,1);
+      write(x,y,78+v+dry*21,102+v+dry*8,44+v*.67+dry*9,a*.066+b*.12+c*.115+f*.026,231+15*c);
     } else if(kind==='grit'){
       const v=a*12+b*8+c*9+f*4;
       write(x,y,174+v,156+v,126+v,a*.13+b*.20+c*.22+f*.045,226+16*b);
@@ -115,22 +115,27 @@ export function repeatSet(T,kind,size=512) {
     }
   }
   if(kind==='lawn'){
-    // Long tapered leaf impressions at world scale; center crests and
-    // shaded roots remain legible after the first few mip levels.
-    for(let i=0;i<22200;i++){
-      const x=(rng()*size)|0,y=(rng()*size)|0,len=7+(rng()*19|0);
-      const a=rng()*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a),b=(rng()-.5)*.28;
-      const gold=rng()<.084,tone=4+rng()*14,wide=rng()<.45;
+    // Bake individual leaf silhouettes, not just a normal-map disturbance.
+    // Wrapped stamps include a shadow edge, a broad body and a narrow lit rib.
+    for(let i=0;i<17600;i++){
+      const x=(rng()*size)|0,y=(rng()*size)|0,len=8+(rng()*23|0);
+      const a=rng()*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a),b=(rng()-.5)*.53;
+      const warm=rng(),tone=(rng()-.35)*41,wide=.8+rng()*2.1;
       for(let j=0;j<len;j++){
-        const t=j/(len-1),lean=b*j*t,xx=x+Math.round(dx*j-dy*lean),yy=y+Math.round(dy*j+dx*lean);
-        const n=((yy+size)%size)*size+(xx+size)%size,k=n*4,
-          v=(t-.26)*tone,crest=(.115+tone*.003)*Math.sin(t*Math.PI);
-        write(xx,yy,color[k]*.93+6+v+(gold?11:0),color[k+1]*.92+8+v*.84,
-          color[k+2]*.91+4+v*.53+(gold?7:0),Math.min(.25,lerp(height[n],crest,.62)+.024),rough[k]-1.9);
-        if(wide&&t>.14&&t<.72){
-          const sideX=xx-Math.round(dy),sideY=yy+Math.round(dx),n2=((sideY+size)%size)*size+(sideX+size)%size,k2=n2*4;
-          write(sideX,sideY,color[k2]+v*.35-3,color[k2+1]+v*.29-3,color[k2+2]+v*.18-1.7,
-            lerp(height[n2],crest*.56,.33),rough[k2]);
+        const t=j/(len-1),lean=b*j*t,w=wide*Math.sqrt(1-t),r=Math.ceil(w);
+        const light=t*21+tone;
+        for(let s=-r;s<=r+1;s++){
+          const xx=x+Math.round(dx*j-dy*(lean+s)),yy=y+Math.round(dy*j+dx*(lean+s));
+          const n=((yy+size)%size)*size+(xx+size)%size,k=n*4;
+          if(s===r+1){
+            if(t>.14&&t<.8)write(xx,yy,color[k]-.9-w*1.8,color[k+1]-1.5-w*2.0,color[k+2]-.8-w, height[n]-.014,rough[k]);
+            continue;
+          }
+          const mix=clamp(w+.64-Math.abs(s),0,1)*.72,rib=s===0?8:0,shade=s>0?6:0;
+          write(xx,yy,lerp(color[k],72+light+warm*27+rib-shade,mix),
+            lerp(color[k+1],95+light*.90+warm*9+rib-shade,mix),
+            lerp(color[k+2],42+light*.45+warm*12+rib*.55-shade,mix),
+            lerp(height[n],.077+Math.sin(t*Math.PI)*.103+rib*.005,mix),rough[k]-1.1*mix);
         }
       }
     }
@@ -274,6 +279,10 @@ export function gardenMaterials(T,mask,ext) {
   gravel.customProgramCacheKey=()=> 'erl-grit-world-v1';
   ground.onBeforeCompile=shader=>{
     worldPatch(shader);
+    shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>',uv+`
+      vec2 erlLawnUV = (modelMatrix * vec4(position,1.0)).xz*vec2(1.0,-1.0) / 1.26;
+      vMapUv=erlLawnUV; vNormalMapUv=erlLawnUV; vRoughnessMapUv=erlLawnUV;
+    `);
     shader.uniforms.erlPaths={value:mask};
     shader.uniforms.erlMaskRect={value:new T.Vector4(ext.x,ext.z,ext.w,ext.h)};
     shader.uniforms.erlGritAlbedo={value:stone.map};
@@ -307,6 +316,6 @@ export function gardenMaterials(T,mask,ext) {
       'vec3 mapN = mix(texture2D(normalMap,vNormalMapUv).xyz,texture2D(erlGritNormal,fine).xyz,verge)*2.0-1.0; mapN.xy *= mix(1.31,1.0,max(verge,bed))*(1.0 - compact*.28 - bed*.20);'
     ));
   };
-  ground.customProgramCacheKey=()=> 'erl-turf-mask-v3';
+  ground.customProgramCacheKey=()=> 'erl-turf-mask-v4';
   return {ground,gravel};
 }

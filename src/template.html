@@ -125,6 +125,8 @@ canvas{touch-action:none;outline:none}
 .light-switch button{padding:0 3px;min-height:36px;font-size:clamp(10px,3vw,12px);white-space:nowrap}
 .light-switch button[aria-pressed=true]{background:#e4cfaa;color:#1c221e;border-color:#e4cfaa;font-weight:650}
 .light-switch button:disabled{opacity:.48;cursor:not-allowed}
+.quality-switch{margin-top:8px;display:flex;gap:10px;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+.quality-switch select{min-width:132px;min-height:35px;font:inherit;color:var(--ink);color-scheme:dark;background:#1a2522;border:1px solid var(--line);border-radius:7px;padding:0 10px}
 #audio-settings{margin-top:8px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;color:var(--muted);font-size:12px}
 #audio-settings summary{cursor:pointer}
 #audio-settings label{display:grid;grid-template-columns:65px 1fr;align-items:center;gap:6px;margin:6px 0}
@@ -264,6 +266,13 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
       <button type="button" data-light="dusk" aria-pressed="true">Sonnenuntergang</button>
       <button type="button" data-light="night" aria-pressed="false">Mondnacht</button>
     </fieldset>
+    <label class="quality-switch">Grafikqualität
+      <select id="graphics-quality">
+        <option value="fast">Flüssig</option>
+        <option value="normal" selected>Normal</option>
+        <option value="high">Hoch</option>
+      </select>
+    </label>
     <details id="audio-settings">
       <summary>Lautstärke</summary>
       <label>Musik <input type="range" min="0" max="100" value="48" data-audio="music"></label>

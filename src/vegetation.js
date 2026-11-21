@@ -21,19 +21,21 @@ function leafAtlas(T){
     for(let k=0;k<stems;k++){
       const a=(k/(stems-1)-.5)*3.68+(rng()-.5)*.49,
         x=251+(rng()-.5)*(thin?145:235),y=323+(rng()-.5)*(thin?136:233),len=114+rng()*128;
-      const ux=Math.sin(a),uy=-Math.cos(a);
+      const ux=Math.sin(a),uy=-Math.cos(a),bow=thin?13:20;
       c.strokeStyle=oak?'#64523b':'#777451';c.lineWidth=thin?1.35:1.9;
-      c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+ux*len*.46+uy*21,y+uy*len*.46-ux*17,x+ux*len,y+uy*len);c.stroke();
+      c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+ux*len*.50+uy*bow,y+uy*len*.50-ux*bow,x+ux*len,y+uy*len);c.stroke();
       for(let j=0;j<(thin?10:13);j++){
         const t=.17+j*(thin?.078:.063),side=j%2?-1:1;
-        c.save();c.translate(x+ux*len*t+uy*side*5,y+uy*len*t-ux*side*5);
+        const stalk=2*bow*t*(1-t)+side*3.6;
+        c.save();c.translate(x+ux*len*t+uy*stalk,y+uy*len*t-ux*stalk);
         c.rotate(a+side*(.52+rng()*1.02));
-        const l=(25+rng()*39)*(1.18-t*.29),h=l*(oak?.30:.41),hue=(oak?77:82)+rng()*22,
-          sat=26+rng()*28,lum=25+rng()*24;
+        const l=(24+rng()*41)*(1.16-t*.36),h=l*(oak?.31:.34),hue=(oak?72:82)+rng()*28,
+          sat=30+rng()*23,lum=29+rng()*22;
         const tone=c.createLinearGradient(-h,0,h,-l*.74);
         tone.addColorStop(0,'hsl('+hue+' '+sat+'% '+(lum*.82)+'%)');
-        tone.addColorStop(.52,'hsl('+hue+' '+sat+'% '+(lum*1.11)+'%)');
-        tone.addColorStop(1,'hsl('+(hue+4)+' '+sat+'% '+lum+'%)');c.fillStyle=tone;
+        tone.addColorStop(.46,'hsl('+hue+' '+sat+'% '+(lum*1.11)+'%)');
+        tone.addColorStop(.63,'hsl('+(hue+3)+' '+sat+'% '+(lum*.93)+'%)');
+        tone.addColorStop(1,'hsl('+(hue+7)+' '+sat+'% '+(lum*.83)+'%)');c.fillStyle=tone;
         c.beginPath();c.moveTo(0,0);
         if(oak){
           for(let s=1;s<=12;s++){
@@ -46,7 +48,9 @@ function leafAtlas(T){
           c.bezierCurveTo(-h*.23,l*.15,-h*1.61,-l*.44,0,-l);
           c.bezierCurveTo(h*1.43,-l*.47,h*.39,l*.13,0,0);
         }
-        c.closePath();c.fill();c.strokeStyle='rgba(213,214,155,.35)';c.lineWidth=.85;
+        c.closePath();c.fill();
+        c.save();c.clip();c.strokeStyle='rgba(38,59,19,.22)';c.lineWidth=1.7;c.stroke();c.restore();
+        c.strokeStyle='rgba(213,214,155,.38)';c.lineWidth=.85;
         c.beginPath();c.moveTo(0,-1);c.quadraticCurveTo(-h*.095,-l*.52,0,-l*.92);
         for(let v=1;v<=3;v++){
           const y=-l*(.13+v*.15),w=h*(.78-v*.09);
@@ -98,18 +102,23 @@ function treeVariant(T,variant,hero){
     const tilt=(rng()-.56)*2.5;
     const u=V(Math.cos(a),0,Math.sin(a)),v=V(Math.sin(a)*Math.sin(tilt),Math.cos(tilt),-Math.cos(a)*Math.sin(tilt));
     const raw=u.clone().cross(v);
-    const normal=raw.clone().multiplyScalar(.69).add(V(origin.x*.040,.66,origin.z*.045)).normalize();
+    const normal=raw.clone().multiplyScalar(.46).add(V(origin.x*.079,.59,origin.z*.079)).normalize();
     const i=part.p.length/3,x=(tile%2)*.5,y=(1-Math.floor(tile/2))*.5,pad=.009;
     const uv=[[x+pad,y+pad],[x+.5-pad,y+pad],[x+.5-pad,y+.5-pad],[x+pad,y+.5-pad]];
     const folded=part===detail||part===middle;
     const knots=folded?[[-1,-1],[0,-1],[1,-1],[-1,1],[0,1],[1,1]]:[[-1,-1],[1,-1],[1,1],[-1,1]];
+    // Baked inner shade + crown rim. No new lights or per-frame colour work.
+    const edge=T.MathUtils.smoothstep(Math.hypot(origin.x,origin.z),1.15,5.55);
+    const crown=T.MathUtils.smoothstep(origin.y,h*.46,h*.99);
+    const sideLight=(.5+.5*Math.cos(Math.atan2(origin.z,origin.x)-2.28))*(.30+.70*edge);
+    const lift=.49+.34*edge+.22*crown+.11*sideLight,young=.36*edge+.43*crown+.21*sideLight;
     for(const [a,b] of knots){
       const bend=folded&&a===0?.108*size:0;
       part.p.push(...origin.clone().addScaledVector(u,a*size*.5).addScaledVector(v,b*size*.5).addScaledVector(raw,bend));
       part.n.push(...normal.clone().addScaledVector(u,-a*.26).normalize());
       part.u.push(uv[0][0]+(uv[1][0]-uv[0][0])*(a*.5+.5),uv[0][1]+(uv[2][1]-uv[0][1])*(b*.5+.5));
-      const light=shade*(.90+.12*(b*.5+.5));
-      part.c.push(light*(oak?1.048:.94),light,light*(oak?.85:1.005));
+      const light=shade*lift*(.87+.15*(b*.5+.5)+(folded&&a===0?.048:0));
+      part.c.push(light*((oak?.91:.84)+.21*young),light,light*((oak?.94:1.04)-.15*young));
     }
     if(folded)part.idx.push(i,i+1,i+4,i,i+4,i+3,i+1,i+2,i+5,i+1,i+5,i+4);
     else part.idx.push(i,i+1,i+2,i,i+2,i+3);
@@ -137,7 +146,8 @@ function treeVariant(T,variant,hero){
       const a=phase+j*TAU/count+tier*1.29+(rng()-.5)*1.02;
       const reach=hero==='sweep'?1+.34*Math.cos(a):hero==='spire'?.82:hero==='fork'?1+.21*Math.cos(a*2+.6):
         hero==='bank'?1.15+.29*Math.cos(a-.71):hero==='court'?.93+.26*Math.cos(a+1.26):1;
-      const r=rC*(.62+rng()*.48)*reach;
+      const lobe=1+.14*Math.cos(a*3+phase+t*.65)+.093*Math.sin(2*a-tier*.72);
+      const r=rC*(.58+rng()*.52)*reach*lobe;
       const elbow=V(start.x+Math.cos(a-.18)*r*.57,start.y+.31+rng()*.97,start.z+Math.sin(a-.18)*r*.57);
       const rise=hero==='spire'?2.45:hero==='fork'&&tier>1?2.01:hero==='bank'?.67:1.18;
       const tip=V(Math.cos(a)*r+start.x*.6,start.y+rise+rng()*1.75,Math.sin(a)*r),thick=root*(.37-.22*t)*(.81+rng()*.4);
@@ -149,8 +159,9 @@ function treeVariant(T,variant,hero){
         branch(pos,q,thick*.27,.011,5,twigs);
         for(let g=0;g<4;g++){
           const silhouette=(g===0||g===1&&b===2);
-          const mass=q.clone().add(V((rng()-.5)*1.64,(rng()-.46)*1.67,(rng()-.5)*1.64));
-          if(g===0)mass.lerp(elbow,.29);
+          const mass=q.clone().add(V((rng()-.5)*1.90,(rng()-.47)*1.90,(rng()-.5)*1.90));
+          if(g===0)mass.lerp(elbow,.36);
+          else if(g===1)mass.lerp(tip,.18);
           spray(silhouette?coarse:middle,mass,
             (silhouette?2.62:1.69)+rng()*.87,a+g*1.90,.77+rng()*.39,(oak?0:2)+((g===0||g===2)?1:0));
         }
@@ -196,18 +207,20 @@ function airyLeaf(T,material,sway){
     shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float erlCanopyTime;')
       .replace('#include <begin_vertex>',`#include <begin_vertex>
         vec3 erlSeed=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;
-        float fern=sin(erlSeed.x*.31+erlSeed.z*.19+erlCanopyTime*1.19+position.y*.33+position.z*.71);
-        float canopy=smoothstep(3.2,17.,position.y);float nearWind=1.-smoothstep(38.,91.,distance(cameraPosition.xz,erlSeed.xz));
-        transformed.x+=(fern*.08+sin(erlCanopyTime*.82+erlSeed.z*.66)*.12)*canopy*nearWind;
-        transformed.z+=cos(position.x*.62+erlCanopyTime*1.37+erlSeed.x*.17)*canopy*nearWind*.104;
+        float twig=dot(position,vec3(.39,.38,.53));
+        float fern=sin(dot(erlSeed.xz,vec2(.31,.19))+erlCanopyTime*1.24+twig);
+        float trunk=smoothstep(3.1,16.5,position.y);
+        float wind=(1.-smoothstep(1420.,7700.,dot(cameraPosition.xz-erlSeed.xz,cameraPosition.xz-erlSeed.xz)))*trunk;
+        transformed.x+=(fern*.082+sin(erlCanopyTime*.78+erlSeed.z*.44)*.12)*wind;
+        transformed.z+=cos(twig*.81+erlCanopyTime*1.09+erlSeed.x*.21)*wind*.10;
       `);
     shader.fragmentShader=shader.fragmentShader.replace('#include <lights_lambert_pars_fragment>',
       T.ShaderChunk.lights_lambert_pars_fragment.replace(
         'vec3 irradiance = dotNL * directLight.color;',
-        'float pass = max(0.0,-dot(geometryNormal,directLight.direction)); vec3 irradiance = (vec3(dotNL)+pass*vec3(.13,.167,.060))*directLight.color;'
+        'float pass = max(0.0,-dot(geometryNormal,directLight.direction)); vec3 irradiance = (vec3(dotNL)+pass*vec3(.155,.23,.082))*directLight.color;'
       ));
   };
-  material.customProgramCacheKey=()=>key+'-leaf-backlight';
+  material.customProgramCacheKey=()=>key+'-leaf-depth-v2';
 }
 function undergrowth(T){
   const dst=buffers(),r=randomSource(31855);
@@ -336,9 +349,9 @@ export function plantGarden(T,group,world,treeSites,coverage,height,shrubSites=[
   }
   const turf=plantParkTurf(T,group,coverage,height,roots);
   let lastX=Infinity,lastZ=Infinity;
-  return (position,time)=>{
+  return (position,time,quality)=>{
     sway.value=time*.001;
-    turf(position);
+    turf(position,quality);
     if(Math.abs(position.x-lastX)+Math.abs(position.z-lastZ)<.48)return;
     lastX=position.x;lastZ=position.z;
     for(const p of parts){

@@ -51,8 +51,8 @@ export function addFixtures(T,scene,world,floorHeight){
     fragmentShader:`varying vec2 v;uniform float power;uniform vec3 tone;
       void main(){
         float d=length((v-.5)*2.0);
-        float fade=pow(max(0.0,1.0-d*d),3.4);
-        gl_FragColor=vec4(tone*.35,fade*power*.34);
+        float fade=pow(max(0.0,1.0-d*d),3.8);
+        gl_FragColor=vec4(tone*.31,fade*power*.32);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`
@@ -77,20 +77,30 @@ export function addFixtures(T,scene,world,floorHeight){
     const spot=new T.SpotLight(0xffad68,0,17,Math.PI*.44,.74,2);
     scene.add(spot,spot.target);return spot;
   });
-  let level=0;
+  let level=0,lastX=Infinity,lastZ=Infinity;
+  const nearest=new Int32Array(spots.length),d2=new Float64Array(spots.length);
   function setLevel(amount){
-    level=amount;lens.emissiveIntensity=3.1*amount;
+    level=amount;lastX=lastZ=Infinity;lens.emissiveIntensity=2.85*amount;
     floorGlow.uniforms.power.value=.88*amount;pools.visible=amount>0;
     for(const light of spots){light.visible=amount>0;light.intensity=0}
   }
   function update(player){
-    if(!level)return;
-    const near=lamp.map(p=>({p,d:Math.hypot(p.x-player.x,p.z-player.z)})).sort((a,b)=>a.d-b.d);
+    if(!level||Math.abs(player.x-lastX)+Math.abs(player.z-lastZ)<.6)return;
+    lastX=player.x;lastZ=player.z;nearest.fill(-1);d2.fill(Infinity);
+    for(let j=0;j<lamp.length;j++){
+      const p=lamp[j],q=(p.x-lastX)**2+(p.z-lastZ)**2;
+      for(let n=0;n<nearest.length;n++){
+        if(q>=d2[n])continue;
+        for(let r=nearest.length-1;r>n;r--){nearest[r]=nearest[r-1];d2[r]=d2[r-1]}
+        nearest[n]=j;d2[n]=q;break;
+      }
+    }
     spots.forEach((spot,i)=>{
-      const {p,d}=near[i];
+      const p=lamp[nearest[i]];
+      if(!p){spot.intensity=0;return}
       spot.position.set(p.x,p.y-.09,p.z);
       spot.target.position.set(p.x,p.base,p.z+(p.wall?2.3:0));
-      spot.intensity=73*level*(1-T.MathUtils.smoothstep(d,25,41));
+      spot.intensity=70*level*(1-T.MathUtils.smoothstep(Math.sqrt(d2[i]),24,40));
     });
   }
   setLevel(0);
