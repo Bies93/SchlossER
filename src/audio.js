@@ -492,11 +492,29 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       for(let i=0;i<6;i++)grit(sfx,t+.05+i*.060,.056,.093,450,5300,{attack:.003,rate:1.06-i*.04});
     }else grit(sfx,t,.024,.061,900,4750,{attack:.001});
   }
+  function crownCue(kind,at,voice=''){
+    if(!live())return;
+    const t=ctx.currentTime+.009,pan=tapePan(at);
+    if(kind==='record'){
+      grit(sfx,t,.53,.081,382,2130,{pan,wet:.17,rate:.71});
+      tone(sfx,t+.03,103,.55,.046,{type:'triangle',end:81,wet:.20,pan});
+    }else if(kind==='knock'){
+      for(const d of [0,.29])tone(sfx,t+d,108,.15,.111,{type:'triangle',end:63,pan,wet:.28});
+    }else if(kind==='latch'||kind==='off'){
+      grit(sfx,t,.57,.105,168,2160,{pan,wet:.20,attack:.045,rate:.68});
+      tone(sfx,t+.24,101,.57,.091,{pan,wet:.26,end:48,shiver:66});
+    }else if(kind==='buzz'){
+      for(const d of [0,.20,.43])tone(sfx,t+d,103,.50,.040,{type:'sawtooth',end:182,pan,wet:.17,attack:.11,shiver:44});
+    }else if(kind==='pour'){
+      grit(sfx,t,.63,.09,290,4490,{pan,wet:.09,rate:1.18,attack:.035});
+    }else if(kind!=='voice')grit(sfx,t,.08,.076,430,2180,{pan,wet:.16,attack:.002});
+    if(voice){stopNpc();speakLocal(at,voice,kind==='voice'?.91:.78,kind==='voice'?.96:.87,.69);}
+  }
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
   return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,berg,
-    bergPhase:()=>bergNode&&bergPlaying?ctx.currentTime-bergStart:null,puddleCue,weatherCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
+    bergPhase:()=>bergNode&&bergPlaying?ctx.currentTime-bergStart:null,puddleCue,weatherCue,crownCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
     playNpc,npcTalking,stopNpc,raven,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},
     grate,priestMurmur,playPrisoner:at=>playChoir(at,prisonerUrl),

@@ -238,7 +238,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,atticWorld,M,height){
     }
     const high=upper(p),lowerVisible=high&&(!attic.inside(p)||attic.linked(p)),
       near=(Math.abs(p.x-E.x)<19&&p.z<arrivalZ+1.2&&p.z>footZ-26&&p.y>=base-.6);
-    changed=attic.update(p,high)||changed;
+    changed=attic.update(p,high,time)||changed;
     const see=lowerVisible||!high&&opening>.045&&near;
     if(room.visible!==see){room.visible=see;changed=true;}
     if(see){
@@ -275,7 +275,7 @@ export function addPalaceUpper(T,scene,facade,upperWorld,atticWorld,M,height){
     camera.layers.set(ATTIC_LAYER);camera.position.set(30.9,ATTIC_FLOOR+1.67,-2);camera.lookAt(1,ATTIC_FLOOR+1.45,0);
     await warmRoom(T,renderer,scene,camera,[attic.root]);
   }
-  return {prepare,update,target,unlock,step,request(d){requested=d;},inside:upper,visible:()=>room.visible,
+  return {prepare,update,target,atticTarget:attic.target,atticUse:attic.use,unlock,step,request(d){requested=d;},inside:upper,visible:()=>room.visible,
     seeGarden,insideAttic:attic.inside,stairLink:attic.linked,downSnap:attic.downSnap,
     floorAt:(x,z,y)=>attic.floorAt(x,z,y)??(y>UPPER_FLOOR-.26&&insidePlan(x,z,.164)?UPPER_FLOOR:null),
     ceilingAt(x,z,y){

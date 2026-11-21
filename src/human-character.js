@@ -53,6 +53,16 @@ const wear={
   plazaEberwin:{palette:[0x332e32,0x533c42,0xb38b57],hair:0x7f7872,weather:.18},
   plazaIsolde:{palette:[0x51453f,0x888d84,0xd5c1ac],hair:0x584d46,weather:.36},
   plazaAnton:{palette:[0x393933,0x485047,0xa99979],hair:0x655342,weather:.23},
+  crownFlesh:{skin:0xb8aaa3,palette:[0x463836,0x9f9183,0xcab493],hair:0x4d3836,weather:.47},
+  crownSleeper17:{skin:0xb8aaa3,palette:[0x463836,0x9f9183,0xcab493],hair:0x4d3836,weather:.41},
+  crownSleeper19:{skin:0xb8aaa3,palette:[0x463836,0x9f9183,0xcab493],hair:0x4d3836,weather:.41},
+  crownDrone:{palette:[0x373e3d,0x4d6863,0xb18b61],coat:0x65746d,insignia:0xbb7646,hair:0x7c4f39,weather:.28},
+  crownMarshal:{palette:[0x2f2826,0x463134,0xbca774],coat:0x2c2d2d,insignia:0xc6a465,hair:0x8b7c6c,weather:.19},
+  crownVoice:{palette:[0x292530,0x584345,0x956f50],coat:0x514044,insignia:0xb28857,hair:0x584842,weather:.17},
+  crownWitness:{skin:0xc0a395,palette:[0x413d39,0x665854,0x968675],hair:0x705441,weather:.71},
+  crownMedic:{palette:[0x343536,0x6a5c55,0xb5a288],coat:0xbfb0a3,insignia:0x7b443a,hair:0x553d39,weather:.43},
+  crownQuartermaster:{palette:[0x362c29,0x594a38,0xaa7954],insignia:0xd7a969,hair:0xa58e76,weather:.25},
+  crownEcho:{skin:0xb3a299,palette:[0x2c3434,0x54615e,0xb39570],coat:0x6d7771,hair:0xa3a098,weather:.62},
   chapterOskar:{palette:[0x282530,0x442533,0xc8ac65],hair:0xbfb2a3,weather:.10},
   chapterMatthias:{palette:[0x332d26,0x535844,0xba985f],hair:0x735742,weather:.19},
   chapterKonrad:{palette:[0x282b30,0x2b414c,0xba8e54],hair:0x574d48,weather:.27},
@@ -514,6 +524,13 @@ export function createHuman(T,id='base'){
     }
     face(t,6.58,talk*(.44+.56*Math.abs(sin(t*17.6))),.017,.026,glance);
   }
+  function tankPose(t,reach,glance,talk){
+    chairPose(t,.48,0,glance,talk);
+    if(reach<.001)return;
+    const n=reach*(.88+.12*Math.sin(t*5));
+    solve(LIMB.l.arm,mix(.18,.164,n),mix(hipsY-.15,hipsY+.37,n),mix(.063,.49,n),.78,-.38,-.32);
+    rot('hand_l',-.17*n,.25*n,-.19*n);curl('l',mix(.4,.09,n));
+  }
   function meditate(t,attention=0,glance=0,talk=0){
     const breath=sin(t*1.06),home=.174/size;
     torso(.004*breath,home-hipsY+.005*breath,-.014,.045+.015*breath,
@@ -755,7 +772,7 @@ export function createHuman(T,id='base'){
   const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
   const alive=()=>!npcInfo||npcInfo.alive;
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,chairPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

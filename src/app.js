@@ -262,6 +262,9 @@ async function start(){
  function npcDialogue(speech){
    if(!speech)return;
    const id=showCaption(speech.name+': „'+speech.line+'“',Math.max(5500,speech.line.length*68));
+   if(speech.id.startsWith('crown')){
+     audio.crownCue('voice',speech.at,speech.line);speech.speakFor?.(speech.line.length*.059);return;
+   }
    audio.playNpc(speech.id,speech.at,seconds=>{
      if(!active()||captionId!==id)return;
      speech.speakFor?.(seconds);
@@ -281,6 +284,14 @@ async function start(){
    audio.playChapel(CHAPEL_SOURCE,line,take);
  }
  const interactionLook=new T.Vector3();
+ const atticRay=new T.Ray(),atticAim=new T.Vector3();
+ function atticBlocked(target){
+   c.getWorldPosition(atticRay.origin);
+   atticAim.set(target.x,target.y,target.z).sub(atticRay.origin);
+   const d=atticAim.length();
+   return geometryQuery.trace(atticRay.set(atticRay.origin,atticAim.multiplyScalar(1/d)),
+     d-.108,1<<ATTIC_LAYER,.045,true)!==Infinity;
+ }
  const orbAt={x:wcX-ORB.v,z:wcZ+ORB.u},orbLine='Fürchte nicht die Stille. Noch ehe der erste Stein fiel, kannte ich deinen Namen. Tritt ins Licht.';
  let orbHeard=false,orbSince=null;
  function orbCue(time,pos){
@@ -321,6 +332,7 @@ async function start(){
    }
    const access=upper.target(pos,look);
    if(access?.action==='upper-unlock'&&names.target()?.id==='gardenHannes')return null;
+   if(upper.insideAttic(pos))return names.target()?null:upper.atticTarget(pos,look,atticBlocked);
    if(access||upper.inside(pos)||player.motion.climbing)return access??null;
    const target=pickups.target(c,activeLayers().mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
@@ -380,6 +392,14 @@ async function start(){
    }
    if(local?.action==='upper-up'||local?.action==='upper-down'){
      upper.request(local.action==='upper-up'?1:-1);doorPrompt();refresh();return;
+   }
+   if(local?.action==='crown'){
+     const event=upper.atticUse(local.id,now);
+     if(event){
+       showCaption(event.text,Math.max(3800,event.text.length*63));
+       audio.crownCue(event.kind,local,event.voice);
+     }
+     doorPrompt();refresh();return;
    }
    if(upper.inside(player.body.position)||player.motion.climbing){
      const person=hallOrPerson();

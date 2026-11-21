@@ -2,6 +2,7 @@ import {architectureKit} from './architecture-kit.js';
 import {sharedSet} from './surface-detail.js';
 import {ATTIC_LAYER,ATTIC_FLOOR as F,ATTIC_CEILING as C,ATTIC_WELL as w,atticStair} from './palace-attic-layout.js';
 import {dressStairWell,stairMaterials} from './palace-stair-detail.js';
+import {dressCrown} from './palace-crown.js';
 
 const X=31.92,Z=8.74,at=(x,y,z)=>[x,y,z];
 const inPlan=(x,z)=>Math.abs(x)<=X&&Math.abs(z)<=Z;
@@ -9,7 +10,7 @@ const inWell=(x,z)=>x>=w.left&&x<=w.right&&z>=w.start&&z<=w.far;
 
 export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
   const stair=new T.Group(),root=new T.Group();
-  stair.name='Südende · alte Diensttreppe';root.name='Zweites Obergeschoss · ungenutzte Säle';
+  stair.name='Südende · alte Diensttreppe';root.name='Zweites Obergeschoss · Schwarze Krone';
   scene.add(stair,root);stair.visible=root.visible=false;
   const surface=(kind,color,roughness,scale=.54)=>new T.MeshStandardMaterial({
     ...sharedSet(T,kind,512),color,roughness,normalScale:new T.Vector2(scale,scale)
@@ -78,7 +79,7 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
   }
   pen.textAlign='center';pen.fillStyle='#e6d2a2';pen.font='bold 43px Georgia';
   pen.fillText('DIENSTTREPPE',224,112,394);
-  pen.font='27px Georgia';pen.fillText('II. OBERGESCHOSS',224,169,379);
+  pen.font='27px Georgia';pen.fillText('II. OG · SCHWARZE KRONE',224,169,379);
   const signTexture=new T.CanvasTexture(signCanvas);signTexture.colorSpace=T.SRGBColorSpace;
   const sign=new T.Mesh(new T.PlaneGeometry(.463,.275),
     new T.MeshStandardMaterial({map:signTexture,roughness:.88}));
@@ -152,17 +153,6 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
       lining('stone',x+.49,x+1.92,F+.63,F+.754,.072,.248);
     }
   }
-  // A few supply trestles and a folded drop cloth indicate storage without
-  // filling the halls meant for a later fit-out.
-  for(const [x,z] of [[-26.5,5.7],[-7.6,-6.5],[20.8,6.85]]){
-    for(const a of [x-.70,x+.70]){
-      beam(up,'oak',[a,F,z-.31],[a,F+.75,z-.17],.081,.082);
-      beam(up,'oak',[a,F,z+.31],[a,F+.75,z+.17],.081,.082);
-      box(up,'edge',a-.095,a+.095,F+.70,F+.78,z-.32,z+.32);
-      atticWorld.box(a-.112,z-.34,a+.112,z+.34);
-    }
-    for(let i=0;i<3;i++)box(up,i%2?'pale':'grey',x-1.03+i*.09,x+1.02+i*.05,F+.78+i*.033,F+.810+i*.033,z-.17+i*.093,z+.21);
-  }
   const lamp=(k,x,y,z)=>{
     box(k,'iron',x-.017,x+.017,y+.015,C-.10,z-.018,z+.018);
     box(k,'iron',x-.157,x+.157,y-.053,y+.021,z-.157,z+.157);
@@ -170,9 +160,9 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
     for(const a of [-.123,.123])for(const b of [-.123,.123])box(k,'iron',x+a-.012,x+a+.012,y-.148,y-.040,z+b-.012,z+b+.012);
     box(k,'brass',x-.145,x+.145,y-.158,y-.141,z-.144,z+.144);
   };
-  const lightSpots=[[-25.3,-2],[-16.1,2.45],[-5,-2.45],[4.9,2.45],[15.75,-2.45],[25.3,2.15],[30.42,-2.2]];
-  for(const [x,z] of lightSpots)lamp(up,x,C-.58,z);
-  const hemi=new T.HemisphereLight(0xdfd5c4,0x8e8271,1.08);
+  lamp(up,30.42,C-.58,-2.20);
+  const crown=dressCrown(T,root,atticWorld);
+  const hemi=new T.HemisphereLight(0xdad2bb,0x8a7671,.66);
   const lights=Array.from({length:3},()=>new T.PointLight(0xffd8a5,30,14.5,2));
   root.add(hemi,...lights);
   up.flush(root.name);k.flush(stair.name);unitBox.dispose();
@@ -193,25 +183,29 @@ export function addPalaceAttic(T,scene,lowerWorld,atticWorld,lower,lowerLayer){
     return null;
   }
   return {root,stair,inside,linked,floorAt,
+    target:(p,look,blocked)=>inside(p)?crown.target(p,look,blocked):null,
+    use:crown.use,
     ceilingAt(x,z,y){
       if(y>=F-.08&&inPlan(x,z)||y>=lower-.23&&inWell(x,z))return C-.26;
       return null;
     },
     downSnap(x,z){return inWell(x,z)||x>=w.left-.03&&x<=w.right+.03&&Math.abs(z-w.start)<=.10?rise+.012:null;},
-    update(p,upper){
+    update(p,upper,time){
       const high=inside(p),join=linked(p),show=high||upper&&join,showStair=upper&&(!high||join);
       const changed=root.visible!==show||stair.visible!==showStair;
       root.visible=show;stair.visible=showStair;
       if(show){
-        // Slide a fixed light budget across the large halls. Nearby fixtures
-        // light the landing and whichever hall is in view.
-        const i=Math.max(0,Math.min(lightSpots.length-3,lightSpots.findIndex(([x])=>x>=p.x)-1));
-        for(let j=0;j<lights.length;j++){
-          const [x,z]=lightSpots[p.x>lightSpots.at(-1)[0]?lightSpots.length-3+j:i+j];
-          lights[j].position.set(x,C-1,z);
-        }
+        // The three existing lamps follow the active bay and the corridor.
+        // No additional shadow maps or persistent light per fixture.
+        const current=crown.lightProfile(p);
+        lights[0].position.set(current.x,C-.94,current.z);
+        lights[0].color.setHex(current.color);lights[0].intensity=27;
+        lights[1].position.set(Math.max(-28,Math.min(30.42,p.x+5.3)),C-1.1,.24);
+        lights[1].color.setHex(0xe2b797);lights[1].intensity=19;
+        lights[2].position.set(Math.max(-28,Math.min(30.42,p.x-5.3)),C-1.1,-.63);
+        lights[2].color.setHex(0x9ab8bf);lights[2].intensity=15;
       }
-      return changed;
+      return crown.update(time,p,high)||changed;
     }
   };
 }
