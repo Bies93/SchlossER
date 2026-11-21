@@ -45,6 +45,24 @@ const payload=JSON.parse($('assets').textContent);
 $('assets').remove();
 const about=$('about');
 $('info').onclick=()=>about.showModal();
+function showLoadingStep(index,text){
+ $('loading-text').textContent=text;
+ $('loading-counter').textContent=String(index+1).padStart(2,'0')+' / 04';
+ for(const [i,step] of Array.from($('loading-steps').children).entries()){
+   step.toggleAttribute('data-done',i<index);
+   if(i===index)step.setAttribute('aria-current','step');
+   else step.removeAttribute('aria-current');
+ }
+}
+// Let the next loading message paint before generating the world in one
+// synchronous batch. Don't wait for a render frame in a background tab.
+function paintLoadingStep(){
+ if(document.hidden)return Promise.resolve();
+ return new Promise(resolve=>{
+   const frame=requestAnimationFrame(()=>{clearTimeout(fallback);setTimeout(resolve,0);});
+   const fallback=setTimeout(()=>{cancelAnimationFrame(frame);resolve();},48);
+ });
+}
 async function start(){
  const bootTime=performance.now();
  const r=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -61,6 +79,8 @@ async function start(){
  const [model,mapPairs,sculptures,poster,seal,humans]=await Promise.all([decode('schloss.glb',payload.model),mapsP,
    decode('skulpturen.glb',payload.sculptures),image(payload.galleryPoster),image(payload.lodgeSeal),decode('human-cast.glb',payload.humans)]);
  performance.measure('schlosser: assets',{start:bootTime,end:performance.now()});
+ showLoadingStep(1,'Schloss und Garten werden aufgebaut …');
+ await paintLoadingStep();
  installHumans(T,humans);
  for(const tex of [poster,seal])if(tex){tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=Math.min(8,r.capabilities.getMaxAnisotropy());}
  const {finish}=surfaceLibrary(T,Object.fromEntries(mapPairs));
@@ -500,7 +520,7 @@ async function start(){
    c.fov=T.MathUtils.clamp(T.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI*24/180)/c.aspect)),65,82);
    c.updateProjectionMatrix();refresh();
  }
- $('loading-text').textContent='Die 3D-Szene wird vorbereitet …';
+ showLoadingStep(2,'Licht und Materialien werden vorbereitet …');
  const shaderTime=performance.now();
  for(const tex of [poster,seal])if(tex)r.initTexture(tex);
  await hall.prepareLab(r,s);
@@ -509,6 +529,7 @@ async function start(){
  await upper.prepare(r);
  await viewmodel.prepare(r);
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
+ showLoadingStep(3,'Der Rundgang wird startklar gemacht …');
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
  geometryQuery.build();s.matrixWorldAutoUpdate=false;
  new ResizeObserver(resize).observe(stage);resize();

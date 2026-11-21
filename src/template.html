@@ -31,7 +31,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 #pause,#overlay,#error,#loading,#leave,#drag-hint,#stick,.paused-copy,.touch-copy{display:none}
 #pause{position:absolute;z-index:4;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));padding:0;background:#141d1bdb}
 body[data-state=playing][data-input=touch] #pause{display:grid;place-items:center}
-body[data-state=loading] #loading,body[data-state=error] #error,
+body[data-state=loading] #loading{display:grid}
+body[data-state=error] #error,
 body[data-state=ready] #overlay,body[data-state=paused] #overlay,
 body[data-state=paused] #leave,body[data-state=paused] .paused-copy{display:block}
 body[data-state=paused] .ready-copy{display:none}
@@ -54,6 +55,63 @@ main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(-
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 body[data-state=loading] #canvas{visibility:hidden}
 canvas{touch-action:none;outline:none}
+.boot{--boot-gold:#e0be89;--boot-line:#c7aa714d;position:absolute;inset:0;z-index:1;overflow:auto;
+  padding:clamp(15px,3.2vw,48px) max(clamp(14px,4.7vw,72px),env(safe-area-inset-right))
+    max(clamp(14px,3.1vw,45px),env(safe-area-inset-bottom)) max(clamp(14px,4.7vw,72px),env(safe-area-inset-left));
+  background:radial-gradient(ellipse at 78% 47%,#36362b 0%,#1e2822 42%,#111b19 83%)}
+.boot-frame{width:min(100%,1380px);min-height:100%;margin:auto;display:grid;grid-template-rows:auto 1fr auto;border:1px solid var(--boot-line);position:relative;
+  background:linear-gradient(var(--boot-gold),var(--boot-gold)) top left/18px 1px,
+    linear-gradient(var(--boot-gold),var(--boot-gold)) top left/1px 18px,
+    linear-gradient(var(--boot-gold),var(--boot-gold)) bottom right/18px 1px,
+    linear-gradient(var(--boot-gold),var(--boot-gold)) bottom right/1px 18px;background-repeat:no-repeat}
+.boot-meta,.boot-bottom{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 clamp(14px,2.5vw,37px);
+  padding:clamp(9px,1.7vh,16px) 0;color:#d2c4a5;font-size:.67rem;letter-spacing:.13em;text-transform:uppercase}
+.boot-meta{border-bottom:1px solid var(--boot-line);font-weight:660}
+.boot-bottom{border-top:1px solid var(--boot-line);color:#b9bdab}
+.boot-index{display:inline-flex;align-items:center;gap:.66rem}
+.boot-index::before{content:"";width:5px;height:5px;background:var(--boot-gold);transform:rotate(45deg)}
+.boot-layout{display:grid;grid-template-columns:minmax(0,.91fr) minmax(0,1.35fr);align-items:center;gap:clamp(12px,3.1vw,55px);
+  padding:clamp(12px,3.5vw,62px) clamp(14px,3.8vw,68px)}
+.boot-copy{min-width:0;max-width:33rem}
+.boot-location{margin:0 0 .95rem;color:var(--boot-gold);font-size:clamp(9px,1vw,12px);font-weight:700;letter-spacing:.20em;text-transform:uppercase}
+.boot h1{margin:0;font:normal clamp(40px,5.5vw,88px)/.96 Georgia,serif;letter-spacing:-.054em;color:#f5ead7}
+.boot h1 span{display:block;margin-top:.17em;color:#dfbf8b;font-size:.68em;letter-spacing:-.035em}
+.boot-intro{margin:clamp(10px,2vh,24px) 0 0;color:#d6d9c9;font-size:clamp(13px,1.22vw,17px);max-width:27rem}
+.boot-process{margin-top:clamp(19px,5vh,53px)}
+.boot-status{display:flex;align-items:baseline;justify-content:space-between;gap:.65rem;min-height:1.4em}
+.boot-status p{margin:0;color:#f4e8d0;font-size:clamp(12px,1.1vw,15px);font-weight:600}
+.boot-counter{color:#c7af82;font:11px/1.5 ui-monospace,monospace;white-space:nowrap}
+.boot-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:11px 0 0;padding:0;list-style:none}
+.boot-steps li{position:relative;min-width:0;overflow:hidden;padding-top:10px;color:#b9c1b4;font-size:clamp(9px,.85vw,12px)}
+.boot-steps li::before,.boot-steps li::after{content:"";position:absolute;top:0;left:0;height:2px;background:#7d806650}
+.boot-steps li::before{width:100%}
+.boot-steps li::after{width:37%;display:none;background:#f5d6a1}
+.boot-steps li[data-done]{color:#e0cba7}
+.boot-steps li[data-done]::before{background:#c7a471}
+.boot-steps li[aria-current=step]{color:#f5e5c4}
+.boot-steps li[aria-current=step]::before{background:#b798635e}
+.boot-steps li[aria-current=step]::after{display:block;animation:boot-glint 1.65s ease-in-out infinite alternate}
+@keyframes boot-glint{from{transform:translateX(0);opacity:.65}to{transform:translateX(170%);opacity:1}}
+.boot-view{position:relative;margin:0;min-width:0;align-self:center}
+.boot-view svg{display:block;width:100%;height:auto;max-height:48vh}
+.boot-view figcaption{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:clamp(5px,1.7vh,17px);
+  color:#dac69f;font-size:clamp(8px,.85vw,11px);font-weight:620;letter-spacing:.16em;text-transform:uppercase;text-align:center}
+.boot-view figcaption::before,.boot-view figcaption::after{content:"";width:clamp(13px,3vw,40px);height:1px;background:var(--boot-line)}
+@media(prefers-reduced-motion:reduce){.boot-steps li[aria-current=step]::after{animation:none;width:100%}}
+@media(max-width:670px) and (min-aspect-ratio:5/6){.boot h1{font-size:clamp(32px,6vw,45px)}}
+@media(max-aspect-ratio:5/6){
+  .boot-layout{grid-template-columns:minmax(0,1fr);align-content:center;padding-block:clamp(16px,4vh,38px);gap:clamp(11px,2vh,25px)}
+  .boot-copy{margin-inline:auto;width:min(100%,420px)}
+  .boot h1{font-size:clamp(40px,9vw,67px)}
+  .boot-view{grid-row:1}.boot-view svg{max-height:29vh}
+  .boot-view figcaption{margin-top:4px}
+}
+@media(max-width:430px){.boot-meta{gap:8px;letter-spacing:.10em}.boot-view-number{display:none}}
+@media(max-height:420px){
+  .boot{padding-block:7px}.boot-meta,.boot-bottom{padding-block:5px}
+  .boot-layout{padding-block:8px}.boot-location{margin-bottom:7px}.boot-intro{margin-top:6px}
+  .boot-process{margin-top:11px}.boot-view svg{max-height:37vh}
+}
 #upper-flash{position:absolute;inset:0;z-index:6;opacity:0;background:#fff;pointer-events:none}
 .panel{position:absolute;left:max(clamp(12px,4vw,60px),env(safe-area-inset-left));bottom:calc(clamp(12px,5vh,58px) + env(safe-area-inset-bottom));width:min(440px,calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right))));
  max-height:calc(100% - 18px - env(safe-area-inset-bottom));overflow:auto;background:#141d1bf5;border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:8px;padding:clamp(15px,2.6vw,26px);box-shadow:0 16px 44px #0006}
@@ -119,7 +177,78 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
   <div id="canvas"></div>
   <div id="upper-flash" aria-hidden="true"></div>
   <button class="tool" id="pause" type="button" aria-label="Rundgang pausieren" title="Pause">Ⅱ</button>
-  <div class="panel" id="loading" role="status"><p class="eyebrow">Erlangen zu Fuß</p><p id="loading-text">Der Rundgang wird geladen …</p></div>
+  <section class="boot" id="loading" aria-labelledby="loading-title">
+    <div class="boot-frame">
+      <div class="boot-meta"><span class="boot-index">Erlangen zu Fuß</span><span><span class="boot-view-number">Ansicht 01 · </span>Schlossplatz</span></div>
+      <div class="boot-layout">
+        <div class="boot-copy">
+          <p class="boot-location">Erlangen · Virtueller Rundgang</p>
+          <h1 id="loading-title">Schloss <span>&amp; Schlossgarten</span></h1>
+          <p class="boot-intro">Vom Pflaster des Schlossplatzes bis hinter die alten Mauern.</p>
+          <div class="boot-process">
+            <div class="boot-status"><p id="loading-text" role="status">Modelle und Texturen werden geladen …</p><span class="boot-counter" id="loading-counter" aria-hidden="true">01 / 04</span></div>
+            <ol class="boot-steps" id="loading-steps" aria-hidden="true">
+              <li aria-current="step">Dateien</li><li>Aufbau</li><li>Licht</li><li>Abschluss</li>
+            </ol>
+          </div>
+        </div>
+        <figure class="boot-view">
+          <svg viewBox="0 0 800 396" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="boot-stone" x2=".14" y2="1" gradientUnits="objectBoundingBox">
+                <stop stop-color="#72705a"/><stop offset=".58" stop-color="#4e5041"/><stop offset="1" stop-color="#343f35"/>
+              </linearGradient>
+              <linearGradient id="boot-glass" x2="0" y2="1" gradientUnits="objectBoundingBox">
+                <stop stop-color="#171f1c"/><stop offset="1" stop-color="#514c35"/>
+              </linearGradient>
+              <path id="boot-window" d="M0 0h17v29H0z"/>
+              <g id="boot-bay" stroke="#c5af7b" stroke-width=".85">
+                <path d="M-8 -5h33v119H-8z" fill="#c4af7923" stroke="none"/>
+                <use href="#boot-window" fill="url(#boot-glass)"/><use href="#boot-window" y="40" fill="url(#boot-glass)"/><use href="#boot-window" y="80" fill="url(#boot-glass)"/>
+                <path d="M-3 -3h23m-24 43 12-8 13 8M-4 78h25M-4 31h25m-25 40h25m-25 40h25M8 0v29m0 11v29m0 11v29M0 13h17M0 53h17M0 93h17" fill="none"/>
+              </g>
+              <g id="boot-wing">
+                <path d="M0 88 28 49h237v39z" fill="#272f29" stroke="#b6a47c"/>
+                <path d="M0 88h266v145H0z" fill="url(#boot-stone)" stroke="#ae9a72"/>
+                <path d="M0 94h266M0 137h266M0 178h266M0 228h266M6 103v122m249-122v122m7-132v133" fill="none" stroke="#b8a97e" opacity=".67"/>
+                <path d="M14 82h249M20 72h243M25 61h238" fill="none" stroke="#81795d"/>
+                <use href="#boot-bay" x="21" y="105"/><use href="#boot-bay" x="58" y="105"/><use href="#boot-bay" x="95" y="105"/>
+                <use href="#boot-bay" x="132" y="105"/><use href="#boot-bay" x="169" y="105"/><use href="#boot-bay" x="206" y="105"/><use href="#boot-bay" x="243" y="105"/>
+              </g>
+            </defs>
+            <g fill="none" stroke="#b8a57c" stroke-width="1" opacity=".48">
+              <circle cx="400" cy="160" r="145"/><circle cx="400" cy="160" r="156" stroke-dasharray="1 6"/>
+              <path d="M400 3V0m0 37V14M232 160h30m276 0h30M400 306v17M232 28l13 8m323-8-13 8M186 120h28m372 0h28M112 169h29m518 0h29"/>
+            </g>
+            <path fill="#dec888" d="M399 18h2v16h-2zM393 25h14v2h-14zM186 80l2 6 6 2-6 2-2 6-2-6-6-2 6-2zM620 74l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>
+            <g transform="translate(46 76)">
+              <use href="#boot-wing"/><use href="#boot-wing" transform="translate(708 0) scale(-1 1)"/>
+              <path d="M256 87h196v146H256z" fill="url(#boot-stone)" stroke="#d3b989"/>
+              <path d="M253 92h202v11H253zM252 135h204v5H252zM252 175h204v6H252zM252 225h204v8H252z" fill="#827657" stroke="#c4a978"/>
+              <path d="M249 87h210l-8-6H257zm7-8h196V54h-63l-35-17-35 17h-63z" fill="#766f53" stroke="#d8be8b"/>
+              <path d="M314 64l40-23 40 23h-80zm17-1 23-13 23 13h-46z" fill="#333931" stroke="#dac08c" stroke-linejoin="round"/>
+              <path d="M256 74h60m76 0h60M265 68v11m12-11v11m12-11v11m12-11v11m106-11v11m12-11v11m12-11v11m12-11v11" fill="none" stroke="#d4b985"/>
+              <path d="M266 54V38m-5 4h10m20 12V36m-5 5h10m121 13V36m-5 5h10m20 13V38m-5 4h10M350 35l4-7 4 7m-4-9v-6" fill="none" stroke="#d4b985" stroke-linecap="round"/>
+              <use href="#boot-bay" x="271" y="104"/><use href="#boot-bay" x="308" y="104"/>
+              <use href="#boot-bay" x="383" y="104"/><use href="#boot-bay" x="420" y="104"/>
+              <path d="M341 106h26v29h-26zM339 145h30v26h-30z" fill="url(#boot-glass)" stroke="#cfb782"/>
+              <path d="M354 106v29m0 10v26m-13-51h26m-28 38h30M336 225v-26a18 18 0 0 1 36 0v26z" fill="#252a23" stroke="#d8bd86"/>
+              <path d="M331 225v-26a23 23 0 0 1 46 0v26m-23-44v44m-29 3h58l5 5h-68z" fill="none" stroke="#bcaa7b"/>
+              <path d="M256 106h7v118h-7zm188 0h7v118h-7z" fill="#a28e66" stroke="#c4ac7d"/>
+              <path d="M22 186h15v25H22zM672 146h15v26h-15zM347 146h14v20h-14z" fill="#ebc677" opacity=".49"/>
+            </g>
+            <g fill="none" stroke="#aa9971" opacity=".62">
+              <path d="M28 309h744M46 315h708M79 326h642M99 338h602M132 355h536M172 375h456M250 396h300"/>
+              <path d="M389 309 290 396m100-87-47 87m56-87v87m11-87 47 87m-46-87 99 87M285 312l-130 84m360-84 130 84" opacity=".58"/>
+            </g>
+            <path d="M8 313q20-41 56-44-4 8-17 16 13-4 23 1-18 8-35 10 13 0 16 5l-10 12zm784 0q-20-41-56-44 4 8 17 16-13-4-23 1 18 8 35 10-13 0-16 5l10 12z" fill="#121d18" stroke="#8d8c65" stroke-opacity=".62"/>
+          </svg>
+          <figcaption>Ansicht vom Schlossplatz</figcaption>
+        </figure>
+      </div>
+      <div class="boot-bottom"><span>SchlossER · Erlangen</span><span>Schloss &amp; Garten</span></div>
+    </div>
+  </section>
   <section class="panel" id="overlay" aria-label="Rundgang">
     <p class="eyebrow">Erlangen zu Fuß</p>
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
