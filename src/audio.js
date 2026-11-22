@@ -351,6 +351,41 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft||material==='wood'?156:575,soft?1230:material==='wood'?2580:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
     tone(sfx,t+.003,f,metal?.121:.052,(metal?.069:.061)*vol,{end:f*.93,attack:.002,pan,wet:.18});
   }
+<<<<<<< Updated upstream
+=======
+  function counterCue(kind,pos){
+    if(!live())return;
+    const a=listener(),dx=pos.x-a.x,dz=pos.z-a.z,d=Math.hypot(dx,dz),t=ctx.currentTime+.004;
+    const pan=Math.max(-.87,Math.min(.87,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    const vol=1/(1+(d/7.2)**1.52);
+    if(kind==='fire'){
+      if(sample('rifle_field_'+(1+(shotIndex++%2)),.51*vol,1.13+random()*.10,pan,.27))return;
+      grit(sfx,t,.062,.40*vol,330,6050,{attack:.002,pan,wet:.30});
+      tone(sfx,t+.003,137,.092,.25*vol,{end:63,attack:.002,pan,wet:.32});
+    }else if(kind==='hurt'){
+      tone(sfx,t,84,.13,.235,{end:37,attack:.003,pan:pan*.45,wet:.07});
+      grit(sfx,t+.008,.075,.15,92,1340,{attack:.005,pan:pan*.45,wet:.07});
+    }else{
+      grit(sfx,t,.065,.12*vol,520,4200,{attack:.002,pan,wet:.21});
+      tone(sfx,t+.024,kind==='mag-in'?474:243,.057,.085*vol,{end:174,attack:.002,pan,wet:.19});
+    }
+  }
+  function questChoke(pos,fall=false){
+    if(!live())return;
+    const a=listener(),dx=pos.x-a.x,dz=pos.z-a.z,d=Math.hypot(dx,dz),t=ctx.currentTime+.004;
+    if(d>19)return;
+    const pan=Math.max(-.82,Math.min(.82,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    const v=1/(1+(d/4.8)**1.65);
+    if(fall){
+      grit(sfx,t,.18,.21*v,104,1930,{attack:.004,pan,wet:.07});
+      tone(sfx,t+.005,101,.16,.14*v,{end:46,attack:.005,pan,wet:.09});return;
+    }
+    for(const [start,f,amount] of [[0,148,.23],[.29,174,.16],[.67,106,.12]]){
+      grit(sfx,t+start,.19,amount*v,192,2570,{attack:.024,pan,wet:.09});
+      tone(sfx,t+start+.009,f,.16,amount*.58*v,{wave:ac,end:f*.66,attack:.018,pan,wet:.08,shiver:83});
+    }
+  }
+>>>>>>> Stashed changes
   function foot(kind,power=1,impact=false,side=1){
     if(!live())return;
     const [low,high,edge,decay]=sound[kind]??sound.stone,t=ctx.currentTime+.005;
@@ -610,7 +645,13 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
+<<<<<<< Updated upstream
   return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,berg,festival,
+=======
+  return {play,pause,toggle,shot,shotContact,weaponAction,counterCue,questChoke,
+    preloadNpc(...ids){if(ctx)for(const id of ids)if(npcUrls[id])void prepareClip(npcUrls[id]).catch(()=>{});},
+    foot,creature,ambience,club,clubPhase,berg,festival,
+>>>>>>> Stashed changes
     bergPhase:()=>bergNode&&bergPlaying?ctx.currentTime-bergStart:null,puddleCue,weatherCue,crownCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
     playNpc,npcTalking,stopNpc,raven,festivalDart,greyCue,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},

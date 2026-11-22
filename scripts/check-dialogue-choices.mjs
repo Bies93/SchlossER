@@ -3,10 +3,11 @@ import {readFile} from 'node:fs/promises';
 import {NPCS} from '../src/npc-lines.js';
 import {NPC_VOICE_FILES} from '../src/npc-voice-assets.js';
 import {bindNpcDialogue} from '../src/npc-dialogue-ui.js';
+import {fountainQuest} from '../src/fountain-quest.js';
 
 const clicks=new Map(),keyEvents=new Map();
 const fake=()=>({textContent:'',disabled:false,addEventListener:(ev,fn)=>{clicks.set(ev,fn);}});
-const buttons=[0,1].map(()=>{const span=fake();return {...fake(),span,querySelector:()=>span};});
+const buttons=[0,1,2].map(()=>{const span=fake();return {...fake(),span,querySelector:()=>span};});
 const listeners=new Map();
 for(const b of buttons)b.addEventListener=(ev,fn)=>listeners.set(b,fn);
 const name=fake(),line=fake(),hint=fake(),close=fake();
@@ -14,10 +15,16 @@ const element={querySelector:s=>({'h2':name,'p':line,'[data-dialogue-hint]':hint
   querySelectorAll:()=>buttons,showModal(){this.isOpen=true;},close(){this.isOpen=false;},
   addEventListener:(ev,fn)=>listeners.set(ev,fn)};
 globalThis.window={addEventListener:(ev,fn)=>keyEvents.set(ev,fn)};
-const actions=[],plays=[],attention=[],closed=[],greyReplies=[];
+const actions=[],plays=[],attention=[],closed=[],greyReplies=[],questReplies=[];
+const quest=fountainQuest();
 let finish,alive=true;
 const ui=bindNpcDialogue({element,play(s,a,f){plays.push(s.id);finish=f;},stop(){},onOpen(){},onClose(reason){closed.push(reason);},
-  onReply(s,r){if(s.id==='grey')greyReplies.push(r.action);else actions.push([s.id,r.clip,r.reaction]);}});
+  nextSpeech:quest.followup,
+  onReply(s,r){
+    if(s.id==='grey')greyReplies.push(r.action);
+    else if(r.action)questReplies.push(r.action);
+    else actions.push([s.id,r.clip,r.reaction]);
+  }});
 const open=id=>ui.open({id,...NPCS[id],listen:on=>attention.push([id,on]),alive:()=>alive});
 function key(code){keyEvents.get('keydown')({code,preventDefault(){},stopImmediatePropagation(){}});}
 for(const id of ['niklas','gardenHannes','bergFritz','bergWirt']){
@@ -33,7 +40,7 @@ finish();key('KeyJ');assert.deepEqual(actions.at(-1),['niklas','niklasAntwort',u
 assert.ok(open('niklas'));finish();key('KeyN');assert.deepEqual(actions.at(-1),['niklas','niklasAntwort',undefined]);
 assert.ok(open('gardenHannes'));finish();key('KeyJ');assert.deepEqual(actions.at(-1),['gardenHannes','jakeDumm',undefined]);
 assert.ok(open('gardenHannes'));finish();key('KeyN');assert.deepEqual(actions.at(-1),['gardenHannes','jakeNaeher',undefined]);
-for(const b of buttons){
+for(const b of buttons.slice(0,2)){
   assert.ok(open('bergFritz'));finish();listeners.get(b)();
   assert.deepEqual(actions.at(-1),['bergFritz','bonsSchluchzen','sob']);
 }
@@ -58,4 +65,16 @@ assert.ok(open('grey'));key('KeyJ');assert.equal(greyReplies.length,0);
 finish();key('KeyN');assert.equal(greyReplies.length,0);assert.ok(!ui.pending());
 assert.ok(open('grey'));finish();key('KeyJ');
 assert.deepEqual(greyReplies,['grey-show']);assert.ok(!ui.pending());
-console.log('Zehn Dialogzweige, Intro-Sperre, stille Antwort, Abbruch und Audiozuordnung geprüft.');
+assert.ok(quest.collect());
+assert.ok(ui.open(quest.opening({id:'niklas',...NPCS.niklas,alive:()=>true})));
+assert.equal(buttons[2].hidden,false);
+key('Digit3');assert.equal(questReplies.length,0);finish();key('Digit3');
+assert.deepEqual(questReplies,['return-fundsache']);
+assert.ok(open('festZwanni'));assert.ok(buttons[2].hidden);finish();
+const before=closed.length;key('KeyN');
+assert.equal(closed.length,before,'Folgeschritt darf Pointerlock nicht zwischenzeitlich anfordern');
+assert.ok(element.isOpen);assert.equal(ui.pending().clip,'festZwanniEier');
+key('KeyJ');assert.equal(questReplies.length,1);finish();key('KeyJ');
+assert.deepEqual(questReplies,['return-fundsache','feed-fundsache']);
+assert.ok(!ui.pending()&&!element.isOpen);
+console.log('Dialogzweige, Intro-Sperre, dritte Auswahl, modaler Quest-Folgeschritt, Abbruch und Audiozuordnung geprüft.');

@@ -1,6 +1,7 @@
 import {LIGHTING} from './lighting.js';
 import {LAMP_SITES} from './world-layout.js';
 import {addFountainCarving} from './fountain-carving.js';
+import {addFountainFind} from './fountain-quest.js';
 
 const CY=-47,Y=.379,STADIUM=4.75,R=9.129;
 const streams=[
@@ -9,7 +10,7 @@ const streams=[
   [-9.06,-47.10,.44,-.93,.39],[9.13,-46.91,-.49,1.08,.43]
 ];
 
-export function makeFountain(T,scene,original){
+export function makeFountain(T,scene,original,quest){
   if(!original)return {tick:()=>false,setPreset(){}};
   const group=new T.Group();group.name='Hugenottenbrunnen · Wasserregie';
   let basinFound=false;
@@ -22,6 +23,7 @@ export function makeFountain(T,scene,original){
   });
   if(!basinFound)return {tick:()=>false,setPreset(){}};
   scene.add(group);
+  const find=quest?addFountainFind(T,group,Y,quest):null;
   addFountainCarving(T,group,original,CY,Y);
   const t={value:0}, lamps={value:0}, night={value:0}, tint={value:new T.Color(0xd8e7e4)};
   const lightSites=LAMP_SITES.filter(p=>Math.abs(p.x)<19&&p.z<-50&&p.z>-68).slice(0,2);
@@ -149,6 +151,7 @@ export function makeFountain(T,scene,original){
     return d;
   }
   return {
+    find,
     syncView,
     setPreset(id){
       lamps.value=LIGHTING[id]?.lamps??0;night.value=id==='night'?1:0;

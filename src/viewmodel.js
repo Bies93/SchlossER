@@ -370,5 +370,6 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       return count>0;
     },
     selectionName:()=>names[swap?pending:selected]??'Ohne Waffe',
+    grantBowBolts(count){states[0].addReserve(count);refresh();},
     clearShots:fx.clear,showPrewarmShots:fx.showPrewarm,bodyLayer:body.layer};
 }

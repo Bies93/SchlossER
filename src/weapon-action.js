@@ -54,7 +54,8 @@ export function weaponAction(spec){
     loadCue=0;
   }
   return {fire,reload,update,cancel(){loadingAt=null;queued=false;},
-    restock(){const count=data.reserve-reserve;reserve=data.reserve;return count;},
+    restock(){const count=Math.max(0,data.reserve-reserve);reserve+=count;return count;},
+    addReserve(count){if(Number.isSafeInteger(count)&&count>0)reserve+=count;},
     get isLoading(){return loadingAt!==null||queued;},
     get rounds(){return rounds;},get reserve(){return reserve;},get capacity(){return capacity;},
     visual(now){

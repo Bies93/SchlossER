@@ -1017,7 +1017,24 @@ export function createHuman(T,id='base'){
     if(t>=1){f.active=false;setReacting(false);}
     return visible;
   }
-  const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting;
+  function chokePose(t,weight=1){
+    const grab=progress(.11,.58,t)*weight,fold=progress(.82,1.93,t)*weight,
+      tremor=Math.sin(t*22.4)*Math.exp(-Math.max(0,t-.86)*1.8)*grab;
+    torso(.016*tremor,-.024*grab-.115*fold,.081*fold,
+      .11*grab+.34*fold+.039*tremor,-.064*grab,.093*fold,t,0,-.225*grab+.19*fold);
+    for(const [j,s] of ['l','r'].entries()){
+      const sign=j===0?1:-1,a=read('foot_'+s);
+      solve(LIMB[s].leg,a.x*1.06+sign*.037*fold,a.y,a.z+sign*.052*grab,sign*.18,0,1);
+      foot('foot_'+s,sign*.04*fold,sign*.08);
+      solve(LIMB[s].arm,sign*mix(.231,j===0?.084:.113,grab),
+        mix(hipsY-.144,j===0?1.424:1.465,grab)-fold*.29+.014*tremor,
+        mix(.089,j===0?.196:.224,grab)+fold*.083,sign*.75,-.64,-.23);
+      rot('hand_'+s,.12+.26*grab,sign*(.13+.12*grab),sign*(.14+.24*grab));
+      curl(s,.24+.39*grab);
+    }
+    face(t,1.16,grab*(.53+.34*Math.abs(tremor))*(1-.52*fold),.06,0,0,.33*fold);
+  }
+  const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting&&!npcInfo.questBusy;
   const alive=()=>!npcInfo||npcInfo.alive;
   function costumeDepth(x,y,side=1){
     // One-time fittings against the bind-space garment, never per-frame raycasts.
@@ -1036,7 +1053,12 @@ export function createHuman(T,id='base'){
     return Number.isFinite(nearest)?nearest*side:null;
   }
   pose(0,0,0,0,0,0,.2);
+<<<<<<< Updated upstream
   const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+=======
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
+    resetCounterHands(){if(counterMount){neutralHand('l');neutralHand('r');}},
+>>>>>>> Stashed changes
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

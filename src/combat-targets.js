@@ -33,12 +33,28 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath,ravens){
     if(!n.alive)return false;
     n.hp=Math.max(0,n.hp-amount);
     n.alive=n.hp>0;
+<<<<<<< Updated upstream
     if(n.alive)n.rig.reaction(at,null,incoming,region);
     else{
       n.rig.reaction(at,planCollapse(n.actor,at,incoming,world,floorAt),incoming);
       if(n.shadow)n.shadow.visible=false;onDeath?.(n.id);
     }
+=======
+    if(n.alive){
+      n.rig.reaction(at,null,incoming,region,kind==='melee'?1.40:1);
+      onHit?.(n,spec);
+    }
+    else finish(n,at,incoming);
+>>>>>>> Stashed changes
     return true;
+  }
+  function finish(n,at,incoming){
+    n.rig.reaction(at,planCollapse(n.actor,at,incoming,world,floorAt),incoming);
+    if(n.shadow)n.shadow.visible=false;onDeath?.(n.id);
+  }
+  function collapse(n,at,incoming){
+    if(!n?.alive||!n.rig?.npcInfo)return false;
+    n.hp=0;n.alive=false;finish(n,at,incoming);return true;
   }
   function tick(dt,mask){
     epoch++;
@@ -49,5 +65,5 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath,ravens){
     }
     return changed;
   }
-  return {nearest,damage,tick};
+  return {nearest,damage,tick,collapse};
 }

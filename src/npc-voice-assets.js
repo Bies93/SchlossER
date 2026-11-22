@@ -3,6 +3,10 @@ export const NPC_VOICE_FILES=Object.freeze({
   // HeyGen August – Polished (de, .95), take d0b2bcd69b3a4495948c06a2b3963531.
   // Source: “Soll ich dir was zeigen?” at .25–1.58 s; “Hihi!” at 2.10–3.12 s.
   grey:'grey-frage.mp3',greyGiggle:'grey-kichern.mp3',
+  // HeyGen, de, original MP3 takes (no edits): August – Polished (1.00), 7b99a6c706394b3e8a7485ed29c1ef23,
+  // “Geil, endlich Mann sein!” (2.013 s); Albrecht – Calm & Trustworthy (.96), 8673eef75e944dc1945f4376bd255791,
+  // “Arrrgh!” (.968 s). Model selected by service, IDs 94cd5eb65450496ca99b1b9192d9fbff / 20cd33ab51e546009b390d207842580f.
+  niklasFundsache:'niklas-fundsache.mp3',zwanniFundsache:'zwanni-fundsache.mp3',
   festZwanni:'festZwanni.mp3',festZwanniEier:'festZwanniEier.mp3',festAnni:'festAnni.mp3',festKalle:'festKalle.mp3',festRudi:'festRudi.mp3',
   bergWirt:'dialog-michi-kerwa.mp3',bergLeni:'bergLeni.mp3',bergDora:'bergDora.mp3',
   bergFritz:'dialog-bons-fcn.mp3',bonsSchluchzen:'dialog-bons-schluchzen.mp3',bergUdo:'bergUdo.mp3',

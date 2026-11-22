@@ -256,6 +256,11 @@ body[data-dialogue=open] #drag-hint{display:none}
 #ghoul-notice{top:14px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 26px);padding:8px 13px;text-align:center;pointer-events:none}
 #ghoul-notice[data-kind=hurt],#ghoul-notice[data-kind=failed]{border-color:#a26c54;background:#392721ed}
 #ghoul-notice[data-kind=won]{border-color:#a1a673}
+#quest-notice{position:absolute;z-index:2;left:max(14px,env(safe-area-inset-left));top:calc(max(12px,env(safe-area-inset-top)) + 54px);
+  display:grid;gap:3px;max-width:min(330px,calc(100% - 28px));padding:10px 14px;border:1px solid #786a4e;border-left:3px solid #ddaf72;
+  background:#171b15ef;border-radius:4px;color:#f3e6cb;box-shadow:0 7px 19px #0005;pointer-events:none}
+#quest-notice strong{font-size:.70rem;text-transform:uppercase;letter-spacing:.14em;color:#e5b77a}
+body:not([data-state=playing]) #quest-notice{display:none}
 #moosfunk-caption{position:absolute;z-index:2;left:50%;bottom:calc(clamp(128px,21%,187px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(580px,calc(100% - 30px));width:max-content;padding:10px 15px;border:1px solid #8e8367;border-radius:6px;background:#151b19f5;color:var(--ink);font-size:.92rem;line-height:1.42;text-align:center;pointer-events:none}
 #npc-name{position:absolute;z-index:2;left:50%;bottom:calc(clamp(24px,5.4%,59px) + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100% - 28px);width:max-content;padding:7px 14px;background:#151b19ed;border:1px solid #82765b;border-radius:6px;color:#e9dfc7;font-size:.89rem;line-height:1.35;font-weight:650;letter-spacing:.015em;text-align:center;pointer-events:none}
 #npc-dialogue{width:min(510px,calc(100vw - 28px));max-height:calc(100dvh - 26px);margin:auto auto max(16px,env(safe-area-inset-bottom));padding:15px 16px 13px;border:1px solid #8e8367;border-top:2px solid var(--accent);border-radius:8px;background:#151d1bf7;color:var(--ink)}
@@ -402,6 +407,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
   <button type="button" id="drag-hint" title="Alternativ zum Umsehen ziehen oder Pfeiltasten nutzen">Maussteuerung aktivieren</button>
   <button id="portal-action" type="button" hidden><kbd aria-hidden="true">E</kbd><span id="portal-text">Tür öffnen</span></button>
   <div id="ghoul-notice" role="status" hidden></div>
+  <div id="quest-notice" role="status" hidden><strong>Doppelte Fundsache</strong><span id="quest-result"></span></div>
   <div id="moosfunk-caption" role="status" hidden></div>
   <div id="npc-name" role="status" hidden></div>
   <dialog id="npc-dialogue" aria-labelledby="npc-speaker" aria-describedby="npc-utterance">
@@ -411,6 +417,7 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <section aria-label="Spielerantworten">
       <button type="button" data-answer aria-keyshortcuts="J" disabled><kbd aria-hidden="true">J</kbd><span></span></button>
       <button type="button" data-answer aria-keyshortcuts="N" disabled><kbd aria-hidden="true">N</kbd><span></span></button>
+      <button type="button" data-answer aria-keyshortcuts="3" hidden disabled><kbd aria-hidden="true">3</kbd><span></span></button>
     </section>
     <small data-dialogue-hint role="status"></small>
   </dialog>

@@ -18,6 +18,7 @@ import {cutPalaceOpenings} from './palace-openings.js';
 import {addPortalFacade,palaceMaterials} from './palace-facade.js';
 import {hallFloor,makeHall} from './palace-hall.js';
 import {makeFountain} from './fountain.js';
+import {fountainQuest} from './fountain-quest.js';
 import {addPauli} from './pauli-fountain.js';
 import {makeViewmodel} from './viewmodel.js';
 import {bindTouchEquipment} from './touch-equipment.js';
@@ -33,7 +34,7 @@ import {CHAPEL_SOURCE,CHAPEL_TRACK,inChapelHearing} from './lab-rites.js';
 import {addChapter} from './chapter.js';
 import {CHAPTER_LAYER,CHAPTER_STEP} from './chapter-layout.js';
 import {SOUTH_HATCH} from './palace-openings.js';
-import {installHumans} from './human-character.js';
+import {installHumans,namedHumans} from './human-character.js';
 import {npcFocus} from './npc-focus.js';
 import {bindNpcDialogue} from './npc-dialogue-ui.js';
 import {sceneQuery} from './scene-query.js';
@@ -122,7 +123,7 @@ async function start(){
    const collar=polishFriedrichMonument(T,sculptures);
    if(collar)walkSurfaces.push(collar);
  }
- const fountain=makeFountain(T,s,sculptures);
+ const fundsache=fountainQuest(),fountain=makeFountain(T,s,sculptures,fundsache);
  // Exterior gate posts and tree trunks never extend into the new rooms.
  let chapter,upper;
  const world=collisionWorld(BOUNDS,PLAYER.radius,insidePerimeter,p=>!isWcInterior(p)&&!clubMix(p)&&!chapter?.isBelow(p));
@@ -262,6 +263,12 @@ async function start(){
  const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s,floorHeight,world,garden.festival.archive);
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
+ const questNotice=$('quest-notice'),questResult=$('quest-result'),chokeAt=new T.Vector3(),chokeFrom=new T.Vector3();
+ let questTimer=0,zwanniEnding=null;
+ function showQuest(text){
+   clearTimeout(questTimer);questResult.textContent=text;questNotice.hidden=false;
+   questTimer=setTimeout(()=>{questNotice.hidden=true;},5400);
+ }
  const names=npcFocus(T,s,c,player.body,$('npc-name'),()=>activeLayers().mask,geometryQuery);
  let captionTimer=0,captionId=0,chapelTime=null,chapelTake=0;
  function hideCaption(){clearTimeout(captionTimer);captionId++;caption.hidden=true;}
@@ -272,6 +279,7 @@ async function start(){
  }
  function npcDialogue(speech){
    if(!speech)return;
+   speech=fundsache.opening(speech);
    if(speech.choices){conversation.open(speech);return;}
    if(speech.id==='hubert'){
      const at=chapter.prisonerAt(player.body.position);
@@ -290,6 +298,40 @@ async function start(){
      clearTimeout(captionTimer);captionTimer=setTimeout(hideCaption,seconds*1000+350);
    },undefined,speech.clip);
  }
+ function endFundsache(speech,reply){
+   const npc=namedHumans(T).find(n=>n.id===speech.id);
+   const choice=fundsache.deliver(speech.id,reply.action,npc?.alive&&!npc.existing);
+   if(choice==='niklas'){
+     viewmodel.grantBowBolts(12);
+     showQuest('Fundsache abgegeben · +12 Armbrustbolzen');
+     npcDialogue({...speech,choices:undefined,line:'Geil, endlich Mann sein!',clip:'niklasFundsache'});
+   }
+   if(choice==='zwanni'){
+     npc.existing=npc.questBusy=true;
+     zwanniEnding={npc,t:0,noise:false,fallen:false};
+     showCaption('Zwanni: „Arrrgh!“',2400);
+     audio.playNpc(npc.id,npc.actor.position,null,null,'zwanniFundsache',()=>npc.alive);
+   }
+   names.clear();doorPrompt();refresh();
+ }
+ function tickFundsache(dt){
+   if(!zwanniEnding)return false;
+   const e=zwanniEnding,n=e.npc;
+   if(!n.alive&&!e.fallen){n.questBusy=false;zwanniEnding=null;return true;}
+   e.t+=dt;
+   if(!e.noise&&e.t>=.64){e.noise=true;audio.questChoke(n.actor.position);}
+   if(!e.fallen){
+     if(!n.rig.isReacting())n.rig.chokePose(e.t);
+     if(e.t>=2.19){
+       e.fallen=true;n.questBusy=false;
+       n.chest.getWorldPosition(chokeAt);chokeFrom.set(-Math.sin(n.actor.rotation.y),0,-Math.cos(n.actor.rotation.y));
+       targets.collapse(n,chokeAt,chokeFrom);
+       showQuest('Fundsache abgegeben · Kein Finderlohn.');
+     }
+   }
+   if(e.t>=3.20){audio.questChoke(n.actor.position,true);zwanniEnding=null;}
+   return true;
+ }
  let resumeMouse=false,resumeTouch=false;
  conversation=bindNpcDialogue({
    element:$('npc-dialogue'),
@@ -297,6 +339,7 @@ async function start(){
      speech.speakFor?.(seconds);started(seconds);
    },finished,speech.clip,stillValid),
    stop:id=>audio.stopNpc(id),
+   nextSpeech:fundsache.followup,
    onOpen(){
      resumeMouse=document.pointerLockElement===canvas;resumeTouch=isTouch();
      document.body.dataset.dialogue='open';
@@ -308,6 +351,9 @@ async function start(){
      resumeMouse=resumeTouch=false;doorPrompt();refresh();
    },
    onReply(speech,reply){
+     if(reply.action==='return-fundsache'||reply.action==='feed-fundsache'){
+       endFundsache(speech,reply);return;
+     }
      if(speech.id==='grey'&&reply.action==='grey-show'){
        names.clear();grey.accept();doorPrompt();refresh();return;
      }
@@ -370,7 +416,7 @@ async function start(){
    if(upper.insideAttic(pos))return names.target()?null:upper.atticTarget(pos,look,atticBlocked);
    if(access||upper.inside(pos)||player.motion.climbing)return access??null;
    const {layer,mask}=activeLayers();
-   const target=(layer===0?garden.festival.target(c,geometryQuery,mask,pos):null)
+   const target=(layer===0?(fountain.find?.target(c,geometryQuery)??garden.festival.target(c,geometryQuery,mask,pos)):null)
      ??pickups.target(c,mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
    // Edda takes priority, without making the tape deck itself unavailable.
@@ -402,6 +448,13 @@ async function start(){
    if(!controls())return;
    const now=performance.now();names.sample(now,true);
    const local=localTarget();
+   if(local?.action==='fountain-quest-pickup'){
+     if(fountain.find.collect()){
+       showQuest('Hodensack mit 2 Eiern gefunden. Niklas sucht ihn. Zwanni würde ihn vermutlich auch nehmen.');
+       audio.preloadNpc('niklasFundsache','zwanniFundsache');audio.weaponAction('bow','equip');
+     }
+     doorPrompt();refresh();return;
+   }
    if(local?.action==='berg-portal'){
      const leaving=bergInside(player.body.position);
      audio.stopNpc();names.clear();viewmodel.stop();
@@ -571,6 +624,7 @@ async function start(){
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
      if(grey.update(dt,player.body.position,layer===0,c))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
+     if(tickFundsache(dt))dirty=true;
      geometryQuery.invalidateMoving();
      if(prisonerCaption!==null&&(prisonerCaption!==captionId||!chapter.prisonerAt(player.body.position)))leavePrison();
      if(state.shadow)r.shadowMap.needsUpdate=true;
