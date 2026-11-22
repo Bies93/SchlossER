@@ -283,7 +283,8 @@ async function start(){
      rounds:$('ammo-rounds'),reserve:$('ammo-reserve'),status:$('ammo-status')});
  const {device:npcPistol,spec:npcPistolSpec}=viewmodel.npcPistol();
  const counterfire=niklasDefense(T,s,hall.butler.rig,npcPistol,npcPistolSpec,{query:geometryQuery,camera:c,context:activeLayers,
-   damage:damagePlayer,sound:audio.counterCue,contact:audio.shotContact,action:audio.counterCue,ready:controls});
+   damage:damagePlayer,sound:audio.counterCue,contact:audio.shotContact,action:audio.counterCue,ready:controls,
+   onReset:hall.butler.restorePatrol});
  hall.butler.attachDefense(counterfire);
  const isTouch=()=>document.body.dataset.input==='touch';
  const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),reloadButton:$('touch-reload'),

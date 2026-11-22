@@ -7,6 +7,7 @@ import {sceneQuery} from '../src/scene-query.js';
 import {meleeAction} from '../src/melee-action.js';
 import {counterfireState} from '../src/npc-counterfire.js';
 import {playerVitals} from '../src/player-vitals.js';
+import {gripHands} from '../src/ego-hands.js';
 
 const spec=kind=>EQUIPMENT.find(s=>s.kind===kind);
 const action=kind=>weaponAction(spec(kind));
@@ -75,6 +76,11 @@ const board=new T.Mesh(new T.BoxGeometry(1,1,1),wood);board.position.z=-2;scene.
 const query=sceneQuery(T,scene,null),sample={};query.build();
 assert.equal(query.trace(new T.Ray(new T.Vector3(),new T.Vector3(0,0,-1)),3,1,.02,false,sample),1.5);
 assert.equal(sample.material,'wood');
+const [fistModel]=gripHands(T,[{kind:'fist',fore:[0,0,0],grip:[0,0,0]}]);
+for(const node of fistModel.nodes){
+  const bounds=new T.Box3().setFromObject(node),span=bounds.getSize(new T.Vector3());
+  assert.ok(span.x>.10&&span.y>.06&&span.z>.125,'Faustmodell hat Handrücken, Knöchel und volles Handgelenk');
+}
 
 const punchScene=new T.Scene(),partition=new T.Mesh(new T.BoxGeometry(1.5,2,.065),wood);
 partition.position.set(0,1,-.85);punchScene.add(partition);

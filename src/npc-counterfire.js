@@ -45,14 +45,10 @@ export function counterfireState(){
 
 // Niklas is the only actor wired to this prototype. Both observation and
 // damage are bounded to the existing game layers and geometry queries.
-export function niklasDefense(T,scene,rig,device,spec,{query,camera,context,damage,sound,contact,action,ready}){
+export function niklasDefense(T,scene,rig,device,spec,{query,camera,context,damage,sound,contact,action,ready,onReset}){
   const {actor,npcInfo}=rig,logic=counterfireState(),V=()=>new T.Vector3();
-  const pistol=new T.Group();
-  const pistolScale=.73;
-  pistol.position.fromArray(spec.grip).multiplyScalar(-pistolScale);
-  pistol.scale.setScalar(pistolScale);
-  pistol.add(device.root);rig.counterSocket.add(pistol);
-  pistol.visible=false;pistol.name='Niklas · Kompaktpistole';
+  const pistol=rig.counterMount;
+  pistol.add(device.root);
   const emit=V().fromArray(spec.emit),muzzle=V(),point=V(),last=V().copy(actor.position),p=V(),forward=V();
   const ray=new T.Ray(),aim=V(),origin=V(),diff=V(),axis=V().set(0,0,1),eye=V(),right=V();
   const fx=new T.Group(),flare=new T.Mesh(new T.IcosahedronGeometry(1,0),
@@ -114,7 +110,10 @@ export function niklasDefense(T,scene,rig,device,spec,{query,camera,context,dama
     return true;
   }
   const matrix=new T.Matrix4();
-  const reset=()=>{logic.stop();pistol.visible=fx.visible=false;pulse=0;arm=0;stale=0;mark='idle';npcInfo.existing=false;};
+  const reset=()=>{
+    logic.stop();pistol.visible=fx.visible=false;pulse=0;arm=0;stale=0;mark='idle';npcInfo.existing=false;
+    if(npcInfo.alive){rig.resetCounterHands();onReset?.();}
+  };
   function update(dt,body){
     if(!npcInfo.alive){if(logic.active||fx.visible)reset();return false;}
     const hadPulse=fx.visible;
@@ -130,7 +129,7 @@ export function niklasDefense(T,scene,rig,device,spec,{query,camera,context,dama
     if(mode==='draw'&&mark!=='draw')action('equip',actor.position);
     if(mode==='reload'&&mark!=='reload'){reloadCue=false;action('mag-out',actor.position);}
     if(mode==='reload'&&reload>.69&&!reloadCue){reloadCue=true;action('mag-in',actor.position);}
-    mark=mode;pistol.visible=draw>.23;
+    mark=mode;pistol.visible=draw>.30;
     device.animate(age,{reload:mode==='reload'?reload:-1});
     arm+=((raise)-arm)*Math.min(1,dt*8);
     stale=mode==='search'?stale+dt:0;

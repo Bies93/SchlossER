@@ -39,13 +39,19 @@ export function palaceButler(T,room,world){
   npc.walk(0,distance,track,HALL.floor,0,0);
   const angle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
   let defense=null,inCombat=false;
+  function restorePatrol(){
+    if(!npc.alive())return;
+    turn=angle(point.yaw,actor.rotation.y);
+    inCombat=false;standing=1;speed=0;acc=0;
+    if(!npc.isReacting())npc.walk(t,distance,track,HALL.floor,0,1);
+  }
   function update(dt,p){
     if(defense?.active){
       inCombat=true;speed=0;standing=1;acc=0;
       collision.ux=Math.cos(actor.rotation.y);collision.uz=-Math.sin(actor.rotation.y);
       return false;
     }
-    if(inCombat){turn=angle(point.yaw,actor.rotation.y);inCombat=false;}
+    if(inCombat)restorePatrol();
     if(!npc.controllable()||!dt||p.y<-.85||Math.abs(p.x)>15||Math.abs(p.z)>22)return false;
     acc+=dt;if(acc<1/30)return false;
     const s=acc;acc=0;t+=s;speech=Math.max(0,speech-s);
@@ -72,5 +78,5 @@ export function palaceButler(T,room,world){
     npc.walk(t,distance,track,HALL.floor,look,standing,mouth);
     return true;
   }
-  return {update,rig:npc,attachDefense(controller){defense=controller;}};
+  return {update,restorePatrol,rig:npc,attachDefense(controller){defense=controller;}};
 }

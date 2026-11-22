@@ -28,6 +28,18 @@ export function egoAssets(T){
     cuff=new T.MeshStandardMaterial({color:0x585749,roughness:.97,...cloth});
   sleeve.normalScale.setScalar(.87);cuff.normalScale.setScalar(.71);
   const shell=new RoundedBoxGeometry(1,1,1,3,.21),cap=coatSleeve(T);
+  const punchSleeve=cap.clone(),pos=punchSleeve.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i),f=(y+1)*.5;
+    const belly=.82+.24*Math.exp(-((f-.29)**2)*15)-.16*T.MathUtils.smoothstep(f,.39,.91),
+      fold=.014*Math.sin(y*33+Math.atan2(x,z)*2.3);
+    pos.setXYZ(i,x*(belly+fold)+.064*Math.sin(f*Math.PI),y,
+      z*(belly+fold+.06*Math.sin(f*Math.PI))-.043*Math.sin(f*Math.PI*1.2));
+  }
+  punchSleeve.computeVertexNormals();
+  const punchCuff=new T.LatheGeometry([[.44,-.50],[.49,-.44],[.51,-.30],[.49,.32],[.52,.40],[.49,.49],
+    [.43,.49],[.405,.42],[.405,-.40],[.44,-.50]].map(([r,y])=>new T.Vector2(r,y)),24);
   const hands=gripHands(T,[...EQUIPMENT,{kind:'fist',fore:[0,0,0],grip:[0,0,0]}]),fists=hands.pop();
-  return {...makeEquipment(T,EQUIPMENT),hands,fists,materials:{frame:m(0x272f33,.73,.19),sleeve,cuff},geometry:{shell,cap}};
+  return {...makeEquipment(T,EQUIPMENT),hands,fists,materials:{frame:m(0x272f33,.73,.19),sleeve,cuff},
+    geometry:{shell,cap,punchSleeve,punchCuff}};
 }

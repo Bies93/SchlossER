@@ -11,7 +11,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     rim=new T.DirectionalLight(0xb5c8dc,.62);
   key.position.set(-1.3,1.18,.39);rim.position.set(1.0,.47,-1.0);stage.add(h,key,rim);
   const hands=new T.Group(),held=new T.Group();hands.add(held);stage.add(hands);
-  const rig=egoAssets(T),{cap,shell}=rig.geometry,{frame,sleeve,cuff}=rig.materials;
+  const rig=egoAssets(T),{cap,shell,punchSleeve,punchCuff}=rig.geometry,{frame,sleeve,cuff}=rig.materials;
   const body=makeEgoBody(T,player.body),V=(...a)=>new T.Vector3(...a),axis=V(0,1,0),linkDir=V();
   function mesh(parent,g,m,x=0,y=0,z=0){
     const o=new T.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o;
@@ -21,7 +21,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     linkDir.subVectors(b,a);const length=linkDir.length();
     node.scale.set(width,length*.52,depth);node.quaternion.setFromUnitVectors(axis,linkDir.normalize());
   }
-  const arms=[-1,1].map(side=>({side,forearm:mesh(hands,cap,sleeve),wrap:mesh(hands,shell,cuff),wrist:V(),elbow:V(),end:V()}));
+  const arms=[-1,1].map(side=>({side,forearm:mesh(hands,cap,sleeve),wrap:mesh(hands,shell,cuff),
+    boxing:mesh(hands,punchSleeve,sleeve),hem:mesh(hands,punchCuff,cuff),wrist:V(),elbow:V(),end:V()}));
   const devices=rig.devices,fists=rig.fists;
   held.add(...devices.map(d=>d.root),...rig.hands.map(p=>p.group));hands.add(fists.group);fists.group.visible=false;
   const rangeObjects=new T.Group();rangeObjects.name='Treffer und Übungsmarken';rangeObjects.userData.noSceneQuery=true;scene.add(rangeObjects);
@@ -108,6 +109,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   function clearRecoil(){for(const s of [kickback,tiltSpring,pitchSpring,yawSpring,rollSpring])s.clear();burst=0;}
   function display(n){
     selected=n;devices.forEach((d,i)=>{d.root.visible=rig.hands[i].group.visible=i===n;});
+  }
+  function showArms(armed,fighting){
+    for(const a of arms){a.forearm.visible=a.wrap.visible=armed;a.boxing.visible=a.hem.visible=fighting;}
   }
   function select(n){
     if(!swap&&selected===n)return;
@@ -263,6 +267,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const wasMelee=fists.group.visible;
     const fistAge=melee.age(clock),fighting=permitted&&isActive()&&selected<0&&!swap&&fistAge<MELEE.duration;
     fists.group.visible=fighting;
+    showArms(selected>=0,fighting);
     if(armed){
       action.update(clock,cue=>{
         onAction(n.kind,cue);
@@ -294,15 +299,16 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       const {coil,reach,weight}=fistPhase(fistAge);
       for(const [i,a] of arms.entries()){
         const node=fists.nodes[i],attack=a.side===melee.side,q=attack?reach:reach*.09,c=attack?coil:0;
-        node.position.set(a.side*(.258-.210*q+.071*c)+strafe*.025,
-          -.219+(1-weight)*-.41+.135*q-.033*c+bob*.013*comfort,
-          -.53-.62*q+.092*c);
-        node.rotation.set(-.22+q*.36+c*.51,-a.side*(.246+q*.14),a.side*(.34-q*.58+c*.14));
+        node.position.set(a.side*(.244-.202*q+.066*c)+strafe*.025,
+          -.226+(1-weight)*-.38+.119*q-.024*c+bob*.013*comfort,
+          -.465-.665*q+.071*c);
+        node.rotation.set(-.10+q*.40+c*.23,-a.side*(.23-q*.09),a.side*(.53-q*.48+c*.13));
         a.wrist.copy(fists.wrists[i]).applyQuaternion(node.quaternion).add(node.position);
-        a.elbow.set(a.side*(.326+.014*c-.021*q),-.57+(1-weight)*-.30,-.218-.24*q);
-        a.end.copy(a.wrist).lerp(a.elbow,.041);
-        link(a.forearm,a.elbow,a.end,.125,.108);a.wrap.position.copy(a.wrist).lerp(a.elbow,.066);
-        a.wrap.scale.set(.082,.074,.073);a.wrap.quaternion.copy(a.forearm.quaternion);
+        a.elbow.set(a.side*(.344+.024*c-.069*q),-.519+(1-weight)*-.26-.017*c+.096*q,-.167-.366*q);
+        a.end.copy(a.wrist).lerp(a.elbow,.103);
+        link(a.boxing,a.elbow,a.end,.175,.157);
+        a.hem.position.copy(a.wrist).lerp(a.elbow,.107);
+        a.hem.scale.set(.104,.055,.097);a.hem.quaternion.copy(a.boxing.quaternion);
       }
     }
     if(selected>=0){
@@ -385,12 +391,13 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const vp=r.getViewport(new T.Vector4()),sc=r.getScissor(new T.Vector4()),test=r.getScissorTest(),meshes=[];
     for(const d of devices)d.root.visible=true;
     for(const p of rig.hands)p.group.visible=true;
-    fists.group.visible=true;flash.visible=true;cases[0].o.visible=true;stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
+    showArms(true,true);fists.group.visible=true;flash.visible=true;cases[0].o.visible=true;
+    stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
     try{
       await r.compileAsync(stage,eye);
       r.setViewport(0,0,32,32);r.setScissor(0,0,32,32);r.setScissorTest(true);r.render(stage,eye);
     }finally{
-      display(selected);fists.group.visible=false;flash.visible=false;cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
+      display(selected);showArms(selected>=0,false);fists.group.visible=false;flash.visible=false;cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
       r.setViewport(vp);r.setScissor(sc);r.setScissorTest(test);
     }
   }

@@ -265,6 +265,7 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     }
     return {root,left,animate:(...args)=>animateParts(slide,magazine,left,...args),replica(){
       const model=root.clone(),slideCopy=model.children.at(-2),magCopy=model.children.at(-1),support=new T.Vector3();
+      model.visible=true;
       return {root:model,animate:(...args)=>animateParts(slideCopy,magCopy,support,...args)};
     }};
   }
