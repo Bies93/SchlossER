@@ -155,5 +155,5 @@ export function weaponWorld(T,root,world,floorAt,creatures,boltMesh,anchors,onCo
     dust.setMatrixAt(0,dummy.matrix);dust.count=1;dust.instanceMatrix.needsUpdate=true;
     return ()=>{bolt.visible=false;for(const [o,cull] of parts)o.frustumCulled=cull;dust.count=0;};
   }
-  return {launch,tick,clear,beginVolley,pellet,endVolley,showPrewarm};
+  return {launch,tick,clear,beginVolley,pellet,endVolley,showPrewarm,dustAt};
 }

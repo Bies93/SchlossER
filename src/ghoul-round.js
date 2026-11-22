@@ -135,15 +135,16 @@ export function ghoulRound(T,scene,world,floorHeight,notify,voice=()=>{}){
     notify('Fünf Ghoule sind im Schlossgarten.','start');
     return true;
   }
-  function nearest(ray,limit){
+  function nearest(ray,limit,radius=0){
     if(state!=='running')return null;
     let best=limit,candidate=null;
     for(const g of pool){
       if(g.health<=0||g.mode==='emerge'||!g.rig.actor.visible)continue;
       const a=g.rig.actor.position;
       if((ray.origin.x-a.x)**2+(ray.origin.z-a.z)**2>(limit+1.4)**2)continue;
-      if(trace(g.cached??=g.rig.hitShapes(),ray,best,zone)&&zone.distance<best){
+      if(trace(g.cached??=g.rig.hitShapes(),ray,best,zone,radius)&&zone.distance<best){
         best=zone.distance;candidate={actor:g,distance:best,point:ray.at(best,point).clone(),head:zone.head};
+        if(radius)candidate.core=zone.core.clone();
       }
     }
     return candidate;

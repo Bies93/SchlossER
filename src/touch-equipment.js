@@ -12,7 +12,9 @@ export function bindTouchEquipment({fireButton,switchButton,reloadButton,weaponN
     const label=viewmodel.selectionName(),ready=viewmodel.touchReady();
     if(weaponName.textContent!==label)weaponName.textContent=label;
     if(fireButton.disabled!==!ready)fireButton.disabled=!ready;
-    reloadButton.hidden=!ready;
+    const armed=viewmodel.hasWeapon(),verb=armed?'Schießen':'Schlagen';
+    if(fireButton.textContent!==verb)fireButton.textContent=verb;
+    reloadButton.hidden=!armed;
     reloadButton.disabled=!viewmodel.canReload();
     if(!ready)clear();
   }

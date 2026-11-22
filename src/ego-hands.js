@@ -1,5 +1,41 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
+function closedPalm(T,side){
+  const rings=[[.099,.019,-.012,.018],[.084,.023,-.011,.020],[.063,.027,-.009,.023],[.045,.036,-.005,.028],[.025,.044,-.002,.032],
+    [.004,.048,-.001,.034],[-.018,.047,-.003,.034],[-.035,.041,-.005,.027],[-.042,.030,-.005,.018],[-.047,.006,-.005,.005]];
+  const p=[],uv=[],indices=[],rgb=[],sides=24;
+  const tint=new T.Color(),warm=new T.Color(1,.87,.82),neutral=new T.Color(.99,.97,.95);
+  for(const [i,[z,w,y0,h]] of rings.entries())for(let k=0;k<=sides;k++){
+    const t=k/sides,a=t*Math.PI*2,c=Math.cos(a),s=Math.sin(a),u=i/(rings.length-1),ridge=Math.max(0,s);
+    const x=side*(Math.sign(c)*Math.abs(c)**.86*w+.0045*Math.sin(u*Math.PI)),
+      y=y0+Math.sign(s)*Math.abs(s)**.91*h+ridge**3*Math.sin(u*Math.PI)*(.0016+.0015*Math.cos(x*363));
+    p.push(x,y,z-.006*side*x/.050*u);uv.push(t,u);
+    tint.copy(neutral).lerp(warm,u*.43+Math.max(0,-s)*.38);
+    const contour=.97+.035*ridge-.072*Math.exp(-((u-.33)**2)*122)*Math.max(0,-s);
+    rgb.push(tint.r*contour,tint.g*contour,tint.b*contour);
+    if(i<rings.length-1&&k<sides){
+      const j=i*(sides+1)+k,d=sides+1;
+      if(side>0)indices.push(j,j+d,j+1,j+1,j+d,j+d+1);
+      else indices.push(j,j+1,j+d,j+1,j+d+1,j+d);
+    }
+  }
+  // Close the end under the sleeve as well as the little pad under the
+  // curled fingers. A close-up must not see through the wrist at the cuff.
+  for(const i of [0,rings.length-1]){
+    const pole=p.length/3,start=i*(sides+1),front=i!==0;
+    p.push(0,rings[i][2],rings[i][0]+(front?-.001:.002));
+    rgb.push(.87,.79,.74);uv.push(.5,front?1:0);
+    for(let j=0;j<sides;j++){
+      if((side>0)!==front)indices.push(pole,start+j,start+j+1);
+      else indices.push(pole,start+j+1,start+j);
+    }
+  }
+  const g=new T.BufferGeometry();g.setIndex(indices);
+  g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+  g.setAttribute('color',new T.Float32BufferAttribute(rgb,3));g.computeVertexNormals();
+  const out=g.toNonIndexed();g.dispose();return out;
+}
+
 // Each palm is local to its own contact, also used by the forearm rig.
 export function gripHands(T,specs){
   const v=(...p)=>new T.Vector3(...p);
@@ -8,7 +44,8 @@ export function gripHands(T,specs){
   const ellipsoid=new T.SphereGeometry(1,20,14);
   const neutral=new T.Color(1,1,1),flush=new T.Color(1,.79,.74);
   const poses=specs.map(spec=>{
-    const pistol=spec.kind==='pistol',bow=spec.kind==='bow',group=new T.Group(),nodes=[],wrists=[
+    const fist=spec.kind==='fist',pistol=spec.kind==='pistol',bow=spec.kind==='bow',group=new T.Group(),nodes=[],wrists=fist?
+      [v(0,-.010,.067),v(0,-.010,.067)]:[
       pistol?v(-.077,-.050,.093):bow?v(-.092,-.044,.089):v(-.107,-.035,.083),v(.055,-.043,.094)];
     group.name='Griffpose · '+spec.kind;
     for(const [hand,w] of wrists.entries()){
@@ -68,7 +105,18 @@ export function gripHands(T,specs){
         p.addScaledVector(normal,radius*.91);m.setPosition(p);gN.applyMatrix4(m);add(nails,gN);
       }
       const finger=(points,r,out)=>form(points,r,.94,true,out);
-      if(hand===1){
+      if(fist){
+        const s=hand===1?-1:1;
+        add(skin,closedPalm(T,s));
+        for(let i=0;i<4;i++){
+          const x=(.033-i*.0215)*s,r=[.012,.0125,.0118,.0097][i],z=[-.046,-.050,-.046,-.035][i];
+          const crest=[.021,.023,.020,.013][i];
+          finger([[x,.009,-.007],[x,crest,z+.011],[x,.009,z],[x-s*.002,-.011,z+.002],
+            [x-s*.004,-.021,z+.018],[x-s*.005,-.018,z+.029]],[r+.003,r+.0004,r*.91],[0,-1,-.2]);
+        }
+        finger([[s*.034,.000,.025],[s*.045,-.013,.013],[s*.046,-.027,-.011],
+          [s*.027,-.035,-.025],[s*.008,-.030,-.030]],[.016,.014,.010],[0,-1,-.26]);
+      } else if(hand===1){
         form([wrist,[.050,-.030,.072],[.042,.001,.030]], [.024,.026,.013]);
         oval(skin,[.041,-.003,.025],[.018,.039,.034],-.38);
         for(let k=0;k<4;k++){

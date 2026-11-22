@@ -286,6 +286,10 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function shot(kind,space='outdoor'){
     if(!live())return;
     const t=ctx.currentTime+.005,v=.95+random()*.10;
+    if(kind==='melee'){
+      grit(sfx,t+.059,.102,.205,240,3550,{attack:.039,wet:.035,rate:v*.91});
+      grit(sfx,t+.038,.067,.066,735,4950,{attack:.028,wet:.04,rate:v});return;
+    }
     const n=shotIndex++;
     const archive=kind==='archive',rifleSound=kind==='rifle'||kind==='pistol'||archive;
     const file=kind==='bow'?'bow_fire_0'+(1+n%3):rifleSound?'rifle_field_'+(1+n%2):'shotgun_field';
@@ -345,14 +349,18 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     if(!live())return;
     const a=listener(),dx=p.x-a.x,dz=p.z-a.z,d=Math.hypot(dx,dz);
     const vol=1/(1+(d/9)**1.45),pan=Math.max(-.85,Math.min(.85,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    if(kind==='melee'){
+      const t=ctx.currentTime+.004,soft=material==='soft',wood=material==='wood';
+      grit(sfx,t,soft?.055:.074,(soft?.27:.20)*vol,soft?118:290,soft?2080:wood?2830:4400,
+        {attack:.002,pan,wet:.11,rate:.94+random()*.12});
+      tone(sfx,t+.005,soft?103:wood?197:144,.083,.19*vol,{end:soft?51:92,attack:.002,pan,wet:.19});return;
+    }
     if(material!=='wood'&&sample('impact_'+(material==='surface'?'stone':material),vol*(material==='soft'?.37:.40),.94+random()*.12,pan,.13))return;
     const t=ctx.currentTime+.006,soft=material==='soft',metal=material==='metal',
       f=metal?1110:soft?107:material==='wood'?204:kind==='bow'?218:415;
     grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft||material==='wood'?156:575,soft?1230:material==='wood'?2580:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
     tone(sfx,t+.003,f,metal?.121:.052,(metal?.069:.061)*vol,{end:f*.93,attack:.002,pan,wet:.18});
   }
-<<<<<<< Updated upstream
-=======
   function counterCue(kind,pos){
     if(!live())return;
     const a=listener(),dx=pos.x-a.x,dz=pos.z-a.z,d=Math.hypot(dx,dz),t=ctx.currentTime+.004;
@@ -385,7 +393,6 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       tone(sfx,t+start+.009,f,.16,amount*.58*v,{wave:ac,end:f*.66,attack:.018,pan,wet:.08,shiver:83});
     }
   }
->>>>>>> Stashed changes
   function foot(kind,power=1,impact=false,side=1){
     if(!live())return;
     const [low,high,edge,decay]=sound[kind]??sound.stone,t=ctx.currentTime+.005;
@@ -645,13 +652,9 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
-<<<<<<< Updated upstream
-  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,berg,festival,
-=======
   return {play,pause,toggle,shot,shotContact,weaponAction,counterCue,questChoke,
     preloadNpc(...ids){if(ctx)for(const id of ids)if(npcUrls[id])void prepareClip(npcUrls[id]).catch(()=>{});},
     foot,creature,ambience,club,clubPhase,berg,festival,
->>>>>>> Stashed changes
     bergPhase:()=>bergNode&&bergPlaying?ctx.currentTime-bergStart:null,puddleCue,weatherCue,crownCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
     playNpc,npcTalking,stopNpc,raven,festivalDart,greyCue,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},

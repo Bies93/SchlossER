@@ -10,8 +10,8 @@
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
 body{height:100vh;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);font:14px/1.45 system-ui,"Segoe UI",sans-serif;color:var(--ink)}
-body[data-state=playing]{grid-template-rows:minmax(0,1fr)}
-body[data-state=playing]>header{display:none}
+body:is([data-state=playing],[data-state=defeated]){grid-template-rows:minmax(0,1fr)}
+body:is([data-state=playing],[data-state=defeated])>header{display:none}
 [hidden]{display:none!important}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:49px;padding:calc(env(safe-area-inset-top) + 3px) max(12px,env(safe-area-inset-right)) 3px max(12px,env(safe-area-inset-left));background:#141b1a;border-bottom:1px solid var(--line)}
 .brand,.tools,.actions{display:flex;align-items:center;gap:10px}
@@ -50,7 +50,8 @@ body[data-state=playing][data-input=touch] #touch-controls{display:grid}
 #touch-fire:disabled{opacity:.47;cursor:default}
 #touch-fire[data-held]{background:#805040;border-color:#e0b487}
 #combat-hud{display:none;position:absolute;inset:0;z-index:1;pointer-events:none;color:#f7edd9;font-variant-numeric:tabular-nums}
-body[data-state=playing]:not([data-dialogue=open]) #combat-hud[data-armed]{display:block}
+body[data-state=playing]:not([data-dialogue=open]) #combat-hud:is([data-armed],[data-melee],[data-hit]){display:block}
+#combat-hud:not([data-armed]) #ammo-readout{display:none}
 .aim-dot,.hit-mark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 1px 2px #000)}
 .aim-dot{width:16px;height:16px;fill:none;stroke:#fff8e5;stroke-width:1.4;opacity:.84}
 #combat-hud[data-aim] .aim-dot{opacity:.36}
@@ -72,6 +73,24 @@ body[data-state=playing]:not([data-dialogue=open]) #combat-hud[data-armed]{displ
 #combat-hud[data-state=reloading] #ammo-reload-meter{display:block}
 body[data-input=touch] #ammo-readout{top:max(9px,env(safe-area-inset-top));right:max(57px,calc(env(safe-area-inset-right) + 48px));bottom:auto}
 body[data-input=touch] #ammo-rounds{font-size:22px}
+#health-ui{position:absolute;inset:0;pointer-events:none;z-index:2;display:none}
+body[data-state=playing] #health-ui[data-live]{display:block}
+#health-meter{position:absolute;left:max(17px,env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));
+  width:136px;background:#141c18eb;border-left:2px solid #ca8061;border-radius:0 4px 4px 0;padding:7px 10px}
+#health-meter strong{font-size:18px;color:#f9ebd9;line-height:1}
+#health-meter small{margin-left:7px;text-transform:uppercase;letter-spacing:.12em;font-size:9px;color:#e3c2a6}
+#health-track{display:block;margin-top:5px;height:3px;background:#633d39}
+#health-track i{display:block;height:100%;background:#f4a278;transform:scaleX(var(--hp,1));transform-origin:left;transition:transform 160ms ease-out}
+body[data-input=touch] #health-meter{bottom:auto;top:max(12px,env(safe-area-inset-top));width:112px}
+#hurt-vignette{position:absolute;inset:0;opacity:var(--hurt,0);box-shadow:inset 0 0 min(18vmin,118px) #a92111b0}
+#hurt-vignette svg{position:absolute;width:clamp(116px,24vmin,190px);top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(var(--from,0rad));fill:none;stroke:#ff8e64;stroke-width:3;stroke-linecap:round}
+#defeat{display:none;position:absolute;inset:0;z-index:5;place-items:center;padding:18px;background:#160c0bd9}
+body[data-state=defeated] #defeat{display:grid}
+#defeat article{width:min(100%,400px);padding:28px;background:#211816;border:1px solid #875344;border-top:3px solid #e0a176;border-radius:8px}
+#defeat h2{margin:.14em 0 .3em;font:clamp(28px,6vw,40px)/1 Georgia,serif;color:#ffe2c0}
+#defeat p{margin:0 0 18px;color:#dcbdaa}
+@media (prefers-reduced-motion:reduce){#health-track i{transition:none}}
 main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
 #canvas,canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 body[data-state=loading] #canvas{visibility:hidden}
@@ -366,8 +385,8 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <h1 class="ready-copy">Schloss &amp; Schlossgarten</h1>
     <h2 class="paused-copy">Pausiert</h2>
     <p class="ready-copy">Vom Schlossplatz durch die Halle in den Garten.</p>
-    <p class="desktop-copy shortcuts"><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Strg&nbsp;links</kbd> knien · <kbd>Leertaste</kbd> springen<br><kbd>E</kbd> interagieren · Mausrad Waffe wechseln · <kbd>R</kbd> nachladen · <kbd>Esc</kbd> Pause / Vollbild verlassen</p>
-    <p class="touch-copy shortcuts">Links gehen, rechts umsehen. „Waffe wechseln“ wählt die nächste Waffe oder steckt sie weg; „Schießen“ feuert.</p>
+    <p class="desktop-copy shortcuts"><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Strg&nbsp;links</kbd> knien · <kbd>Leertaste</kbd> springen<br><kbd>E</kbd> interagieren · Mausrad Waffe wechseln · Linksklick schlagen/schießen · <kbd>R</kbd> optional nachladen · <kbd>Esc</kbd> Pause</p>
+    <p class="touch-copy shortcuts">Links gehen, rechts umsehen. „Waffe wechseln“ wählt die nächste Waffe oder steckt sie weg; die große Taste schlägt oder schießt.</p>
     <label class="ghoul-option"><input id="with-ghouls" type="checkbox"> Mit Ghouls?</label>
     <fieldset class="light-switch" id="lighting">
       <legend>Lichtstimmung</legend>
@@ -422,6 +441,16 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
     <small data-dialogue-hint role="status"></small>
   </dialog>
   <div id="stick" aria-hidden="true"><span></span></div>
+  <div id="health-ui">
+    <div id="hurt-vignette" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M36 14 Q50 8 64 14"/></svg></div>
+    <div id="health-meter" role="meter" aria-label="Lebenspunkte" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+      <strong id="health-value">100</strong><small>Gesundheit</small><span id="health-track" aria-hidden="true"><i></i></span>
+    </div>
+  </div>
+  <section id="defeat" aria-labelledby="defeat-title">
+    <article><h2 id="defeat-title">Du bist gefallen</h2><p>Am Schlossplatz geht es weiter. Dein Inventar bleibt bei dir.</p>
+      <button type="button" class="primary" id="respawn">Zurück zum Schlossplatz</button></article>
+  </section>
   <div id="combat-hud">
     <svg class="aim-dot" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1v5m0 8v5M1 10h5m8 0h5"/></svg>
     <svg class="hit-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="m5 5 6 6m10 10 6 6M27 5l-6 6M11 21l-6 6"/></svg>
@@ -434,15 +463,15 @@ body[data-input=touch] #moosfunk-caption{bottom:calc(max(184px,23%) + env(safe-a
   <div id="touch-controls" role="group" aria-label="Touch-Steuerung">
     <button type="button" id="touch-weapon">Waffe wechseln<span id="touch-weapon-name">Ohne Waffe</span></button>
     <button type="button" id="touch-reload" hidden>Nachladen</button>
-    <button type="button" id="touch-fire" disabled>Schießen</button>
+    <button type="button" id="touch-fire" disabled>Schlagen</button>
     <button type="button" id="jump">Sprung</button>
   </div>
 </main>
 <dialog id="about" aria-labelledby="help-title">
   <h2 id="help-title">So erkundest du das Schloss</h2>
   <p><kbd>WASD</kbd> gehen · <kbd>Umschalt</kbd> rennen · <kbd>Strg links</kbd> / <kbd>C</kbd> knien · <kbd>Leertaste</kbd> springen.</p>
-  <p><kbd>E</kbd> interagieren / aufheben · Mausrad wechseln / wegstecken · Rechtsklick zielen · Linksklick schießen (Sturmgewehr: halten) · <kbd>R</kbd> nachladen.</p>
-  <p><kbd>Esc</kbd> Pause und Vollbild verlassen · <kbd>M</kbd> Ton. Touch: links gehen, rechts umsehen; „Waffe wechseln“, „Schießen“, „Nachladen“ und „Sprung“ rechts.</p>
+  <p><kbd>E</kbd> interagieren / aufheben · Mausrad wechseln / wegstecken · Rechtsklick zielen · Linksklick schlagen oder schießen (Sturmgewehr: halten). Leer lädt automatisch nach; <kbd>R</kbd> lädt früher nach.</p>
+  <p><kbd>Esc</kbd> Pause und Vollbild verlassen · <kbd>M</kbd> Ton. Touch: links gehen, rechts umsehen; rechts Waffe wechseln, schlagen/schießen oder springen.</p>
   <p><strong>Viel Spaß wünscht Bies!</strong></p>
   <form method="dialog"><button autofocus class="primary">Schließen</button></form>
 </dialog>

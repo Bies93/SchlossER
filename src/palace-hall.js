@@ -215,7 +215,7 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
   function update(dt,p,beat=null){
     const visitorsMoved=wings.update(p,preset,dt);
     const hatchMoved=wings.hatch.update(dt,p);
-    const attendantMoved=butler(dt,p);
+    const attendantMoved=butler.update(dt,p);
     let changed=lab.update(dt,p,wings.hatch.shown(),beat)||hatchMoved||attendantMoved||visitorsMoved,shadow=hatchMoved&&wings.hatch.settled();
     for(const d of doors){
       if(d.progress===d.target)continue;
@@ -238,6 +238,6 @@ export function makeHall(T,root,M,world,leaves,poster,seal,moosfunk){
     return {changed,shadow};
   }
   function setPreset(id){preset=id;wings.setPreset(id);hallShade.emissiveIntensity=id==='night'?.86:.58}
-  return {targetFor,commit,usable,update,setPreset,prepareLab:lab.prepare,labVisible:lab.visible,seesLabExit:lab.seesExit,lodgeOpen:wings.hatch.open,
+  return {targetFor,commit,usable,update,setPreset,butler,prepareLab:lab.prepare,labVisible:lab.visible,seesLabExit:lab.seesExit,lodgeOpen:wings.hatch.open,
     staffTalk(player,camera){return lab.staffTalk(player.body.position,camera.getWorldDirection(look));}};
 }

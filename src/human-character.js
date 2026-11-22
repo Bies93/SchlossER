@@ -415,6 +415,12 @@ export function createHuman(T,id='base'){
     const sign=s==='l'?1:-1;
     for(const f of fingers)for(let k=1;k<=3;k++)rot(f+'_0'+k+'_'+s,amount*(k===1?.26:.14),sign*amount*.18,0);
   }
+  function neutralHand(s){
+    const sign=s==='l'?1:-1;
+    rot('hand_'+s,.025,sign*.055,sign*.045);
+    for(let k=1;k<=3;k++)rot('thumb_0'+k+'_'+s,0,0,0);
+    curl(s,.36);
+  }
   function torso(x,y,z,bend,twist,tilt,t,lookX,lookY){
     pelvis.position.copy(rest.get('pelvis').p).add(A.set(x,y,z));
     rot('pelvis',bend*.25,twist*.30,tilt*.52);rot('spine_01',bend*.50,twist*.28,-tilt*.39);
@@ -444,7 +450,7 @@ export function createHuman(T,id='base'){
       const footYaw=anchorA.yaw+yawDelta*blend-actor.rotation.y;
       foot('foot_'+s,-sin(tau*u)*.133*motion,Math.atan2(sin(footYaw),cos(footYaw))*motion);
       solve(LIMB[s].arm,sign*(.208+.018*motion),hipsY-.160+motion*.036*Math.abs(sin(w)),.024-.113*sign*sin(w)*motion,sign*.65,-.45,-.72);
-      curl(s,.36);
+      if(id==='niklas')neutralHand(s);else curl(s,.36);
     }
     face(t,2.34,talk,0,.05,look);
   }
@@ -746,6 +752,81 @@ export function createHuman(T,id='base'){
     }
     face(t,8.21,Math.min(1,talk+chuckle*.13),.04+chuckle*.13,.075*show-.037*spark,look);
   }
+  const counterGrip=id==='niklas'?grip('r'):null,counterSupport=id==='niklas'?grip('l'):null;
+  const counterMount=counterGrip?new T.Group():null,handToProp=Q();
+  const counterPoint=V(),counterLeft=V(),counterWrist=V(),counterQ=Q(),supportQ=Q(),propQ=Q(),relaxedQ=Q();
+  if(counterMount){
+    // A hand socket is palm / back of hand / index edge, not the prop's
+    // right / up / backward axes. The same mount drives both hand contacts.
+    handToProp.setFromRotationMatrix(new T.Matrix4().makeBasis(V(-1,0,0),V(0,0,1),V(0,1,0)));
+    counterMount.quaternion.copy(handToProp).invert();
+    const propScale=.67;
+    counterMount.scale.setScalar(propScale);
+    counterMount.position.set(.021,-.087,.024).multiplyScalar(-propScale).applyQuaternion(counterMount.quaternion);
+    counterMount.name='Niklas · gefasste Kompaktpistole';counterMount.visible=false;
+    counterGrip.socket.add(counterMount);
+  }
+  const easePose=(a,b,v)=>{const k=clamp((v-a)/(b-a));return k*k*(3-2*k);};
+  function counterPose(t,draw,aim,pitch,kick,reload){
+    const change=sin(reload*Math.PI)**1.25,breathe=sin(t*2.35)*.004,
+      reach=easePose(0,.34,draw),lift=easePose(.23,.73,draw),present=easePose(.57,1,draw),
+      raise=present*aim*(1-change*.79);
+    torso(-.013*raise,-.027*lift,.030*raise-.019*kick,.043*raise-.070*kick,-.080*raise,
+      .045*raise,t,0,-pitch*.58*raise);
+    for(const [j,s] of ['l','r'].entries()){
+      const a=read('foot_'+s),sign=j===0?1:-1;
+      solve(LIMB[s].leg,a.x*1.12+sign*.031*draw,a.y,a.z+sign*.079*draw,sign*.17,0,1);
+      foot('foot_'+s,0,sign*.105*draw);
+    }
+    if(draw<.018){
+      for(const [j,s] of ['l','r'].entries()){
+        const sign=j===0?1:-1;
+        solve(LIMB[s].arm,sign*.211,hipsY-.158,.028,sign*.63,-.52,-.34);
+        neutralHand(s);
+      }
+      face(t,1.86,0,.045,.034,0);return;
+    }
+    const yaw=actor.rotation.y,extension=raise*(1-.14*Math.abs(pitch));
+    counterPoint.set(-.227+.017*reach+.056*lift+.098*raise,hipsY-.097+.27*reach+.13*lift+.123*raise+.27*pitch*raise+breathe,
+      .071+.052*reach+.133*lift+.265*extension-kick*.037);
+    body.localToWorld(counterPoint);
+    propQ.setFromEuler(e.set(mix(-1.20+.68*lift,pitch,raise)+kick*.19,yaw+Math.PI-.15*(1-lift),
+      -.15*(1-present)+.26*change));
+    counterQ.copy(propQ).multiply(handToProp);
+    if(reach<.998){
+      solve(LIMB.r.arm,-.211,hipsY-.158,.028,-.63,-.52,-.34);
+      neutralHand('r');
+      counterGrip.socket.getWorldPosition(counterWrist);
+      counterGrip.socket.getWorldQuaternion(relaxedQ);
+      counterPoint.lerp(counterWrist,1-reach);counterQ.slerp(relaxedQ,1-reach);
+    }
+    counterGrip.wristAt(counterPoint,counterQ,counterWrist).applyMatrix4(worldInverse);
+    solve(LIMB.r.arm,counterWrist.x,counterWrist.y,counterWrist.z,-.60,-.79,-.21);
+    counterGrip.hold(counterQ,{thumb:.54*reach,index:(.51+.20*kick)*reach,middle:.92*reach,ring:.97*reach,pinky:.93*reach});
+    const join=easePose(.62,.98,draw)*easePose(.25,.72,aim);
+    const support=Math.max(join,easePose(.07,.32,reload)*(1-easePose(.83,1,reload)));
+    if(support<.998){
+      solve(LIMB.l.arm,.222,hipsY-.149+.049*lift,.027+.033*lift,.57,-.65,-.25);
+      neutralHand('l');
+      if(support>.001){
+        counterSupport.socket.getWorldPosition(counterWrist);
+        counterSupport.socket.getWorldQuaternion(relaxedQ);
+      }
+    }
+    if(support>.001){
+      counterLeft.set(-.051,-.105-.14*change,.013+.053*change);
+      counterMount.localToWorld(counterLeft);
+      if(support<.998)counterLeft.lerp(counterWrist,1-support);
+      // Support palm approaches from underneath and closes to the near side.
+      supportQ.setFromEuler(e.set(.02-.18*change,.38,-.24));
+      counterMount.getWorldQuaternion(propQ).multiply(supportQ).multiply(handToProp);
+      if(support<.998)propQ.slerp(relaxedQ,1-support);
+      counterSupport.wristAt(counterLeft,propQ,counterWrist).applyMatrix4(worldInverse);
+      solve(LIMB.l.arm,counterWrist.x,counterWrist.y,counterWrist.z,.63,-.76,-.19);
+      counterSupport.hold(propQ,{thumb:.62*support,index:.82*support,middle:.89*support,ring:.87*support,pinky:.84*support});
+    }
+    face(t,1.86,0,.045,.034,0);
+  }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);
     torso(.007*sin(t*1.2),home-hipsY+.003*sin(t*1.65),.07*rise,.028+.21*rise,
@@ -883,7 +964,7 @@ export function createHuman(T,id='base'){
     leg_l:bones.get('thigh_l'),leg_r:bones.get('thigh_r')},limbBase=Q();
   // Allocate only on the first fall for a rig. This is a short, articulated
   // animation with floor contacts, not a physics simulation left running.
-  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0,flinchRegion='body',flinchLimb=null;
+  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0,flinchPower=1,flinchRegion='body',flinchLimb=null;
   const isReacting=()=>reacting;
   const setReacting=value=>{reacting=value;if(npcInfo)npcInfo.reacting=value;};
   const progress=(a,b,t)=>{const k=clamp((t-a)/(b-a));return k*k*(3-2*k);};
@@ -919,14 +1000,14 @@ export function createHuman(T,id='base'){
     rot('neck_01',brace?.11:fore*.08,-side*.18);
     rot('head',brace?-.13:fore*.09,side*.275,side*.14+(brace?.02:.07));
   }
-  function reaction(point,fall,incoming,region='body'){
+  function reaction(point,fall,incoming,region='body',power=1){
     setReacting(true);clock=0;
     const fromX=point.x-actor.position.x,fromZ=point.z-actor.position.z;
     side=fromX*cos(actor.rotation.y)-fromZ*sin(actor.rotation.y)<0?1:-1;
     flinchPitch=(incoming?.x??-fromX)*sin(actor.rotation.y)+(incoming?.z??-fromZ)*cos(actor.rotation.y);
     if(!fall){
       if(flinchLimb&&flinchLimb!==limbReactions[region])flinchLimb.quaternion.copy(limbBase);
-      flinchRegion=region;flinchLimb=limbReactions[region];
+      flinchPower=power;flinchRegion=region;flinchLimb=limbReactions[region];
       if(flinchLimb)limbBase.copy(flinchLimb.quaternion);
       if(falling)falling.active=false;
       for(const [b,out] of flinchBones)if(b)out.copy(b.quaternion);
@@ -990,7 +1071,8 @@ export function createHuman(T,id='base'){
     clock+=dt;
     const f=falling;
     if(!f?.active){
-      const head=flinchRegion==='head',k=clamp(clock/(head?.24:flinchLimb?.32:.28)),p=sin(Math.PI*k);
+      const head=flinchRegion==='head',k=clamp(clock/(head?.24:flinchLimb?.32:.28)),
+        p=flinchPower>1?flinchPower*progress(0,.23,k)*(1-progress(.27,1,k)):sin(Math.PI*k);
       for(const [j,[b,base]] of flinchBones.entries())if(b){
         const weight=head?(j===2?1.75:.48):flinchLimb?.48:1;
         b.quaternion.copy(base).multiply(q.setFromEuler(e.set((flinchPitch*.13+(head&&j===2?-.12:0))*p*weight,side*p*(.17-j*.028)*weight,side*p*.10*weight)));
@@ -1053,12 +1135,8 @@ export function createHuman(T,id='base'){
     return Number.isFinite(nearest)?nearest*side:null;
   }
   pose(0,0,0,0,0,0,.2);
-<<<<<<< Updated upstream
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
-=======
   const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
     resetCounterHands(){if(counterMount){neutralHand('l');neutralHand('r');}},
->>>>>>> Stashed changes
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){
