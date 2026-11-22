@@ -1,5 +1,9 @@
 # Dialoge: Niklas, Jake, Kerwas Michi, Bons
 
+Die aktuellen Sprachzeilen der vier Figuren wurden mit [Qwen3-TTS VoiceDesign](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign) entworfen. Es wurden keine früheren Aufnahmen als Stimmvorlage verwendet. Die Zuordnung steht in `src/npc-voice-assets.js`, Regie und Schnitt in `scripts/npc-voice-pilot.mjs`.
+
+## Archivierte Aufnahmen
+
 Katalogstimmen von HeyGen Voice, Sprache Deutsch. Keine Stimmklone aus Projektaufnahmen.
 Das Produktionsmodell wurde vom Dienst gewählt; die Antwort enthielt keine Modell-ID.
 Spieltexte stehen in `src/npc-lines.js`. Tastatur- und Mausantworten des Spielers sind nicht vertont.
@@ -15,7 +19,7 @@ Bons’ Spruch stammt aus der vom Projektinhaber gelieferten Ersatzaufnahme (unv
 Keine der gewählten Stimmen ist als fränkische Muttersprachlerstimme ausgewiesen.
 Geprüft wurden Dekodierung, tatsächliche Clipdauer und Schnittgrenzen per Wortzeitmarken/Pegel; keine Hörabnahme.
 
-| Datei in `assets/npc-voices/` | Quelle/s | Dauer im Spiel |
+| Frühere Datei | Quelle/s | Ehemalige Spieldauer |
 | --- | --- | --- |
 | `dialog-niklas-frage.mp3` | 0,225–2,260 | 2,04 s |
 | `dialog-niklas-antwort.mp3` | 2,342–5,063 | 2,72 s |
@@ -24,10 +28,10 @@ Geprüft wurden Dekodierung, tatsächliche Clipdauer und Schnittgrenzen per Wort
 | `dialog-jake-naeher.mp3` | 3,554–6,059 | 2,51 s |
 | `dialog-michi-kerwa.mp3` | 0,200–2,950 | 2,75 s |
 | `dialog-bons-fcn.mp3` | vollständige Ersatzaufnahme | 2,35 s |
-| `dialog-bons-schluchzen.mp3` | 5,590–11,240 | 5,65 s |
 
-Das Schluchzen ist eine Mikrofonaufnahme von takareads:
+## Weiterhin im Spiel: Bons’ Schluchzen
+
+`dialog-bons-schluchzen.mp3` ist eine Mikrofonaufnahme von takareads:
 [sobbing_crying_male, Freesound #852987](https://freesound.org/people/takareads/sounds/852987/),
 [CC0](https://creativecommons.org/publicdomain/zero/1.0/). Verwendet wurde ein gekürzter,
-auf Mono konvertierter Ausschnitt mit kurzem Fade. Die Ersatzaufnahme für Bons ist
-MP3, 44,1 kHz, Mono, 96 kbit/s; die übrigen Clips sind MP3, 24 kHz, Mono, 64 kbit/s.
+auf Mono konvertierter Ausschnitt (5,590–11,240 s) mit kurzem Fade.

@@ -1,10 +1,10 @@
 // Local production only. No synthesis runtime is shipped with SchlossER.
-// node scripts/npc-voice-pilot.mjs synth [Niklas|Jake]
-// node scripts/npc-voice-pilot.mjs export <ffmpeg.exe> [Niklas|Jake] (build with libmp3lame + librubberband)
+// node scripts/npc-voice-pilot.mjs synth [Niklas|Jake|Bons|Michi]
+// node scripts/npc-voice-pilot.mjs export <ffmpeg.exe> [Niklas|Jake|Bons|Michi] (build with libmp3lame)
 // node scripts/npc-voice-pilot.mjs compare
 // VOICE_LAB optionally overrides %LOCALAPPDATA%/SchlossER/VoiceLab.
 import {spawnSync} from 'node:child_process';
-import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {NPCS} from '../src/npc-lines.js';
@@ -31,19 +31,27 @@ const reply=(speech,n,original)=>{
   return cue(clip,line,original);
 };
 const profiles=[
-  {name:'Niklas',take:'niklas-take01',seed:2194,threads:4,
-    // Nudge the register down without changing speed or vowel formants.
-    finish:'rubberband=pitch=0.89:formant=preserved,bass=f=170:g=1.2,',
-    direction:'A native German male actor, speaking very natural Standard German, medium-low warm baritone with an unpolished, slightly dry texture. Young adult working as a stiff butler; deadpan, slightly embarrassed first question with a tiny pause after Hi, then disappointed and sincerely hopeful on sentence two, and surprised, honest relief and delight on the last sentence. The three subsequent sentences are separate dialogue takes; leave a clear beat of silence between them. Keep the same speaker. Mic close and conversational, no announcing, no added words.',
-    cues:[cue(niklas.id,niklas.line,'dialog-niklas-frage.mp3'),reply(niklas,0,'dialog-niklas-antwort.mp3'),cue(reward.clip,reward.line,'niklas-fundsache.mp3')]},
+  {name:'Niklas',take:'niklas-take02',seed:3817,threads:4,
+    direction:'Ein deutscher Mann um die 28, natürliche ungekünstelte Sprechstimme in Hochdeutsch, mittlere Lage, warm und klar. Kein Ansager und kein Flüstern. Im ersten Satz etwas unsicher, im zweiten freundlich enttäuscht, im dritten spontan erleichtert. Wie in einem echten Gespräch, klar und ohne Übertreibung. Kurze Pause nach jedem Satz.',
+    cues:[cue(niklas.id,niklas.line,'dialog-niklas-frage-vl.mp3'),reply(niklas,0,'dialog-niklas-antwort-vl.mp3'),cue(reward.clip,reward.line,'niklas-fundsache-vl.mp3')]},
   {name:'Jake',take:'jake-take02',seed:9882,threads:4,
     direction:'Ein junger deutscher Mann, weicher heller Tenor mit leicht rauchiger Stimme, natürlich und entspannt statt wie ein Sprecher. Beim ersten Satz verträumt, beim zweiten leicht verlegen und selbstironisch, beim dritten aufmunternd mit leiser Vorfreude. Sprich alle Wörter in klarem Hochdeutsch genau wie geschrieben; besonders „tritt näher an ihn“. Entspannte kurze Sprechpausen am Satzende. Keine zusätzlichen Wörter.',
-    cues:[cue(jake.id,jake.line,'dialog-jake-baeume.mp3'),reply(jake,0,'dialog-jake-dumm.mp3'),reply(jake,1,'dialog-jake-naeher.mp3')]}
+    cues:[cue(jake.id,jake.line,'dialog-jake-baeume.mp3'),reply(jake,0,'dialog-jake-dumm.mp3'),reply(jake,1,'dialog-jake-naeher.mp3')]},
+  {name:'Bons',take:'bons-take01',seed:9863,threads:3,targetLufs:-16,peakCeiling:-1.3,
+    // Tighten the beat before the chant, then speed up just the three letters.
+    chant:{headEnd:2.51,tailStart:2.77,rate:1.17},
+    text:'Dai Mudda is dai Fadda! Eff Zeh Enn!',
+    direction:'Ein stark betrunkener junger Franke grölt im Erlanger Bierzelt voller Inbrunst einen Fußballspruch. Laut, frech, angeschlagen, heiser und lallend, echte fränkische Aussprache. Die letzten drei Buchstaben schnell zusammen als Schlachtruf, ohne Pause dazwischen. Nur den vorgegebenen Text, keine Hintergrundgeräusche.',
+    cues:[cue('bergFritz',NPCS.bergFritz.line,'dialog-bons-fcn.mp3')]},
+  {name:'Michi',displayName:NPCS.bergWirt.name,take:'michi-take02',seed:5210,threads:4,
+    direction:'Ein etwa vierzigjähriger Mann, natürliche, leicht heisere und raue Stimme, angenehm tief. Trocken und beiläufig gesprochen, wie ein Wirt am Tresen. Hochdeutsch mit einem leichten fränkischen Tonfall. Das erste Wort ist klar und betont: Halb. Gib genau den vorgegebenen Text wieder.',
+    cues:[cue('bergWirt',NPCS.bergWirt.line,'dialog-michi-kerwa.mp3')]}
 ];
 // Seconds into the respective raw WAV; allow space around the first/last phoneme.
 const cuts={
-  niklas:[0,2.055],niklasAntwort:[2.025,4.45],niklasFundsache:[4.55,6.80],
-  gardenHannes:[.27,2.02],jakeDumm:[2.57,5.52],jakeNaeher:[6.26,9.40]
+  niklas:[0,1.98],niklasAntwort:[2.07,4.64],niklasFundsache:[4.83,7.07],
+  gardenHannes:[.27,2.02],jakeDumm:[2.57,5.52],jakeNaeher:[6.26,9.40],
+  bergFritz:[.56,3.96],bergWirt:[0,4.10]
 };
 
 function run(bin,args,capture=false){
@@ -62,7 +70,7 @@ if(command==='synth'){
   for(const p of selected){
     run(join(lab,'audio-cpp-0.9.6','audiocpp_cli.exe'),[
       '--task','tts','--family','qwen3_tts','--model',join(lab,'models',model),'--backend','cpu',
-      '--threads',String(p.threads),'--language','de','--text',p.cues.map(c=>c.line).join(' '),
+      '--threads',String(p.threads),'--language','de','--text',p.text??p.cues.map(c=>c.line).join(' '),
       '--text-chunk-size','500','--instruct',p.direction,'--seed',String(p.seed),
       '--log','--metrics','--out',wav(p.take)
     ]);
@@ -72,23 +80,35 @@ if(command==='synth'){
   for(const p of selected)for(const c of p.cues){
     const cut=cuts[c.id],file=NPC_VOICE_FILES[c.id];
     if(!cut||!file||file===c.original)throw Error('Missing pilot edit for '+c.id);
-    const [start,end]=cut,duration=end-start;
+    const [start,end]=cut;
     const input=['-nostdin','-hide_banner','-ss',String(start),'-i',wav(p.take)];
-    const chain=`atrim=duration=${duration.toFixed(4)},highpass=f=65,${p.finish??''}afade=t=in:d=0.009,afade=t=out:st=${(duration-.018).toFixed(4)}:d=0.018`;
+    let duration=end-start,edit=`atrim=duration=${duration.toFixed(4)}`;
+    if(p.chant){
+      const {headEnd,tailStart,rate}=p.chant;
+      edit=`asplit[phrase][chant];[phrase]atrim=end=${(headEnd-start).toFixed(4)},asetpts=PTS-STARTPTS[a];`+
+        `[chant]atrim=start=${(tailStart-start).toFixed(4)}:end=${(end-start).toFixed(4)},asetpts=PTS-STARTPTS,atempo=${rate}[b];`+
+        '[a][b]concat=n=2:v=0:a=1';
+      duration=headEnd-start+(end-tailStart)/rate;
+    }
+    const chain=`${edit},highpass=f=65,afade=t=in:d=0.009,afade=t=out:st=${(duration-.018).toFixed(4)}:d=0.018`;
     // Measure once, then apply a constant gain: preserve the acting dynamics.
     const report=run(ffmpeg,[...input,'-af',chain+',loudnorm=print_format=json','-f','null','-'],true);
     const {input_i,input_tp}=JSON.parse(report.match(/\{\s*"input_i"[\s\S]*?\}/)[0]);
     if(!Number.isFinite(+input_i)||!Number.isFinite(+input_tp))throw Error('Silent cue: '+c.id);
-    const gain=Math.min(-19-input_i,-2.5-input_tp);
+    const gain=Math.min((p.targetLufs??-19)-input_i,(p.peakCeiling??-2.5)-input_tp);
     run(ffmpeg,[...input,'-loglevel','error','-af',chain+`,volume=${gain.toFixed(2)}dB`,
       '-ac','1','-ar','24000','-c:a','libmp3lame','-b:a','64k','-map_metadata','-1','-y',join(assetDir,file)]);
   }
 }else if(command==='compare'){
   const escape=s=>s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
-  const player=file=>`<audio controls preload="none" src="data:audio/mpeg;base64,${readFileSync(join(assetDir,file)).toString('base64')}"></audio>`;
-  const cards=profiles.map(p=>`<section><h2>${p.name}</h2>${p.cues.map(c=>`<article><h3>${escape(c.line)}</h3>
-    <div><span>Bisher · HeyGen</span>${player(c.original)}</div>
-    <div><span>Neu · lokaler Pilot</span>${player(NPC_VOICE_FILES[c.id])}</div></article>`).join('')}</section>`).join('');
+  const player=path=>`<audio controls preload="none" src="data:audio/mpeg;base64,${readFileSync(path).toString('base64')}"></audio>`;
+  const previous=file=>{
+    const paths=[join(lab,'retired',file),join(assetDir,file)],path=paths.find(existsSync);
+    return path?player(path):'<small>Auf diesem Rechner nicht archiviert</small>';
+  };
+  const cards=profiles.map(p=>`<section><h2>${escape(p.displayName??p.name)}</h2>${p.cues.map(c=>`<article><h3>${escape(c.line)}</h3>
+    <div><span>Bisher</span>${previous(c.original)}</div>
+    <div><span>Aktuell im Spiel</span>${player(join(assetDir,NPC_VOICE_FILES[c.id]))}</div></article>`).join('')}</section>`).join('');
   mkdirSync(dist,{recursive:true});
   const out=join(dist,'stimmenvergleich.html');
   writeFileSync(out,`<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -99,7 +119,7 @@ if(command==='synth'){
     section{margin-top:2rem}article{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:.65rem 1.2rem;
     padding:.85rem 1.1rem;background:#1b2621;border:1px solid #48554b;border-radius:10px;margin:.7rem 0}
     h3{grid-column:1/-1;margin:0}span{display:block;font-size:.9rem;margin-bottom:.3rem}audio{display:block;width:100%}
-    </style><main><h1>Stimmenvergleich</h1><p>SchlossER · Sechs Zeilen im direkten Vorher/Nachher-Vergleich.</p>${cards}</main>
+    </style><main><h1>Stimmenvergleich</h1><p>SchlossER · Bisherige und aktuell eingebundene Aufnahmen.</p>${cards}</main>
     <script>document.addEventListener('play',e=>{for(const a of document.querySelectorAll('audio'))if(a!==e.target)a.pause()},true)</script></html>`);
   console.log(out);
 }else{

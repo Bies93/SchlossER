@@ -1,6 +1,6 @@
 # Hannes Mohr
 
-- Datei: `assets/npc-voices/garden-hannes.mp3`
+- Archivierte Aufnahme: `garden-hannes.mp3` (nicht mehr im Spiel)
 - Eingereicht: „Ich mag Bäume.“ (Deutsch, de)
 - HeyGen Voice, Albrecht – Calm & Trustworthy, Voice-ID `20cd33ab51e546009b390d207842580f`
 - Modell serverseitig gewählt, Geschwindigkeit 0,92×, generiertes MP3 (mono, 44,1 kHz)

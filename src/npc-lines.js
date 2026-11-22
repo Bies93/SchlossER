@@ -16,7 +16,7 @@ export const NPCS={
   bergWirt:{name:'Kerwas Michi',template:'labSepp',line:'Halb besoffen ist rausgeschmissenes Geld!'},
   bergLeni:{name:"Leni Beck · Schankkellnerin",template:'guestSabine',line:"Früher hat mei Mutter die Maß ohne Strich ausg’schenkt. Der Strich war am Deckel. Schau, der da is noch von vor der Flut."},
   bergDora:{name:"Dora Pfister · Stammgast",template:'guestMarlene',line:"Alla, früher ham mer für die letzte Runde a Bleim g’sunga. Heut sing mer’s nimmer. Sonst könnt’s ja wirklich die letzte sei."},
-  bergFritz:{name:'Bons',template:'clubNiko',line:'Dei Mudda ist dei Vadda F-C-N!',choices:[
+  bergFritz:{name:'Bons',template:'clubNiko',line:'Dai Mudda is dai Fadda, F.C.N.!',choices:[
     {label:'Geh heim Bons!',reply:bonsReply},{label:'Deine Mudda ist eine Jutta!',reply:bonsReply}
   ]},
   bergUdo:{name:"Udo Heller · Musikant",template:'guestJona',line:"Früher ham mer am Berch bis zum Regen g’spielt. Jetzt spiel mer bis zum Trocknen. Des zieht si, wenn mer in einer Pfützn wohnt."},
