@@ -10,16 +10,17 @@ export function addGardenGrey(T,scene,world,height,audio){
   root.add(actor);
   actor.position.set(GREY_AT.x,rig.groundedY(height(GREY_AT.x,GREY_AT.z)),GREY_AT.z);
   actor.rotation.y=GREY_AT.yaw;
-  greyHair(T,rig);
+  const hair=greyHair(T,rig);
   greyCrewNeck(T,rig);
   const vial=greyVial(T,rig.vialSocket),fx=greyFX(T,root,height),ash=greyAftermath(T,root,GREY_SITE.x,GREY_SITE.z,height);
   const shadow=contactShadow(T,root,actor.position.x,height(actor.position.x,actor.position.z)+.009,actor.position.z,.85,.72);
   npcInfo.shadow=shadow;
   const beats=greyShow(),route=new T.CubicBezierCurve3(
     ...[[GREY_AT.x,GREY_AT.z],...GREY_CONTROLS,[GREY_SITE.x,GREY_SITE.z]].map(([x,z])=>new T.Vector3(x,0,z)));
-  const direction=new T.Vector3(),point=new T.Vector3(),hit=new T.Vector3(),spot=new T.Vector3();
+  const direction=new T.Vector3(),point=new T.Vector3(),hit=new T.Vector3(),spot=new T.Vector3(),torsoAt=new T.Vector3();
   const L=route.getLength(),q={},tread={distance:0,stop:0,floor:0,route:track};
   let idle=0,speech=0,acc=0,glance=0,listening=false,arrivalYaw=null,ending=false,teardown=false;
+  let charred=false,landed=false;
   function track(d,out){
     const t=Math.max(0,Math.min(1,d/L));
     route.getPointAt(t,point);route.getTangentAt(t,direction);
@@ -37,7 +38,10 @@ export function addGardenGrey(T,scene,world,height,audio){
     return true;
   }
   function turnTo(p,dt,force=4.4){
-    const goal=Math.atan2(p.x-actor.position.x,p.z-actor.position.z),a=goal-actor.rotation.y;
+    turnYaw(Math.atan2(p.x-actor.position.x,p.z-actor.position.z),dt,force);
+  }
+  function turnYaw(goal,dt,force){
+    const a=goal-actor.rotation.y;
     actor.rotation.y+=Math.atan2(Math.sin(a),Math.cos(a))*Math.min(1,force*dt);
   }
   function standAtEnd(){
@@ -49,10 +53,9 @@ export function addGardenGrey(T,scene,world,height,audio){
       vial.group.getWorldPosition(spot);audio.greyCue(id,spot);
     }else if(id==='burst'){
       standAtEnd();vial.group.getWorldPosition(hit);
-      fx.burst(hit);ash.visible=true;vial.group.visible=false;
+      npcInfo.chest.getWorldPosition(torsoAt);fx.burst(hit,torsoAt);vial.group.visible=false;
       npcInfo.hp=0;npcInfo.alive=false;shadow.visible=false;ending=true;
       audio.stopNpc('grey');audio.greyCue(id,hit);
-      blackenGrey(T,actor);
       const impulse=new T.Vector3(-Math.sin(actor.rotation.y),0,-Math.cos(actor.rotation.y));
       rig.reaction(hit,planCollapse(actor,hit,impulse,world,height),impulse);
     }
@@ -61,7 +64,12 @@ export function addGardenGrey(T,scene,world,height,audio){
     const near=surface&&Math.hypot(p.x-actor.position.x,p.z-actor.position.z)<32;
     if(ending){
       const changed=beats.step(dt,()=>{});
-      if(changed||!teardown){fx.tick(beats.time-GREY_CUES.burst,near);teardown=beats.beat==='ash';}
+      const age=beats.time-GREY_CUES.burst;
+      if(!charred&&age>.13){blackenGrey(T,actor);ash.visible=true;charred=true;}
+      if(!landed&&age>1.02){
+        npcInfo.chest.getWorldPosition(spot);audio.greyCue('landing',spot);landed=true;
+      }
+      if(changed||!teardown){fx.tick(age,near);teardown=beats.beat==='ash';}
       return near&&changed;
     }
     if(!npcInfo.alive){
@@ -87,19 +95,24 @@ export function addGardenGrey(T,scene,world,height,audio){
     glance+=((attentive?Math.max(-.68,Math.min(.68,Math.atan2(Math.sin(angle),Math.cos(angle)))):0)-glance)*Math.min(1,step*6);
     if(beat==='walk'){
       const f=(time-GREY_CUES.walk)/(GREY_CUES.arrive-GREY_CUES.walk);
-      tread.distance=L*(f-.115*Math.sin(f*Math.PI*2)/(Math.PI*2));
-      tread.stop=1-ease(0,.085,f)+ease(.89,1,f);
+      const edge=.12,part=f<edge?f*f/(2*edge):f>1-edge?1-edge-(1-f)**2/(2*edge):f-edge/2;
+      tread.distance=L*part/(1-edge);
+      tread.stop=1-ease(0,edge,f)+ease(1-edge,1,f);
       track(tread.distance,q);tread.floor=height(q.x,q.z);actor.position.set(q.x,rig.groundedY(tread.floor),q.z);
       actor.rotation.y=q.yaw;
       rig.greyPose(idle,{tread,talk:speech*.27});
+      hair(idle,.33+.55*(1-tread.stop));
     }else{
       const show=ease(GREY_CUES.arrive,GREY_CUES.shake,time);
+      const laugh=beat==='laugh'?(1-ease(.48,.85,time))*ease(0,.16,time):0;
+      if(beat==='laugh'&&time>.36){track(0,q);turnYaw(q.yaw,step,5.3*ease(.35,.62,time));}
       if(show>0&&surface&&near)turnTo(p,step,2.8);
       else if(show>0&&arrivalYaw!==null)actor.rotation.y=arrivalYaw;
       const shake=ease(GREY_CUES.shake,GREY_CUES.shake+.13,time)*(1-ease(GREY_CUES.spark-.18,GREY_CUES.spark,time));
       const spark=ease(GREY_CUES.spark-.22,GREY_CUES.spark+.15,time);
-      rig.greyPose(idle,{show,shake,spark,look:glance,talk:speech>0?.48+.18*Math.sin(idle*15):0});
+      rig.greyPose(idle,{show,shake,spark,laugh,look:glance,talk:speech>0?.48+.18*Math.sin(idle*15):0});
       vial.update(idle,shake);
+      hair(idle,.16+shake*.20+spark*.19+laugh*.40);
     }
     shadow.position.set(actor.position.x,height(actor.position.x,actor.position.z)+.009,actor.position.z);
     fx.vial(idle,vial.group,beat==='spark',near);

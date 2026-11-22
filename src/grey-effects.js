@@ -23,6 +23,17 @@ export function greyHair(T,rig){
   });
   map.anisotropy=4;
   const mat=new T.MeshStandardMaterial({map,color:0xc6c4c4,roughness:.81,side:T.DoubleSide});
+  const time={value:0},sway={value:0};
+  mat.customProgramCacheKey=()=> 'grey-hair-sway-1';
+  mat.onBeforeCompile=sh=>{
+    sh.uniforms.greyHairTime=time;sh.uniforms.greyHairSway=sway;
+    sh.vertexShader=sh.vertexShader.replace('#include <common>',
+      '#include <common>\nuniform float greyHairTime; uniform float greyHairSway;')
+      .replace('#include <begin_vertex>',`#include <begin_vertex>
+        float tip=uv.y*uv.y*greyHairSway;
+        transformed.x+=tip*.029*sin(greyHairTime*5.9+position.x*13.-uv.y*2.1);
+        transformed.z+=tip*.017*cos(greyHairTime*6.1+position.x*21.-uv.y*1.8);`);
+  };
   const vertices=[],uv=[],order=[];
   // Layered, tapering locks: short scalp mesh stays underneath the long back/sides.
   for(let j=0;j<21;j++){
@@ -41,7 +52,8 @@ export function greyHair(T,rig){
   const g=new T.BufferGeometry();
   g.setAttribute('position',new T.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
   g.setIndex(order);g.computeVertexNormals();
-  const hair=mesh(T,head,g,mat);hair.name='Grey · silbergraue, schulterlange Strähnen';return hair;
+  const hair=mesh(T,head,g,mat);hair.name='Grey · silbergraue, schulterlange Strähnen';
+  return (t,amount)=>{time.value=t;sway.value=amount;};
 }
 export function greyCrewNeck(T,rig){
   const chest=rig.costumeMount('spine_03'),g=new T.BufferGeometry(),p=[],uv=[],idx=[];
@@ -69,6 +81,15 @@ export function greyCrewNeck(T,rig){
   const collar=new T.MeshStandardMaterial({color:0x5e6867,roughness:.94,normalMap:knit.normalMap,normalScale:new T.Vector2(.18,.18),
     transparent:true,depthWrite:false,alphaMap:fade});
   const o=mesh(T,chest,g,collar);o.name='Grey · T-Shirt-Rundhals';
+  const neckLine=[];
+  for(let i=2;i<=10;i++){
+    const j=(7*13+i)*3;neckLine.push(new T.Vector3(p[j],p[j+1]-.004,p[j+2]+.002));
+  }
+  mesh(T,chest,new T.TubeGeometry(new T.CatmullRomCurve3(neckLine),18,.0035,6,false),
+    new T.MeshStandardMaterial({color:0x56615f,roughness:.96})).name='Grey · Rundhalsbund';
+  const wrist=rig.costumeMount('hand_l'),j=rig.restPoint('hand_l');
+  const strap=new T.TorusGeometry(.023,.0065,7,20).rotateY(Math.PI/2);
+  mesh(T,wrist,strap,new T.MeshStandardMaterial({color:0x3d3027,roughness:.96}),j.x-.024,j.y-.006,j.z+.002).name='Grey · Lederarmband';
 }
 export function greyVial(T,socket){
   const group=new T.Group();
@@ -171,14 +192,24 @@ export function greyFX(T,root,height){
       s.visible=false;s.renderOrder=5;root.add(s);return {s,a:rand()*TAU,b:rand(),c:rand(),offset:i/count};
     });
   const vapour=make(7,smokeMap,0x98cabc),smoke=make(17,smokeMap,0x39333a),embers=make(26,disc,0xffb24f,T.AdditiveBlending);
+  const dust=make(13,smokeMap,0x947761);
   const flash=make(2,disc,0xffd18b,T.AdditiveBlending);
   flash[1].s.material.color.setHex(0xf1fff0);
-  const spark=make(7,disc,0xfaffae,T.AdditiveBlending),at=new T.Vector3(),blastAt=new T.Vector3(),mouth=new T.Vector3();
+  const spark=make(7,disc,0xfaffae,T.AdditiveBlending),at=new T.Vector3(),blastAt=new T.Vector3(),bodyAt=new T.Vector3(),mouth=new T.Vector3();
+  const waveMap=paint(T,96,96,(c,w,h)=>{
+    const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);
+    for(const [a,b] of [[0,0],[.67,0],[.78,.16],[.87,.57],[.94,.27],[1,0]])
+      g.addColorStop(a,'rgba(245,230,188,'+b+')');
+    c.fillStyle=g;c.fillRect(0,0,w,h);
+  });
+  const wave=mesh(T,root,new T.PlaneGeometry(2,2).rotateX(-Math.PI/2),
+    new T.MeshBasicMaterial({map:waveMap,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide}));
+  wave.userData.noSceneQuery=true;wave.visible=false;
   let active=false;
   function clear(xs){for(const {s} of xs)s.visible=false;}
   function draw(e,x,y,z,size,alpha){const {s}=e;s.visible=alpha>.015;s.position.set(x,y,z);s.scale.set(size,size,1);s.material.opacity=Math.max(0,alpha);}
   clear(vapour);
-  return {burst(origin){blastAt.copy(origin);active=true;clear(vapour);clear(spark);},
+  return {burst(origin,body){blastAt.copy(origin);bodyAt.copy(body);active=true;clear(vapour);clear(spark);},
     vial(t,vial,showSpark=false,near=true){
       if(!near||!vial.visible){clear(vapour);clear(spark);return;}
       at.copy(mouth.set(0,.149,0));vial.localToWorld(at);
@@ -194,9 +225,21 @@ export function greyFX(T,root,height){
       }else clear(spark);
     },
     tick(t,near=true){
-      if(!active||!near||t>6.2){clear(smoke);clear(embers);clear(flash);return;}
+      if(!active||!near||t>6.2){clear(smoke);clear(embers);clear(flash);clear(dust);wave.visible=false;return;}
       const {x,y,z}=blastAt;
-      for(const e of flash)draw(e,x,y,z,(1.75+e.offset*.8)*(1+t*4.8),Math.max(0,1-t*(4.8+e.offset*4))*.91*flashWeight);
+      const bodyDelay=t-.047;
+      draw(flash[0],x,y,z,1.41+t*6.1,Math.max(0,1-t*6.7)*.91*flashWeight);
+      draw(flash[1],bodyAt.x,bodyAt.y,bodyAt.z,1.86+Math.max(0,bodyDelay)*7.1,
+        bodyDelay>=0?Math.max(0,1-bodyDelay*5.6)*.89*flashWeight:0);
+      const ring=Math.max(.12,Math.min(2.9,.17+t*5.25));
+      wave.visible=t<.57;wave.position.set(bodyAt.x,height(bodyAt.x,bodyAt.z)+.047,bodyAt.z);
+      wave.scale.set(ring,1,ring);wave.material.opacity=Math.max(0,1-t/.57)*.72*flashWeight;
+      for(const e of dust){
+        const d=t-.080-e.offset*.18,f=Math.max(0,d),rr=.24+(1-Math.exp(-f*2.8))*(1.04+e.b*1.22);
+        const X=bodyAt.x+Math.cos(e.a)*rr,Z=bodyAt.z+Math.sin(e.a)*rr;
+        draw(e,X,height(X,Z)+.16+f*(.12+.17*e.c),Z,.42+f*.39+e.b*.18,
+          d>0?Math.min(1,d*9)*Math.max(0,1-f/2.55)**1.25*.57:0);
+      }
       for(const e of smoke){
         const d=t-e.offset*.37,f=Math.max(0,d),spread=(1-Math.exp(-f*2.1))*(.34+e.b*1.04);
         const Y=y+.23+f*(.32+e.c*.44);
@@ -208,7 +251,9 @@ export function greyFX(T,root,height){
         const d=t-e.offset*.14,f=Math.max(0,d),p=f*(1.2+e.b*3.0);
         const X=x+Math.cos(e.a)*p,Z=z+Math.sin(e.a)*p;
         const ground=height(X,Z),Y=Math.max(ground+.031,y+(.81+e.c*3.9)*f-4.5*f*f);
-        draw(e,X,Y,Z,(.033+e.b*.042)*(1+Math.max(0,.5-f)),d>0?Math.max(0,.96-f*.79):0);
+        draw(e,X,Y,Z,(.031+e.b*.041)*(1+Math.max(0,.5-f)),d>0?Math.max(0,.96-f*.77):0);
+        e.s.scale.y*=1+(1-Math.min(1,f))*1.6;
+        e.s.material.rotation=e.a*.63+f*.9;
       }
     }};
 }

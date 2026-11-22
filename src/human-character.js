@@ -16,7 +16,7 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
-  grey:{bulk:.23,weather:.14},
+  grey:{bulk:.29,weather:.14,shoe:0x726963},
   festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x412e27,weather:.15,bulk:.47,mess:.47},
   festAnni:{palette:[0x534752,0xbc7773,0xd1ac89],hair:0x715443,weather:.13,bulk:.14},
   festKalle:{palette:[0x303a4a,0xd18a55,0xd1a881],hair:0x624337,weather:.11,bulk:.21},
@@ -119,10 +119,12 @@ function personalize(T,lib,id,base,eyeY){
           float fibers=1.+(castNoise(castP*vec3(112.,196.,82.))-.5)*.10;
           float band=(1.-smoothstep(.003,.012,abs(h-.993)))+
             (1.-smoothstep(.004,.012,abs(u-.299)))*step(1.15,h);
-          vec3 fabric=vec3(.112,.139,.137)*fibers*(1.-min(1.,band)*.18);
+          float seam=(1.-smoothstep(.002,.006,abs(u-.296)))*step(1.15,h);
+          vec3 fabric=vec3(.112,.139,.137)*fibers*(1.-min(1.,band)*.18)+seam*vec3(.017,.022,.020);
           float soft=castNoise(castP*vec3(17.,25.,21.));
           vec3 armSkin=vec3(.55,.345,.238)*(.90+.15*soft);
-          diffuseColor.rgb=mix(vec3(.055,.068,.076)*fibers,mix(fabric,armSkin,sleeve),top);
+          vec3 denim=vec3(.036,.054,.075)*(1.+.18*(soft-.5)+.095*sin(castP.y*27.+u*31.));
+          diffuseColor.rgb=mix(denim*fibers,mix(fabric,armSkin,sleeve),top);
         `:''}
         ${grey&&(hair||brow)?`
           float silver=castNoise(castP*vec3(236.,42.,126.));
@@ -707,29 +709,36 @@ export function createHuman(T,id='base'){
     face(t,5.4+role,talk,.032+release*.04,(dj?.106:.04)*(1-gesture)-sip*.07,look);
   }
   const vialGrip=id==='grey'?grip('r'):null,vialWrist=V(),vialPoint=V(),vialQuat=Q();
-  function greyPose(t,{tread=null,look=0,talk=0,show=0,shake=0,spark=0}={}){
+  function greyPose(t,{tread=null,look=0,talk=0,show=0,shake=0,spark=0,laugh=0}={}){
+    const breath=sin(t*1.85),chuckle=laugh*(.48+.52*Math.abs(sin(t*15.7)));
+    const recoil=spark*(.038+.014*cos(t*10.2));
     if(tread)walk(t,tread.distance,tread.route,tread.floor,look,tread.stop,talk);
     else {
-      torso(.010*sin(t*1.17),-.022-.006*shake,.013+.021*show,.045+.087*show,
-        -.04*show+.027*sin(t*1.28),-.018+.013*sin(t*.94),t,look,.06+.106*show);
+      torso(.015*sin(t*1.17)+spark*.033,-.026+.003*breath-.012*chuckle-.008*shake,.013+.021*show-recoil,
+        .045+.093*show-.13*spark+.054*chuckle,-.043*show+.027*sin(t*1.28)+.11*spark,
+        -.02+.015*sin(t*.94)+.027*chuckle,t,look,.032+.16*show-.111*spark+.046*chuckle);
       for(const [j,s] of ['l','r'].entries()){
-        const sign=j===0?1:-1,a=read('foot_'+s);
-        solve(LIMB[s].leg,a.x*1.16,a.y,a.z+sign*.074,sign*.17,0,1);
-        foot('foot_'+s,0,sign*.10);
+        const sign=j===0?1:-1,a=read('foot_'+s),brace=j===0?0:spark;
+        solve(LIMB[s].leg,a.x*(1.07+.13*show)+sign*.044*brace,a.y+.031*sin(Math.PI*brace),
+          a.z+sign*.052-.121*brace,sign*.17,0,1);
+        foot('foot_'+s,-.12*sin(Math.PI*brace),sign*(.09+.11*brace));
       }
     }
     const twitch=shake*sin(t*26.4),raise=show*(.27+.028*cos(t*3.2));
-    vialPoint.set(-.219+.072*show+.054*twitch,1.175+raise+.063*twitch+.014*sin(t*2.4),.323+.115*show+.026*twitch);
+    const stride=tread?sin(tread.distance/1.04*tau)*(1-tread.stop):0;
+    vialPoint.set(-.219+.061*show+.052*twitch+.022*stride,1.175+raise+.063*twitch+.010*breath+.020*chuckle+.019*stride,
+      .321+.127*show+.026*twitch-.032*stride);
     body.localToWorld(vialPoint);
-    vialQuat.setFromEuler(e.set(-Math.PI/2+.24*twitch,actor.rotation.y,.08-.22*twitch));
+    vialQuat.setFromEuler(e.set(-Math.PI/2+.32*twitch+.096*stride,actor.rotation.y,.08-.24*twitch+.063*stride));
     vialGrip.wristAt(vialPoint,vialQuat,vialWrist).applyMatrix4(worldInverse);
     solve(LIMB.r.arm,vialWrist.x,vialWrist.y,vialWrist.z,-.77,-.54,-.48);
     vialGrip.hold(vialQuat,.88);
     if(!tread){
-      solve(LIMB.l.arm,mix(.211,-.073,spark),mix(hipsY-.14,1.41,spark),.071+.343*spark,.84,-.46,-.53);
-      rot('hand_l',.14-.30*spark,.13,.069);curl('l',.38+.31*spark);
+      solve(LIMB.l.arm,mix(.211,-.065,spark),mix(hipsY-.14,1.385,spark)+.084*chuckle,
+        .071+.353*spark+.050*chuckle,.84,-.46,-.53);
+      rot('hand_l',.14-.29*spark,.13-spark*.22,.069+spark*.16);curl('l',.38+.40*spark);
     }
-    face(t,8.21,talk,.046,.074*show,look);
+    face(t,8.21,Math.min(1,talk+chuckle*.13),.04+chuckle*.13,.075*show-.037*spark,look);
   }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);

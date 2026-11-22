@@ -562,7 +562,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function greyCue(kind,at){
     if(!live())return;
     const a=listener(),dx=at.x-a.x,dz=at.z-a.z,d=Math.hypot(dx,dz);
-    const max=kind==='burst'?44:12;
+    const max=kind==='burst'?44:kind==='landing'?15:12;
     if(d>max||Math.abs(at.y-a.y)>6)return;
     const f=(1-d/max)/(1+(d/(kind==='burst'?10:3.2))**2);
     const pan=Math.max(-.86,Math.min(.86,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
@@ -575,6 +575,10 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
         grit(sfx,t+i*.076,.032,.13*f,1360,6270,{attack:.001,pan,wet:.09});
         tone(sfx,t+i*.076,897+i*219,.055,.04*f,{end:513+i*108,attack:.003,pan});
       }
+    }else if(kind==='landing'){
+      tone(sfx,t,114,.15,.24*f,{end:53,attack:.005,pan,wet:.13});
+      grit(sfx,t+.013,.31,.26*f,135,1370,{attack:.008,pan,wet:.10});
+      grit(sfx,t+.075,.36,.119*f,742,3820,{attack:.024,pan});
     }else{
       grit(sfx,t,.16,.88*f,192,5100,{attack:.002,pan,wet:.18});
       grit(sfx,t+.033,.89,.46*f,75,698,{attack:.008,pan,wet:.30});
@@ -582,6 +586,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       for(let i=0;i<5;i++)
         tone(sfx,t+.093+i*.046,1435+i*444,.14,.068*f,{end:1120+i*367,attack:.002,wet:.21,pan});
       grit(sfx,t+.32,1.03,.155*f,880,4710,{attack:.062,pan,wet:.19});
+      grit(sfx,t+.24,.42,.14*f,152,1180,{attack:.027,pan:pan*.62,wet:.24});
     }
   }
   function crownCue(kind,at,voice=''){
