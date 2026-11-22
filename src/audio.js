@@ -237,7 +237,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       if(Math.hypot(at.x-a.x,at.z-a.z)>4.0||Math.abs(at.y+1.4-a.y)>1.95)return;
       const node=ctx.createBufferSource(),pan=ctx.createStereoPanner?.(),amp=gain(sfx,0);
       node.buffer=buffer;if(pan){node.connect(pan);pan.connect(amp);}else node.connect(amp);
-      const trim=clip==='jakeNaeher'?.77:clip==='gardenHannes'?1.25:clip==='bonsSchluchzen'?1.37:1;
+      const trim=clip==='bonsSchluchzen'?1.37:1;
       const entry={id,at,node,pan,amp,level:-1,balance:0,trim};npcVoice=entry;
       node.onended=()=>{
         node.disconnect();pan?.disconnect();amp.disconnect();
