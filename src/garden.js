@@ -12,7 +12,7 @@ import {WC_CUT} from './park-stair.js';
 import {CHAPTER_CUT,CHAPTER_BAY_PATH,chapterContains} from './chapter-layout.js';
 import {UPPER_ENTRY} from './palace-openings.js';
 import {BERG_POOL,WEATHER_ZERO} from './berg-layout.js';
-import {ORANGERY_CENTER,orangeryWing,ORANGERY_PAVILION_X} from './orangery-plan.js';
+import {ORANGERY_CENTER,orangeryWing,ORANGERY_PAVILION_X,orangeryTreeClear} from './orangery-plan.js';
 import {layParkPaths,woodlandDensity} from './park-plan.js';
 import {addGateApproaches} from './garden-approach.js';
 import {addPathVerge} from './path-verge.js';
@@ -48,7 +48,7 @@ export function addGarden(T, scene, world, finish) {
   const beds=planBeds(layout,network,(x,z)=>!noBergProps(x,z,1)&&insidePerimeter(x,z)&&!parkFacadeClearance(x,z,1.03)&&
     Math.hypot(Math.max(0,Math.abs(x)-4.75),z+47)>10.40);
   function tree(x,z,h,species,hero,mapped=false,infill=false,tone){
-    if(noBergProps(x,z,1.1)||festivalClear(x,z,3.7)||greyLaneClear(x,z,1.5))return;
+    if(!orangeryTreeClear(x,z,h)||noBergProps(x,z,1.1)||festivalClear(x,z,3.7)||greyLaneClear(x,z,1.5))return;
     if(z>-18||(!mapped&&x<-21&&z>-88)||parkFacadeClearance(x,z,2)||monumentClear(x,z,1.3))return;
     if(!insidePerimeter(x,z)||distanceToPerimeter(x,z)<(infill?1.78:3.50)||network.edge(x,z)<1.23||beds.atBed(x,z,.25))return;
     if(!mapped&&Math.abs(x)<23&&z>-78)return;
@@ -66,7 +66,7 @@ export function addGarden(T, scene, world, finish) {
   // Selected OSM tree anchors on the near parterre, fit to the compressed
   // plan. Heights/species are illustrative; keep the axis itself clear.
   for(const [x,z,h] of [[-16,-20.4,8.2],[UPPER_ENTRY.treeX,UPPER_ENTRY.treeZ,8.5],[-32.1,-30,11.4],
-    [27.9,-57.8,10.0],[-31.4,-55.1,9.6],[-46.3,-54.8,12.8],[-61.2,-46.1,11.7],[-13.6,-73,10.1]])
+    [27.9,-57.8,10.0],[-31.4,-55.1,9.6],[-46.3,-54.8,12.8],[-13.6,-73,10.1]])
     tree(x,z,h,'lime',null,true);
   // Uneven, view-framing groves. Important gaps stay in front of the
   // Kollegienhaus, at the gates, and along the path to the old axis.
@@ -106,8 +106,10 @@ export function addGarden(T, scene, world, finish) {
     const n=Math.floor(len/11.8);
     for(let i=0;i<n;i++){
       const t=(i+.5)/n,dist=range(8,15),x=e.a[0]+dx*t+dz/len*dist,z=e.a[1]+dz*t-dx/len*dist;
-      if(!insidePerimeter(x,z)&&!parkFacadeClearance(x,z,4.5))
-        sites.push({x,z,h:range(7.4,13.7),species:i%3?'oak':'lime',backdrop:true});
+      if(!insidePerimeter(x,z)&&!parkFacadeClearance(x,z,4.5)){
+        const h=range(7.4,13.7);
+        if(orangeryTreeClear(x,z,h))sites.push({x,z,h,species:i%3?'oak':'lime',backdrop:true});
+      }
     }
   }
   const shrubs=[];

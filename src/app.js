@@ -10,6 +10,7 @@ import {addGarden} from './garden.js';
 import {addPalaceRavens} from './palace-ravens.js';
 import {addGardenMeditation} from './garden-meditation.js';
 import {addGardenGrey} from './garden-grey.js';
+import {addPlazaMarcel} from './plaza-marcel.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
@@ -40,6 +41,7 @@ import {bindNpcDialogue} from './npc-dialogue-ui.js';
 import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
 import {niklasDefense} from './npc-counterfire.js';
+import {npcBoxing} from './npc-boxing.js';
 import {playerVitals} from './player-vitals.js';
 import {weaponPickups} from './weapon-pickups.js';
 import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
@@ -185,6 +187,7 @@ async function start(){
  const weather=addWeatherZero(T,s,world,garden.heightAt,audio);
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
+ const marcel=addPlazaMarcel(T,s,world,floorHeight);
  const grey=addGardenGrey(T,s,world,(x,z)=>garden.heightAt(x,z)??floorHeight(x,z),audio);
  // Optional effects still prefetch, but slow audio cannot hold up Start.
  void audio.preloadWeapons();
@@ -264,6 +267,8 @@ async function start(){
    audio.counterCue('hurt',from);viewmodel.playerHit(Math.sign(x*e[0]+z*e[2]));
    paintHealth();refresh();
  }
+ const boxing=npcBoxing(T,{context:activeLayers,query:geometryQuery,worldAt:localWorld,floorAt:floorHeight,
+   ready:controls,damage:damagePlayer,sound:audio.counterCue});
  const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
    if(id==='niklas')counterfire.reset();
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
@@ -271,10 +276,11 @@ async function start(){
    if(id==='hubert')leavePrison();
    if(id==='bergUdo')audio.berg(bergInside(player.body.position),false);
    names.sample(performance.now(),true);
- },ravens,(npc)=>{
-   if(npc.id!=='niklas'||!counterfire.provoke())return;
-   if(conversation?.pending()?.id==='niklas')conversation.close('interrupt');
-   if(audio.npcTalking('niklas')){audio.stopNpc('niklas');hideCaption();}
+ },ravens,(npc,spec)=>{
+   const provoked=npc.id==='niklas'?counterfire.provoke():spec.kind!=='melee'&&boxing.provoke(npc);
+   if(!provoked)return;
+   if(conversation?.pending()?.id===npc.id)conversation.close('interrupt');
+   if(audio.npcTalking(npc.id)){audio.stopNpc(npc.id);hideCaption();}
    names.clear();refresh();
  });
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,controls,refresh,
@@ -324,7 +330,7 @@ async function start(){
    }
    audio.playNpc(speech.id,speech.at,seconds=>{
      if(!active()||captionId!==id)return;
-     if(!speech.stageDirection)speech.speakFor?.(seconds);
+     if(!speech.stageDirection||speech.reactionOnly)speech.speakFor?.(seconds);
      clearTimeout(captionTimer);captionTimer=setTimeout(hideCaption,seconds*1000+350);
    },undefined,speech.clip);
  }
@@ -652,11 +658,13 @@ async function start(){
      if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
+     if(marcel.update(dt,player.body.position,layer===0))dirty=true;
      if(grey.update(dt,player.body.position,layer===0,c))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      if(tickFundsache(dt))dirty=true;
      geometryQuery.invalidateMoving();
      if(counterfire.update(dt,player.body.position))dirty=true;
+     if(boxing.update(dt,player.body.position))dirty=true;
      if(vitals.tick(dt))paintHealth();
      if(vitals.down){
        pause();document.body.dataset.state='defeated';
@@ -732,7 +740,7 @@ async function start(){
  }
  action.onclick=enterGame;
  $('respawn').onclick=event=>{
-   vitals.reset();paintHealth();counterfire.reset();viewmodel.clearShots();
+   vitals.reset();paintHealth();counterfire.reset();boxing.reset();viewmodel.clearShots();
    player.relocate({...SPAWN,y:floorHeight(SPAWN.x,SPAWN.z)});
    names.clear();enterGame(event);refresh();
  };

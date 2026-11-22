@@ -30,6 +30,7 @@ export function greyShow(){
   let time=0,running=false;
   return {get time(){return time;},get running(){return running;},get beat(){return running?greyBeat(time):'idle';},
     begin(accept){if(!accept||running)return false;running=true;return true;},
+    cancel(){if(!running||time>=GREY_CUES.burst)return false;running=false;time=0;return true;},
     step(dt,emit){
       if(!running||dt<=0||time>=GREY_CUES.still)return false;
       const next=Math.min(GREY_CUES.still,time+dt);

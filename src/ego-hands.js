@@ -44,9 +44,9 @@ export function gripHands(T,specs){
   const ellipsoid=new T.SphereGeometry(1,20,14);
   const neutral=new T.Color(1,1,1),flush=new T.Color(1,.79,.74);
   const poses=specs.map(spec=>{
-    const fist=spec.kind==='fist',pistol=spec.kind==='pistol',bow=spec.kind==='bow',group=new T.Group(),nodes=[],wrists=fist?
+    const fist=spec.kind==='fist',pistol=spec.kind==='pistol',bow=spec.kind==='bow',archive=spec.kind==='archive',group=new T.Group(),nodes=[],wrists=fist?
       [v(0,-.010,.067),v(0,-.010,.067)]:[
-      pistol?v(-.077,-.050,.093):bow?v(-.092,-.044,.089):v(-.107,-.035,.083),v(.055,-.043,.094)];
+      pistol?v(-.077,-.050,.093):bow?v(-.092,-.044,.089):archive?v(-.086,-.035,.081):v(-.107,-.035,.083),v(.055,-.043,.094)];
     group.name='Griffpose · '+spec.kind;
     for(const [hand,w] of wrists.entries()){
       const node=new T.Group();node.position.fromArray(hand===0?spec.fore:spec.grip);
@@ -151,6 +151,18 @@ export function gripHands(T,specs){
         }
         finger([[-.036,-.021,.045],[-.049,-.007,.030],[-.049,.012,.015],[-.043,.031,.000],[-.034,.039,-.013]],
           [.015,.012,.0095],[-1,.18,-.19]);
+      } else if(archive){
+        // Screen-side silhouette: continuous wrist to dorsum. Individual
+        // digits follow the far cheek of this particular wooden shell.
+        form([wrist,[-.060,-.028,.060],[-.036,-.015,.031],[.006,-.018,.008]], [.0215,.025,.014],.78);
+        oval(skin,[-.026,-.015,.021],[.040,.019,.046],-.11);
+        for(let k=0;k<4;k++){
+          const z=-.026+k*.018,r=k===3?.007:.0085,h=[.028,.040,.034,.024][k];
+          finger([[.012,-.021,z+.008],[.030,-.015,z+.004],[.039,.002,z],
+            [.037,h*.78,z-.002],[.026,h,z-.005]],[r+.002,r+.001,r*.89],[1,.3,0]);
+        }
+        finger([[-.037,-.014,.046],[-.045,-.001,.032],[-.046,.015,.014],
+          [-.039,.030,-.004],[-.030,.032,-.019]],[.014,.012,.0085],[-1,.21,-.18]);
       } else {
         const w=spec.kind==='shotgun'?.051:.047;
         form([wrist,[-.072,-.035,.049],[-.039,-.021,.020],[-.023,-.015,.007]], [.024,.025,.012]);

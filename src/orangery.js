@@ -1,20 +1,10 @@
 import {architectureKit} from './architecture-kit.js';
 import {ageMasonry,randomSource,sharedSet} from './surface-detail.js';
-import {ORANGERY_CENTER as C,ORANGERY_END_PIER,orangeryWing} from './orangery-plan.js';
+import {ORANGERY_END_PIER,ORANGERY_HALL as hall,orangeryWingPoints as wing,ORANGERY_SECTIONS as sections} from './orangery-plan.js';
 import {orangeryCarvings} from './orangery-carving.js';
 
-const hall=Array.from({length:4},(_,i)=>[-59.10,C+6-i*4]);
-const wing=(s)=>Array.from({length:8},(_,i)=>orangeryWing(s,i/7)).sort((a,b)=>b[1]-a[1]);
 const eave=6.45,attic=.71;
 const mainSweep={points:[...wing(1).slice(0,-1),...hall,...wing(-1).slice(1)],depth:8.45};
-const sections=[
-  {points:hall,depth:8.45,main:true},
-  ...[-1,1].map(s=>({points:wing(s),depth:8.45})),
-  ...[-1,1].map(s=>{
-    const [x,z]=orangeryWing(s,1);
-    return {points:[[x+.26,z],[x+.26,z+s*7.75]].sort((a,b)=>b[1]-a[1]),depth:9.30,pavilion:s};
-  })
-];
 
 function tileMap(T){
   const canv=document.createElement('canvas');canv.width=canv.height=512;

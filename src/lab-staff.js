@@ -39,10 +39,10 @@ export function labStaff(T,world){
     const t=d.id.length*.66;
     const motion=d.job==='clinic'?npc.chartPose(pencil()):null;
     const a={...d,npc,motion,target:{id:d.id,action:'lab-talk',label:d.name+' ansprechen'},t,acc:0,gaze:0,chat:0,speechLength:0};
-    a.speak=(duration=d.id==='labPrisoner'?5.48:isPatient?1.67:3.4)=>{a.chat=a.speechLength=duration;};
+    a.speak=(duration=d.id==='labPrisoner'?5.48:isPatient?.63:3.4)=>{a.chat=a.speechLength=duration;};
     npc.npcInfo.speak=a.speak;
     pose(a);
-    world.circle(d.x,d.z,.197,p=>npc.alive()&&labLower(p.y)&&!clubLevel(p.y));
+    world.circle(d.x,d.z,.197,p=>npc.atStation()&&labLower(p.y)&&!clubLevel(p.y));
     return a;
   }
   function register(room,root){
@@ -52,8 +52,8 @@ export function labStaff(T,world){
   function pose(a){
     const active=a.chat>0,voice=a.job==='patient'?(()=>{const t=a.speechLength-a.chat;
       if(!active)return 0;
-      if(t>=.22&&t<=.53)return .94*Math.sin(Math.PI*(t-.22)/.31)**.34;
-      return t>=1.01?.22+.34*Math.abs(Math.sin(a.t*20)):0;
+      const phase=limit(t/Math.max(.01,a.speechLength),1);
+      return .94*Math.sin(Math.PI*phase)**.62*(.92+.08*Math.sin(phase*18));
     })():active?.11+.16*Math.abs(Math.sin(a.t*14)):0;
     if(a.seat)a.npc.wardSeat(a.t,a.seat,a.gaze,voice,a.job==='patient');
     else if(a.motion)a.motion(a.t,chart,a.gaze,voice);
@@ -75,7 +75,7 @@ export function labStaff(T,world){
     }
     return changed;
   }
-  const staffAt=p=>actors.get(cell(p))?.find(a=>a.existing&&a.npc.alive());
+  const staffAt=p=>actors.get(cell(p))?.find(a=>a.existing&&a.npc.atStation());
   function target(p,look){
     const a=staffAt(p);if(!a)return null;
     const x=a.x-p.x,z=a.z-p.z,d=Math.hypot(x,z);

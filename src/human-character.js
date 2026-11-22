@@ -16,6 +16,7 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
+  marcel:{palette:[0x524737,0x628275,0xc69354],hair:0x563a2c,weather:.14},
   grey:{bulk:.29,weather:.14,shoe:0x726963},
   festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x412e27,weather:.15,bulk:.47,mess:.47},
   festAnni:{palette:[0x534752,0xbc7773,0xd1ac89],hair:0x715443,weather:.13,bulk:.14},
@@ -40,7 +41,7 @@ const wear={
   niklas:{skin:0xf7ece3},
   labAuer:{weather:.12},labHedwig:{weather:.08},labSepp:{weather:.27},
   labPrisoner:{palette:[0x53534a,0x8c795a,0xa18c65],hair:0x53483f,weather:.49},
-  labPatient:{palette:[0x626e65,0x899e94,0xc1cbb4],hair:0x998470,weather:.25},
+  labPatient:{hair:0xd9b770,shoe:0x26272a,weather:.12},
   labOrderly:{palette:[0x333d3c,0x536b61,0xb6b49a],hair:0x433931,weather:.11},
   guestBruno:{palette:[0x454b52,0x757460,0xc7ba9d],hair:0xbbb5a6,weather:.17},
   guestMarlene:{palette:[0x4b4b52,0x566477,0xd8cba9],hair:0x6c4e3b,weather:.09},
@@ -78,16 +79,17 @@ function personalize(T,lib,id,base,eyeY){
     field=id==='hubert'&&/^(?:Cloth|Shoes|Pocket|Field|LinenBand|Helmet)/.test(m.name),
     formal=cloth&&(id==='niklas'||id==='orbPriest'),staff=cloth&&id.startsWith('lab'),
     copperHair=id==='niklas'&&(hair||brow),freckles=id==='niklas'&&skin,
-    blondHair=id==='bergFritz'&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,jakeScalp=id==='gardenHannes'&&skin,
+    blondHair=(id==='bergFritz'||id==='labPatient')&&(hair||brow),bonsShirt=id==='bergFritz'&&cloth,jakeScalp=id==='gardenHannes'&&skin,
     ritual=/^(?:Ritual|LabCoat|Apron|Visitor)/.test(m.name),
     hoodie=id==='festZwanni',team=cloth&&id.startsWith('fest'),
-    grey=id==='grey',
+    grey=id==='grey',bies=id==='labPatient'&&cloth,
     visitorPalette=cloth&&!team?p.palette:null,vec=hex=>new T.Color(hex).toArray().map(x=>x.toFixed(4)).join(',');
   const visitorColors=visitorPalette?.map(vec);
   if(skin&&p.skin)m.color.multiply(new T.Color(p.skin));
   if(p.cloth&&cloth)m.color.multiply(new T.Color(p.cloth));
   if(p.hair&&(hair||brow))m.color.multiply(new T.Color(p.hair));
   if(p.shoe&&/^Shoes/.test(m.name))m.color.multiply(new T.Color(p.shoe));
+  if(id==='labPatient'&&/^Shoes/.test(m.name)){m.color.setHex(0x222328);m.roughness=.61;}
   if(p.coat&&/^LabCoat/.test(m.name))m.color.multiply(new T.Color(p.coat));
   if(p.insignia&&/^InsigniaBlue/.test(m.name))m.color.setHex(p.insignia);
   if(hair||brow){
@@ -185,6 +187,21 @@ function personalize(T,lib,id,base,eyeY){
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(${vec(p.bodice)})*(.62+shade*1.30),lining*cut);
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.53,.32,.16),piping*(.53+.41*stitch));
           `:''}
+        `:''}
+        ${bies?`
+          float height=castP.y,ax=abs(castP.x);
+          float top=smoothstep(.89,1.073,height);
+          float fold=castNoise(castP*vec3(57.,27.,34.));
+          float fiberX=sin(castP.x*1360.+castP.z*510.);
+          float fiberY=sin(height*1270.+castP.x*120.);
+          float weave=fiberX*fiberY*(1.-smoothstep(.001,.006,castD));
+          float front=smoothstep(.075,.119,castP.z);
+          float placket=front*(1.-smoothstep(.003,.008,abs(ax-.013)))*smoothstep(1.07,1.15,height)*(1.-smoothstep(1.43,1.46,height));
+          float lap=(1.-smoothstep(.003,.010,abs(ax-(.044+(1.45-height)*.35))))*smoothstep(1.34,1.39,height)*front;
+          float buttons=front*exp(-pow((ax-.002)*310.,2.))*exp(-pow((fract((height-1.04)*14.)-.5)*7.,2.))*smoothstep(1.09,1.17,height)*(1.-smoothstep(1.39,1.44,height));
+          vec3 shirt=vec3(.039,.043,.052)*(1.+.23*fold+.13*weave);
+          vec3 pants=vec3(.025,.026,.029)*(1.+.19*fold+.09*weave);
+          diffuseColor.rgb=mix(pants,shirt,top)+vec3(.018,.018,.024)*(placket*.58+lap*.42+buttons*.62);
         `:''}
         ${team?`
           float yy=castP.y, xx=abs(castP.x);
@@ -1116,7 +1133,28 @@ export function createHuman(T,id='base'){
     }
     face(t,1.16,grab*(.53+.34*Math.abs(tremor))*(1-.52*fold),.06,0,0,.33*fold);
   }
-  const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting&&!npcInfo.questBusy;
+  function boxPose(t,distance,pace,guard,lead,reach){
+    const w=distance/1.03*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
+    torso(.016*sin(w)*pace,-.026-.044*guard+.016*cos(w*2)*pace,
+      .026*guard+.059*reach*guard,.018+.145*guard+.125*reach*guard,
+      .14*guard-.42*turn+.12*sin(w)*pace,-.055*turn,t,0,-.06*guard);
+    for(const [j,s] of ['l','r'].entries()){
+      const sign=j===0?1:-1,phase=w+j*Math.PI,a=read('foot_'+s);
+      solve(LIMB[s].leg,a.x+sign*.020*guard,a.y+Math.max(0,cos(phase))*.086*pace,
+        a.z+sign*.091*guard+sin(phase)*.222*pace,sign*.21,0,1);
+      foot('foot_'+s,-cos(phase)*.132*pace,sign*.13*guard);
+      const jab=sign===lead?reach*guard:0;
+      const x=mix(sign*.235,sign*(.176-.072*jab),guard);
+      const y=mix(hipsY-.145,1.38+.014*pulse+sign*.035+.047*jab,guard);
+      const z=mix(.035-.11*sign*sin(w)*pace,.252+.342*jab,guard);
+      solve(LIMB[s].arm,x,y,z,sign*.86,-.46,-.31);
+      neutralHand(s);rot('hand_'+s,.03-.34*jab,sign*(.055+.48*guard),sign*(.045-.27*guard));
+      curl(s,.36+1.62*guard);
+      for(let k=1;k<=3;k++)rot('thumb_0'+k+'_'+s,.14*guard,sign*.17*guard);
+    }
+    face(t,2.34,Math.max(0,reach)*.15,.24*guard,0,0,0);
+  }
+  const controllable=()=>!npcInfo||npcInfo.alive&&!npcInfo.reacting&&!npcInfo.questBusy&&!npcInfo.hostile;
   const alive=()=>!npcInfo||npcInfo.alive;
   function costumeDepth(x,y,side=1){
     // One-time fittings against the bind-space garment, never per-frame raycasts.
@@ -1136,6 +1174,8 @@ export function createHuman(T,id='base'){
   }
   pose(0,0,0,0,0,0,.2);
   const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
+    boxPose,atStation:()=>alive()&&!npcInfo?.hostile,
+    resetBoxPose(){pose(0,0,0,0,0,0,.2);neutralHand('l');neutralHand('r');},
     resetCounterHands(){if(counterMount){neutralHand('l');neutralHand('r');}},
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.

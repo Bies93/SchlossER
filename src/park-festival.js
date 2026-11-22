@@ -97,7 +97,7 @@ export function addParkFestival(T,scene,world,height){
     if(i===0)rig.npcInfo.listen=on=>{entry.listening=on;};
     festivalOutfit(T,rig,id,m);
     rig.festivalPose(entry.time,i,0);
-    world.circle(C.x+x,C.z+z,.247,p=>rig.alive()&&Math.abs(p.y-ground)<1.3);
+    world.circle(C.x+x,C.z+z,.247,p=>rig.atStation()&&Math.abs(p.y-ground)<1.3);
     return entry;
   });
   const darts=new T.Group();darts.userData.noSceneQuery=true;root.add(darts);
@@ -135,7 +135,7 @@ export function addParkFestival(T,scene,world,height){
     const step=stepClock;stepClock=0;
     const waiting=cast[0].listening||cast[0].speech>0;
     const previousPhase=throwClock%12%3.2/3.2;
-    if(!waiting||(previousPhase>=.54&&previousPhase<.65))throwClock+=step;
+    if(cast[0].rig.atStation()&&(!waiting||(previousPhase>=.54&&previousPhase<.65)))throwClock+=step;
     const seq=throwClock%12,index=Math.floor(seq/3.2),phase=(seq%3.2)/3.2;
     for(const a of cast){
       if(!a.rig.controllable())continue;
@@ -153,17 +153,18 @@ export function addParkFestival(T,scene,world,height){
       a.rig.festivalPose(a.time,a.i,index<3&&!waiting?phase:0,gaze,pTalk,a.motion);
     }
     const ann=cast[1],rudi=cast[3];
-    cloth.visible=ann.rig.alive()&&ann.talk<.22&&(ann.motion?.clean??0)>.14;
+    cloth.visible=ann.rig.atStation()&&ann.talk<.22&&(ann.motion?.clean??0)>.14;
     if(cloth.visible){
       bHand.getWorldPosition(cloth.position);
       cloth.position.x+=.017;cloth.position.y-=.024;cloth.rotation.y=ann.actor.rotation.y+.16*Math.sin(ann.time*2.1);
     }
-    mug.visible=rudi.rig.alive();
+    mug.visible=rudi.rig.atStation();
     if(mug.visible){
       rHand.getWorldPosition(mug.position);mug.position.x-=.071;mug.position.y-=.061;
       mug.rotation.set((rudi.motion?.sip??0)*(1-rudi.talk)*.63,Math.PI,.045);
     }
     if(!cast[0].rig.alive()){darts.visible=false;return true;}
+    if(!cast[0].rig.atStation()){pencil.visible=false;return true;}
     const turn=Math.floor(throwClock/12),s=turn*3+index;
     if(index===0&&clearedTurn!==turn){
       clearedTurn=turn;marks.length=0;lane.display(marks);

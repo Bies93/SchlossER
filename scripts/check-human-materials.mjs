@@ -32,6 +32,10 @@ for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)]){
   if(id==='festZwanni')assert.ok(cloth.some(s=>s.includes('float teeth=')&&!s.includes('float seamPhase=')));
   if(id==='festAnni')assert.ok(cloth.some(s=>s.includes('float jersey=')&&!s.includes('float seamPhase=')));
   if(id==='grey')assert.ok(greyScalp&&hair.length&&hair.every(o=>!o.visible),'Grey ersetzt den alten Kurzhaarschnitt');
+  if(id==='labPatient'){
+    assert.ok(cloth.some(s=>s.includes('float placket=')&&s.includes('vec3 pants=')),'Bies trägt Hemd und Hose mit separaten dunklen Stoffen');
+    assert.ok(hair.some(o=>o.visible&&o.material.customProgramCacheKey().includes('labPatient')),'Bies hat den eigenen Blondton');
+  }
   if(id==='clubNiko')assert.ok(hair.some(o=>o.visible),'Nikos geteilter GLB-Haarschnitt bleibt unverändert');
   if(id==='niklas'){
     const path=(d,out)=>{out.x=0;out.z=d;out.yaw=0;},idle=()=>rig.walk(.7,0,path,0,0,1);

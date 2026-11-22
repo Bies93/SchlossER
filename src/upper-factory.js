@@ -559,7 +559,7 @@ export function dressUpperFactory(T,parent,world,F,bays,{roof,gardenWidth,garden
       actor.position.set(x,rig.groundedY(F),z);actor.rotation.y=cfg.yaw;
       rig.shadow(false);room.add(actor);
       npcInfo.shadow=contactShadow(T,room,x,F+.007,z,.70,.65);
-      world.circle(x,z,.21,()=>rig.alive());
+      world.circle(x,z,.21,rig.atStation);
       const t=cfg.room*.77+.8;
       rig.factoryPose(t,cfg.role);
       let chat=0;

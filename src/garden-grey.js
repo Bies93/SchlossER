@@ -5,7 +5,7 @@ import {GREY_AT,GREY_SITE,GREY_CONTROLS,GREY_CUES,ease,greyShow} from './grey-pl
 import {greyScorch,greyAftermath,greyCrewNeck,greyFX,greyHair,greyVial} from './grey-effects.js';
 
 export function addGardenGrey(T,scene,world,height,audio){
-  const root=new T.Group();root.name='Orangerie · Grey';scene.add(root);
+  const root=new T.Group();root.name='Orangerie · Chris';scene.add(root);
   const rig=createHuman(T,'grey'),{actor,npcInfo}=rig;
   root.add(actor);
   actor.position.set(GREY_AT.x,rig.groundedY(height(GREY_AT.x,GREY_AT.z)),GREY_AT.z);
@@ -16,6 +16,7 @@ export function addGardenGrey(T,scene,world,height,audio){
   const scorch=greyScorch(T,actor,vial.group);
   const shadow=contactShadow(T,root,actor.position.x,height(actor.position.x,actor.position.z)+.009,actor.position.z,.85,.72);
   npcInfo.shadow=shadow;
+  const home={position:actor.position.clone(),yaw:GREY_AT.yaw,shadow:shadow.position.clone()};
   const beats=greyShow(),route=new T.CubicBezierCurve3(
     ...[[GREY_AT.x,GREY_AT.z],...GREY_CONTROLS,[GREY_SITE.x,GREY_SITE.z]].map(([x,z])=>new T.Vector3(x,0,z)));
   const direction=new T.Vector3(),point=new T.Vector3(),hit=new T.Vector3(),spot=new T.Vector3(),torsoAt=new T.Vector3();
@@ -29,10 +30,15 @@ export function addGardenGrey(T,scene,world,height,audio){
   }
   npcInfo.speak=(d=1.38)=>{speech=d;};
   npcInfo.listen=value=>{listening=value;};
-  world.circle(GREY_AT.x,GREY_AT.z,.26,p=>!beats.running&&npcInfo.alive&&Math.abs(p.y-actor.position.y)<1.25);
+  npcInfo.interruptRoutine=()=>{
+    if(!beats.cancel())return null;
+    npcInfo.existing=false;arrivalYaw=null;speech=0;listening=false;
+    vial.update(0,0);return home;
+  };
+  world.circle(GREY_AT.x,GREY_AT.z,.26,p=>!beats.running&&npcInfo.alive&&!npcInfo.hostile&&Math.abs(p.y-actor.position.y)<1.25);
   rig.greyPose(0);
   function accept(){
-    if(!npcInfo.alive||!beats.begin(true))return false;
+    if(!npcInfo.alive||npcInfo.hostile||!beats.begin(true))return false;
     npcInfo.existing=true;
     speech=.89;
     audio.playNpc('grey',actor.position,seconds=>{speech=seconds;},undefined,'greyGiggle',()=>npcInfo.alive);
@@ -87,7 +93,7 @@ export function addGardenGrey(T,scene,world,height,audio){
       teardown=true;vial.group.visible=false;fx.vial(0,vial.group,false,false);audio.stopNpc('grey');
       return near;
     }
-    if(!beats.running&&!near){fx.vial(0,vial.group,false,false);return false;}
+    if(npcInfo.hostile||!beats.running&&!near){fx.vial(0,vial.group,false,false);return false;}
     acc+=dt;
     if(acc<.039)return false;
     const step=acc;acc=0;idle+=step;

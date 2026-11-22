@@ -3,7 +3,8 @@
 const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
 const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
-  grey:{name:'Grey',template:'clubNiko',line:'Soll ich dir was zeigen?',choices:[
+  marcel:{name:'Marcel',template:'guestJona',line:'Ich warte auf Bestimmung!'},
+  grey:{name:'Chris',template:'clubNiko',line:'Soll ich dir was zeigen?',choices:[
     {label:'Ja, zeig!',reply:{action:'grey-show'}},{label:'Verpiss dich!'}
   ]},
   festZwanni:{name:'Zwanni',template:'guestJona',line:'Ich bin dein Gottkönig! Aahhh!',choices:[
@@ -56,9 +57,9 @@ export const NPCS={
   niklas:{name:'Niklas',line:'Hi, hast du meine Hoden gesehen?',choices:[
     {label:'Nein, Eierloser Spast!',reply:niklasReply},{label:'Was? Nein?!',reply:niklasReply}
   ]},
-  labAuer:{name:'Dr. Ernst Auer',line:'In der Akte steht „Behandlung“. So heißt es hier.',existing:true},
+  labAuer:{name:'Dr. Ernst Auer',line:'Seit Bies hier ist, terrorisieren uns Raben!',existing:true},
   labPrisoner:{name:'Kilian Beck · Zelle C',template:'guestBruno',line:'Ich hab heimlich alkoholfreies Bier getrunken. Jetzt sitz ich dafür lebenslänglich.'},
-  labPatient:{name:'Tobias Lang · Patient',template:'guestJona',line:'Aaah! Aufhören!'},
+  labPatient:{name:'Tobias Bies',template:'guestJona',line:'Tobias Bies schreit.',stageDirection:true,reactionOnly:true},
   labOrderly:{name:'Greta Lang · Nachtdienst',template:'guestRike',line:'Ich sortiere nur die Akten. Nach Ursachen sortieren wir hier nicht.'},
   labHedwig:{name:'Hedwig Kern',line:'Herkunft? Für die neue Akte zählt nur der neue Name.',existing:true},
   labSepp:{name:'Sepp Moser',line:'Fränkische Suppe. Auf dem Speiseplan steht jetzt bayerisch.',existing:true},

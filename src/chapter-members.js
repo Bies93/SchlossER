@@ -113,7 +113,7 @@ export function chapterMembers(T,rooms,world,F,isBelow){
     const shadow=npcInfo.shadow=contactShadow(T,room,x,(kind==='chair'?F+.319:F+.014),z,.67,.64);
     const state={rig,actor,shadow,room,kind,x,z,yaw,t:i+1,cycle:9,say:0,glance:0,acc:0};
     npcInfo.speak=(s=3.4)=>{state.say=Math.max(state.say,s);};
-    const collides=p=>isBelow(p)&&Math.abs(p.y-F)<.72&&rig.alive();
+    const collides=p=>isBelow(p)&&Math.abs(p.y-F)<.72&&rig.atStation();
     if(kind==='chair'){
       state.collider={x,z,ux:0,uz:-1,half:.226,depth:.232};
       world.movingBox(x-.4,z-.45,turn+.42,z+.45,state.collider,collides);

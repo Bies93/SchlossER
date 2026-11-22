@@ -568,13 +568,13 @@ export function dressUpperPlaza(T,parent,world,F,bays,{roof,Z,squareWidth,square
           out.x=x+.76*Math.cos(k);out.z=z+1.35*Math.sin(k);out.yaw=Math.atan2(-.76*Math.sin(k),1.35*Math.cos(k));out.curve=true;
           return out;
         };
-        world.movingBox(x-1.1,z-1.57,x+1.1,z+1.57,pose,()=>rig.alive());
+        world.movingBox(x-1.1,z-1.57,x+1.1,z+1.57,pose,rig.atStation);
         Object.assign(state,{track,pose,point,lookAhead});
         track(0,point);Object.assign(pose,{x:point.x,z:point.z});
         actor.position.x=shadow.position.x=point.x;actor.position.z=shadow.position.z=point.z;actor.rotation.y=point.yaw;
         rig.walk(state.t,0,track,F,0,0);
       }else{
-        world.circle(x,z,.195,()=>rig.alive());
+        world.circle(x,z,.195,rig.atStation);
         if(c.mode==='desk')rig.deskWork(state.t,'registry');
         else rig.visitorPose(state.t,c.mode==='sit'?'rest':'prayer',c.mode==='sit'?.526:0);
       }

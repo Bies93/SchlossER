@@ -24,7 +24,7 @@ function install(T,root,world,d,floor,eligible){
   actor.position.set(d.x,rig.groundedY(floor),d.z);actor.rotation.y=d.yaw;root.add(actor);
   rig.shadow(false);
   const radius=d.seat?.205:.188;
-  world.circle(d.x,d.z,radius,p=>rig.alive()&&eligible(p));
+  world.circle(d.x,d.z,radius,p=>rig.atStation()&&eligible(p));
   // For seated poses the feet, not the torso, set the contact patch.
   npcInfo.shadow=contactShadow(T,root,d.x+Math.sin(d.yaw)*(d.seat?.34:0),floor+.008,d.z+Math.cos(d.yaw)*(d.seat?.34:0),
     d.seat?.60:.72,.70);

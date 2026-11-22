@@ -54,14 +54,15 @@ export function npcFocus(T,scene,camera,body,element,visibleLayers,query){
     show(null);return null;
   }
   function target(){
-    if(!selected?.alive||!selected.line||selected.existing)return null;
-    return selected.target??={id:selected.id,action:'npc-talk',label:'Ansprechen'};
+    if(!selected?.alive||!selected.line||selected.existing||selected.hostile)return null;
+    return selected.target??={id:selected.id,action:'npc-talk',label:selected.reactionOnly?'Reaktion prüfen':'Ansprechen'};
   }
   function use(id,now){
     const ent=selected;
-    if(ent?.id!==id||!ent.alive||!ent.line||ent.existing||now<(cooling.get(id)??0))return null;
+    if(ent?.id!==id||!ent.alive||!ent.line||ent.existing||ent.hostile||now<(cooling.get(id)??0))return null;
     cooling.set(id,now+2700);ent.speak?.();
     return {id:ent.id,name:ent.name,line:ent.line,at:ent.actor.position,choices:ent.choices,
+      stageDirection:ent.stageDirection,reactionOnly:ent.reactionOnly,
       speakFor:ent.speak,listen:ent.listen,react:ent.react,alive:()=>ent.alive};
   }
   return {sample,target,use,clear(){next=0;show(null);}};

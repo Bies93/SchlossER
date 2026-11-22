@@ -83,6 +83,7 @@ export function addPalaceLab(T,root,world,M,moosfunk){
     labFloorPatch:plain(0x747b6f,.91,sharedSet(T,'plaster',256)),
     infCloth:plain(0x667b75,1,{...fabric,side:T.DoubleSide}),infClothPale:plain(0xa8ad91,1,{...fabric,side:T.DoubleSide}),
     infSheet:plain(0xb3b19a,.94,fabric),infPad:plain(0x4f6054,.77,fabric),
+    biesLeather:plain(0x652f32,.68,{...enamel,normalScale:new T.Vector2(.29,.29)}),
     wardSteel:plain(0x9baba9,.37,{metalness:.61,normalMap:enamel.normalMap,normalScale:new T.Vector2(.22,.22)}),
     wardEnamel:plain(0xb8bcb0,.51,{...enamel,metalness:.12,normalScale:new T.Vector2(.39,.39)}),
     wardGlass:plain(0x425c53,.27,{metalness:.20}),

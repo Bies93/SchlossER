@@ -248,7 +248,7 @@ export function addBergTavern(T,scene,world){
     a.position.set(P.x+x,rig.groundedY(F),P.z+z);a.rotation.y=yaw;root.add(a);
     const bellows=dress(T,rig,mat,vest,trim,i);
     rig.npcInfo.shadow=contactShadow(T,root,P.x+x,F+.011,P.z+z,.74,.66);
-    world.circle(P.x+x,P.z+z,.245,()=>rig.alive());
+    world.circle(P.x+x,P.z+z,.245,rig.atStation);
     let prop,handR,handL;
     if(i===0||i===1||i===3){
       prop=new T.Group();prop.userData.noSceneQuery=true;root.add(prop);
@@ -276,7 +276,7 @@ export function addBergTavern(T,scene,world){
     if(!preview)waterTime.value+=step;
     for(const [i,a] of cast.entries()){
       if(preview&&i!==0)continue;
-      if(a.prop)a.prop.visible=a.rig.alive()&&!(preview&&i===0);
+      if(a.prop)a.prop.visible=a.rig.atStation()&&!(preview&&i===0);
       if(!a.rig.controllable())continue;
       a.t+=step;a.speech=Math.max(0,a.speech-step);
       const crying=(performance.now()-a.weepAt)*.001,

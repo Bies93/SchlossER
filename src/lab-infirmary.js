@@ -1,12 +1,13 @@
 import {LAB,LAB_CELLS} from './lab-layout.js';
 import {wardEvidence} from './lab-ward-evidence.js';
 import {WARD_CHAIR,WARD_CHART} from './lab-ward-layout.js';
+import {biesPerformanceBoard} from './lab-bies-display.js';
 
 const {floor:Y,ceiling:C}=LAB,pi=Math.PI;
 export const INFIRMARY={name:'Behandlungsstation',palette:['labTileWall','green'],tiles:['concrete','labFloorPatch'],tile:.71};
 export const INFIRMARY_LIGHTS=[
   [-18.96,41.93,0xd2b69c,11,6.8],[-23.44,45.25,0xa2bfad,15.5,7.4],
-  [-16.79,46.30,0xc4d5cb,15,6.9],[-24.02,49.90,0xe5bca5,14.5,5.9],
+  [-16.79,46.30,0xc4d5cb,15,6.9],[-24.02,49.90,0xffd8b5,22,6.1],
   [-18.44,51.3,0xe3d8b9,17,6.8]
 ];
 
@@ -199,15 +200,17 @@ export function addInfirmary(T,kit){
     for(const side of [-1,1])rod('gasket',p(side*.22,1.19,.238),p(side*.23,.20,.28),.017);
   }
   function screenChair(x,z,other=false){
-    const p=point(x,z,(other?-1:1)*pi*.5),block=(m,a,b,l,h,c,d)=>frameBox(m,p,a,b,l,h,c,d);
+    const angle=(other?-1:1)*pi*.5,p=point(x,z,angle),block=(m,a,b,l,h,c,d)=>frameBox(m,p,a,b,l,h,c,d);
+    const shell=(m,u,y,d,w,h,s)=>{const [X,,Z]=p(u,y,d);put(m,X,y,Z,w,h,s,angle);};
+    const leather=other?'infPad':'biesLeather';
     block('iron',-.478,.478,.02,.14,-.66,other?.54:.187);
     block('gunmetal',-.36,.36,.14,.56,-.43,other?.37:.205);
-    block('infPad',-.327,.327,.55,.651,-.45,other?.367:.219);
+    shell(leather,0,.600,other?-.040:-.115,.654,.102,other?.813:.666);
     block(other?'rust':'green',-.346,.346,.59,1.68,-.46,-.347);
-    block('infPad',-.29,.29,.707,1.60,-.356,-.274);
-    block('infPad',-.19,.19,1.493,1.747,-.345,-.204);
+    shell(leather,0,1.151,-.316,.58,.89,.084);
+    shell(leather,0,1.623,-.275,.38,.254,.143);
     evidence.surface(other?'cloth':'wipe',(u,v)=>p((u-.5)*.571,.655,other?-.035-(v-.5)*.655:-.097-(v-.5)*.589));
-    evidence.surface('spray',(u,v)=>p((u-.5)*.506,.75+v*.66,-.27));
+    if(other)evidence.surface('spray',(u,v)=>p((u-.5)*.506,.75+v*.66,-.27));
     for(const a of [-.326,.326]){
       rod('edge',p(a,.52,.262),p(a,.914,.262),.027);
       rod('gunmetal',p(a,.914,-.27),p(a,.911,.304),.043);
@@ -216,7 +219,7 @@ export function addInfirmary(T,kit){
       fastener(f,0,1.41,-.472,.018,true);
       rod('wardSteel',p(a,.911,-.253),p(a,.911,-.206),.043);
       rod('wardSteel',p(a,.911,.267),p(a,.911,.307),.041);
-      block('infPad',a-.038,a+.038,.906,.955,-.201,.253);
+      shell(leather,a,.930,.026,.077,.047,.454);
       rod('cellTick',p(a-.033,.952,-.172),p(a-.033,.952,.224),.004);
       rod('cellTick',p(a+.033,.952,-.172),p(a+.033,.952,.224),.004);
       for(const d of [-.50,other?.309:.111]){
@@ -237,6 +240,20 @@ export function addInfirmary(T,kit){
     }else{
       block('wardSteel',-.266,.266,.180,.229,.183,.204);
       for(const u of [-.21,.21])rod('iron',p(u,.205,.205),p(u,.205,.224),.014);
+      // Upholstery and trim only; the old apparatus remains a disconnected prop.
+      for(const s of [-1,1]){
+        rod('brass',p(s*.302,.735,-.281),p(s*.302,1.492,-.281),.010);
+        rod('edge',p(s*.412,.134,-.588),p(s*.412,.134,.152),.011);
+        for(const q of [-.522,-.23,.086])rod('wardSteel',p(s*.431,.135,q),p(s*.431,.147,q),.025);
+        for(let j=0;j<23;j++){
+          const y=.760+j*.030;
+          rod('cellTick',p(s*.259,y,-.272),p(s*.259,y+.014,-.273),.0026);
+        }
+      }
+      for(let j=0;j<5;j++)shell('biesLeather',0,.81+j*.137,-.265,.46,.121,.039);
+      for(const d of [-.385,.176])rod('copper',p(-.291,.648,d),p(.291,.648,d),.005);
+      const [X,,Z]=p(0,1.79,-.242);
+      plaque('BIES / 001',['SONDERSERIE'],X,1.805,Z,.41,.132,angle,'cream',0,false);
     }
     // Blank, closed housings and a cut service lead suggest a decommissioned
     // apparatus without depicting operating circuitry or active effects.
@@ -305,8 +322,12 @@ export function addInfirmary(T,kit){
   plaque('BEHANDLUNG B',['GERÄTE ABGESCHALTET'],x1-.036,1.96,43.65,1.11,.53,-pi/2,'red');
 
   screenChair(WARD_CHAIR.x,WARD_CHAIR.z);
-  plaque('ANWENDUNGSRAUM',['STILLGELEGT / NICHT BENUTZEN'],x0+.039,2.06,48.04,1.34,.54,pi/2,'red');
-  monitor(-26.41,50.31,{label:'STROM GETRENNT',green:false});
+  biesPerformanceBoard(T,kit,x0+.086,Y+2.263,49.55);
+  plaque('BIES-PRÜFSTAND',['MESSLATTE DEFEKT.','BIES HAT SIE ÜBERTROFFEN.'],x0+.044,1.93,47.40,1.22,.59,pi/2,'red');
+  monitor(-26.41,50.31,{label:'BIES / KANAL 01',green:false});
+  plaque('RABENPROTOKOLL',['SEIT BIES: 23 ZWISCHENFÄLLE','HAUPTVERDÄCHTIG: DER HIMMEL.'],x0+.048,1.90,51.23,1.02,.48,pi/2,'cream');
+  for(const z of [48.46,50.46])line('copperDark',-26.09,.015,z,-23.85,.015,z,.006);
+  for(const x of [-26.09,-23.85])line('copperDark',x,.015,48.46,x,.015,50.46,.006);
   stand(WARD_CHART.x,WARD_CHART.z,.88,.66,WARD_CHART.top,'gunmetal');
   put('fileKraft',WARD_CHART.pageX,.952,WARD_CHART.pageZ,.258,.012,.268);
   props.folio(WARD_CHART.pageX,Y+.961,WARD_CHART.pageZ,.225,.239,pi,6,{loose:true,thickness:.009});
@@ -314,6 +335,9 @@ export function addInfirmary(T,kit){
   line('gunmetal',WARD_CHART.pageX-.028,.983,WARD_CHART.pageZ+.120,
     WARD_CHART.pageX+.028,.983,WARD_CHART.pageZ+.120,.005);
   instrumentTray(-23.47,.950,49.96,.370,.192,pi*.96);
+  plaque('PRÜFBOGEN T. BIES',['ERGEBNIS: ZU GUT FÜR DIE AKTE'],WARD_CHART.x,.894,WARD_CHART.z-.340,.464,.117,pi,'cream',0,false);
+  bottle(-23.80,.951,50.358,3,pi);
+  bottle(-23.64,.951,50.393,1,pi);
   obj('wardEnamel',panShape,-23.12,Y+.948,50.003,.66,.84,.66);
   put('infSheet',-23.74,.951,50.020,.186,.014,.172,.08);
   evidence.skull(-23.74,.961,50.020,1.92);

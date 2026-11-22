@@ -52,7 +52,7 @@ export function addGardenMeditation(T,scene,world,heightAt){
   glasses(T,rig);
   const p=place(0,.030,.085);
   npcInfo.shadow=contactShadow(T,seat,...p,1.04,.77);
-  world.circle(x,z,.34,p=>Math.abs(p.y-y)<.65&&rig.alive());
+  world.circle(x,z,.34,p=>Math.abs(p.y-y)<.65&&rig.atStation());
   let t=3.11,acc=0,say=0,attention=0,glance=0,listening=false;
   npcInfo.listen=on=>{listening=on;};
   npcInfo.speak=(seconds=1.65)=>{say=seconds?seconds+.20:0;};
