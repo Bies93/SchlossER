@@ -299,12 +299,18 @@ export function createHuman(T,id='base'){
   const proto=lib.models.get(id);if(!proto)throw Error('Unknown human: '+id);
   const actor=new T.Group(),body=clone(proto),bones=new Map(),faces=[],meshes=[];
   const style=wear[id],bulk=style?.bulk??(id==='gardenHannes'?1:0);
+  let greyScalp=null;
   actor.name=id;actor.add(body);body.scale.multiplyScalar(proto.userData.size??1);
   const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
   body.traverse(o=>{
     if(id.startsWith('berg')&&/^(Insignia|Bortenstreifen|Messinganhänger|Besatz|Stoff)/.test(o.name))o.visible=false;
     if(o.isBone)bones.set(o.userData.name??o.name,o);
     if(o.isSkinnedMesh){
+      if(id==='grey'){
+        const type=o.material.name??'';
+        if(/^Hair/.test(type)){o.visible=false;return;}
+        if(/^Skin/.test(type))greyScalp=o.geometry;
+      }
       if(bulk){
         const type=o.material.name??'';
         if(id==='gardenHannes'&&/^Hair/.test(type)){o.visible=false;return;}
@@ -1038,7 +1044,7 @@ export function createHuman(T,id='base'){
       mount.quaternion.copy(bind.axis).invert();mount.position.copy(bind.at).negate().applyQuaternion(mount.quaternion);
       bones.get(name).add(mount);return mount;
     },
-    restPoint(name){return read(name).clone();},costumeDepth,
+    restPoint(name){return read(name).clone();},costumeDepth,greyScalp,
     joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
   if(npcInfo)npcInfo.rig=rig;
   return rig;

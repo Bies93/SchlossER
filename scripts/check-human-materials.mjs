@@ -17,7 +17,7 @@ installHumans(T,scene);
 
 let checked=0;
 for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)]){
-  const {actor}=createHuman(T,id),cloth=[];
+  const {actor,greyScalp}=createHuman(T,id),cloth=[],hair=[];
   actor.traverse(o=>{
     if(!o.isSkinnedMesh)return;
     const {material}=o;
@@ -25,11 +25,14 @@ for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)]){
     assert.doesNotThrow(()=>material.onBeforeCompile(shader),
       'Shader für '+id+' · '+material.name+' kann nicht erzeugt werden');
     if(/^Cloth/.test(material.name))cloth.push(shader.fragmentShader);
+    if(/^Hair/.test(material.name))hair.push(o);
     checked++;
   });
   if(id==='guestJona')assert.ok(cloth.some(s=>s.includes('float seamPhase=')));
   if(id==='festZwanni')assert.ok(cloth.some(s=>s.includes('float teeth=')&&!s.includes('float seamPhase=')));
   if(id==='festAnni')assert.ok(cloth.some(s=>s.includes('float jersey=')&&!s.includes('float seamPhase=')));
+  if(id==='grey')assert.ok(greyScalp&&hair.length&&hair.every(o=>!o.visible),'Grey ersetzt den alten Kurzhaarschnitt');
+  if(id==='clubNiko')assert.ok(hair.some(o=>o.visible),'Nikos geteilter GLB-Haarschnitt bleibt unverändert');
 }
 assert.ok(checked>100);
 console.log(checked+' NPC-Materialien erzeugt: Besucherpalette und Festival-Outfits geprüft.');

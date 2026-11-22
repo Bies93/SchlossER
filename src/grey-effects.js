@@ -12,48 +12,138 @@ const mesh=(T,parent,geometry,material,x=0,y=0,z=0)=>{
 };
 export function greyHair(T,rig){
   const head=rig.costumeMount('head'),p=rig.restPoint('head'),rand=randomSource(41);
-  const map=paint(T,128,256,(c,w,h)=>{
-    const base=c.createLinearGradient(0,0,0,h);base.addColorStop(0,'#c2bdb5');base.addColorStop(.56,'#a4a2a0');base.addColorStop(1,'#8a898c');
+  const map=paint(T,768,256,(c,w,h)=>{
+    const base=c.createLinearGradient(0,h,0,0);
+    base.addColorStop(0,'#6e6b6b');base.addColorStop(.28,'#808083');base.addColorStop(.72,'#99979a');base.addColorStop(1,'#858386');
     c.fillStyle=base;c.fillRect(0,0,w,h);
-    for(let i=0;i<930;i++){
-      const x=rand()*w,d=rand()>.47;
-      c.strokeStyle=d?'#e3dbcc69':'#46505751';c.lineWidth=.27+rand()*.88;
-      c.beginPath();c.moveTo(x,-4);c.bezierCurveTo(x+2,75,x-4,166,x+4,h+4);c.stroke();
+    for(let i=0;i<760;i++){
+      const x=rand()*w,t=rand(),light=rand()>.5,d=(rand()-.5)*15;
+      c.strokeStyle=light?'#dedbd5':'#363745';c.globalAlpha=.07+t*t*.29;
+      c.lineWidth=.42+rand()*1.38;
+      for(const offset of [-w,0,w]){
+        const a=x+offset;
+        c.beginPath();c.moveTo(a,h+4);c.bezierCurveTo(a+3+d,h*.64,a-4-d,h*.32,a+d*.7,-4);c.stroke();
+      }
     }
   });
   map.anisotropy=4;
-  const mat=new T.MeshStandardMaterial({map,color:0xc6c4c4,roughness:.81,side:T.DoubleSide});
+  const mat=new T.MeshStandardMaterial({map,roughness:.84,vertexColors:true,side:T.DoubleSide});
+  mat.name='GreyHair';
   const time={value:0},sway={value:0};
-  mat.customProgramCacheKey=()=> 'grey-hair-sway-1';
+  mat.customProgramCacheKey=()=> 'grey-hair-sway-2';
   mat.onBeforeCompile=sh=>{
     sh.uniforms.greyHairTime=time;sh.uniforms.greyHairSway=sway;
     sh.vertexShader=sh.vertexShader.replace('#include <common>',
-      '#include <common>\nuniform float greyHairTime; uniform float greyHairSway;')
+      '#include <common>\nattribute float hairTip; uniform float greyHairTime; uniform float greyHairSway;')
       .replace('#include <begin_vertex>',`#include <begin_vertex>
-        float tip=uv.y*uv.y*greyHairSway;
-        transformed.x+=tip*.029*sin(greyHairTime*5.9+position.x*13.-uv.y*2.1);
-        transformed.z+=tip*.017*cos(greyHairTime*6.1+position.x*21.-uv.y*1.8);`);
+        float tip=hairTip*greyHairSway;
+        transformed.x+=tip*.014*sin(greyHairTime*4.9+position.x*12.-hairTip*1.5);
+        transformed.z+=tip*.009*cos(greyHairTime*4.4+position.x*17.-hairTip*1.4);`);
   };
-  const vertices=[],uv=[],order=[];
-  // Layered, tapering locks: short scalp mesh stays underneath the long back/sides.
-  for(let j=0;j<21;j++){
-    const a=(j-10)*.159,side=Math.sin(a),back=Math.cos(a),s=.85+rand()*.27,shift=(rand()-.5)*.048;
-    const wave=rand()*TAU,base=vertices.length/3;
-    for(let i=0;i<=15;i++)for(let k=0;k<=4;k++){
-      const t=i/15,u=k/2-1,b=(.066+.059*Math.sin(t*Math.PI*.68));
-      const taper=(.28+.72*Math.min(1,t*5))*(1-Math.pow(t,6)*.85)*(.028+.007*Math.sin(j*2.2));
-      const x=p.x+side*b+u*taper*back+.013*Math.sin(t*8+wave)*t;
-      const y=p.y+.150-.071*Math.abs(side)-t*(.359+.029*back)*s+t*shift;
-      const z=p.z-back*(.081+.055*Math.sin(t*Math.PI*.74))-.043*t+u*taper*side-.009*(1-u*u)+Math.abs(side)**5*.043*t;
-      vertices.push(x,y,z);uv.push(k/4,t);
-      if(i<15&&k<4){const n=base+i*5+k;order.push(n,n+1,n+5,n+5,n+1,n+6);}
+  const vertices=[],uv=[],tip=[],colors=[],order=[];
+  const add=(x,y,z,u,v,flex,tone)=>{
+    const i=tip.length;vertices.push(x,y,z);uv.push(u,v);tip.push(flex);colors.push(tone,tone,tone);return i;
+  };
+  const stitch=(a,b,c,d)=>order.push(a,b,c,b,d,c);
+  const sm=T.MathUtils.smoothstep,center=p.clone().add(new T.Vector3(0,.052,.005));
+  const scalp=scalpFitter(T,rig.greyScalp,center),dir=new T.Vector3();
+  const sides=72,rows=15,edge=[],above=[];
+  const tint=a=>.96+.036*Math.cos(a*11+.4)+.018*Math.cos(a*23);
+  for(let i=0;i<=rows;i++){
+    const t=i/rows;
+    for(let j=0;j<=sides;j++){
+      const u=j/sides,a=u*TAU,k=Math.min(a,TAU-a);
+      // Keep the temples and ears clear; run the hairline down to the nape.
+      const hairline=1.165-.090*Math.exp(-((k-.54)**2)/.063)+.32*sm(k,.63,1.65)+.29*sm(k,1.57,2.7)
+        +.021*Math.sin(a*5)+.014*Math.cos(a*13)+.013*Math.sin(a*29);
+      const sweep=.23*Math.sin(Math.PI*t)*(.58+.42*Math.cos(a+.26)),theta=.005+t*(hairline-.005);
+      const angle=a-sweep;
+      dir.set(Math.sin(angle)*Math.sin(theta),Math.cos(theta),Math.cos(angle)*Math.sin(theta));
+      const crown=Math.sin(theta)*(.003+.002*Math.sin(a*17+theta*1.5))+.010*(1-t)**1.4;
+      const blend=1-.69*sm(t,.84,1)*(1-sm(k,1.12,1.47));
+      const r=scalp(dir)+(.0035+crown)*blend;
+      const x=center.x+r*dir.x,y=center.y+r*dir.y,z=center.z+r*dir.z;
+      add(x,y,z,u,t*.63,0,tint(a));
+      if(i===rows)edge[j]=[x,y,z];
+      if(i===rows-1)above[j]=[x,y,z];
+      if(i<rows&&j<sides){const n=i*(sides+1)+j;stitch(n,n+sides+1,n+1,n+sides+2);}
     }
+  }
+  // Continue the SAME scalp vertices into thick, swept-back lengths.
+  // Each outer ring has a matching underside so the side profile isn't a sheet.
+  const sideStart=15,sideEnd=sides-sideStart,span=sideEnd-sideStart,steps=17;
+  const outer=[],inner=[];
+  const sample=(j,t)=>{
+    const a=j/sides*TAU,k=Math.min(a,TAU-a),f=sm(k,sideStart/sides*TAU,2.28);
+    const [x0,y0,z0]=edge[j],[x1,y1,z1]=above[j];
+    const bin=Math.sin(Math.PI*(j-sideStart)/span),falls=sm(t,0,1);
+    const fine=Math.sin(a*24+t*1.8+.3)+.43*Math.cos(a*39+t*2.3-.61);
+    const length=f*(.217+.015*Math.cos(a*9-.5)+.010*Math.sin(a*17)+.006*fine);
+    const tangent=Math.min(7,length/Math.max(.002,y1-y0))*t*(1-t)**2;
+    const x=x0+(x0-x1)*tangent-(.011+.005*Math.cos(a*5))*falls*Math.sin(a)*f
+      +.007*Math.sin(a*13+t*3.9)*falls*bin;
+    const y=y0-length*t;
+    const z=z0+(z0-z1)*tangent-(.031+.080*Math.abs(Math.sin(a)))*falls*f
+      -.013*bin*Math.sin(t*Math.PI)*sm(t,0,.28)-.0042*fine*bin*falls;
+    return [x,y,z,a,bin,f,fine];
+  };
+  const root=rows*(sides+1);
+  for(let j=sideStart;j<=sideEnd;j++){
+    const [x,y,z]=edge[j],u=j/sides;
+    outer[j-sideStart]=root+j;
+    inner[j-sideStart]=add(x,y,z,u,.63,0,tint(u*TAU)*.66);
+  }
+  for(let i=1;i<=steps;i++){
+    const t=i/steps;
+    for(let k=0;k<=span;k++){
+      const j=sideStart+k,[x,y,z,a,bin,f,fine]=sample(j,t),swing=t*t*f;
+      const tone=tint(a)+t*(.031*Math.cos(a*19+t*2.3)+.012*fine-.04);
+      const u=j/sides+.008*t*Math.sin(a*3+t*2.2),v=.63+t*.37;
+      const top=add(x,y,z,u,v,swing,tone);
+      const thickness=k===0||k===span||i===steps?0:Math.sin(Math.PI*t)**.65*.027*bin**.65*f;
+      const bottom=add(x-.22*Math.sin(a)*thickness,y+.08*thickness,z+thickness,u,v,swing,tone*.66);
+      if(k>0){
+        const left=outer[k-1],previous=outer[k],underLeft=inner[k-1],underPrevious=inner[k];
+        stitch(left,outer[k-1+span+1],previous,top);
+        stitch(underLeft,underPrevious,inner[k-1+span+1],bottom);
+      }
+      outer[k+span+1]=top;inner[k+span+1]=bottom;
+    }
+    for(let k=0;k<=span;k++){outer[k]=outer[k+span+1];inner[k]=inner[k+span+1];}
+  }
+  // A tapered inward rim meets the skin around the exposed forehead/temples.
+  for(let j=0;j<=sides;j++){
+    if(j>sideStart&&j<sideEnd)continue;
+    const [x,y,z]=edge[j],u=j/sides;
+    edge[j]=add(T.MathUtils.lerp(x,center.x,.10),y-.001,T.MathUtils.lerp(z,center.z,.10),u,.655,0,.66);
+    if(j>0&&(j<=sideStart||j>sideEnd))stitch(root+j-1,edge[j-1],root+j,edge[j]);
   }
   const g=new T.BufferGeometry();
   g.setAttribute('position',new T.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+  g.setAttribute('hairTip',new T.Float32BufferAttribute(tip,1));g.setAttribute('color',new T.Float32BufferAttribute(colors,3));
   g.setIndex(order);g.computeVertexNormals();
-  const hair=mesh(T,head,g,mat);hair.name='Grey · silbergraue, schulterlange Strähnen';
+  const hair=mesh(T,head,g,mat);hair.name='Grey · durchgehendes silbergraues Haar';
   return (t,amount)=>{time.value=t;sway.value=amount;};
+}
+function scalpFitter(T,g,center){
+  const {position:p}=g.attributes,index=g.index,count=index?.count??p.count,triangles=[];
+  const v=new T.Vector3(),h=new T.Vector3(),ray=new T.Ray(center,new T.Vector3());
+  for(let i=0;i<count;i+=3){
+    const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2;
+    const a=p.getY(ia),b=p.getY(ib),c=p.getY(ic);
+    if(Math.max(a,b,c)<center.y-.063||Math.min(a,b,c)<center.y-.16)continue;
+    triangles.push([ia,ib,ic].map(j=>new T.Vector3().fromBufferAttribute(p,j)));
+  }
+  return dir=>{
+    const x=.069,y=.095,z=dir.z>0?.099:.100;
+    const ellipse=1/Math.hypot(dir.x/x,dir.y/y,dir.z/z);
+    let radius=0;
+    ray.direction.copy(dir);
+    for(const [a,b,c] of triangles)if(ray.intersectTriangle(a,b,c,false,h)){
+      v.subVectors(h,center);radius=Math.max(radius,v.dot(dir));
+    }
+    return radius>0?Math.min(ellipse+.015,Math.max(ellipse-.012,radius)):ellipse;
+  };
 }
 export function greyCrewNeck(T,rig){
   const chest=rig.costumeMount('spine_03'),g=new T.BufferGeometry(),p=[],uv=[],idx=[];
