@@ -2,7 +2,7 @@ import {createHuman} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 import {planCollapse} from './npc-collapse.js';
 import {GREY_AT,GREY_SITE,GREY_CONTROLS,GREY_CUES,ease,greyShow} from './grey-plan.js';
-import {blackenGrey,greyAftermath,greyCrewNeck,greyFX,greyHair,greyVial} from './grey-effects.js';
+import {greyScorch,greyAftermath,greyCrewNeck,greyFX,greyHair,greyVial} from './grey-effects.js';
 
 export function addGardenGrey(T,scene,world,height,audio){
   const root=new T.Group();root.name='Orangerie · Grey';scene.add(root);
@@ -13,6 +13,7 @@ export function addGardenGrey(T,scene,world,height,audio){
   const hair=greyHair(T,rig);
   greyCrewNeck(T,rig);
   const vial=greyVial(T,rig.vialSocket),fx=greyFX(T,root,height),ash=greyAftermath(T,root,GREY_SITE.x,GREY_SITE.z,height);
+  const scorch=greyScorch(T,actor,vial.group);
   const shadow=contactShadow(T,root,actor.position.x,height(actor.position.x,actor.position.z)+.009,actor.position.z,.85,.72);
   npcInfo.shadow=shadow;
   const beats=greyShow(),route=new T.CubicBezierCurve3(
@@ -60,16 +61,25 @@ export function addGardenGrey(T,scene,world,height,audio){
       rig.reaction(hit,planCollapse(actor,hit,impulse,world,height),impulse);
     }
   }
-  function update(dt,p,surface){
+  async function prewarm(draw){
+    const offFx=fx.warmup(actor.position),offScorch=scorch.warmup();
+    try{
+      ash.visible=true;
+      await draw();
+    }finally{
+      ash.visible=false;offScorch();offFx();
+    }
+  }
+  function update(dt,p,surface,camera){
     const near=surface&&Math.hypot(p.x-actor.position.x,p.z-actor.position.z)<32;
     if(ending){
       const changed=beats.step(dt,()=>{});
       const age=beats.time-GREY_CUES.burst;
-      if(!charred&&age>.13){blackenGrey(T,actor);ash.visible=true;charred=true;}
+      if(!charred&&age>.13){scorch.apply();ash.visible=true;charred=true;}
       if(!landed&&age>1.02){
         npcInfo.chest.getWorldPosition(spot);audio.greyCue('landing',spot);landed=true;
       }
-      if(changed||!teardown){fx.tick(age,near);teardown=beats.beat==='ash';}
+      if(changed||!teardown){fx.tick(age,near,camera);teardown=beats.beat==='ash';}
       return near&&changed;
     }
     if(!npcInfo.alive){
@@ -83,9 +93,9 @@ export function addGardenGrey(T,scene,world,height,audio){
     const step=acc;acc=0;idle+=step;
     speech=Math.max(0,speech-step);
     if(beats.running)beats.step(step,cue);
-    if(ending){fx.tick(beats.time-GREY_CUES.burst,near);return near;}
+    if(ending){fx.tick(beats.time-GREY_CUES.burst,near,camera);return near;}
     if(rig.isReacting()){
-      fx.vial(idle,vial.group,false,near);
+      fx.vial(idle,vial.group,false,near,camera);
       return near;
     }
     const time=beats.time,beat=beats.beat;
@@ -115,8 +125,8 @@ export function addGardenGrey(T,scene,world,height,audio){
       hair(idle,.16+shake*.20+spark*.19+laugh*.40);
     }
     shadow.position.set(actor.position.x,height(actor.position.x,actor.position.z)+.009,actor.position.z);
-    fx.vial(idle,vial.group,beat==='spark',near);
+    fx.vial(idle,vial.group,beat==='spark',near,camera);
     return near;
   }
-  return {root,accept,update,get beat(){return beats.beat;},get actor(){return actor;}};
+  return {root,accept,update,prewarm,get beat(){return beats.beat;},get actor(){return actor;}};
 }

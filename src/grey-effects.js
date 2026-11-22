@@ -251,10 +251,10 @@ export function greyAftermath(T,root,x,z,height){
   group.add(d);return group;
 }
 
-export function blackenGrey(T,actor){
-  const soot=weaponSwatch(T,'rubber'),used=new Map();
-  actor.traverse(o=>{
-    if(!o.isMesh||!o.material.isMeshStandardMaterial)return;
+export function greyScorch(T,actor,vial){
+  const soot=weaponSwatch(T,'rubber'),used=new Map(),parts=[];
+  actor.traverseVisible(o=>{
+    if(!o.isMesh||!o.material.isMeshStandardMaterial||o.parent===vial)return;
     const old=o.material;
     if(!used.has(old)){
       const m=old.clone();
@@ -262,8 +262,76 @@ export function blackenGrey(T,actor){
       m.color.setHex(/^Skin/.test(old.name)?0x38302a:0x262327);
       m.emissive.setHex(0x000000);m.roughness=.99;m.metalness=0;used.set(old,m);
     }
-    o.material=used.get(old);
+    parts.push([o,used.get(old)]);
   });
+  return {
+    apply(){for(const [o,m] of parts)o.material=m;},
+    warmup(){
+      // Use the real geometry, skinning and light setup without exposing the
+      // scorched actor to gameplay. Prepared materials stay on the renderer.
+      const previews=parts.map(([o,m])=>{
+        const copy=o.clone(false);copy.material=m;o.parent.add(copy);return copy;
+      });
+      return ()=>{for(const copy of previews)copy.removeFromParent();};
+    }
+  };
+}
+
+function greyBillboards(T,root,count,map,blend,renderOrder){
+  const g=new T.InstancedBufferGeometry(),attr=(name,n)=>{
+    const b=new T.InstancedBufferAttribute(new Float32Array(count*n),n).setUsage(T.DynamicDrawUsage);
+    g.setAttribute(name,b);return b;
+  };
+  g.setAttribute('position',new T.Float32BufferAttribute([-.5,-.5,0,.5,-.5,0,-.5,.5,0,.5,.5,0],3));
+  g.setAttribute('uv',new T.Float32BufferAttribute([0,0,1,0,0,1,1,1],2));
+  g.setIndex([0,1,2,2,1,3]);g.instanceCount=0;
+  const place=attr('fxPlace',3),shape=attr('fxShape',4),tint=attr('fxTint',3);
+  const m=new T.MeshBasicMaterial({map,transparent:true,depthWrite:false,blending:blend,toneMapped:blend!==T.AdditiveBlending});
+  m.customProgramCacheKey=()=> 'grey-billboards-1';
+  m.onBeforeCompile=sh=>{
+    sh.vertexShader=sh.vertexShader.replace('#include <common>',`#include <common>
+      attribute vec3 fxPlace, fxTint;
+      attribute vec4 fxShape;
+      varying vec4 vGreyParticle;`)
+      .replace('#include <project_vertex>',`
+        vec4 mvPosition = modelViewMatrix * vec4(fxPlace, 1.0);
+        vec2 p = position.xy * fxShape.xy;
+        float c = cos(fxShape.z), s = sin(fxShape.z);
+        mvPosition.xy += vec2(c*p.x - s*p.y, s*p.x + c*p.y);
+        gl_Position = projectionMatrix * mvPosition;
+        vGreyParticle = vec4(fxTint, fxShape.w);`);
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec4 vGreyParticle;')
+      .replace('#include <color_fragment>','#include <color_fragment>\n diffuseColor *= vGreyParticle;');
+  };
+  const object=mesh(T,root,g,m),queue=[];
+  object.renderOrder=renderOrder;object.frustumCulled=false;object.userData.noSceneQuery=true;object.visible=false;
+  function flush(camera){
+    if(blend===T.NormalBlending&&camera&&queue.length>1){
+      const v=camera.matrixWorldInverse.elements;
+      for(const e of queue)e.depth=v[2]*e.x+v[6]*e.y+v[10]*e.z;
+      queue.sort((a,b)=>a.depth-b.depth);
+    }
+    object.visible=queue.length>0;g.instanceCount=queue.length;
+    if(!object.visible)return;
+    for(let i=0;i<queue.length;i++){
+      const e=queue[i],c=e.color;
+      place.setXYZ(i,e.x,e.y,e.z);shape.setXYZW(i,e.size,e.size*e.stretch,e.angle,e.alpha);tint.setXYZ(i,c.r,c.g,c.b);
+    }
+    for(const b of [place,shape,tint]){
+      b.clearUpdateRanges();b.addUpdateRange(0,queue.length*b.itemSize);b.needsUpdate=true;
+    }
+    queue.length=0;
+  }
+  return {flush,draw(e,x,y,z,size,alpha,angle=0,stretch=1){
+    if(alpha<=.015)return;
+    e.x=x;e.y=y;e.z=z;e.size=size;e.alpha=alpha;e.angle=angle;e.stretch=stretch;queue.push(e);
+  },warmup(at){
+    const entries=object.visible,n=g.instanceCount;
+    object.visible=true;g.instanceCount=1;
+    place.setXYZ(0,at.x,at.y+.8,at.z);shape.setXYZW(0,.32,.32,0,0);tint.setXYZ(0,1,1,1);
+    place.needsUpdate=shape.needsUpdate=tint.needsUpdate=true;
+    return ()=>{object.visible=entries;g.instanceCount=n;};
+  }};
 }
 
 export function greyFX(T,root,height){
@@ -276,16 +344,19 @@ export function greyFX(T,root,height){
       c.fillStyle=g;c.fillRect(x-r,y-r,2*r,2*r);
     }
   });
-  const rand=randomSource(1819),make=(count,map,color,blend=T.NormalBlending)=>
-    Array.from({length:count},(_,i)=>{
-      const s=new T.Sprite(new T.SpriteMaterial({map,color,depthWrite:false,opacity:0,blending:blend,toneMapped:blend!==T.AdditiveBlending}));
-      s.visible=false;s.renderOrder=5;root.add(s);return {s,a:rand()*TAU,b:rand(),c:rand(),offset:i/count};
+  const rand=randomSource(1819),make=(count,color)=>{
+    const tint=new T.Color(color);
+    return Array.from({length:count},(_,i)=>{
+      const a=rand()*TAU;
+      return {a,dx:Math.cos(a),dz:Math.sin(a),b:rand(),c:rand(),offset:i/count,color:tint};
     });
-  const vapour=make(7,smokeMap,0x98cabc),smoke=make(17,smokeMap,0x39333a),embers=make(26,disc,0xffb24f,T.AdditiveBlending);
-  const dust=make(13,smokeMap,0x947761);
-  const flash=make(2,disc,0xffd18b,T.AdditiveBlending);
-  flash[1].s.material.color.setHex(0xf1fff0);
-  const spark=make(7,disc,0xfaffae,T.AdditiveBlending),at=new T.Vector3(),blastAt=new T.Vector3(),bodyAt=new T.Vector3(),mouth=new T.Vector3();
+  };
+  const vapour=make(7,0x98cabc),smoke=make(17,0x39333a),embers=make(26,0xffb24f),dust=make(13,0x947761);
+  const flash=make(2,0xffd18b);flash[1].color=new T.Color(0xf1fff0);
+  const spark=make(7,0xfaffae),at=new T.Vector3(),blastAt=new T.Vector3(),bodyAt=new T.Vector3(),mouth=new T.Vector3(0,.149,0);
+  const glow=greyBillboards(T,root,2,disc,T.AdditiveBlending,4);
+  const mist=greyBillboards(T,root,vapour.length+smoke.length+dust.length,smokeMap,T.NormalBlending,5);
+  const sparks=greyBillboards(T,root,spark.length+embers.length,disc,T.AdditiveBlending,6),batches=[glow,mist,sparks];
   const waveMap=paint(T,96,96,(c,w,h)=>{
     const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);
     for(const [a,b] of [[0,0],[.67,0],[.78,.16],[.87,.57],[.94,.27],[1,0]])
@@ -296,54 +367,65 @@ export function greyFX(T,root,height){
     new T.MeshBasicMaterial({map:waveMap,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide}));
   wave.userData.noSceneQuery=true;wave.visible=false;
   let active=false;
-  function clear(xs){for(const {s} of xs)s.visible=false;}
-  function draw(e,x,y,z,size,alpha){const {s}=e;s.visible=alpha>.015;s.position.set(x,y,z);s.scale.set(size,size,1);s.material.opacity=Math.max(0,alpha);}
-  clear(vapour);
-  return {burst(origin,body){blastAt.copy(origin);bodyAt.copy(body);active=true;clear(vapour);clear(spark);},
-    vial(t,vial,showSpark=false,near=true){
-      if(!near||!vial.visible){clear(vapour);clear(spark);return;}
-      at.copy(mouth.set(0,.149,0));vial.localToWorld(at);
-      for(const e of vapour){
-        const p=(t*.94+e.offset)%1,q=.035+.22*p;
-        draw(e,at.x+.078*p+.027*Math.sin(e.a+t+p*3)*p,at.y+.37*p,
-          at.z+.044*Math.cos(e.a+p*1.6)*p,q,.32*Math.sin(p*Math.PI));
+  const flush=camera=>{for(const b of batches)b.flush(camera);};
+  return {burst(origin,body){
+    blastAt.copy(origin);bodyAt.copy(body);
+    wave.position.set(body.x,height(body.x,body.z)+.047,body.z);
+    active=true;
+  },warmup(at){
+    const hide=batches.map(b=>b.warmup(at)),before=wave.visible;
+    wave.visible=true;wave.position.set(at.x,at.y+.02,at.z);
+    return ()=>{for(const h of hide)h();wave.visible=before;};
+  },
+    vial(t,vial,showSpark=false,near=true,camera=null){
+      if(near&&vial.visible){
+        vial.localToWorld(at.copy(mouth));
+        for(const e of vapour){
+          const p=(t*.94+e.offset)%1,q=.035+.22*p;
+          mist.draw(e,at.x+.078*p+.027*Math.sin(e.a+t+p*3)*p,at.y+.37*p,
+            at.z+.044*Math.cos(e.a+p*1.6)*p,q,.32*Math.sin(p*Math.PI));
+        }
+        if(showSpark)for(const e of spark){
+          const f=(t*7+e.offset)%1,d=f*(.09+e.b*.18);
+          sparks.draw(e,at.x+e.dx*d,at.y+.012+f*.13,at.z+e.dz*d,.024+(1-f)*.095,(1-f)*.81);
+        }
       }
-      if(showSpark)for(const e of spark){
-        const f=(t*7+e.offset)%1,d=f*(.09+e.b*.18);
-        draw(e,at.x+Math.cos(e.a)*d,at.y+.012+f*.13,at.z+Math.sin(e.a)*d,
-          .024+(1-f)*.095,(1-f)*.81);
-      }else clear(spark);
+      flush(camera);
     },
-    tick(t,near=true){
-      if(!active||!near||t>6.2){clear(smoke);clear(embers);clear(flash);clear(dust);wave.visible=false;return;}
+    tick(t,near=true,camera=null){
+      if(!active||!near||t>6.2){flush(camera);wave.visible=false;return;}
       const {x,y,z}=blastAt;
       const bodyDelay=t-.047;
-      draw(flash[0],x,y,z,1.41+t*6.1,Math.max(0,1-t*6.7)*.91*flashWeight);
-      draw(flash[1],bodyAt.x,bodyAt.y,bodyAt.z,1.86+Math.max(0,bodyDelay)*7.1,
+      glow.draw(flash[0],x,y,z,1.41+t*6.1,Math.max(0,1-t*6.7)*.91*flashWeight);
+      glow.draw(flash[1],bodyAt.x,bodyAt.y,bodyAt.z,1.86+Math.max(0,bodyDelay)*7.1,
         bodyDelay>=0?Math.max(0,1-bodyDelay*5.6)*.89*flashWeight:0);
-      const ring=Math.max(.12,Math.min(2.9,.17+t*5.25));
-      wave.visible=t<.57;wave.position.set(bodyAt.x,height(bodyAt.x,bodyAt.z)+.047,bodyAt.z);
-      wave.scale.set(ring,1,ring);wave.material.opacity=Math.max(0,1-t/.57)*.72*flashWeight;
+      if(wave.visible=t<.57){
+        const ring=Math.max(.12,Math.min(2.9,.17+t*5.25));
+        wave.scale.set(ring,1,ring);wave.material.opacity=Math.max(0,1-t/.57)*.72*flashWeight;
+      }
       for(const e of dust){
-        const d=t-.080-e.offset*.18,f=Math.max(0,d),rr=.24+(1-Math.exp(-f*2.8))*(1.04+e.b*1.22);
-        const X=bodyAt.x+Math.cos(e.a)*rr,Z=bodyAt.z+Math.sin(e.a)*rr;
-        draw(e,X,height(X,Z)+.16+f*(.12+.17*e.c),Z,.42+f*.39+e.b*.18,
-          d>0?Math.min(1,d*9)*Math.max(0,1-f/2.55)**1.25*.57:0);
+        const f=t-.080-e.offset*.18;
+        if(f<=0||f>=2.55)continue;
+        const alpha=Math.min(1,f*9)*(1-f/2.55)**1.25*.57;
+        if(alpha<=.015)continue;
+        const rr=.24+(1-Math.exp(-f*2.8))*(1.04+e.b*1.22),X=bodyAt.x+e.dx*rr,Z=bodyAt.z+e.dz*rr;
+        mist.draw(e,X,height(X,Z)+.16+f*(.12+.17*e.c),Z,.42+f*.39+e.b*.18,alpha);
       }
       for(const e of smoke){
-        const d=t-e.offset*.37,f=Math.max(0,d),spread=(1-Math.exp(-f*2.1))*(.34+e.b*1.04);
+        const f=t-e.offset*.37;
+        if(f<=0||f>=5.65)continue;
+        const spread=(1-Math.exp(-f*2.1))*(.34+e.b*1.04);
         const Y=y+.23+f*(.32+e.c*.44);
-        e.s.material.rotation=e.a+f*(e.c-.50)*.56;
-        draw(e,x+Math.cos(e.a)*spread+f*.13,Y,z+Math.sin(e.a)*spread,.38+spread*.55+.21*f,
-          d>0?Math.min(1,d*8)*Math.max(0,1-f/5.65)**1.5*.72:0);
+        mist.draw(e,x+e.dx*spread+f*.13,Y,z+e.dz*spread,.38+spread*.55+.21*f,
+          Math.min(1,f*8)*(1-f/5.65)**1.5*.72,e.a+f*(e.c-.50)*.56);
       }
       for(const e of embers){
-        const d=t-e.offset*.14,f=Math.max(0,d),p=f*(1.2+e.b*3.0);
-        const X=x+Math.cos(e.a)*p,Z=z+Math.sin(e.a)*p;
+        const f=t-e.offset*.14,alpha=.96-f*.77;
+        if(f<=0||alpha<=.015)continue;
+        const p=f*(1.2+e.b*3.0),X=x+e.dx*p,Z=z+e.dz*p;
         const ground=height(X,Z),Y=Math.max(ground+.031,y+(.81+e.c*3.9)*f-4.5*f*f);
-        draw(e,X,Y,Z,(.031+e.b*.041)*(1+Math.max(0,.5-f)),d>0?Math.max(0,.96-f*.77):0);
-        e.s.scale.y*=1+(1-Math.min(1,f))*1.6;
-        e.s.material.rotation=e.a*.63+f*.9;
+        sparks.draw(e,X,Y,Z,(.031+e.b*.041)*(1+Math.max(0,.5-f)),alpha,e.a*.63+f*.9,1+(1-Math.min(1,f))*1.6);
       }
+      flush(camera);
     }};
 }

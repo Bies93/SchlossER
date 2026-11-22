@@ -182,7 +182,7 @@ async function start(){
  const weather=addWeatherZero(T,s,world,garden.heightAt,audio);
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
- const grey=addGardenGrey(T,s,world,(x,z)=>floorHeight(x,z),audio);
+ const grey=addGardenGrey(T,s,world,(x,z)=>garden.heightAt(x,z)??floorHeight(x,z),audio);
  // Optional effects still prefetch, but slow audio cannot hold up Start.
  void audio.preloadWeapons();
  const player=createPlayer(T,c,world,floorHeight,event=>{
@@ -569,7 +569,7 @@ async function start(){
      if(weather.update(dt,player.body.position,c.getWorldDirection(interactionLook),layer===0))dirty=true;
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
-     if(grey.update(dt,player.body.position,layer===0))dirty=true;
+     if(grey.update(dt,player.body.position,layer===0,c))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      geometryQuery.invalidateMoving();
      if(prisonerCaption!==null&&(prisonerCaption!==captionId||!chapter.prisonerAt(player.body.position)))leavePrison();
@@ -710,7 +710,7 @@ async function start(){
  const parkWarmup=performance.now();
  await puddle.prepare(r);
  garden.festival.prepare(r);
- await weather.prepare(r,[puddle.root,garden.orangery,garden.festival.root,grey.root]);
+ await grey.prewarm(()=>weather.prepare(r,[puddle.root,garden.orangery,garden.festival.root,grey.root]));
  performance.measure('schlosser: Orangerie und Pfütze',{start:parkWarmup,end:performance.now()});
  performance.measure('schlosser: room warmup',{start:shaderTime,end:performance.now()});
  wc.update(0,player.body.position);chapter.update(0,player.body.position);
