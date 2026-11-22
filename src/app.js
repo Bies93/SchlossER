@@ -2,7 +2,7 @@ import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {collisionWorld} from './collision.js';
 import {createPlayer, bindPlayerInput} from './player.js';
-import {addFixedColliders, BOUNDS, PLAYER, insidePerimeter} from './world-layout.js';
+import {addFixedColliders, BOUNDS, PLAYER, SPAWN, insidePerimeter} from './world-layout.js';
 import {addPerimeter} from './perimeter.js';
 import {addBackdrop} from './backdrop.js';
 import {DEFAULT_LIGHT,makeLighting} from './lighting.js';
@@ -38,6 +38,8 @@ import {npcFocus} from './npc-focus.js';
 import {bindNpcDialogue} from './npc-dialogue-ui.js';
 import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
+import {niklasDefense} from './npc-counterfire.js';
+import {playerVitals} from './player-vitals.js';
 import {weaponPickups} from './weapon-pickups.js';
 import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
 import {ATTIC_LAYER,ATTIC_WELL,ATTIC_FLOOR} from './palace-attic-layout.js';
@@ -244,18 +246,45 @@ async function start(){
    return layerContext;
  }
  const targetWorld={blocked(x,z,y){return localWorld({x,y,z}).blocked(x,z,y);}};
+ const vitals=playerVitals(),healthUI=$('health-ui'),healthValue=$('health-value'),healthMeter=$('health-meter');
+ const hurtUI=$('hurt-vignette'),comfort=matchMedia('(prefers-reduced-motion: reduce)');
+ function paintHealth(){
+   healthUI.toggleAttribute('data-live',vitals.hp<100);
+   const hp=String(vitals.hp);
+   if(healthValue.textContent!==hp){healthValue.textContent=hp;healthMeter.setAttribute('aria-valuenow',hp);
+     healthMeter.style.setProperty('--hp',vitals.hp*.01);}
+   hurtUI.style.setProperty('--hurt',vitals.flash*(comfort.matches?.48:.89));
+ }
+ function damagePlayer(amount,from){
+   if(!controls()||!vitals.hit(amount))return;
+   c.updateWorldMatrix(true,false);
+   const e=c.matrixWorld.elements,x=from.x-e[12],z=from.z-e[14];
+   hurtUI.style.setProperty('--from',Math.atan2(x*e[0]+z*e[2],-x*e[8]-z*e[10])+'rad');
+   audio.counterCue('hurt',from);viewmodel.playerHit(Math.sign(x*e[0]+z*e[2]));
+   paintHealth();refresh();
+ }
  const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
+   if(id==='niklas')counterfire.reset();
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
    if(conversation?.pending()?.id===id)conversation.close('interrupt');
    if(id==='hubert')leavePrison();
    if(id==='bergUdo')audio.berg(bergInside(player.body.position),false);
    names.sample(performance.now(),true);
- },ravens);
+ },ravens,(npc)=>{
+   if(npc.id!=='niklas'||!counterfire.provoke())return;
+   if(conversation?.pending()?.id==='niklas')conversation.close('interrupt');
+   if(audio.npcTalking('niklas')){audio.stopNpc('niklas');hideCaption();}
+   names.clear();refresh();
+ });
  const viewmodel=makeViewmodel(T,s,c,player,world,floorHeight,canvas,controls,refresh,
    undefined,targets,
    kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0?'cellar':hallFloor(p.x,p.z)!==null?'hall':'outdoor');},
    audio.shotContact,audio.weaponAction,geometryQuery,activeLayers,{root:$('combat-hud'),weapon:$('ammo-weapon'),
      rounds:$('ammo-rounds'),reserve:$('ammo-reserve'),status:$('ammo-status')});
+ const {device:npcPistol,spec:npcPistolSpec}=viewmodel.npcPistol();
+ const counterfire=niklasDefense(T,s,hall.butler.rig,npcPistol,npcPistolSpec,{query:geometryQuery,camera:c,context:activeLayers,
+   damage:damagePlayer,sound:audio.counterCue,contact:audio.shotContact,action:audio.counterCue,ready:controls});
+ hall.butler.attachDefense(counterfire);
  const isTouch=()=>document.body.dataset.input==='touch';
  const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),reloadButton:$('touch-reload'),
    weaponName:$('touch-weapon-name'),viewmodel,enabled:()=>controls()&&isTouch()});
@@ -572,6 +601,12 @@ async function start(){
      if(grey.update(dt,player.body.position,layer===0,c))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      geometryQuery.invalidateMoving();
+     if(counterfire.update(dt,player.body.position))dirty=true;
+     if(vitals.tick(dt))paintHealth();
+     if(vitals.down){
+       pause();document.body.dataset.state='defeated';
+       $('respawn').focus({preventScroll:true});return;
+     }
      if(prisonerCaption!==null&&(prisonerCaption!==captionId||!chapter.prisonerAt(player.body.position)))leavePrison();
      if(state.shadow)r.shadowMap.needsUpdate=true;
      if(targets.tick(dt,mask))dirty=true;
@@ -626,7 +661,7 @@ async function start(){
      .finally(()=>{ghoulsReady=true;});
  }
  ghoulOption.addEventListener('change',()=>{if(!started&&ghoulOption.checked)warmGhouls();});
- action.onclick=event=>{
+ function enterGame(event){
    const first=!started, touch=event.pointerType==='touch'||event.pointerType!=='mouse'&&coarse.matches;
    if(!started){
      started=true;ghoulsEnabled=firstRound=ghoulOption.checked;audio.mode(ghoulsEnabled);
@@ -639,6 +674,12 @@ async function start(){
    if(first&&document.fullscreenEnabled&&!document.fullscreenElement)
      document.documentElement.requestFullscreen().catch(()=>{});
    schedule();
+ }
+ action.onclick=enterGame;
+ $('respawn').onclick=event=>{
+   vitals.reset();paintHealth();counterfire.reset();viewmodel.clearShots();
+   player.relocate({...SPAWN,y:floorHeight(SPAWN.x,SPAWN.z)});
+   names.clear();enterGame(event);refresh();
  };
  $('pause').onclick=()=>pause(true);
  const audioButton=$('audio-toggle');
@@ -720,8 +761,8 @@ async function start(){
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  fountain.syncView?.(c);
- const hideFirstShot=viewmodel.showPrewarmShots();
- try{draw();}finally{hideFirstShot();}
+ const hideFirstShot=viewmodel.showPrewarmShots(),hideCounterfire=counterfire.warmup();
+ try{draw();}finally{hideFirstShot();hideCounterfire();}
  // Don't schedule another heavy draw underneath the archive's closing stamp.
  dirty=false;
  showLoadingStep(4,'Spielbereit');

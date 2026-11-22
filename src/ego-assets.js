@@ -28,5 +28,6 @@ export function egoAssets(T){
     cuff=new T.MeshStandardMaterial({color:0x585749,roughness:.97,...cloth});
   sleeve.normalScale.setScalar(.87);cuff.normalScale.setScalar(.71);
   const shell=new RoundedBoxGeometry(1,1,1,3,.21),cap=coatSleeve(T);
-  return {...makeEquipment(T,EQUIPMENT),hands:gripHands(T,EQUIPMENT),materials:{frame:m(0x272f33,.73,.19),sleeve,cuff},geometry:{shell,cap}};
+  const hands=gripHands(T,[...EQUIPMENT,{kind:'fist',fore:[0,0,0],grip:[0,0,0]}]),fists=hands.pop();
+  return {...makeEquipment(T,EQUIPMENT),hands,fists,materials:{frame:m(0x272f33,.73,.19),sleeve,cuff},geometry:{shell,cap}};
 }

@@ -746,6 +746,34 @@ export function createHuman(T,id='base'){
     }
     face(t,8.21,Math.min(1,talk+chuckle*.13),.04+chuckle*.13,.075*show-.037*spark,look);
   }
+  const counterGrip=id==='niklas'?grip('r'):null,counterSupport=id==='niklas'?grip('l'):null;
+  const counterPoint=V(),counterLeft=V(),counterWrist=V(),counterQ=Q(),supportQ=Q();
+  function counterPose(t,draw,aim,pitch,kick,reload){
+    const change=sin(reload*Math.PI)**1.25,breathe=sin(t*2.35)*.007,raise=draw*aim*(1-change*.77);
+    torso(-.016*raise,-.034*draw,.036*raise-.022*kick,.057*raise-.086*kick,-.109*raise,
+      .045*raise,t,0,-pitch*.58*raise);
+    for(const [j,s] of ['l','r'].entries()){
+      const a=read('foot_'+s),sign=j===0?1:-1;
+      solve(LIMB[s].leg,a.x*1.12+sign*.031*draw,a.y,a.z+sign*.079*draw,sign*.17,0,1);
+      foot('foot_'+s,0,sign*.105*draw);
+    }
+    const yaw=actor.rotation.y;
+    counterPoint.set(mix(-.267,-.106,raise),mix(1.029+.20*draw,1.395,raise)+.32*pitch*raise+breathe,
+      mix(.063+.16*draw,.523,raise)-kick*.065);
+    body.localToWorld(counterPoint);
+    counterQ.setFromEuler(e.set(mix(-.94,pitch,raise)+kick*.22,yaw+Math.PI-.16*(1-raise),-.095*(1-raise)-.29*change));
+    counterGrip.wristAt(counterPoint,counterQ,counterWrist).applyMatrix4(worldInverse);
+    solve(LIMB.r.arm,counterWrist.x,counterWrist.y,counterWrist.z,-.82,-.53,-.49);
+    counterGrip.hold(counterQ,{thumb:.80,index:.52+.33*kick,middle:.94,ring:.92,pinky:.92});
+    counterLeft.set(mix(.216,-.073,raise),mix(1.08,1.345,raise)+.29*pitch*raise-.094*change+breathe,
+      mix(.10,.514,raise)-kick*.058+.17*change);
+    body.localToWorld(counterLeft);
+    supportQ.setFromEuler(e.set(-.21+pitch*raise,yaw+Math.PI+.19,-.53*raise-.15*change));
+    counterSupport.wristAt(counterLeft,supportQ,counterWrist).applyMatrix4(worldInverse);
+    solve(LIMB.l.arm,counterWrist.x,counterWrist.y,counterWrist.z,.82,-.62,-.42);
+    counterSupport.hold(supportQ,.29+.47*raise+.12*change);
+    face(t,1.86,0,.045,.034,0);
+  }
   function chairPose(t,seat,weight,glance=0,talk=0){
     const home=mix(hipsY-.017,(seat+.108)/size,weight),rise=sin(weight*Math.PI);
     torso(.007*sin(t*1.2),home-hipsY+.003*sin(t*1.65),.07*rise,.028+.21*rise,
@@ -883,7 +911,7 @@ export function createHuman(T,id='base'){
     leg_l:bones.get('thigh_l'),leg_r:bones.get('thigh_r')},limbBase=Q();
   // Allocate only on the first fall for a rig. This is a short, articulated
   // animation with floor contacts, not a physics simulation left running.
-  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0,flinchRegion='body',flinchLimb=null;
+  let falling=null,clock=0,reacting=false,side=1,flinchPitch=0,flinchPower=1,flinchRegion='body',flinchLimb=null;
   const isReacting=()=>reacting;
   const setReacting=value=>{reacting=value;if(npcInfo)npcInfo.reacting=value;};
   const progress=(a,b,t)=>{const k=clamp((t-a)/(b-a));return k*k*(3-2*k);};
@@ -919,14 +947,14 @@ export function createHuman(T,id='base'){
     rot('neck_01',brace?.11:fore*.08,-side*.18);
     rot('head',brace?-.13:fore*.09,side*.275,side*.14+(brace?.02:.07));
   }
-  function reaction(point,fall,incoming,region='body'){
+  function reaction(point,fall,incoming,region='body',power=1){
     setReacting(true);clock=0;
     const fromX=point.x-actor.position.x,fromZ=point.z-actor.position.z;
     side=fromX*cos(actor.rotation.y)-fromZ*sin(actor.rotation.y)<0?1:-1;
     flinchPitch=(incoming?.x??-fromX)*sin(actor.rotation.y)+(incoming?.z??-fromZ)*cos(actor.rotation.y);
     if(!fall){
       if(flinchLimb&&flinchLimb!==limbReactions[region])flinchLimb.quaternion.copy(limbBase);
-      flinchRegion=region;flinchLimb=limbReactions[region];
+      flinchPower=power;flinchRegion=region;flinchLimb=limbReactions[region];
       if(flinchLimb)limbBase.copy(flinchLimb.quaternion);
       if(falling)falling.active=false;
       for(const [b,out] of flinchBones)if(b)out.copy(b.quaternion);
@@ -990,7 +1018,8 @@ export function createHuman(T,id='base'){
     clock+=dt;
     const f=falling;
     if(!f?.active){
-      const head=flinchRegion==='head',k=clamp(clock/(head?.24:flinchLimb?.32:.28)),p=sin(Math.PI*k);
+      const head=flinchRegion==='head',k=clamp(clock/(head?.24:flinchLimb?.32:.28)),
+        p=flinchPower>1?flinchPower*progress(0,.23,k)*(1-progress(.27,1,k)):sin(Math.PI*k);
       for(const [j,[b,base]] of flinchBones.entries())if(b){
         const weight=head?(j===2?1.75:.48):flinchLimb?.48:1;
         b.quaternion.copy(base).multiply(q.setFromEuler(e.set((flinchPitch*.13+(head&&j===2?-.12:0))*p*weight,side*p*(.17-j*.028)*weight,side*p*.10*weight)));
@@ -1036,7 +1065,7 @@ export function createHuman(T,id='base'){
     return Number.isFinite(nearest)?nearest*side:null;
   }
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
+  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterSocket:counterGrip?.socket,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,
     // Fits authored costume overlays in the model's rest space, then carries
     // them with the selected bone. No assumptions about the bone's local axes.
     costumeMount(name){

@@ -257,11 +257,15 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
       bolt([s*.030,-.018,-.155],.0033,m.raw);
     }
     const root=A.build(),slide=S.build(),magazine=M.build();root.add(slide,magazine);
-    return {root,left,animate(age,{reload=-1,loaded=true}={}){
+    function animateParts(slide,magazine,left,age,{reload=-1,loaded=true}={}){
       animateMagazine(magazine,left,reload,.031,-.047,-.125);
       const lock=loaded?0:age<.022?ramp(0,.022,age):1-ramp(.83,.93,reload);
       slide.position.z=.024*Math.max(lock,ramp(0,.019,age)-ramp(.033,.094,age));
       if(reload>=.83)slide.position.z*=1-ramp(.88,.97,reload);
+    }
+    return {root,left,animate:(...args)=>animateParts(slide,magazine,left,...args),replica(){
+      const model=root.clone(),slideCopy=model.children.at(-2),magCopy=model.children.at(-1),support=new T.Vector3();
+      return {root:model,animate:(...args)=>animateParts(slideCopy,magCopy,support,...args)};
     }};
   }
   if(type==='archive'){

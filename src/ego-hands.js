@@ -8,7 +8,8 @@ export function gripHands(T,specs){
   const ellipsoid=new T.SphereGeometry(1,20,14);
   const neutral=new T.Color(1,1,1),flush=new T.Color(1,.79,.74);
   const poses=specs.map(spec=>{
-    const pistol=spec.kind==='pistol',bow=spec.kind==='bow',group=new T.Group(),nodes=[],wrists=[
+    const fist=spec.kind==='fist',pistol=spec.kind==='pistol',bow=spec.kind==='bow',group=new T.Group(),nodes=[],wrists=fist?
+      [v(0,-.014,.053),v(0,-.014,.053)]:[
       pistol?v(-.077,-.050,.093):bow?v(-.092,-.044,.089):v(-.107,-.035,.083),v(.055,-.043,.094)];
     group.name='Griffpose · '+spec.kind;
     for(const [hand,w] of wrists.entries()){
@@ -68,7 +69,19 @@ export function gripHands(T,specs){
         p.addScaledVector(normal,radius*.91);m.setPosition(p);gN.applyMatrix4(m);add(nails,gN);
       }
       const finger=(points,r,out)=>form(points,r,.94,true,out);
-      if(hand===1){
+      if(fist){
+        const s=hand===1?-1:1;
+        form([wrist,[0,-.012,.023],[0,-.004,-.022]], [.023,.032,.025],.92);
+        oval(skin,[0,-.004,-.007],[.038,.026,.036],-.09);
+        for(let i=0;i<4;i++){
+          const x=(.028-i*.018)*s,r=i===3?.0087:.0105,z=-.041+(i===3?.012:i===2?.006:0);
+          finger([[x,.008,-.008],[x,.013,z+.008],[x,.004,z],
+            [x,-.011,z+.002],[x,-.018,z+.018],[x-s*.004,-.010,z+.025]],
+            [r+.002,r+.001,r*.90],[0,-1,0]);
+        }
+        finger([[s*.034,-.005,.021],[s*.040,-.016,-.001],[s*.028,-.025,-.022],
+          [s*.009,-.022,-.030]],[.013,.0115,.009],[0,-1,-.18]);
+      } else if(hand===1){
         form([wrist,[.050,-.030,.072],[.042,.001,.030]], [.024,.026,.013]);
         oval(skin,[.041,-.003,.025],[.018,.039,.034],-.38);
         for(let k=0;k<4;k++){

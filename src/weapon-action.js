@@ -24,11 +24,13 @@ export function weaponAction(spec){
       loadingAt=null;
     }
     if(!rounds){
+      if(canLoad()){reload(now);return 'busy';}
       if(now<dryUntil)return 'busy';
       dryUntil=now+.28;return 'dry';
     }
     if(queued)return 'busy';
     rounds--;shotAt=now;shotEnd=now+spec.recovery;cycleCue=0;
+    if(!rounds&&canLoad())reload(now);
     return 'fire';
   }
   function update(now,signal){
@@ -37,7 +39,8 @@ export function weaponAction(spec){
       const [at,cue]=cycle[cycleCue++];
       if(Number.isFinite(shotAt)&&now-shotAt-at<.14)signal(cue);
     }
-    if(queued&&now>=shotEnd){queued=false;if(canLoad())reload(now);}
+    if(queued&&now>=shotEnd){queued=false;if(canLoad())reload(shotEnd);}
+    if(!rounds&&loadingAt===null&&!queued&&canLoad())reload(now);
     if(loadingAt===null)return;
     const age=now-loadingAt;
     while(loadCue<data.cues.length&&age>=data.cues[loadCue][0]){

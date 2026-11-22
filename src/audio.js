@@ -286,6 +286,10 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function shot(kind,space='outdoor'){
     if(!live())return;
     const t=ctx.currentTime+.005,v=.95+random()*.10;
+    if(kind==='melee'){
+      grit(sfx,t+.059,.102,.205,240,3550,{attack:.039,wet:.035,rate:v*.91});
+      grit(sfx,t+.038,.067,.066,735,4950,{attack:.028,wet:.04,rate:v});return;
+    }
     const n=shotIndex++;
     const archive=kind==='archive',rifleSound=kind==='rifle'||kind==='pistol'||archive;
     const file=kind==='bow'?'bow_fire_0'+(1+n%3):rifleSound?'rifle_field_'+(1+n%2):'shotgun_field';
@@ -345,11 +349,34 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     if(!live())return;
     const a=listener(),dx=p.x-a.x,dz=p.z-a.z,d=Math.hypot(dx,dz);
     const vol=1/(1+(d/9)**1.45),pan=Math.max(-.85,Math.min(.85,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    if(kind==='melee'){
+      const t=ctx.currentTime+.004,soft=material==='soft',wood=material==='wood';
+      grit(sfx,t,soft?.055:.074,(soft?.27:.20)*vol,soft?118:290,soft?2080:wood?2830:4400,
+        {attack:.002,pan,wet:.11,rate:.94+random()*.12});
+      tone(sfx,t+.005,soft?103:wood?197:144,.083,.19*vol,{end:soft?51:92,attack:.002,pan,wet:.19});return;
+    }
     if(material!=='wood'&&sample('impact_'+(material==='surface'?'stone':material),vol*(material==='soft'?.37:.40),.94+random()*.12,pan,.13))return;
     const t=ctx.currentTime+.006,soft=material==='soft',metal=material==='metal',
       f=metal?1110:soft?107:material==='wood'?204:kind==='bow'?218:415;
     grit(sfx,t,soft?.026:.046,(soft?.088:.141)*vol,soft||material==='wood'?156:575,soft?1230:material==='wood'?2580:4860,{attack:.002,pan,wet:.18,rate:.9+random()*.22});
     tone(sfx,t+.003,f,metal?.121:.052,(metal?.069:.061)*vol,{end:f*.93,attack:.002,pan,wet:.18});
+  }
+  function counterCue(kind,pos){
+    if(!live())return;
+    const a=listener(),dx=pos.x-a.x,dz=pos.z-a.z,d=Math.hypot(dx,dz),t=ctx.currentTime+.004;
+    const pan=Math.max(-.87,Math.min(.87,(dx*a.rightX+dz*a.rightZ)/Math.max(d,1)));
+    const vol=1/(1+(d/7.2)**1.52);
+    if(kind==='fire'){
+      if(sample('rifle_field_'+(1+(shotIndex++%2)),.51*vol,1.13+random()*.10,pan,.27))return;
+      grit(sfx,t,.062,.40*vol,330,6050,{attack:.002,pan,wet:.30});
+      tone(sfx,t+.003,137,.092,.25*vol,{end:63,attack:.002,pan,wet:.32});
+    }else if(kind==='hurt'){
+      tone(sfx,t,84,.13,.235,{end:37,attack:.003,pan:pan*.45,wet:.07});
+      grit(sfx,t+.008,.075,.15,92,1340,{attack:.005,pan:pan*.45,wet:.07});
+    }else{
+      grit(sfx,t,.065,.12*vol,520,4200,{attack:.002,pan,wet:.21});
+      tone(sfx,t+.024,kind==='mag-in'?474:243,.057,.085*vol,{end:174,attack:.002,pan,wet:.19});
+    }
   }
   function foot(kind,power=1,impact=false,side=1){
     if(!live())return;
@@ -610,7 +637,7 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
   function clubPhase(){
     return danceNode?((danceOffset+ctx.currentTime-danceStart)%danceNode.loopEnd)*128/danceNode.loopEnd:null;
   }
-  return {play,pause,toggle,shot,shotContact,weaponAction,foot,creature,ambience,club,clubPhase,berg,festival,
+  return {play,pause,toggle,shot,shotContact,weaponAction,counterCue,foot,creature,ambience,club,clubPhase,berg,festival,
     bergPhase:()=>bergNode&&bergPlaying?ctx.currentTime-bergStart:null,puddleCue,weatherCue,crownCue,hatch,upperReveal,playChoir,choirStatus,playMoosfunk,playChapel,
     playNpc,npcTalking,stopNpc,raven,festivalDart,greyCue,preloadWeapons:weapons.preload,stopChapel:stopRadio,mode:on=>{combat=on},
     playOrb:at=>playChoir(at,orbUrl),stopOrb(){if(choirRequest?.url===orbUrl||choirVoice?.url===orbUrl)stopChoir();},

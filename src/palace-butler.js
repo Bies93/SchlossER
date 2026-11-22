@@ -38,7 +38,14 @@ export function palaceButler(T,room,world){
   actor.position.set(point.x,floor,point.z);shadow.position.x=point.x;shadow.position.z=point.z;
   npc.walk(0,distance,track,HALL.floor,0,0);
   const angle=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
-  return (dt,p)=>{
+  let defense=null,inCombat=false;
+  function update(dt,p){
+    if(defense?.active){
+      inCombat=true;speed=0;standing=1;acc=0;
+      collision.ux=Math.cos(actor.rotation.y);collision.uz=-Math.sin(actor.rotation.y);
+      return false;
+    }
+    if(inCombat){turn=angle(point.yaw,actor.rotation.y);inCombat=false;}
     if(!npc.controllable()||!dt||p.y<-.85||Math.abs(p.x)>15||Math.abs(p.z)>22)return false;
     acc+=dt;if(acc<1/30)return false;
     const s=acc;acc=0;t+=s;speech=Math.max(0,speech-s);
@@ -64,5 +71,6 @@ export function palaceButler(T,room,world){
     const mouth=speech>0?Math.min(1,speech/.15)*(.22+.23*Math.abs(Math.sin(t*14.7))):0;
     npc.walk(t,distance,track,HALL.floor,look,standing,mouth);
     return true;
-  };
+  }
+  return {update,rig:npc,attachDefense(controller){defense=controller;}};
 }

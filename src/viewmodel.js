@@ -2,6 +2,7 @@ import {egoAssets,EQUIPMENT as style} from './ego-assets.js';
 import {makeEgoBody} from './ego-body.js';
 import {weaponWorld} from './ego-projectiles.js';
 import {recoilSpring,weaponAction} from './weapon-action.js';
+import {fistPhase,meleeAction,MELEE} from './melee-action.js';
 
 export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,
   creatures=null,onFire=()=>{},onContact=()=>{},onAction=()=>{},query,context,hud){
@@ -21,7 +22,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     node.scale.set(width,length*.52,depth);node.quaternion.setFromUnitVectors(axis,linkDir.normalize());
   }
   const arms=[-1,1].map(side=>({side,forearm:mesh(hands,cap,sleeve),wrap:mesh(hands,shell,cuff),wrist:V(),elbow:V(),end:V()}));
-  const devices=rig.devices;held.add(...devices.map(d=>d.root),...rig.hands.map(p=>p.group));
+  const devices=rig.devices,fists=rig.fists;
+  held.add(...devices.map(d=>d.root),...rig.hands.map(p=>p.group));hands.add(fists.group);fists.group.visible=false;
   const rangeObjects=new T.Group();rangeObjects.name='Treffer und Übungsmarken';rangeObjects.userData.noSceneQuery=true;scene.add(rangeObjects);
   const anchors=[[57.1,47.7],[62.5,49.2],[65.7,53.7]].map(([x,z])=>{
     const y=floorHeight(x,z),center=V(x,y+.88,z);
@@ -64,6 +66,13 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     yawSpring=recoilSpring(17),rollSpring=recoilSpring(19);
   const projector=new T.Raycaster(),headQ=new T.Quaternion(),origin=V(),muzzle=V(),contact=V(),sightAnchor=V();
   const screen=new T.Vector2(),aimScreen=new T.Vector2();
+  const meleeDir=V();
+  const melee=meleeAction(T,query,creatures,context,(at,kind,material)=>{
+    if(kind!=='solid')hitFeedback(kind);
+    else fx.dustAt(at,camera.getWorldDirection(meleeDir),context().layer,material);
+    onContact(at,'melee',material);
+    pitchSpring.push(kind==='solid'?.24:.37);rollSpring.push(melee.side*.27);
+  });
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,owned=[-1,0],
     names=style.map(n=>n.label.split(' · ').at(-1));
   let selected=-1,pending=-1,swap=null,aiming=false,ads=0,t0=null,step=0,clock=0;
@@ -81,13 +90,14 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   function paintHud(isArmed,visual,action){
     if(!hud)return;
     setData(hud.root,'armed',isArmed?'yes':null);
+    setData(hud.root,'melee',fists.group.visible?'yes':null);
     setData(hud.root,'aim',ads>.7?'yes':null);
     setData(hud.root,'hit',clock<hitUntil?hitType:null);
     setData(hud.root,'state',isArmed?visual.phase:null);
     setData(hud.root,'wall',wallDistance<.36?'yes':null);
     if(!isArmed)return;
     const message=clock<noticeUntil?notice:visual.phase==='reloading'?(style[selected].kind==='bow'?'Wird gespannt':'Wird nachgeladen'):
-      visual.phase==='empty'?(action.reserve?'R · Nachladen':'Keine Reserve'):wallDistance<.36?'Mündung blockiert':'';
+      visual.phase==='empty'?(action.reserve?'Ladebereit':'Keine Reserve'):wallDistance<.36?'Mündung blockiert':'';
     const assign=(el,v)=>{if(el.textContent!==v)el.textContent=v;};
     assign(hud.weapon,names[selected]);assign(hud.rounds,String(action.rounds));assign(hud.reserve,String(action.reserve));
     assign(hud.status,message);
@@ -102,6 +112,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   function select(n){
     if(!swap&&selected===n)return;
     leftHeld=touchHeld=dryLatched=false;
+    melee.cancel();fists.group.visible=false;
     states[selected]?.cancel();
     if(n<0)aiming=false;
     pending=n;
@@ -128,7 +139,11 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     return query.trace(projector.ray,n.kind==='pistol'?.70:.94,context?.().mask??1,.065);
   }
   function fire(){
-    if(!isActive()||selected<0||swap||!equipmentAllowed())return false;
+    if(!isActive()||swap||!equipmentAllowed())return false;
+    if(selected<0){
+      if(!melee.begin(clock))return false;
+      onFire('melee');rollSpring.push(melee.side*.12);refresh();return true;
+    }
     const n=style[selected],weapon=states[selected];
     if(!weapon.rounds&&dryLatched)return false;
     camera.updateWorldMatrix(true,false);
@@ -136,7 +151,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     if(wallDistance<.36){notice='Mündung blockiert';noticeUntil=clock+.23;return false;}
     const result=weapon.fire(clock);
     if(result==='dry'){
-      dryLatched=true;onAction(n.kind,'dry');notice=weapon.reserve?'Leer · Nachladen':'Keine Reserve';noticeUntil=clock+.58;refresh();
+      dryLatched=true;onAction(n.kind,'dry');notice='Keine Reserve';noticeUntil=clock+.58;refresh();
     }
     if(result!=='fire')return false;
     if(clock-lastShot>.28)burst=0;
@@ -187,7 +202,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const current=swap?pending:selected;
     select(owned[(owned.indexOf(current)+Math.sign(direction)+owned.length)%owned.length]);
   }
-  const touchReady=()=>isActive()&&selected>=0&&!swap&&equipmentAllowed();
+  const touchReady=()=>isActive()&&!swap&&equipmentAllowed();
   function touchTrigger(pressed){
     if(!pressed){touchHeld=false;dryLatched=false;return false;}
     if(touchHeld||!touchReady())return false;
@@ -234,7 +249,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     inertia=relax(inertia,T.MathUtils.clamp(dyaw/Math.max(.001,dt),-4,4),18,dt);
     if(grounded)step+=delta*(5.04-running*.80);
     const permitted=equipmentAllowed(),transition=!!swap;
-    if(!permitted&&wasPermitted){leftHeld=touchHeld=aiming=false;fx.clear();flash.visible=false;}
+    if(!permitted&&wasPermitted){leftHeld=touchHeld=aiming=false;fx.clear();melee.cancel();flash.visible=false;}
     wasPermitted=permitted;
     let holster=0;
     if(swap){
@@ -245,6 +260,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     const index=Math.max(0,selected),n=style[index],device=devices[index],pose=rig.hands[index];
     const action=states[index],armed=selected>=0&&permitted&&isActive();
+    const wasMelee=fists.group.visible;
+    const fistAge=melee.age(clock),fighting=permitted&&isActive()&&selected<0&&!swap&&fistAge<MELEE.duration;
+    fists.group.visible=fighting;
     if(armed){
       action.update(clock,cue=>{
         onAction(n.kind,cue);
@@ -271,6 +289,22 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     camera.position.y=(bob*.013*(1+running*.35)-landing*.035)*comfort;
     camera.rotation.set(punch*comfort,yawKick*comfort,strafe*.007*comfort+roll*.32*comfort);
     syncProjection();
+    if(fighting){
+      melee.step(clock,camera);
+      const {coil,reach,weight}=fistPhase(fistAge);
+      for(const [i,a] of arms.entries()){
+        const node=fists.nodes[i],attack=a.side===melee.side,q=attack?reach:reach*.09,c=attack?coil:0;
+        node.position.set(a.side*(.258-.210*q+.071*c)+strafe*.025,
+          -.219+(1-weight)*-.41+.135*q-.033*c+bob*.013*comfort,
+          -.53-.62*q+.092*c);
+        node.rotation.set(-.22+q*.36+c*.51,-a.side*(.246+q*.14),a.side*(.34-q*.58+c*.14));
+        a.wrist.copy(fists.wrists[i]).applyQuaternion(node.quaternion).add(node.position);
+        a.elbow.set(a.side*(.326+.014*c-.021*q),-.57+(1-weight)*-.30,-.218-.24*q);
+        a.end.copy(a.wrist).lerp(a.elbow,.041);
+        link(a.forearm,a.elbow,a.end,.125,.108);a.wrap.position.copy(a.wrist).lerp(a.elbow,.066);
+        a.wrap.scale.set(.082,.074,.073);a.wrap.quaternion.copy(a.forearm.quaternion);
+      }
+    }
     if(selected>=0){
     held.rotation.set(-.039*rest+sway*.020*comfort+rise*1.31-holster*.74-lookDown*.26-handling*.141+breath-wall*.48,
       n.yaw*rest+inertia*.008*rest+sway*.011*comfort+.069*handling+yawKick*1.7+wall*.12,
@@ -295,7 +329,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x,crouch:player.motion.crouch});
     let effect=permitted&&fx.tick(dt);
-    if((leftHeld||touchHeld)&&n.automatic&&visual.phase!=='cycling'&&visual.phase!=='reloading'&&fire()){age=0;effect=true;}
+    if(armed&&(leftHeld||touchHeld)&&n.automatic&&visual.phase!=='cycling'&&visual.phase!=='reloading'&&fire()){age=0;effect=true;}
     for(const c of cases){
       if(!c.o.visible)continue;
       c.age+=dt;effect=true;
@@ -319,10 +353,10 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const breatheFrame=permitted&&selected>=0&&!reduced&&Math.floor(clock*24)!==Math.floor((clock-dt)*24);
     return changingBody||delta>.0001||moving>.001||Math.abs(inertia)>.003||Math.abs(oldAds-ads)>.0003||
       Math.abs(kick)+Math.abs(rise)+Math.abs(punch)+Math.abs(yawKick)+Math.abs(roll)>.0001||effect||
-      transition||breatheFrame;
+      transition||breatheFrame||fighting||wasMelee;
   }
   function draw(renderer){
-    if(!isActive()||selected<0||!equipmentAllowed())return;
+    if(!isActive()||selected<0&&!fists.group.visible||!equipmentAllowed())return;
     syncProjection();
     const reset=renderer.autoClear;renderer.autoClear=false;renderer.clearDepth();
     try{renderer.render(stage,eye);}finally{renderer.autoClear=reset;}
@@ -335,7 +369,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   function stop(){
     leftHeld=touchHeld=aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
-    states[selected]?.cancel();clearRecoil();noticeUntil=hitUntil=0;dryLatched=false;
+    states[selected]?.cancel();melee.cancel();fists.group.visible=false;clearRecoil();noticeUntil=hitUntil=0;dryLatched=false;
     for(const c of cases)c.o.visible=false;
     camera.position.y=0;camera.rotation.set(0,0,0);syncProjection();flash.visible=false;refresh();
   }
@@ -351,18 +385,21 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     const vp=r.getViewport(new T.Vector4()),sc=r.getScissor(new T.Vector4()),test=r.getScissorTest(),meshes=[];
     for(const d of devices)d.root.visible=true;
     for(const p of rig.hands)p.group.visible=true;
-    flash.visible=true;cases[0].o.visible=true;stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
+    fists.group.visible=true;flash.visible=true;cases[0].o.visible=true;stage.traverse(o=>{if(o.isMesh){meshes.push([o,o.frustumCulled]);o.frustumCulled=false;}});
     try{
       await r.compileAsync(stage,eye);
       r.setViewport(0,0,32,32);r.setScissor(0,0,32,32);r.setScissorTest(true);r.render(stage,eye);
     }finally{
-      display(selected);flash.visible=false;cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
+      display(selected);fists.group.visible=false;flash.visible=false;cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
       r.setViewport(vp);r.setScissor(sc);r.setScissorTest(test);
     }
   }
   update(performance.now());
   return {update,draw,preset,stop,collect,pickupModel,prepare,cycle,touchTrigger,touchReady,reload,
-    canReload:()=>touchReady()&&!states[selected].isLoading&&states[selected].rounds<states[selected].capacity&&states[selected].reserve>0,
+    playerHit(side){pitchSpring.push(.63);yawSpring.push(side*.26);rollSpring.push(side*.48);},
+    npcPistol(){const i=style.findIndex(n=>n.kind==='pistol');return {device:devices[i].replica(),spec:style[i]};},
+    hasWeapon:()=>selected>=0&&!swap,
+    canReload:()=>selected>=0&&touchReady()&&!states[selected].isLoading&&states[selected].rounds<states[selected].capacity&&states[selected].reserve>0,
     restock(){
       let count=0;
       for(const i of owned)if(i>=0)count+=states[i].restock();
