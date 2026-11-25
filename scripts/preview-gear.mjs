@@ -2,6 +2,7 @@ import {build} from 'esbuild';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 const base=new URL('../',import.meta.url),folder=new URL('dist/',base);
+const archiveOnly=process.argv.includes('--archive');
 const src=`
 import * as T from 'three';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
@@ -37,22 +38,35 @@ vm.preset('dusk');
 let ms=0;
 function settle(n=28){for(let i=0;i<n;i++)vm.update(ms+=1000/60);}
 async function renderBoard(){
-for(let i=0;i<EQUIPMENT.length;i++){
+const archiveOnly=${archiveOnly};
+for(const i of EQUIPMENT.keys()){
+  if(archiveOnly&&EQUIPMENT[i].kind!=='archive')continue;
   const spec=EQUIPMENT[i],model=rig.devices[i].root,
     target=new T.Vector3(0,-.041,spec.kind==='bow'?-.18:-.20);
   studio.add(model);
-  for(const [label,p] of [['Seitenansicht',[2.1,.48,.22]],['Frontdiagonale',[.82,.80,-1.90]]]){
+  for(const [label,p] of [['Seitenansicht',[2.1,.48,.22]],['Frontdiagonale',[-.82,.80,-1.90]]]){
     close.position.fromArray(p);close.lookAt(target);close.updateMatrixWorld();
     snap(spec.label+' · '+label,()=>r.render(studio,close));
   }
   studio.remove(model);
-  if(i){vm.collect(i);await new Promise(resolve=>setTimeout(resolve,112));}
-  r.domElement.dispatchEvent(new WheelEvent('wheel',{deltaY:120,bubbles:true,cancelable:true}));settle();
+  if(archiveOnly){vm.collect(i);vm.cycle(-1);settle();}
+  else{
+    if(i){vm.collect(i);await new Promise(resolve=>setTimeout(resolve,112));}
+    r.domElement.dispatchEvent(new WheelEvent('wheel',{deltaY:120,bubbles:true,cancelable:true}));settle();
+  }
   const render=()=>{r.render(world,eye);vm.draw(r);};
   snap(spec.label+' · First Person',render);
   r.domElement.dispatchEvent(new MouseEvent('mousedown',{button:2,bubbles:true,cancelable:true}));settle();
   snap(spec.label+' · ADS',render);
   window.dispatchEvent(new MouseEvent('mouseup',{button:2,bubbles:true}));settle();
+  if(archiveOnly){
+    vm.touchTrigger(true);vm.touchTrigger(false);vm.update(ms+=1);
+    snap('Falkenried · Mündungsblitz',render);
+    settle(8);snap('Falkenried · Rauchfahne',render);
+    settle(50);snap('Falkenried · Nachladebewegung',render);
+    settle(75);vm.preset('night');world.background.setHex(0x333d53);
+    snap('Falkenried · Mondnacht',render);
+  }
   if(spec.kind==='shotgun'){
     close.position.set(-1.52,-.82,.64);close.lookAt(0,-.077,-.154);close.updateMatrixWorld();
     const device=rig.devices[i];studio.add(model);
@@ -67,7 +81,7 @@ renderBoard();
 `;
 const page=await build({stdin:{contents:src,resolveDir:fileURLToPath(base)},bundle:true,minify:true,write:false});
 await mkdir(folder,{recursive:true});
-await writeFile(new URL('waffen-atelier.html',folder),`<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>SchlossER · Waffenatelier</title>
+await writeFile(new URL(archiveOnly?'falkenried-atelier.html':'waffen-atelier.html',folder),`<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>SchlossER · Waffenatelier</title>
 <style>*{box-sizing:border-box}body{background:#191c1e;color:#e6e2da;font:15px system-ui;margin:18px}header{margin:0 auto 14px;max-width:1082px}h1{font:26px Georgia;margin:0 0 4px}main{display:grid;grid-template-columns:repeat(2,minmax(0,530px));gap:12px;max-width:1082px;margin:auto}figure{margin:0;background:#262a2c;overflow:hidden;border-radius:6px}canvas{display:block;width:100%;height:auto}canvas[hidden]{display:none}figcaption{padding:8px 10px}@media(max-width:590px){main{grid-template-columns:1fr}}</style>
 <body><header><h1>SchlossER · Waffenatelier</h1><span>Die ausgelieferten Modelle unter Studiolicht und mit dem First-Person-Rig.</span></header><main></main><script>`+
   page.outputFiles[0].text.replace(/<\/script/gi,'<\\/script')+'</script></body></html>');

@@ -3,6 +3,7 @@ import {makeEgoBody} from './ego-body.js';
 import {weaponWorld} from './ego-projectiles.js';
 import {recoilSpring,weaponAction} from './weapon-action.js';
 import {fistPhase,meleeAction,MELEE} from './melee-action.js';
+import {archiveShotFX} from './ego-archive-fx.js';
 
 export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isActive,refresh,equipmentAllowed=()=>true,
   creatures=null,onFire=()=>{},onContact=()=>{},onAction=()=>{},query,context,hud){
@@ -36,6 +37,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   });
   const fx=weaponWorld(T,rangeObjects,world,floorHeight,creatures,rig.bolt,anchors,onContact,query,context,hitFeedback);
   const flash=new T.Group();held.add(flash);
+  const archiveFX=archiveShotFX(T,stage);
   const shine=new T.MeshBasicMaterial({color:0xe9a33b,transparent:true,depthWrite:false,
     blending:T.AdditiveBlending,toneMapped:false});
   const spark=mesh(flash,new T.IcosahedronGeometry(1,0),shine,0,0,-.023);
@@ -125,7 +127,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     else if(swap.shown)swap={at:clock,shown:false,down:.080,up:n<0?0:.160};
     // A change while still lowering replaces the destination only.
     else swap.up=n<0?0:.176;
-    clearRecoil();wall=0;wallDistance=Infinity;nextWall=-Infinity;noticeUntil=0;flash.visible=false;refresh();
+    clearRecoil();wall=0;wallDistance=Infinity;nextWall=-Infinity;noticeUntil=0;flash.visible=false;archiveFX.clear();refresh();
   }
   display(selected);
   function syncProjection(){
@@ -180,7 +182,9 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       flash.visible=false;
     }else{
       if(n.kind!=='shotgun'&&n.kind!=='archive')eject(n);
-      flash.position.fromArray(n.emit);flash.visible=true;flash.rotation.z=(serial*2.39996)%6.28318;
+      flash.visible=n.kind!=='archive';
+      if(flash.visible){flash.position.fromArray(n.emit);flash.rotation.z=(serial*2.39996)%6.28318;}
+      else archiveFX.fire(n.emit,held,serial,reduced);
       fx.beginVolley();let nearest=Infinity,material;
       for(let i=0;i<n.pattern;i++){
         const az=(i-1)*Math.PI*.5+serial*2.39996,
@@ -253,7 +257,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     inertia=relax(inertia,T.MathUtils.clamp(dyaw/Math.max(.001,dt),-4,4),18,dt);
     if(grounded)step+=delta*(5.04-running*.80);
     const permitted=equipmentAllowed(),transition=!!swap;
-    if(!permitted&&wasPermitted){leftHeld=touchHeld=aiming=false;fx.clear();melee.cancel();flash.visible=false;}
+    if(!permitted&&wasPermitted){leftHeld=touchHeld=aiming=false;fx.clear();melee.cancel();flash.visible=false;archiveFX.clear();}
     wasPermitted=permitted;
     let holster=0;
     if(swap){
@@ -335,6 +339,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     const changingBody=body.update({step,moving,running,strafe,grounded,landing,pitch:camera.parent.rotation.x,crouch:player.motion.crouch});
     let effect=permitted&&fx.tick(dt);
+    if(archiveFX.update(dt))effect=true;
     if(armed&&(leftHeld||touchHeld)&&n.automatic&&visual.phase!=='cycling'&&visual.phase!=='reloading'&&fire()){age=0;effect=true;}
     for(const c of cases){
       if(!c.o.visible)continue;
@@ -345,8 +350,8 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
     if(flash.visible){
       effect=true;
-      const width=n.kind==='shotgun'?.053:n.kind==='archive'?.046:n.kind==='pistol'?.026:.034,
-        fade=1-age/(n.kind==='shotgun'||n.kind==='archive'?.059:.041),k=Math.max(0,fade);
+      const width=n.kind==='shotgun'?.053:n.kind==='pistol'?.026:.034,
+        fade=1-age/(n.kind==='shotgun'?.059:.041),k=Math.max(0,fade);
       if(fade<=0)flash.visible=false;
       else{
         spark.scale.set(width*k*.51,width*k*.41,width*k*(n.kind==='rifle'?1.92:1.18));
@@ -377,7 +382,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     leftHeld=touchHeld=aiming=false;ads=0;t0=null;moving=running=strafe=inertia=0;wheel=0;swap=null;display(pending);
     states[selected]?.cancel();melee.cancel();fists.group.visible=false;clearRecoil();noticeUntil=hitUntil=0;dryLatched=false;
     for(const c of cases)c.o.visible=false;
-    camera.position.y=0;camera.rotation.set(0,0,0);syncProjection();flash.visible=false;refresh();
+    camera.position.y=0;camera.rotation.set(0,0,0);syncProjection();flash.visible=false;archiveFX.clear();refresh();
   }
   function collect(index){
     if(!style[index]||owned.includes(index))return false;
@@ -401,6 +406,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
   }
   async function prepare(r){
     const vp=r.getViewport(new T.Vector4()),sc=r.getScissor(new T.Vector4()),test=r.getScissorTest(),meshes=[];
+    const hideArchiveFX=archiveFX.warmup();
     for(const d of devices)d.root.visible=true;
     for(const p of rig.hands)p.group.visible=true;
     showArms(true,true);fists.group.visible=true;flash.visible=true;cases[0].o.visible=true;
@@ -409,7 +415,7 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
       await r.compileAsync(stage,eye);
       r.setViewport(0,0,32,32);r.setScissor(0,0,32,32);r.setScissorTest(true);r.render(stage,eye);
     }finally{
-      display(selected);showArms(selected>=0,false);fists.group.visible=false;flash.visible=false;cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
+      display(selected);showArms(selected>=0,false);fists.group.visible=false;flash.visible=false;hideArchiveFX();cases[0].o.visible=false;for(const [o,v] of meshes)o.frustumCulled=v;
       r.setViewport(vp);r.setScissor(sc);r.setScissorTest(test);
     }
   }

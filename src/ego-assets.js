@@ -18,8 +18,8 @@ export const EQUIPMENT=[
     sight:[0,.090,-.237],emit:[0,.033,-.272],hold:[.156,-.152,-.443],yaw:.164,
     fore:[-.020,-.120,.002],grip:[0,-.100,.029],recovery:.205,recoil:.026,pattern:1,impact:38,range:70,spread:.0066,weight:.77},
   {kind:'archive',label:'Falkenried · Archivgewehr',color:0x99734e,
-    sight:[0,.087,-.403],emit:[0,.030,-.881],hold:[.185,-.160,-.555],yaw:.213,
-    fore:[0,-.060,-.459],grip:[0,-.121,.058],recovery:.47,recoil:.074,pattern:1,impact:89,range:158,spread:.0032,weight:1.21}
+    sight:[0,.087,-.403],emit:[0,.034,-.883],hold:[.183,-.156,-.566],yaw:.199,
+    fore:[.004,-.052,-.473],grip:[0,-.121,.058],recovery:.47,recoil:.074,pattern:1,impact:89,range:158,spread:.0032,weight:1.21}
 ];
 
 export function egoAssets(T){

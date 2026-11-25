@@ -27,6 +27,8 @@ export function makeEquipment(T,specs){
     rubber:F(0x323433,.99,0,'rubber',1.09,.08,.12),
     wood:F(0xc6b8a9,.94,0,'walnut',1.08,.70,.10),
     darkWood:F(0xae9f8e,.96,0,'walnut',.94,.62,.16),
+    archiveWood:F(0xada39b,.72,0,'walnut',.58,.65,.06),
+    archiveSteel:F(0x68706f,.66,.60,'blue',.65,.78,.11),
     brass:F(0xae925e,.72,.68,'machine',.88,.29,.06),
     enamel:F(0xb0a36d,.93,0,'polymer',.69),
     string:F(0xa0978b,.99,0,'twill',.54),vane:F(0x934d37,.89,0,'rubber',.63),
@@ -86,7 +88,7 @@ export function makeEquipment(T,specs){
     function cyl(mat,p,r,length,axis='z'){
       add(round,mat,p,[r,length,r],axis==='x'?[0,0,-Math.PI*.5]:axis==='y'?[0,0,0]:[Math.PI*.5,0,0]);
     }
-    function sculpt(mat,slices,{power=.66,side=.0,chamfer=.02,openStart=false,openEnd=false}={}){
+    function sculpt(mat,slices,{power=.66,side=.0,chamfer=.02,openStart=false,openEnd=false,continuousGrain=false}={}){
       // A smooth single volume, with independent stock shoulders along Z.
       // Longitudinal UVs wrap continuously over the visible side and comb.
       const step=32,p=[],u=[],f=[];
@@ -94,7 +96,8 @@ export function makeEquipment(T,specs){
         for(let i=0;i<=step;i++){
           const a=(i/step-.25)*Math.PI*2,cs=Math.cos(a),sn=Math.sin(a),t=(1+Math.sign(sn)*Math.abs(sn)**power)*.5;
           const x=Math.sign(cs)*Math.abs(cs)**power*w*(1-side*(1-t));
-          p.push(x,lo+(hi-lo)*t,z);u.push(z/.71,i/step*(2*w+hi-lo)/.15);
+          p.push(x,lo+(hi-lo)*t,z);
+          u.push(z/(continuousGrain?.62:.71),continuousGrain?i/step:i/step*(2*w+hi-lo)/.15);
         }
       }
       slices.forEach(s=>ring(...s));
@@ -147,10 +150,11 @@ export function makeEquipment(T,specs){
         const d=Math.sign(p[0])||1;box(m.recess,[p[0]+d*.00173,p[1],p[2]],[.00055,r*.26,r*1.35],.00014,[d*.37,0,0]);
       }
     }
-    function stamp(code,x,y,z,w,h){
+    function stamp(code,x,y,z,w,h,sub=''){
       const cv=document.createElement('canvas');cv.width=256;cv.height=64;const ctx=cv.getContext('2d');
-      ctx.fillStyle='#bfb7a2';ctx.font='bold 27px monospace';ctx.fillText(code,12,34);
-      ctx.fillRect(13,44,128,2);
+      ctx.fillStyle='#bfb7a2';ctx.font='bold 27px monospace';ctx.fillText(code,12,sub?27:34);
+      ctx.fillRect(13,sub?32:44,128,2);
+      if(sub){ctx.font='14px monospace';ctx.fillText(sub,13,49);}
       // Two authored abrasion clusters at the outer corners, not an overlay
       // of evenly distributed rust or dirt.
       ctx.fillStyle='#c5b78f7f';
