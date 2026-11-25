@@ -65,4 +65,28 @@ const victim=s.defenders[0];s.target.collapse(victim,victim.chest.getWorldPositi
 for(let t=0;t<16&&s.c.phase!=='done';t+=.04)s.step(.04,true);
 assert.deepEqual(s.results,['interrupted']);assert.deepEqual(s.losses,[victim.id]);
 assert.ok([s.lead,...s.defenders].every(n=>!n.questBusy));
-console.log('Marcel-Quest: freier Laufweg, alle drei Gegenangriffe, korrekte Trefferfolge, Rückkehr, kein Spielereingriff und sauberer Abbruch geprüft.');
+
+// Test planted ankles against world movement, not just the presence of IK.
+const {lead:{rig}}=setup(),p=rig.actor.position,ankles=['foot_l','foot_r'].map(n=>rig.joint(n));
+const last=[new T.Vector3(),new T.Vector3()],prevPhase=[0,0],now=new T.Vector3();
+const stride=1.68,speed=3.65,y=rig.groundedY(0),route=(distance,out)=>Object.assign(out,{x:0,z:distance,yaw:0});
+const base=rig.restPoint('foot_l').y*rig.actor.children[0].scale.y+y;
+let planted=0,flight=0,maxSlip=0;
+for(let d=.9;d<8;d+=.014){
+  p.set(0,y,d);rig.actor.rotation.y=0;rig.run(d/speed,d,route,0,speed);
+  let air=0;
+  for(let i=0;i<2;i++){
+    ankles[i].getWorldPosition(now);
+    const f=(d/stride+.22+i*.5)%1;
+    assert.ok(Math.abs(now.x)<.125,'Kein breitbeiniger Sprint');
+    if(f>.04&&f<.38&&prevPhase[i]>.035&&prevPhase[i]<.38){
+      maxSlip=Math.max(maxSlip,Math.hypot(now.x-last[i].x,now.z-last[i].z));planted++;
+    }
+    if(now.y>base+.013)air++;
+    last[i].copy(now);prevPhase[i]=f;
+  }
+  if(air===2)flight++;
+}
+assert.ok(planted>200&&maxSlip<.010,`Standfüße rutschen höchstens ${(maxSlip*1000).toFixed(1)} mm pro Schrittprobe`);
+assert.ok(flight>10,'Zwischen den Auftritten gibt es eine kurze Flugphase');
+console.log('Marcel-Quest: Sprint mit Bodenkontakt und Flugphase, freier Laufweg, vollständiger Ablauf ohne Spielereingriff.');

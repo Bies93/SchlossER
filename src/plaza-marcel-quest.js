@@ -14,14 +14,34 @@ const beats=[[1,0,22],[0,3,11],[3,0,27],[0,2,13],[2,0,26],[1,0,Infinity]];
 const contactSpec=Object.freeze({kind:'melee'});
 const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const approach=(now,to,speed,dt)=>now+(to-now)*(1-Math.exp(-speed*dt));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+function runningCourse(T,from){
+  const points=[new T.Vector3(from.x,0,from.z),...marcelRun.map(([x,z])=>new T.Vector3(x,0,z))];
+  const path=new T.CurvePath(),v=new T.Vector3(),rear=new T.Vector3(),front=new T.Vector3();
+  let last=points[0];
+  for(let i=1;i<points.length-1;i++){
+    const a=points[i-1],b=points[i],c=points[i+1];
+    const cut=Math.min(.61,b.distanceTo(a)*.38,b.distanceTo(c)*.38);
+    const enter=b.clone().lerp(a,cut/b.distanceTo(a)),leave=b.clone().lerp(c,cut/b.distanceTo(c));
+    path.add(new T.LineCurve3(last,enter));path.add(new T.QuadraticBezierCurve3(enter,b,leave));last=leave;
+  }
+  path.add(new T.LineCurve3(last,points.at(-1)));
+  const length=path.getLength();
+  const point=(s,p)=>p.copy(path.getPoint(clamp(s/length,0,1)));
+  return {length,sample(s,out){
+    point(s,v);point(Math.max(0,s-.045),rear);point(Math.min(length,s+.045),front);
+    out.x=v.x;out.z=v.z;out.yaw=Math.atan2(front.x-rear.x,front.z-rear.z);return out;
+  }};
+}
 
 // A self-contained scene: only its four actors exchange game hit events.
 // It never inflicts player damage, takes over the camera or needs input.
 export function marcelStandQuest(T,marcel,stand,{world,floorAt,query,targets,sound=()=>{},outcome=()=>{}}){
   const characters=[marcel.rig.npcInfo,...stand.cast.map(x=>x.npcInfo)];
   const point=new T.Vector3(),start=new T.Vector3(),direction=new T.Vector3(),ray=new T.Ray();
-  const step={x:0,y:0,z:0,feet:0};
-  let phase='idle',time=0,age=0,bout=0,actors=[],strike=null,completed=false;
+  const step={x:0,y:0,z:0,feet:0},ahead={};
+  let phase='idle',time=0,age=0,bout=0,actors=[],strike=null,completed=false,course;
   const switchTo=name=>{phase=name;age=0;strike=null;};
   function route(a,points){a.path=points;a.index=0;a.stuck=0;}
   function move(a,dt,max){
@@ -51,9 +71,28 @@ export function marcelStandQuest(T,marcel,stand,{world,floorAt,query,targets,sou
     a.n.actor.rotation.y+=d*(1-Math.exp(-dt*13));
     return d;
   }
-  function pose(a,dt,guard,sprint=0){
+  function pose(a,dt,guard){
     a.guard=approach(a.guard,guard,13,dt);
-    if(a.n.alive&&!a.n.rig.isReacting())a.n.rig.boxPose(time+a.offset,a.distance,a.pace,a.guard,a.clock.side,a.clock.extension(),sprint);
+    if(a.n.alive&&!a.n.rig.isReacting())a.n.rig.boxPose(time+a.offset,a.distance,a.pace,a.guard,a.clock.side,a.clock.extension());
+  }
+  function run(a,dt){
+    const p=a.n.actor.position,remaining=course.length-a.progress;
+    const speed=Math.min(3.72,Math.sqrt(2*6.4*remaining));
+    a.speed=approach(a.speed,speed,speed<a.speed?16:7.5,dt);
+    const next=Math.min(course.length,a.progress+a.speed*dt);
+    course.sample(next,ahead);
+    Object.assign(step,{x:p.x,y:a.floor+.05,z:p.z,feet:a.floor});
+    world.move(step,ahead.x-p.x,ahead.z-p.z);
+    const floor=floorAt(step.x,step.z,a.floor),error=Math.hypot(step.x-ahead.x,step.z-ahead.z);
+    if(Number.isFinite(floor)&&Math.abs(floor-a.floor)<.22&&error<.12){
+      a.floor=floor;a.progress=next;a.distance=next;a.stuck=0;
+      p.set(step.x,a.n.rig.groundedY(floor),step.z);
+    }else a.stuck+=dt;
+    const yaw=ahead.yaw;
+    a.n.actor.rotation.y+=angle(yaw-a.n.actor.rotation.y)*(1-Math.exp(-dt*17));
+    if(a.n.shadow){a.n.shadow.position.set(p.x,a.floor+.009,p.z);a.n.shadow.rotation.y=a.n.actor.rotation.y;}
+    a.n.rig.run(time,a.progress,course.sample,a.floor,a.speed);
+    return course.length-a.progress<.006;
   }
   function strikeAt(attacker,defender,value,dt,audible){
     const a=actors[attacker],d=actors[defender];
@@ -104,9 +143,9 @@ export function marcelStandQuest(T,marcel,stand,{world,floorAt,query,targets,sou
       actors=characters.map((n,i)=>{
         n.questBusy=true;const p=n.actor.position;
         return {n,home:p.clone(),yaw:n.actor.rotation.y,clock:boxingClock(),floor:floorAt(p.x,p.z,p.y),
-          path:[],index:0,distance:0,speed:0,pace:0,guard:0,stuck:0,offset:i*.83};
+          path:[],index:0,distance:0,progress:0,speed:0,pace:0,guard:0,stuck:0,offset:i*.83};
       });
-      route(actors[0],marcelRun);switchTo('shout');return true;
+      course=runningCourse(T,actors[0].home);switchTo('shout');return true;
     },
     update(dt,audible){
       if(!dt||phase==='idle'||phase==='done')return false;
@@ -116,16 +155,19 @@ export function marcelStandQuest(T,marcel,stand,{world,floorAt,query,targets,sou
         returnCast(false);return true;
       }
       if(phase==='shout'){
+        if(age>.64){
+          course.sample(0,ahead);
+          lead.n.actor.rotation.y+=angle(ahead.yaw-lead.n.actor.rotation.y)*(1-Math.exp(-dt*13));
+        }
         lead.n.rig.pose(time,0,0,0,0,0,2.8,.65*(1-age/.96)*Math.abs(Math.sin(time*17)));
         if(age>=.90)switchTo('run');
       }else if(phase==='run'){
-        const arrived=move(lead,dt,3.85);pose(lead,dt,0,1);
-        if(arrived)switchTo('opening');
+        if(run(lead,dt)){lead.speed=0;switchTo('opening');}
         else if(age>10||lead.stuck>1.5)returnCast(false);
       }else if(phase==='opening'){
         lead.pace=approach(lead.pace,0,18,dt);
         const result=strikeAt(0,1,14,dt,audible);
-        turn(actors[1],lead,dt);pose(actors[1],dt,strike?.hit?.76:0);pose(lead,dt,1,1);
+        turn(actors[1],lead,dt);pose(actors[1],dt,strike?.hit?.76:0);pose(lead,dt,1);
         if(result==='hit'){
           for(let i=1;i<actors.length;i++)route(actors[i],castRoutes[i-1]);
           switchTo('gather');

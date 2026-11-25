@@ -476,6 +476,34 @@ export function createHuman(T,id='base'){
     }
     face(t,2.34,talk,0,.05,look);
   }
+  function run(t,distance,route,floorY,speed){
+    // A shorter contact than a walk, plus a brief flight phase. The support
+    // ankle samples one fixed route point for the entire contact.
+    const stride=1.68,stance=.445,phase=distance/stride+.22,w=phase*tau;
+    const effort=clamp(speed/2.65),m=effort*effort*(3-2*effort);
+    torso(.012*sin(w)*m,-.014+.025*cos(2*w-.34)*m,.024*m,.018+.202*m,
+      .102*sin(w)*m,.025*sin(w)*m,t,.025*sin(w),-.025*m);
+    for(const [j,s] of ['l','r'].entries()){
+      const side=j===0?1:-1,ankle=read('foot_'+s),cycle=phase+j*.5,f=frac(cycle);
+      const contact=(Math.floor(cycle)-j*.5-.22+.211)*stride;
+      const swing=clamp((f-stance)/(1-stance)),blend=swing*swing*(3-2*swing);
+      route(contact,anchorA);route(contact+stride,anchorB);
+      const width=side*.079;
+      const x=mix(anchorA.x+cos(anchorA.yaw)*width,anchorB.x+cos(anchorB.yaw)*width,blend);
+      const z=mix(anchorA.z-sin(anchorA.yaw)*width,anchorB.z-sin(anchorB.yaw)*width,blend);
+      const lift=.215*sin(Math.PI*swing)**1.38*(1.24-.48*swing);
+      ankleGoal.set(x,groundedY(floorY)+ankle.y*size+lift,z).applyMatrix4(worldInverse);
+      solve(LIMB[s].leg,mix(side*.099,ankleGoal.x,m),mix(ankle.y,ankleGoal.y,m),mix(.015,ankleGoal.z,m),side*.055,-.12,1);
+      const yaw=anchorA.yaw+Math.atan2(sin(anchorB.yaw-anchorA.yaw),cos(anchorB.yaw-anchorA.yaw))*blend;
+      const yawError=Math.atan2(sin(yaw-actor.rotation.y),cos(yaw-actor.rotation.y));
+      foot('foot_'+s,.52*sin(swing*tau)*m,clamp(yawError,-.34,.34)*m);
+      const drive=-side*cos(w-.29);
+      solve(LIMB[s].arm,side*(.211-.022*m),hipsY-.145+m*(.282+.099*drive),.038+m*(.101+.243*drive),
+        side*.51,-.77,-.63);
+      neutralHand(s);curl(s,.36+.31*m);
+    }
+    face(t,2.8,.04*m,0,0);
+  }
   function grip(side){
     const n='hand_'+side,w=bones.get(n),joint=f=>read(f+'_01_'+side);
     const fore=joint('middle').clone().sub(read(n)).normalize();
@@ -1160,16 +1188,15 @@ export function createHuman(T,id='base'){
     }
     face(t,1.16,grab*(.53+.34*Math.abs(tremor))*(1-.52*fold),.06,0,0,.33*fold);
   }
-  function boxPose(t,distance,pace,guard,lead,reach,sprint=0){
-    const phase=distance/(1.12+.58*sprint),w=phase*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
-    const run=sprint*pace*(1-guard);
+  function boxPose(t,distance,pace,guard,lead,reach){
+    const phase=distance/1.12,w=phase*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
     torso(.023*sin(w)*pace,-.028-.039*guard-.025*(.5+.5*cos(w*2))*pace,
-      .026*guard+.059*reach*guard+.026*run,.018+.074*pace+.145*guard+.125*reach*guard+.13*run,
+      .026*guard+.059*reach*guard,.018+.074*pace+.145*guard+.125*reach*guard,
       .14*guard-.42*turn+.133*sin(w)*pace,.037*sin(w)*pace-.055*turn,t,0,-.06*guard);
     for(const [j,s] of ['l','r'].entries()){
-      const sign=j===0?1:-1,f=frac(phase+j*.5),stance=.59-.09*sprint,u=clamp((f-stance)/(1-stance)),
-        stride=(f<stance?1-2*f/stance:-cos(u*Math.PI))*(.327+.096*sprint),
-        lift=sin(u*Math.PI)**1.27*(.102+.075*sprint),a=read('foot_'+s);
+      const sign=j===0?1:-1,f=frac(phase+j*.5),stance=.59,u=clamp((f-stance)/(1-stance)),
+        stride=(f<stance?1-2*f/stance:-cos(u*Math.PI))*.327,
+        lift=sin(u*Math.PI)**1.27*.102,a=read('foot_'+s);
       // Ground phase sweeps back at walking speed; the foot only lifts
       // during the measured forward swing.
       solve(LIMB[s].leg,a.x*.91+sign*.034*guard,a.y+lift*pace,
@@ -1178,8 +1205,8 @@ export function createHuman(T,id='base'){
       const jab=sign===lead?reach*guard:0;
       const x=mix(sign*(.213+.019*pace),sign*(.176-.072*jab),guard);
       const pump=sign*cos(w);
-      const y=mix(hipsY-.155+.029*pace*(1+pump)+run*(.22+.112*pump),1.38+.014*pulse+sign*.035+.047*jab,guard);
-      const z=mix(.051+.205*pump*pace+run*(.063+.075*pump),.252+.342*jab,guard);
+      const y=mix(hipsY-.155+.029*pace*(1+pump),1.38+.014*pulse+sign*.035+.047*jab,guard);
+      const z=mix(.051+.205*pump*pace,.252+.342*jab,guard);
       solve(LIMB[s].arm,x,y,z,sign*mix(.59,.86,guard),-.45,mix(-.69,-.31,guard));
       rot('hand_'+s,.025-.34*jab+sign*.045*cos(w)*pace,sign*(.055+.48*guard),sign*(.045-.27*guard));
       curl(s,.35+1.62*guard);
@@ -1206,7 +1233,7 @@ export function createHuman(T,id='base'){
     return Number.isFinite(nearest)?nearest*side:null;
   }
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,infoPose,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
+  const rig={actor,pose,dance,altarWork,deskWork,infoPose,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,run,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
     boxPose,atStation:()=>alive()&&!npcInfo?.hostile,
     resetBoxPose(){pose(0,0,0,0,0,0,.2);neutralHand('l');neutralHand('r');},
     resetCounterHands(){if(counterMount){neutralHand('l');neutralHand('r');}},

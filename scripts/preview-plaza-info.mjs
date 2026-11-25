@@ -61,7 +61,7 @@ async function render(){
     const brawl=marcelStandQuest(T,marcel,stand,{world,floorAt:()=>0,query,
       targets:{damage(n,...args){const got=targets.damage(n,...args);if(got)hits++;return got;}},outcome:r=>{ending=r;}});
     if(!brawl.start())throw Error('Marcel-Quest startet nicht');
-    const views=new Set();let endTime=null;
+    const views=new Set();let endTime=null,firstRun=null;
     for(let t=0;t<24;t+=.027){
       brawl.update(.027,false);targets.tick(.027,1);
       const p=marcel.rig.actor.position;
@@ -69,7 +69,12 @@ async function render(){
         if(views.has(key))return;
         views.add(key);snap(title,546,333,a,b,fov);
       };
-      if(brawl.phase==='run'&&p.z<28.0)capture('run','Marcel läuft zum Stand',V(p.x-2.0,1.65,p.z+.95),p.clone().add(V(0,.86,0)),44);
+      if(brawl.phase==='run'&&p.z<27.4){
+        firstRun??=t;
+        const at=V(p.x+1.26,1.43,p.z-2.50),look=p.clone().add(V(0,.88,0));
+        capture('run','Marcel sprintet zum Stand',at,look,45);
+        if(t-firstRun>.13)capture('run2','Gegenläufiger Armschwung und nächster Schritt',at,look,45);
+      }
       if(hits===1)capture('first','Marcel beginnt die Prügelei',V(x-3.75,1.65,z+4.65),V(x-1.3,1.11,z+1.87),48);
       if(hits>=4&&!ending)capture('defense','Heidi, Luisa und Greta wehren sich',V(x+2.85,1.85,z+5.4),V(x-.75,1.05,z+2.28));
       if(ending&&endTime===null)endTime=t;
@@ -77,7 +82,7 @@ async function render(){
         capture('end','Marcel fällt · Quest abgeschlossen',V(x-2.95,1.81,z+5.27),V(x-.70,.78,z+2.25));break;
       }
     }
-    if(ending!=='complete'||views.size!==4)throw Error('Quest-Vorschau blieb unvollständig: '+hits+' Treffer, '+ending);
+    if(ending!=='complete'||views.size!==5)throw Error('Quest-Vorschau blieb unvollständig: '+hits+' Treffer, '+ending);
     document.body.dataset.finished='true';return;
   }
   for(let i=0;i<16;i++)stand.update(.045,{x,z:z+6},true);
