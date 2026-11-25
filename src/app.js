@@ -40,8 +40,9 @@ import {npcFocus} from './npc-focus.js';
 import {bindNpcDialogue} from './npc-dialogue-ui.js';
 import {sceneQuery} from './scene-query.js';
 import {combatTargets} from './combat-targets.js';
-import {niklasDefense} from './npc-counterfire.js';
+import {npcCounterfire} from './npc-counterfire.js';
 import {npcBoxing} from './npc-boxing.js';
+import {npcWeapon} from './npc-loadouts.js';
 import {playerVitals} from './player-vitals.js';
 import {weaponPickups} from './weapon-pickups.js';
 import {addPalaceUpper,UPPER_LAYER} from './palace-upper.js';
@@ -269,15 +270,16 @@ async function start(){
  }
  const boxing=npcBoxing(T,{context:activeLayers,query:geometryQuery,worldAt:localWorld,floorAt:floorHeight,
    ready:controls,damage:damagePlayer,sound:audio.counterCue});
- const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,id=>{
-   if(id==='niklas')counterfire.reset();
+ const targets=combatTargets(T,geometryQuery,round,targetWorld,floorHeight,(id,npc)=>{
+   pickups.drop(npc);counterfire.drop(npc);boxing.drop(npc);
    if(audio.npcTalking(id)){audio.stopNpc(id);hideCaption();}
    if(conversation?.pending()?.id===id)conversation.close('interrupt');
    if(id==='hubert')leavePrison();
    if(id==='bergUdo')audio.berg(bergInside(player.body.position),false);
    names.sample(performance.now(),true);
  },ravens,(npc,spec)=>{
-   const provoked=npc.id==='niklas'?counterfire.provoke():spec.kind!=='melee'&&boxing.provoke(npc);
+   if(spec.kind==='melee'&&npc.id!=='niklas')return;
+   const provoked=npcWeapon(npc.id)?counterfire.provoke(npc):boxing.provoke(npc);
    if(!provoked)return;
    if(conversation?.pending()?.id===npc.id)conversation.close('interrupt');
    if(audio.npcTalking(npc.id)){audio.stopNpc(npc.id);hideCaption();}
@@ -288,15 +290,16 @@ async function start(){
    kind=>{const p=player.body.position;audio.shot(kind,activeLayers().layer!==0?'cellar':hallFloor(p.x,p.z)!==null?'hall':'outdoor');},
    audio.shotContact,audio.weaponAction,geometryQuery,activeLayers,{root:$('combat-hud'),weapon:$('ammo-weapon'),
      rounds:$('ammo-rounds'),reserve:$('ammo-reserve'),status:$('ammo-status')});
- const {device:npcPistol,spec:npcPistolSpec}=viewmodel.npcPistol();
- const counterfire=niklasDefense(T,s,hall.butler.rig,npcPistol,npcPistolSpec,{query:geometryQuery,camera:c,context:activeLayers,
-   damage:damagePlayer,sound:audio.counterCue,contact:audio.shotContact,action:audio.counterCue,ready:controls,
-   onReset:hall.butler.restorePatrol});
- hall.butler.attachDefense(counterfire);
+ const counterfire=npcCounterfire(T,s,viewmodel.npcWeapon,{query:geometryQuery,camera:c,context:activeLayers,
+   damage:damagePlayer,sound:audio.counterCue,contact:audio.shotContact,ready:controls,
+   onReset:n=>{if(n.id==='niklas')hall.butler.restorePatrol();}});
+ const niklas=hall.butler.rig.npcInfo;
+ hall.butler.attachDefense({get active(){return counterfire.isActive(niklas);}});
  const isTouch=()=>document.body.dataset.input==='touch';
  const touchEquipment=bindTouchEquipment({fireButton:$('touch-fire'),switchButton:$('touch-weapon'),reloadButton:$('touch-reload'),
    weaponName:$('touch-weapon-name'),viewmodel,enabled:()=>controls()&&isTouch()});
- const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s,floorHeight,world,garden.festival.archive);
+ const pickups=weaponPickups(T,viewmodel,wc,chapter,geometryQuery,s,floorHeight,world,garden.festival.archive,
+   {worldAt:localWorld,onLand:(at,kind)=>audio.shotContact(at,kind,'surface')});
  const portalAction=$('portal-action'),portalText=$('portal-text');
  const caption=$('moosfunk-caption');
  const questNotice=$('quest-notice'),questResult=$('quest-result'),chokeAt=new T.Vector3(),chokeFrom=new T.Vector3();
@@ -440,20 +443,22 @@ async function start(){
    if(captionId===prisonerCaption)hideCaption();
    prisonerCaption=null;audio.stopPrisoner();
  }
+ const gearAt=()=>{const {mask,layer}=activeLayers();return pickups.target(c,mask,layer);};
  const localTarget=()=>{
    const pos=player.body.position,look=c.getWorldDirection(interactionLook);
-   if(bergInside(pos))return puddle.target(pos,look,false);
+   if(bergInside(pos))return puddle.target(pos,look,false)??gearAt();
    if(pos.y>-.60&&pos.y<1.75){
      const extra=puddle.target(pos,look,true)??weather.target(pos,look);
      if(extra)return extra;
    }
    const access=upper.target(pos,look);
    if(access?.action==='upper-unlock'&&names.target()?.id==='gardenHannes')return null;
-   if(upper.insideAttic(pos))return names.target()?null:upper.atticTarget(pos,look,atticBlocked);
-   if(access||upper.inside(pos)||player.motion.climbing)return access??null;
+   if(upper.insideAttic(pos))return gearAt()??(names.target()?null:upper.atticTarget(pos,look,atticBlocked));
+   if(access||player.motion.climbing)return access??null;
+   if(upper.inside(pos))return gearAt();
    const {layer,mask}=activeLayers();
    const target=(layer===0?(fountain.find?.target(c,geometryQuery)??garden.festival.target(c,geometryQuery,mask,pos)):null)
-     ??pickups.target(c,mask)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
+     ??pickups.target(c,mask,layer)??chapter.target(pos,look)??moosfunk.target(pos,look)??wc.target(pos,look);
    // The console's interaction cone is broader than its face. Focus on
    // Edda takes priority, without making the tape deck itself unavailable.
    return target?.id==='mf-radio'&&names.target()?.id==='guestEdda'?null:target;
@@ -527,14 +532,14 @@ async function start(){
      }
      doorPrompt();refresh();return;
    }
-   if(upper.inside(player.body.position)||player.motion.climbing){
-     const person=hallOrPerson();
-     if(person?.action==='npc-talk'&&!audio.npcTalking(person.id))npcDialogue(names.use(person.id,now));
-     doorPrompt();refresh();return;
-   }
    if(local?.action==='gear-pickup'){
      const notice=pickups.collect(local,isTouch());
      if(notice)showCaption(notice,4200);
+     doorPrompt();refresh();return;
+   }
+   if(upper.inside(player.body.position)||player.motion.climbing){
+     const person=hallOrPerson();
+     if(person?.action==='npc-talk'&&!audio.npcTalking(person.id))npcDialogue(names.use(person.id,now));
      doorPrompt();refresh();return;
    }
    if(local?.action==='festival-playlist'){
@@ -665,6 +670,7 @@ async function start(){
      geometryQuery.invalidateMoving();
      if(counterfire.update(dt,player.body.position))dirty=true;
      if(boxing.update(dt,player.body.position))dirty=true;
+     if(pickups.update(dt,mask))dirty=true;
      if(vitals.tick(dt))paintHealth();
      if(vitals.down){
        pause();document.body.dataset.state='defeated';
@@ -824,7 +830,7 @@ async function start(){
  new ResizeObserver(resize).observe(stage);resize();
  r.shadowMap.needsUpdate=true;
  fountain.syncView?.(c);
- const hideFirstShot=viewmodel.showPrewarmShots(),hideCounterfire=counterfire.warmup();
+ const hideFirstShot=viewmodel.showPrewarmShots(),hideCounterfire=counterfire.warmup(niklas);
  try{draw();}finally{hideFirstShot();hideCounterfire();}
  // Don't schedule another heavy draw underneath the archive's closing stamp.
  dirty=false;

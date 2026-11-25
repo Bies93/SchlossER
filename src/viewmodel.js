@@ -383,9 +383,21 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     if(!style[index]||owned.includes(index))return false;
     owned.push(index);owned.sort((a,b)=>a-b);onAction(style[index].kind,'equip');return true;
   }
-  function pickupModel(index){
-    const device=devices[index];device.animate(10);
-    const copy=device.root.clone();copy.visible=true;return copy;
+  function pickupModel(index,{loaded=true}={}){
+    const device=devices[index];
+    const replica=device.replica?.();
+    (replica??device).animate(10,{loaded});
+    const copy=replica?.root??device.root.clone();copy.visible=true;return copy;
+  }
+  function collectDrop(index,ammo){
+    if(!style[index])return null;
+    const known=owned.includes(index);
+    const count=states[index].receiveDrop(known,ammo);
+    if(!count)return null;
+    if(!known)collect(index);
+    else onAction(style[index].kind,'equip');
+    refresh();
+    return {weapon:!known,count};
   }
   async function prepare(r){
     const vp=r.getViewport(new T.Vector4()),sc=r.getScissor(new T.Vector4()),test=r.getScissorTest(),meshes=[];
@@ -402,9 +414,12 @@ export function makeViewmodel(T,scene,camera,player,world,floorHeight,canvas,isA
     }
   }
   update(performance.now());
-  return {update,draw,preset,stop,collect,pickupModel,prepare,cycle,touchTrigger,touchReady,reload,
+  return {update,draw,preset,stop,collect,collectDrop,pickupModel,prepare,cycle,touchTrigger,touchReady,reload,
     playerHit(side){pitchSpring.push(.63);yawSpring.push(side*.26);rollSpring.push(side*.48);},
-    npcPistol(){const i=style.findIndex(n=>n.kind==='pistol');return {device:devices[i].replica(),spec:style[i]};},
+    npcWeapon(kind){
+      const i=style.findIndex(n=>n.kind===kind);
+      return {device:devices[i].replica(),spec:style[i],bolt:kind==='bow'?rig.bolt.clone():null};
+    },
     hasWeapon:()=>selected>=0&&!swap,
     canReload:()=>selected>=0&&touchReady()&&!states[selected].isLoading&&states[selected].rounds<states[selected].capacity&&states[selected].reserve>0,
     restock(){

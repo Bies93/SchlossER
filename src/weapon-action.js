@@ -59,6 +59,12 @@ export function weaponAction(spec){
   return {fire,reload,update,cancel(){loadingAt=null;queued=false;},
     restock(){const count=Math.max(0,data.reserve-reserve);reserve+=count;return count;},
     addReserve(count){if(Number.isSafeInteger(count)&&count>0)reserve+=count;},
+    receiveDrop(alreadyOwned,count){
+      if(!Number.isSafeInteger(count)||count<=0)return 0;
+      if(alreadyOwned)reserve+=count;
+      else{rounds=Math.min(capacity,count);reserve=count-rounds;}
+      return count;
+    },
     get isLoading(){return loadingAt!==null||queued;},
     get rounds(){return rounds;},get reserve(){return reserve;},get capacity(){return capacity;},
     visual(now){

@@ -48,7 +48,7 @@ export function npcBoxing(T,{context,query,worldAt,floorAt,ready,damage,sound}){
     const p=actor.position;
     active.set(n,{home:resume?.position??p.clone(),yaw:resume?.yaw??actor.rotation.y,shadow:resume?.shadow??n.shadow?.position.clone(),
       shadowYaw:n.shadow?.rotation.y,layer,clock:boxingClock(),t:0,distance:0,lost:0,
-      floor:floorAt(p.x,p.z,p.y),blocked:0,focus:0,pace:0,returning:false});
+      floor:floorAt(p.x,p.z,p.y),blocked:0,focus:0,pace:0,speed:0,returning:false});
     n.hostile=true;
     return true;
   }
@@ -62,7 +62,8 @@ export function npcBoxing(T,{context,query,worldAt,floorAt,ready,damage,sound}){
     return length>.13&&query.trace(ray.set(origin,dir.multiplyScalar(1/length)),length-.12,1<<s.layer,.045,true)===Infinity;
   }
   function move(n,s,yaw,amount){
-    const p=n.actor.position,area=worldAt(p),min=.009;
+    const p=n.actor.position,area=worldAt(p),min=Math.min(.006,amount*.42);
+    if(amount<.0005)return 0;
     for(const offset of offsets){
       const h=yaw+offset;
       Object.assign(step,{x:p.x,y:s.floor+.065,z:p.z,feet:s.floor});
@@ -74,7 +75,7 @@ export function npcBoxing(T,{context,query,worldAt,floorAt,ready,damage,sound}){
           Math.hypot(other.actor.position.x-step.x,other.actor.position.z-step.z)<.47){occupied=true;break;}
       if(occupied)continue;
       const y=floorAt(step.x,step.z,s.floor+.065);
-      if(Math.abs(y-s.floor)>.21)continue;
+      if(!Number.isFinite(y)||Math.abs(y-s.floor)>.21)continue;
       p.set(step.x,n.rig.groundedY(y),step.z);s.floor=y;s.distance+=travel;return travel;
     }
     return 0;
@@ -97,16 +98,18 @@ export function npcBoxing(T,{context,query,worldAt,floorAt,ready,damage,sound}){
       s.t+=dt;
       const dst=s.returning?s.home:body,yaw=Math.atan2(dst.x-p.x,dst.z-p.z);
       const turn=angle(yaw-n.actor.rotation.y);
-      n.actor.rotation.y+=turn*Math.min(1,dt*9.4);
-      s.focus+=((s.returning?0:1)-s.focus)*Math.min(1,dt*7);
+      n.actor.rotation.y+=turn*(1-Math.exp(-dt*(s.pace>.50?7.4:10.2)));
       const hitRange=REACH+(body.eyeHeight<1.15?.03:0);
       const canHit=!s.returning&&ready()&&Math.abs(turn)<.59&&clear(n,s,body,hitRange);
       let travel=0;
-      if(s.t>.34&&clock.mode==='guard'){
+      const mayMove=s.t>.24&&clock.mode==='guard'&&!canHit&&(s.returning||distance>.82);
+      const wanted=mayMove?(s.returning?1.33:2.37)*(.73+.27*Math.max(0,Math.cos(turn))):0;
+      s.speed+=(wanted-s.speed)*(1-Math.exp(-dt*(wanted>s.speed?6.5:11)));
+      if(s.t>.24&&clock.mode==='guard'){
         if(canHit){clock.start();sound('swing',p);}
-        else if(s.returning||distance>.82){
+        else if(mayMove){
           const need=s.returning?fromHome:Math.max(0,distance-.79);
-          travel=move(n,s,yaw,Math.min(need,dt*(s.returning?1.33:2.34)));
+          travel=move(n,s,yaw,Math.min(need,dt*s.speed));
           s.blocked=travel?0:s.blocked+dt;
         }
       }
@@ -116,7 +119,10 @@ export function npcBoxing(T,{context,query,worldAt,floorAt,ready,damage,sound}){
             !clear(n,s,body,hitRange))return;
         damage(clock.side>0?14:12,p);
       });
-      s.pace+=(clamp(travel/Math.max(.001,dt*1.8),0,1)-s.pace)*Math.min(1,dt*13);
+      s.pace+=(clamp(travel/Math.max(.001,dt*2.23),0,1)-s.pace)*(1-Math.exp(-dt*13));
+      const close=clamp((1.53-distance)/.46,0,1);
+      const guard=s.returning?0:clock.mode!=='guard'?1:close*(1-.67*s.pace);
+      s.focus+=(guard-s.focus)*(1-Math.exp(-dt*(guard>s.focus?12:8)));
       n.rig.boxPose(s.t,s.distance,s.pace,s.focus,clock.side,clock.extension());
       if(n.shadow){
         n.shadow.position.set(p.x,s.floor+.01,p.z);n.shadow.rotation.y=n.actor.rotation.y;

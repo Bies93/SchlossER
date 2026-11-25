@@ -44,7 +44,7 @@ export function combatTargets(T,visibility,ghouls,world,floorAt,onDeath,ravens,o
   }
   function finish(n,at,incoming){
     n.rig.reaction(at,planCollapse(n.actor,at,incoming,world,floorAt),incoming);
-    if(n.shadow)n.shadow.visible=false;onDeath?.(n.id);
+    if(n.shadow)n.shadow.visible=false;onDeath?.(n.id,n);
   }
   function collapse(n,at,incoming){
     if(!n?.alive||!n.rig?.npcInfo)return false;

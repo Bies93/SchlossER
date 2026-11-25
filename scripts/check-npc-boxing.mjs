@@ -41,7 +41,7 @@ neighbor.actor.position.set(home.x+3,home.y,home.z);scene.add(neighbor.actor);
 const wall=new T.Mesh(new T.BoxGeometry(6,3,.15),new T.MeshBasicMaterial());
 wall.position.set(home.x,1,home.z+.48);wall.visible=false;scene.add(wall);
 const query=sceneQuery(T,scene,null);query.build();
-const body=new T.Vector3(home.x,0,home.z+2.50);body.eyeHeight=1.67;
+const body=new T.Vector3(home.x,0,home.z+3.50);body.eyeHeight=1.67;
 let layer=0,damage=0;
 const box=npcBoxing(T,{context:()=>({layer}),query,worldAt:()=>world,floorAt:()=>0,ready:()=>true,
   damage:n=>{damage+=n;},sound(){}});
@@ -51,7 +51,17 @@ advance(.6);assert.equal(damage,0);
 const hit=new T.Vector3(home.x,1.23,home.z),dir=new T.Vector3(0,0,-1);
 targets.damage(npc,38,0xffffff,hit,{kind:'pistol'},0,dir);
 assert.ok(npc.alive&&npc.hostile&&!neighbor.hostile,'Nur der überlebende Getroffene wird aggressiv');
-advance(2.5);
+const hands=[];npc.actor.traverse(o=>{if(o.isBone&&/^hand_[lr]$/.test(o.userData.name??o.name))hands.push(o);});
+const handLevel=()=>Math.max(...hands.map(hand=>hand.getWorldPosition(new T.Vector3()).y));
+advance(1.05);
+assert.equal(hands.length,2);
+const height=()=>handLevel()-npc.chest.getWorldPosition(new T.Vector3()).y;
+assert.ok(npc.actor.position.z>home.z+.20&&height()<-.19,
+  `Beim Anlaufen bleiben die Handgelenke unter der Brust: Weg ${(npc.actor.position.z-home.z).toFixed(2)} m, Höhe ${height().toFixed(2)} m`);
+let guard=0;
+for(let i=0;i<60;i++){advance(.024);guard=Math.max(guard,handLevel());}
+assert.ok(guard>npc.chest.getWorldPosition(new T.Vector3()).y-.10,'Boxdeckung erst im Nahbereich');
+advance(.44);
 assert.ok(npc.actor.position.z>home.z+.8&&damage>0,'Überlebender läuft zum Spieler und boxt');
 assert.equal(neighbor.actor.position.z,home.z);
 box.reset();assert.ok(!npc.hostile&&npc.actor.position.equals(home));

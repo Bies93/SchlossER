@@ -1,5 +1,6 @@
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
 import {NPCS} from './npc-lines.js';
+import {npcWeapon} from './npc-loadouts.js';
 
 // GLB templates are loaded once; each actor has an independent skeleton and
 // morph state. Rigs, outfits, profiles and game logic are separate layers.
@@ -769,7 +770,8 @@ export function createHuman(T,id='base'){
     }
     face(t,8.21,Math.min(1,talk+chuckle*.13),.04+chuckle*.13,.075*show-.037*spark,look);
   }
-  const counterGrip=id==='niklas'?grip('r'):null,counterSupport=id==='niklas'?grip('l'):null;
+  const weapon=npcWeapon(id),bowDefense=weapon==='bow';
+  const counterGrip=weapon?grip('r'):null,counterSupport=weapon?grip('l'):null;
   const counterMount=counterGrip?new T.Group():null,handToProp=Q();
   const counterPoint=V(),counterLeft=V(),counterWrist=V(),counterQ=Q(),supportQ=Q(),propQ=Q(),relaxedQ=Q();
   if(counterMount){
@@ -777,17 +779,17 @@ export function createHuman(T,id='base'){
     // right / up / backward axes. The same mount drives both hand contacts.
     handToProp.setFromRotationMatrix(new T.Matrix4().makeBasis(V(-1,0,0),V(0,0,1),V(0,1,0)));
     counterMount.quaternion.copy(handToProp).invert();
-    const propScale=.67;
+    const propScale=bowDefense?.76:.67;
     counterMount.scale.setScalar(propScale);
-    counterMount.position.set(.021,-.087,.024).multiplyScalar(-propScale).applyQuaternion(counterMount.quaternion);
-    counterMount.name='Niklas · gefasste Kompaktpistole';counterMount.visible=false;
+    counterMount.position.set(.021,bowDefense?-.121:-.087,.024).multiplyScalar(-propScale).applyQuaternion(counterMount.quaternion);
+    counterMount.name=bowDefense?'NPC · gefasste Armbrust':'NPC · gefasste Kompaktpistole';counterMount.visible=false;
     counterGrip.socket.add(counterMount);
   }
   const easePose=(a,b,v)=>{const k=clamp((v-a)/(b-a));return k*k*(3-2*k);};
   function counterPose(t,draw,aim,pitch,kick,reload){
     const change=sin(reload*Math.PI)**1.25,breathe=sin(t*2.35)*.004,
       reach=easePose(0,.34,draw),lift=easePose(.23,.73,draw),present=easePose(.57,1,draw),
-      raise=present*aim*(1-change*.79);
+      raise=present*aim*(1-change*.79)*(bowDefense?.85:1);
     torso(-.013*raise,-.027*lift,.030*raise-.019*kick,.043*raise-.070*kick,-.080*raise,
       .045*raise,t,0,-pitch*.58*raise);
     for(const [j,s] of ['l','r'].entries()){
@@ -805,7 +807,7 @@ export function createHuman(T,id='base'){
     }
     const yaw=actor.rotation.y,extension=raise*(1-.14*Math.abs(pitch));
     counterPoint.set(-.227+.017*reach+.056*lift+.098*raise,hipsY-.097+.27*reach+.13*lift+.123*raise+.27*pitch*raise+breathe,
-      .071+.052*reach+.133*lift+.265*extension-kick*.037);
+      .071+.052*reach+.133*lift+(bowDefense?.148:.265)*extension-kick*.037);
     body.localToWorld(counterPoint);
     propQ.setFromEuler(e.set(mix(-1.20+.68*lift,pitch,raise)+kick*.19,yaw+Math.PI-.15*(1-lift),
       -.15*(1-present)+.26*change));
@@ -820,7 +822,7 @@ export function createHuman(T,id='base'){
     counterGrip.wristAt(counterPoint,counterQ,counterWrist).applyMatrix4(worldInverse);
     solve(LIMB.r.arm,counterWrist.x,counterWrist.y,counterWrist.z,-.60,-.79,-.21);
     counterGrip.hold(counterQ,{thumb:.54*reach,index:(.51+.20*kick)*reach,middle:.92*reach,ring:.97*reach,pinky:.93*reach});
-    const join=easePose(.62,.98,draw)*easePose(.25,.72,aim);
+    const join=bowDefense?easePose(.38,.82,draw):easePose(.62,.98,draw)*easePose(.25,.72,aim);
     const support=Math.max(join,easePose(.07,.32,reload)*(1-easePose(.83,1,reload)));
     if(support<.998){
       solve(LIMB.l.arm,.222,hipsY-.149+.049*lift,.027+.033*lift,.57,-.65,-.25);
@@ -831,11 +833,11 @@ export function createHuman(T,id='base'){
       }
     }
     if(support>.001){
-      counterLeft.set(-.051,-.105-.14*change,.013+.053*change);
+      counterLeft.set(-.051,bowDefense?-.079+.15*change:-.105-.14*change,bowDefense?-.282+.145*change:.013+.053*change);
       counterMount.localToWorld(counterLeft);
       if(support<.998)counterLeft.lerp(counterWrist,1-support);
       // Support palm approaches from underneath and closes to the near side.
-      supportQ.setFromEuler(e.set(.02-.18*change,.38,-.24));
+      supportQ.setFromEuler(e.set(bowDefense?-.37-.32*change:.02-.18*change,bowDefense?.76:.38,-.24));
       counterMount.getWorldQuaternion(propQ).multiply(supportQ).multiply(handToProp);
       if(support<.998)propQ.slerp(relaxedQ,1-support);
       counterSupport.wristAt(counterLeft,propQ,counterWrist).applyMatrix4(worldInverse);
@@ -1134,23 +1136,27 @@ export function createHuman(T,id='base'){
     face(t,1.16,grab*(.53+.34*Math.abs(tremor))*(1-.52*fold),.06,0,0,.33*fold);
   }
   function boxPose(t,distance,pace,guard,lead,reach){
-    const w=distance/1.03*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
-    torso(.016*sin(w)*pace,-.026-.044*guard+.016*cos(w*2)*pace,
-      .026*guard+.059*reach*guard,.018+.145*guard+.125*reach*guard,
-      .14*guard-.42*turn+.12*sin(w)*pace,-.055*turn,t,0,-.06*guard);
+    const phase=distance/1.12,w=phase*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
+    torso(.023*sin(w)*pace,-.028-.039*guard-.025*(.5+.5*cos(w*2))*pace,
+      .026*guard+.059*reach*guard,.018+.074*pace+.145*guard+.125*reach*guard,
+      .14*guard-.42*turn+.133*sin(w)*pace,.037*sin(w)*pace-.055*turn,t,0,-.06*guard);
     for(const [j,s] of ['l','r'].entries()){
-      const sign=j===0?1:-1,phase=w+j*Math.PI,a=read('foot_'+s);
-      solve(LIMB[s].leg,a.x+sign*.020*guard,a.y+Math.max(0,cos(phase))*.086*pace,
-        a.z+sign*.091*guard+sin(phase)*.222*pace,sign*.21,0,1);
-      foot('foot_'+s,-cos(phase)*.132*pace,sign*.13*guard);
+      const sign=j===0?1:-1,f=frac(phase+j*.5),stance=.59,u=clamp((f-stance)/(1-stance)),
+        stride=(f<stance?1-2*f/stance:-cos(u*Math.PI))*.327,
+        lift=sin(u*Math.PI)**1.27*.102,a=read('foot_'+s);
+      // Ground phase sweeps back at walking speed; the foot only lifts
+      // during the measured forward swing.
+      solve(LIMB[s].leg,a.x*.91+sign*.034*guard,a.y+lift*pace,
+        a.z+sign*.091*guard+stride*pace,sign*.18,-.075,1);
+      foot('foot_'+s,sin(u*tau)*.19*pace,sign*(.045+.091*guard));
       const jab=sign===lead?reach*guard:0;
-      const x=mix(sign*.235,sign*(.176-.072*jab),guard);
-      const y=mix(hipsY-.145,1.38+.014*pulse+sign*.035+.047*jab,guard);
-      const z=mix(.035-.11*sign*sin(w)*pace,.252+.342*jab,guard);
-      solve(LIMB[s].arm,x,y,z,sign*.86,-.46,-.31);
-      neutralHand(s);rot('hand_'+s,.03-.34*jab,sign*(.055+.48*guard),sign*(.045-.27*guard));
-      curl(s,.36+1.62*guard);
-      for(let k=1;k<=3;k++)rot('thumb_0'+k+'_'+s,.14*guard,sign*.17*guard);
+      const x=mix(sign*(.213+.019*pace),sign*(.176-.072*jab),guard);
+      const y=mix(hipsY-.155+.029*pace*(1+sign*cos(w)),1.38+.014*pulse+sign*.035+.047*jab,guard);
+      const z=mix(.051+.205*sign*cos(w)*pace,.252+.342*jab,guard);
+      solve(LIMB[s].arm,x,y,z,sign*mix(.59,.86,guard),-.45,mix(-.69,-.31,guard));
+      rot('hand_'+s,.025-.34*jab+sign*.045*cos(w)*pace,sign*(.055+.48*guard),sign*(.045-.27*guard));
+      curl(s,.35+1.62*guard);
+      for(let k=1;k<=3;k++)rot('thumb_0'+k+'_'+s,.14*guard,sign*.17*guard,0);
     }
     face(t,2.34,Math.max(0,reach)*.15,.24*guard,0,0,0);
   }

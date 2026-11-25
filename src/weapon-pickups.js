@@ -2,9 +2,13 @@ import {b,p} from './park-wc-layout.js';
 import {WC_LAYER} from './park-stair.js';
 import {CHAPTER_LAYER} from './chapter-layout.js';
 import {GALLERY_PISTOL} from './south-gallery.js';
+import {EQUIPMENT} from './ego-assets.js';
+import {npcActorLayer,npcWeapon} from './npc-loadouts.js';
 
-export function weaponPickups(T,vm,wc,chapter,query,scene,floorHeight,world,archive){
+export function weaponPickups(T,vm,wc,chapter,query,scene,floorHeight,world,archive,{worldAt=()=>world,onLand=()=>{}}={}){
   const items=[],ray=new T.Ray(),v=new T.Vector3(),point=new T.Vector3();
+  const drops=new WeakSet(),falling=new Set(),restBox=new T.Box3();
+  const loot={pistol:3,bow:2};
   function add(index,label,at,rotation,scale,layer,attach,focus,placement){
     const group=new T.Group(),model=vm.pickupModel(index);
     group.name=label+' · Waffenfund';group.userData.noSceneQuery=true;
@@ -72,10 +76,74 @@ export function weaponPickups(T,vm,wc,chapter,query,scene,floorHeight,world,arch
   const supply={id:'gear-ammo',layer:0,group:box,targets:[new T.Vector3(x,y+.25,z+.15)],action:'gear-pickup',
     label:'Munition auffüllen',index:0,refill:true};
   items.push(supply);
-  function target(camera,mask){
+  function drop(n){
+    const kind=npcWeapon(n?.id),index=EQUIPMENT.findIndex(spec=>spec.kind===kind);
+    if(!n||n.alive||index<0||drops.has(n))return null;
+    drops.add(n);
+    const {actor,rig}=n,layer=npcActorLayer(actor),label=EQUIPMENT[index].label;
+    const from=actor.getWorldPosition(new T.Vector3()),start=from.clone();
+    if(rig.counterMount.visible)rig.counterMount.getWorldPosition(start);
+    else{
+      n.chest.getWorldPosition(start);
+      start.y-=.21;
+    }
+    const yaw=actor.rotation.y,collision=worldAt(from);
+    let x=from.x,z=from.z,floor=floorHeight(x,z,from.y);
+    // Drop beside the body, not into the nearest wall, chair or stair void.
+    for(const offset of [1.1,-1.1,0,Math.PI,.55,-.55,2.25,-2.25]){
+      const X=x+Math.sin(yaw+offset)*.60,Z=z+Math.cos(yaw+offset)*.60;
+      if(collision.blocked(X,Z,from.y)||worldAt({x:X,y:from.y,z:Z})!==collision)continue;
+      const Y=floorHeight(X,Z,from.y);
+      if(!Number.isFinite(Y)||Math.abs(Y-floor)>.29)continue;
+      x=X;z=Z;floor=Y;break;
+    }
+    const model=vm.pickupModel(index,{loaded:false}),group=new T.Group();
+    group.name=label+' · fallen gelassen';group.userData.noSceneQuery=true;
+    group.add(model);model.scale.setScalar(kind==='bow'?.84:.85);
+    const roll=kind==='bow'?.08:Math.PI*.49;
+    model.rotation.set(.10,yaw+.58,roll);
+    group.traverse(o=>o.layers.set(layer));
+    group.position.set(x,floor,z);
+    group.updateWorldMatrix(true,true);
+    restBox.setFromObject(model,true);
+    group.position.y+=floor-restBox.min.y+.019;
+    group.updateWorldMatrix(true,true);
+    restBox.setFromObject(model,true);
+    const focus=restBox.getCenter(new T.Vector3()),end=group.position.clone();
+    start.y=Math.max(start.y,end.y+.28);group.position.copy(start);
+    scene.add(group);
+    const item={id:'gear-drop-'+n.id,index,layer,group,room:actor.parent,targets:[focus],
+      action:'gear-pickup',label:label+' aufnehmen',notice:label+' aufgenommen.',ammo:loot[kind],kind,landed:false};
+    items.push(item);
+    falling.add({item,model,start,end,roll,age:0,time:Math.min(.61,Math.sqrt(2*(start.y-end.y)/9.8))});
+    return item;
+  }
+  function update(dt,mask){
+    let changed=false;
+    for(const f of falling){
+      f.age+=dt;
+      const t=Math.min(1,f.age/f.time),{item,model,start,end,roll}=f;
+      item.group.position.lerpVectors(start,end,t);
+      item.group.position.y=start.y+(end.y-start.y)*t*t;
+      model.rotation.x=.10+(1-t)*.49;model.rotation.z=roll+(1-t)*.69;
+      if(t===1){
+        falling.delete(f);item.landed=true;
+        if(mask&(1<<item.layer))onLand(end,item.kind);
+      }
+      changed ||= !!(mask&(1<<item.layer));
+    }
+    // Keep the drop at its world position, but respect room culling.
+    for(const item of items)if(item.ammo&&!item.taken){
+      const show=query.seen(item.room);
+      if(item.group.visible!==show){item.group.visible=show;changed ||= !!(mask&(1<<item.layer));}
+    }
+    return changed;
+  }
+  function target(camera,mask,layer=0){
     camera.getWorldPosition(ray.origin);camera.getWorldDirection(v);
     let winner=null,best=.36;
     for(const item of items){
+      if(item.ammo&&(!item.landed||item.layer!==layer))continue;
       if(!item.group.visible||!(mask&(1<<item.layer))||!query.seen(item.group))continue;
       for(const focus of item.targets){
         point.subVectors(focus,ray.origin);
@@ -91,8 +159,16 @@ export function weaponPickups(T,vm,wc,chapter,query,scene,floorHeight,world,arch
   }
   function collect(item,touch=false){
     if(item?.refill)return vm.restock()?'Munitionsreserve am Übungsstand aufgefüllt.':'Deine Munitionsreserve ist bereits voll.';
+    const instruction=touch?' Mit „Waffe wechseln“ auswählen.':' Mit dem Mausrad auswählen.';
+    if(item?.ammo){
+      if(item.taken||!item.group.visible||!item.landed)return null;
+      const got=vm.collectDrop(item.index,item.ammo);
+      if(!got)return null;
+      item.taken=true;item.group.removeFromParent();item.group.visible=false;
+      return got.weapon?item.notice+instruction:'+'+got.count+' '+(item.kind==='bow'?'Armbrustbolzen':'Pistolenpatronen')+'.';
+    }
     if(!item?.group.visible||!vm.collect(item.index))return null;
-    item.group.visible=false;return item.notice+(touch?' Mit „Waffe wechseln“ auswählen.':' Mit dem Mausrad auswählen.');
+    item.group.visible=false;return item.notice+instruction;
   }
-  return {target,collect};
+  return {target,collect,drop,update};
 }

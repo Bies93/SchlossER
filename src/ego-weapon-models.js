@@ -103,13 +103,15 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
     box(m.polymer,[0,.050,-.288],[.056,.012,.058],.0025);
     iron(spec.sight[2],spec.sight[1],false);
     const root=A.build(),mounted=loadedBolt.clone(),incoming=loadedBolt.clone(),bowPivot=-.430;
+    const movingStart=root.children.length;
     mounted.position.set(0,.055,-.281);root.add(mounted,incoming,...limbs);
-    const strands=[],pin=new T.Vector3(),v=new T.Vector3(),a=new T.Vector3(),up=new T.Vector3(0,1,0);
+    const pin=new T.Vector3(),v=new T.Vector3(),a=new T.Vector3(),up=new T.Vector3(0,1,0);
     const g=new T.CylinderGeometry(1,1,1,7);
-    for(const s of [-1,1]){
-      const string=new T.Mesh(g,m.string);root.add(string);strands.push({o:string,side:s,hinge:limbs[s<0?0:1]});
-    }
-    return {root,left,animate(age,{reload=-1,loaded=true}={}){
+    for(let i=0;i<2;i++)root.add(new T.Mesh(g,m.string));
+    function parts(model,support){
+      const [mounted,incoming,l,r,leftString,rightString]=model.children.slice(movingStart);
+      const strands=[{o:leftString,side:-1,hinge:l},{o:rightString,side:1,hinge:r}];
+      return {root:model,left:support,animate(age,{reload=-1,loaded=true}={}){
       const c=reload>=0?ramp(.27,.72,reload):loaded?1:age<.115?bowCharge(age):0,z=-.480+.330*c;
       const twang=age<.22?Math.sin(age*122)*Math.exp(-age*22)*.011:0;
       pin.set(0,.052+twang*.31,z+twang);
@@ -128,8 +130,10 @@ export function buildWeapon(T,spec,assembly,m,loadedBolt){
         incoming.rotation.set(.09*(1-q),.55*(1-q),-.24*(1-q));
       }
       const reach=ramp(.18,.55,reload)-ramp(.88,1,reload);
-      left.set(-.045*reach,.162*reach,.146*reach);
-    }};
+      support.set(-.045*reach,.162*reach,.146*reach);
+      }};
+    }
+    return {...parts(root,left),replica(){return parts(root.clone(),new T.Vector3());}};
   }
   if(type==='rifle'){
     contactGrip(.023,-.139,m.polymer);

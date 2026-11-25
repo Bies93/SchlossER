@@ -370,6 +370,11 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
       if(sample('rifle_field_'+(1+(shotIndex++%2)),.51*vol,1.13+random()*.10,pan,.27))return;
       grit(sfx,t,.062,.40*vol,330,6050,{attack:.002,pan,wet:.30});
       tone(sfx,t+.003,137,.092,.25*vol,{end:63,attack:.002,pan,wet:.32});
+    }else if(kind.startsWith('bow-')){
+      const shot=kind==='bow-fire',id=shot?'bow_fire_0'+(1+shotIndex++%3):'bow_reload_'+kind.slice(4);
+      if(sample(id,(shot?.56:.31)*vol,.94+random()*.12,pan,.16))return;
+      grit(sfx,t,shot?.049:.092,(shot?.29:.14)*vol,270,3050,{attack:shot?.002:.008,pan,wet:.13});
+      tone(sfx,t+.005,shot?242:318,.065,.098*vol,{end:shot?136:252,attack:.002,pan,wet:.10});
     }else if(kind==='swing'){
       grit(sfx,t,.14,.145*vol,210,1190,{attack:.026,pan,wet:.08});
       tone(sfx,t+.019,96,.088,.057*vol,{end:66,attack:.022,pan,wet:.08});
