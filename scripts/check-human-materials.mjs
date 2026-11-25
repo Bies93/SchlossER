@@ -17,7 +17,7 @@ installHumans(T,scene);
 
 let checked=0;
 for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)]){
-  const rig=createHuman(T,id),{actor,greyScalp}=rig,cloth=[],hair=[];
+  const rig=createHuman(T,id),{actor,costumeScalp}=rig,cloth=[],hair=[];
   actor.traverse(o=>{
     if(!o.isSkinnedMesh)return;
     const {material}=o;
@@ -31,7 +31,8 @@ for(const id of ['base','ghoulA','ghoulB','ghoulC',...Object.keys(NPCS)]){
   if(id==='guestJona')assert.ok(cloth.some(s=>s.includes('float seamPhase=')));
   if(id==='festZwanni')assert.ok(cloth.some(s=>s.includes('float teeth=')&&!s.includes('float seamPhase=')));
   if(id==='festAnni')assert.ok(cloth.some(s=>s.includes('float jersey=')&&!s.includes('float seamPhase=')));
-  if(id==='grey')assert.ok(greyScalp&&hair.length&&hair.every(o=>!o.visible),'Grey ersetzt den alten Kurzhaarschnitt');
+  if(id==='grey'||id.startsWith('info'))assert.ok(costumeScalp&&hair.length&&hair.every(o=>!o.visible),
+    'Die benutzerdefinierte Frisur ersetzt das GLB-Haar vollständig');
   if(id==='labPatient'){
     assert.ok(cloth.some(s=>s.includes('float placket=')&&s.includes('vec3 pants=')),'Bies trägt Hemd und Hose mit separaten dunklen Stoffen');
     assert.ok(hair.some(o=>o.visible&&o.material.customProgramCacheKey().includes('labPatient')),'Bies hat den eigenen Blondton');

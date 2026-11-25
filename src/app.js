@@ -11,6 +11,7 @@ import {addPalaceRavens} from './palace-ravens.js';
 import {addGardenMeditation} from './garden-meditation.js';
 import {addGardenGrey} from './garden-grey.js';
 import {addPlazaMarcel} from './plaza-marcel.js';
+import {addPlazaInfoStand} from './plaza-info-stand.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
 import {sculptureMaterials} from './surface-detail.js';
@@ -189,6 +190,7 @@ async function start(){
  const ravens=addPalaceRavens(T,s,(x,z)=>floorHeight(x,z),audio.raven);
  const meditation=addGardenMeditation(T,s,world,(x,z)=>floorHeight(x,z));
  const marcel=addPlazaMarcel(T,s,world,floorHeight);
+ const infoStand=addPlazaInfoStand(T,s,world,floorHeight);
  const grey=addGardenGrey(T,s,world,(x,z)=>garden.heightAt(x,z)??floorHeight(x,z),audio);
  // Optional effects still prefetch, but slow audio cannot hold up Start.
  void audio.preloadWeapons();
@@ -664,6 +666,7 @@ async function start(){
      if(ravens.update(dt,player.body.position,layer===0))dirty=true;
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
      if(marcel.update(dt,player.body.position,layer===0))dirty=true;
+     if(infoStand.update(dt,player.body.position,layer===0))dirty=true;
      if(grey.update(dt,player.body.position,layer===0,c))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      if(tickFundsache(dt))dirty=true;

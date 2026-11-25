@@ -1,5 +1,6 @@
 import {randomSource} from './surface-detail.js';
 import {weaponSwatch} from './weapon-finishes.js';
+import {scalpFitter} from './scalp-fit.js';
 
 const TAU=Math.PI*2;
 function paint(T,w,h,draw){
@@ -46,7 +47,7 @@ export function greyHair(T,rig){
   };
   const stitch=(a,b,c,d)=>order.push(a,b,c,b,d,c);
   const sm=T.MathUtils.smoothstep,center=p.clone().add(new T.Vector3(0,.052,.005));
-  const scalp=scalpFitter(T,rig.greyScalp,center),dir=new T.Vector3();
+  const scalp=scalpFitter(T,rig.costumeScalp,center),dir=new T.Vector3();
   const sides=72,rows=15,edge=[],above=[];
   const tint=a=>.96+.036*Math.cos(a*11+.4)+.018*Math.cos(a*23);
   for(let i=0;i<=rows;i++){
@@ -124,26 +125,6 @@ export function greyHair(T,rig){
   g.setIndex(order);g.computeVertexNormals();
   const hair=mesh(T,head,g,mat);hair.name='Grey · durchgehendes silbergraues Haar';
   return (t,amount)=>{time.value=t;sway.value=amount;};
-}
-function scalpFitter(T,g,center){
-  const {position:p}=g.attributes,index=g.index,count=index?.count??p.count,triangles=[];
-  const v=new T.Vector3(),h=new T.Vector3(),ray=new T.Ray(center,new T.Vector3());
-  for(let i=0;i<count;i+=3){
-    const ia=index?index.getX(i):i,ib=index?index.getX(i+1):i+1,ic=index?index.getX(i+2):i+2;
-    const a=p.getY(ia),b=p.getY(ib),c=p.getY(ic);
-    if(Math.max(a,b,c)<center.y-.063||Math.min(a,b,c)<center.y-.16)continue;
-    triangles.push([ia,ib,ic].map(j=>new T.Vector3().fromBufferAttribute(p,j)));
-  }
-  return dir=>{
-    const x=.069,y=.095,z=dir.z>0?.099:.100;
-    const ellipse=1/Math.hypot(dir.x/x,dir.y/y,dir.z/z);
-    let radius=0;
-    ray.direction.copy(dir);
-    for(const [a,b,c] of triangles)if(ray.intersectTriangle(a,b,c,false,h)){
-      v.subVectors(h,center);radius=Math.max(radius,v.dot(dir));
-    }
-    return radius>0?Math.min(ellipse+.015,Math.max(ellipse-.012,radius)):ellipse;
-  };
 }
 export function greyCrewNeck(T,rig){
   const chest=rig.costumeMount('spine_03'),g=new T.BufferGeometry(),p=[],uv=[],idx=[];

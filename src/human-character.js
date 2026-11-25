@@ -17,6 +17,9 @@ export const namedHumans=T=>libraries.get(T)?.present??[];
 const cos=Math.cos,sin=Math.sin,tau=2*Math.PI,clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t,frac=x=>x-Math.floor(x);
 const wear={
+  infoHeide:{palette:[0x702438,0x8c3047,0xa54c60],hair:0x8f633e,haircut:true,weather:.11},
+  infoLuisa:{palette:[0x476577,0x323b43,0x53636e],hair:0x9d7a53,haircut:true,weather:.08},
+  infoGrete:{palette:[0x25272b,0xa8a39d,0xb3afaa],hair:0xaf9d7d,haircut:true,size:.948,weather:.12},
   marcel:{palette:[0x524737,0x628275,0xc69354],hair:0x563a2c,weather:.14},
   grey:{bulk:.29,weather:.14,shoe:0x726963},
   festZwanni:{palette:[0x454757,0x4c7c77,0xdfc285],hair:0x412e27,weather:.15,bulk:.47,mess:.47},
@@ -316,18 +319,19 @@ export function createHuman(T,id='base'){
   const lib=libraries.get(T);if(!lib)throw Error('Human GLB not loaded');
   const proto=lib.models.get(id);if(!proto)throw Error('Unknown human: '+id);
   const actor=new T.Group(),body=clone(proto),bones=new Map(),faces=[],meshes=[];
-  const style=wear[id],bulk=style?.bulk??(id==='gardenHannes'?1:0);
-  let greyScalp=null;
-  actor.name=id;actor.add(body);body.scale.multiplyScalar(proto.userData.size??1);
+  const style=wear[id],bulk=style?.bulk??(id==='gardenHannes'?1:0),size=(proto.userData.size??1)*(style?.size??1);
+  let costumeScalp=null;
+  actor.name=id;actor.add(body);body.scale.multiplyScalar(size);
   const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
   body.traverse(o=>{
     if(id.startsWith('berg')&&/^(Insignia|Bortenstreifen|Messinganhänger|Besatz|Stoff)/.test(o.name))o.visible=false;
+    if(id.startsWith('info')&&/^Visitor/.test(o.material?.name??''))o.visible=false;
     if(o.isBone)bones.set(o.userData.name??o.name,o);
     if(o.isSkinnedMesh){
-      if(id==='grey'){
+      if(id==='grey'||style?.haircut){
         const type=o.material.name??'';
         if(/^Hair/.test(type)){o.visible=false;return;}
-        if(/^Skin/.test(type))greyScalp=o.geometry;
+        if(/^Skin/.test(type))costumeScalp=o.geometry;
       }
       if(bulk){
         const type=o.material.name??'';
@@ -446,7 +450,7 @@ export function createHuman(T,id='base'){
     rot('neck_01',-bend*.29,lookX*.44);rot('head',-bend*.45+lookY,lookX*.56,sin(t*.96)*.026);
     body.updateWorldMatrix(true,false);worldInverse.copy(body.matrixWorld).invert();matrixQ(body,bodyQ);
   }
-  const size=proto.userData.size??1,groundedY=y=>y+.003-(proto.userData.soleY??0)*size;
+  const groundedY=y=>y+.003-(proto.userData.soleY??0)*size;
   const anchorA={},anchorB={},ankleGoal=V();
   function walk(t,distance,route,floorY,look,stopBlend,talk=0){
     // Ground anchors are sampled on the actual route, including the curves.
@@ -542,6 +546,27 @@ export function createHuman(T,id='base'){
       rot('hand_'+s,.23+.10*f,sign*.14,.24*sign);curl(s,j===0?.64:1.03);
     }
     face(t,job.length,speech,.08,0,glance);
+  }
+  function infoPose(t,part,glance=0,talk=0){
+    const cycle=frac((t+part*1.88)/(part===1?6.8:8.2)),sm=T.MathUtils.smoothstep;
+    const gesture=(sm(cycle,.13,.28)-sm(cycle,.51,.70))*(part===1?1-.76*talk:1),
+      wave=sin(t*2.65),breath=sin(t*1.63+part),lift=sm(talk,0,.22);
+    const lean=part===1?.08+.096*gesture:.026+.022*breath;
+    torso(.010*sin(t*.66+part),-.025+.006*breath,.022*gesture,lean,
+      .048*sin(t*.77+part),-.032+.02*breath,t,glance,part===1?.21*gesture-.07*lift:-.027*lift);
+    for(const [j,s] of ['l','r'].entries()){
+      const side=j===0?1:-1,a=read('foot_'+s);
+      solve(LIMB[s].leg,a.x*.91+side*.025,a.y,a.z+side*.047,side*.14,0,1);
+      foot('foot_'+s,0,side*.12);
+      let x=side*.211,y=hipsY-.15,z=.074;
+      if(part===0&&j===0){x=.203+.061*gesture;y+=.27*gesture+.12*lift;z+=.164*gesture;}
+      if(part===1){x=side*(.175+.031*gesture);y+=.192+.034*gesture+.010*wave;z+=.20+.094*gesture;}
+      if(part===2&&j===1){x=-.221-.054*gesture;y+=.22*gesture+.087*lift;z+=.142*gesture;}
+      solve(LIMB[s].arm,x,y,z,side*.74,-.53,-.61);
+      const hand=part===1?.21+.13*gesture:.065+.072*gesture;
+      rot('hand_'+s,hand,side*(.08+.14*gesture),side*.13);curl(s,.44+.30*gesture);
+    }
+    face(t,1.42+part*1.51,talk*(.27+.52*Math.abs(sin(t*14.1))),.021,.11+.051*lift,glance);
   }
   function chartPose(pencil){
     const left=grip('l'),right=grip('r'),target=V(),wrist=V();
@@ -1179,7 +1204,7 @@ export function createHuman(T,id='base'){
     return Number.isFinite(nearest)?nearest*side:null;
   }
   pose(0,0,0,0,0,0,.2);
-  const rig={actor,pose,dance,altarWork,deskWork,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
+  const rig={actor,pose,dance,altarWork,deskWork,infoPose,archivePose,chartPose,wardSeat,visitorPose,factoryPose,tavernPose,festivalPose,greyPose,vialSocket:vialGrip?.socket,counterPose,counterMount,chairPose,tankPose,meditate,grip,walk,groundedY,npcInfo,reaction,reactionTick,isReacting,controllable,alive,chokePose,
     boxPose,atStation:()=>alive()&&!npcInfo?.hostile,
     resetBoxPose(){pose(0,0,0,0,0,0,.2);neutralHand('l');neutralHand('r');},
     resetCounterHands(){if(counterMount){neutralHand('l');neutralHand('r');}},
@@ -1190,7 +1215,7 @@ export function createHuman(T,id='base'){
       mount.quaternion.copy(bind.axis).invert();mount.position.copy(bind.at).negate().applyQuaternion(mount.quaternion);
       bones.get(name).add(mount);return mount;
     },
-    restPoint(name){return read(name).clone();},costumeDepth,greyScalp,
+    restPoint(name){return read(name).clone();},costumeDepth,costumeScalp,
     joint(name){return bones.get(name);},hitShapes,shadow(on){for(const m of meshes)m.castShadow=on;}};
   if(npcInfo)npcInfo.rig=rig;
   return rig;
