@@ -1,6 +1,6 @@
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-const rad=Math.PI*2,styles=['Heide · weinrotes Kleid','Luisa · Rippstrick und Jeans','Grete · offene Strickjacke'];
+const rad=Math.PI*2,styles=['Heidi · weinrotes Kleid','Luisa · Rippstrick und Jeans','Greta · offene Strickjacke'];
 const attrs=(T,g,p,uv,ix)=>{
   g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
   g.setIndex(ix);g.computeVertexNormals();return g;
@@ -67,7 +67,7 @@ function material(T,part,extra='body'){
 
 function shoes(T,o,part){
   const m=new T.MeshStandardMaterial({roughness:.81,color:0xffffff});
-  m.name=part===2?'Grete · kobaltblaue Sneaker':'Heide · flache dunkelbraune Lederschuhe';o.material=m;
+  m.name=part===2?'Greta · kobaltblaue Sneaker':'Heidi · flache dunkelbraune Lederschuhe';o.material=m;
   m.customProgramCacheKey=()=> 'info-schuhe-2:'+part;
   m.onBeforeCompile=sh=>{
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 shoeP;')
@@ -130,11 +130,11 @@ export function dressInfoWardrobe(T,rig,part){
       if(j===0&&i<s)ix.push(i,i+s+1,i+1,i+1,i+s+1,i+s+2);
     }
     const beltMat=new T.MeshStandardMaterial({color:0x7b273d,roughness:.75,side:T.DoubleSide});
-    attach(attrs(T,new T.BufferGeometry(),pos,uv,ix),beltMat,sk,wt,'Heide · stoffbezogener Gürtel');
+    attach(attrs(T,new T.BufferGeometry(),pos,uv,ix),beltMat,sk,wt,'Heidi · stoffbezogener Gürtel');
     const chest=rig.costumeMount('spine_01'),front=(beltFront??.113)+.008;
     const buckle=new T.Mesh(new RoundedBoxGeometry(.058,.036,.012,2,.005),
       new T.MeshStandardMaterial({color:0xa76c57,roughness:.60,metalness:.36}));
-    buckle.position.set(.004,y,front);buckle.name='Heide · rechteckige Gürtelschnalle';chest.add(buckle);
+    buckle.position.set(.004,y,front);buckle.name='Heidi · rechteckige Gürtelschnalle';chest.add(buckle);
     const slot=new T.Mesh(new RoundedBoxGeometry(.043,.022,.005,2,.002),beltMat);
     slot.position.copy(buckle.position);slot.position.z+=.006;chest.add(slot);
     return;
@@ -163,7 +163,7 @@ export function dressInfoWardrobe(T,rig,part){
       }
     }
   }
-  attach(attrs(T,new T.BufferGeometry(),pos,uv,ix),sleeveMat,sk,wt,part===1?'Luisa · gestrickte lange Ärmel':'Grete · lange Strickärmel');
+  attach(attrs(T,new T.BufferGeometry(),pos,uv,ix),sleeveMat,sk,wt,part===1?'Luisa · gestrickte lange Ärmel':'Greta · lange Strickärmel');
   if(part===1){
     const p=[],uv=[],ix=[],bones=[],weights=[],s=28,h=rig.restPoint('neck_01').y;
     for(let j=0;j<4;j++)for(let i=0;i<=s;i++){

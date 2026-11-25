@@ -9,7 +9,8 @@ import {addFixedColliders,BOUNDS,PLAYER,insidePerimeter} from '../src/world-layo
 import {RAVEN_PERCHES} from '../src/palace-ravens.js';
 import {PORTALS} from '../src/palace-openings.js';
 import {addPlazaInfoStand,INFO_SITE} from '../src/plaza-info-stand.js';
-import {INFO_MOTTO,PRIDE_TITLE} from '../src/plaza-info-art.js';
+import {INFO_MOTTO,PRIDE_TITLE,CLIMATE_MOTTO,GREENS_LABEL} from '../src/plaza-info-art.js';
+import {INFO_FLAG_SITES} from '../src/plaza-info-flags.js';
 import {npcFocus} from '../src/npc-focus.js';
 
 const written=[];
@@ -30,8 +31,15 @@ assert.ok(root.getObjectByName(INFO_MOTTO)&&written.slice(0,2).join(' ')===INFO_
 assert.ok(root.getObjectByName('Regenbogenschild · '+PRIDE_TITLE)&&written.includes('QUEER IN ERLANGEN'));
 assert.equal(root.children.filter(o=>o.name==='Regenbogenflyer · '+PRIDE_TITLE).length,2);
 assert.equal(root.children.filter(o=>o.name==='Pavillon · grünes Spannfeld').length,4);
+assert.ok(root.getObjectByName(CLIMATE_MOTTO)?.material.map&&written.includes(CLIMATE_MOTTO)&&written.includes(GREENS_LABEL));
+assert.ok(root.getObjectByName(CLIMATE_MOTTO).geometry.attributes.uv.getY(0)<.01,
+  'Der Schriftzug sitzt an der breiten Vorderkante des Dachs');
+const flags=['Stoffflagge · Grüne mit Sonnenblume','Stoffflagge · Inklusive Regenbogenflagge'].map(name=>root.getObjectByName(name));
+assert.ok(flags.every(o=>o?.material.map&&o.userData.noSceneQuery));
+assert.ok(flags[0].parent.position.x<-half&&flags[1].parent.position.x>half);
+for(const site of INFO_FLAG_SITES)assert.ok(world.blocked(x+site.x,z+site.z,0),'Ballastfuß ist solide');
 let balloons=0;root.traverse(o=>{if(o.name==='Luftballon · grünes Herz')balloons++;});assert.equal(balloons,6);
-assert.deepEqual(namedHumans(T).map(n=>n.name),['Heide','Luisa','Grete']);
+assert.deepEqual(namedHumans(T).map(n=>n.name),['Heidi','Luisa','Greta']);
 assert.ok(world.blocked(x,z+1.11,0)&&world.blocked(x-half,z-half,0));
 assert.ok(!world.blocked(x,z-.23,0)&&!world.blocked(x,z+2.05,0));
 for(const [a,b] of RAVEN_PERCHES)assert.ok(!world.blocked(a,b,0));
@@ -54,13 +62,18 @@ for(const a of cast){
   assert.equal(focus.target()?.action,'npc-talk');assert.ok(focus.use(a.npcInfo.id,100)?.line);
 }
 assert.ok(lengths[0]>lengths[1]&&lengths[1]>.35&&lengths[2]<lengths[1]);
-assert.ok(heights[2]<Math.min(heights[0],heights[1])-.055,'Grete ist im Stand etwas kleiner');
-assert.ok(cast[0].rig.actor.getObjectByName('Heide · stoffbezogener Gürtel')?.isSkinnedMesh);
+assert.ok(heights[2]<Math.min(heights[0],heights[1])-.055,'Greta ist im Stand etwas kleiner');
+assert.ok(cast[0].rig.actor.getObjectByName('Heidi · stoffbezogener Gürtel')?.isSkinnedMesh);
 assert.ok(cast[1].rig.actor.getObjectByName('Luisa · gestrickte lange Ärmel')?.isSkinnedMesh);
-assert.ok(cast[2].rig.actor.getObjectByName('Grete · lange Strickärmel')?.isSkinnedMesh);
-let shoes=false;cast[2].rig.actor.traverse(o=>{if(o.material?.name==='Grete · kobaltblaue Sneaker')shoes=true;});assert.ok(shoes);
+assert.ok(cast[2].rig.actor.getObjectByName('Greta · lange Strickärmel')?.isSkinnedMesh);
+let shoes=false;cast[2].rig.actor.traverse(o=>{if(o.material?.name==='Greta · kobaltblaue Sneaker')shoes=true;});assert.ok(shoes);
 assert.ok(!stand.update(.06,{x:99,z:100},true)&&!stand.update(.06,{x,z},false));
 const look=cast[1].rig.joint('head').quaternion.clone();
 for(let i=0;i<12;i++)assert.ok(stand.update(.045,{x:x+.6,z:z+2.1},true));
 assert.ok(cast[1].rig.joint('head').quaternion.angleTo(look)>.01);
-console.log('Drei ansprechbare Figuren, eigenständige Frisuren, Banner, sechs Ballons und freie Hauptachse auf dem Schlossplatz geprüft.');
+for(const flag of flags){
+  const shader={uniforms:{},vertexShader:'#include <common>\n#include <begin_vertex>'};
+  flag.material.onBeforeCompile(shader);
+  assert.ok(shader.uniforms.infoWind.value>0&&shader.vertexShader.includes('freedom*drag'));
+}
+console.log('Infostand: Figuren, Dachaufdruck, beide Flaggen und freie Hauptachse auf dem Schlossplatz geprüft.');

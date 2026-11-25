@@ -11,7 +11,8 @@ export function addPlazaMarcel(T,scene,world,floorAt){
   const rig=createHuman(T,'marcel'),{actor,npcInfo}=rig;
   actor.position.set(x,rig.groundedY(floor),z);actor.rotation.y=yaw;scene.add(actor);
   npcInfo.shadow=contactShadow(T,scene,x,floor+.009,z,.84,.67);
-  world.circle(x,z,.225,p=>rig.atStation()&&Math.abs(floor-p.y)<1.28);
+  world.circle(x,z,.225,p=>rig.atStation()&&!npcInfo.questBusy&&Math.abs(floor-p.y)<1.28&&
+    Math.hypot(actor.position.x-x,actor.position.z-z)<.18);
   const vec=(...p)=>new T.Vector3(...p);
   const mat=(color,roughness=.86,extra={})=>new T.MeshStandardMaterial({color,roughness,...extra});
   function add(holder,geometry,material,p,name){

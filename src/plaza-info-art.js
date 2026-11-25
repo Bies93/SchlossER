@@ -2,6 +2,8 @@ import {randomSource} from './surface-detail.js';
 
 export const INFO_MOTTO='Nie wieder ist jetzt!';
 export const PRIDE_TITLE='Alle willkommen';
+export const CLIMATE_MOTTO='Klimagerechtigkeit!';
+export const GREENS_LABEL='Grüne';
 const tau=2*Math.PI;
 const prideColors=['#c94a49','#da7c3d','#e2ba57','#55945b','#4a76a5','#80578e'];
 
@@ -49,6 +51,63 @@ function pridePrint(T,sign){
   map.name=sign?'Regenbogen · '+PRIDE_TITLE:'Regenbogenflyer · Infos & Austausch';
   return map;
 }
+
+function sunflower(c,x,y,r){
+  c.save();c.translate(x,y);
+  for(let j=0;j<2;j++)for(let i=0;i<17;i++){
+    const a=(i+j*.48)/17*tau;
+    c.save();c.rotate(a);
+    c.fillStyle=j?'#ffe051':i%2?'#ffd43b':'#efbb27';
+    c.beginPath();c.ellipse(0,-r*(j?.66:.77),r*(j?.148:.126),r*(j?.357:.301),0,0,tau);c.fill();c.restore();
+  }
+  c.fillStyle='#675424';c.beginPath();c.arc(0,0,r*.455,0,tau);c.fill();
+  for(let i=0;i<110;i++){
+    const a=i*2.39996323,dist=Math.sqrt(i/110)*r*.419;
+    c.fillStyle=i%3?'#d5a830':'#907038';c.beginPath();c.arc(Math.cos(a)*dist,Math.sin(a)*dist,r*.021,0,tau);c.fill();
+  }
+  c.restore();
+}
+
+function beachFlagArt(T){
+  const green=paint(T,256,672,(c,w,h)=>{
+    c.fillStyle='#128b43';c.fillRect(0,0,w,h);
+    c.fillStyle='#087038';c.fillRect(0,0,10,h);
+    c.fillStyle='#159c46';c.fillRect(w*.68,0,w*.32,h);
+    c.fillStyle='#7ab536';c.fillRect(w*.963,0,w*.037,h);
+    sunflower(c,w*.52,h*.306,76);
+    c.fillStyle='#fff4d8';c.textAlign='center';c.font='bold 69px system-ui';
+    c.fillText(GREENS_LABEL,w*.51,h*.554,w*.91);
+    c.fillStyle='#e6cf4f';c.fillRect(w*.21,h*.583,w*.59,3);
+    flecks(c,w,h,640,2100);
+  });green.name='Beachflag · Sonnenblume und '+GREENS_LABEL;
+  const pride=paint(T,256,672,(c,w,h)=>{
+    for(const [i,col] of ['#d93646','#ed842d','#f1cc40','#268848','#315aae','#86448e'].entries()){
+      c.fillStyle=col;c.fillRect(i*w/6,0,w/6+.6,h);
+    }
+    function chevron(color,edge,point,inset=0){
+      c.fillStyle=color;c.beginPath();c.moveTo(inset,0);c.lineTo(w-inset,0);
+      if(edge>0)c.lineTo(w-inset,edge);
+      c.lineTo(w*.5,point);
+      if(edge>0)c.lineTo(inset,edge);
+      c.closePath();c.fill();
+    }
+    chevron('#231e22',148,272);
+    chevron('#69442c',116,240);
+    chevron('#60c3df',84,208);
+    chevron('#ef9ac1',52,176);
+    chevron('#fff3e3',21,145);
+    chevron('#f8d839',0,112,17);
+    c.strokeStyle='#8d3b93';c.lineWidth=6;c.beginPath();c.arc(w/2,43,24,0,tau);c.stroke();
+    c.strokeStyle='#fffae280';c.lineWidth=1.25;c.strokeRect(3,3,w-6,h-6);
+    flecks(c,w,h,620,2000);
+  });pride.name='Hochformatflagge · Inklusive Pride-Fahne';
+  const roof=paint(T,1024,320,(c,w,h)=>{
+    c.textAlign='center';c.font='900 103px system-ui';c.lineJoin='round';
+    c.lineWidth=5;c.strokeStyle='#204532';c.strokeText(CLIMATE_MOTTO,w/2,298,w*.65);
+    c.fillStyle='#fcf1cf';c.fillText(CLIMATE_MOTTO,w/2,298,w*.65);
+  });roof.name='Dachaufdruck · '+CLIMATE_MOTTO;
+  return {green,pride,roof};
+}
 export function infoArt(T){
   const cloth=paint(T,1024,384,(c,w,h)=>{
     c.fillStyle='#ddd1b1';c.fillRect(0,0,w,h);
@@ -84,5 +143,5 @@ export function infoArt(T){
     c.fillStyle='#ebd8ad';c.fillRect(0,0,w,h);rainbow(c,48,59,32,3.3);
     heart(c,48,69,6,'#a74848');
   });
-  return {cloth,seal,flyer,balloon,prideFlyer:pridePrint(T,false),prideSign:pridePrint(T,true),prideButton};
+  return {cloth,seal,flyer,balloon,prideFlyer:pridePrint(T,false),prideSign:pridePrint(T,true),prideButton,flags:beachFlagArt(T)};
 }

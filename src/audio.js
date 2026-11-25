@@ -378,6 +378,11 @@ export function makeAudio(listener,musicUrl,choirUrl,orbUrl,clubUrl,prisonerUrl,
     }else if(kind==='swing'){
       grit(sfx,t,.14,.145*vol,210,1190,{attack:.026,pan,wet:.08});
       tone(sfx,t+.019,96,.088,.057*vol,{end:66,attack:.022,pan,wet:.08});
+    }else if(kind==='brawl-hit'||kind==='brawl-fall'){
+      const fall=kind==='brawl-fall';
+      if(!sample('impact_soft',(fall?.55:.39)*vol,fall?.84:1.07+random()*.09,pan,.10))
+        grit(sfx,t,fall?.16:.069,(fall?.27:.23)*vol,100,fall?1500:1040,{attack:.003,pan,wet:.07});
+      tone(sfx,t+.008,fall?88:121,fall?.13:.066,.13*vol,{end:fall?44:68,attack:.004,pan,wet:.07});
     }else if(kind==='hurt'){
       tone(sfx,t,84,.13,.235,{end:37,attack:.003,pan:pan*.45,wet:.07});
       grit(sfx,t+.008,.075,.15,92,1340,{attack:.005,pan:pan*.45,wet:.07});

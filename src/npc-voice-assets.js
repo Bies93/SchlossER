@@ -1,6 +1,7 @@
 // Model/dialogue ID -> local, bundled recording.
 export const NPC_VOICE_FILES=Object.freeze({
-  marcel:'dialog-marcel-bestimmung-vl.mp3',
+  marcel:'dialog-marcel-stand-vl.mp3',marcelSuper:'dialog-marcel-super-vl.mp3',
+  infoHeide:'dialog-heidi-flyer-vl.mp3',infoLuisa:'dialog-luisa-herzen-vl.mp3',infoGrete:'dialog-greta-tisch-vl.mp3',
   // Local VoiceDesign takes. Keep stable gameplay IDs for dialogue and FX cues.
   grey:'dialog-chris-frage-vl.mp3',greyGiggle:'dialog-chris-kichern-vl.mp3',
   zwanniFundsache:'zwanni-fundsache-vl.mp3',

@@ -11,6 +11,7 @@ import {addPalaceRavens} from './palace-ravens.js';
 import {addGardenMeditation} from './garden-meditation.js';
 import {addGardenGrey} from './garden-grey.js';
 import {addPlazaMarcel} from './plaza-marcel.js';
+import {marcelStandQuest} from './plaza-marcel-quest.js';
 import {addPlazaInfoStand} from './plaza-info-stand.js';
 import {surfaceLibrary} from './palace.js';
 import {palaceExterior,renewPalaceRoof} from './palace-exterior.js';
@@ -310,6 +311,8 @@ async function start(){
    clearTimeout(questTimer);questResult.textContent=text;questNotice.hidden=false;
    questTimer=setTimeout(()=>{questNotice.hidden=true;},5400);
  }
+ const standQuest=marcelStandQuest(T,marcel,infoStand,{world,floorAt:floorHeight,query:geometryQuery,targets,
+   sound:audio.counterCue,outcome:result=>showQuest(result==='complete'?'Infostand · Marcel ist gefallen.':'Infostand · Die Auseinandersetzung wurde unterbrochen.')});
  const names=npcFocus(T,s,c,player.body,$('npc-name'),()=>activeLayers().mask,geometryQuery);
  let captionTimer=0,captionId=0,chapelTime=null,chapelTake=0;
  function hideCaption(){clearTimeout(captionTimer);captionId++;caption.hidden=true;}
@@ -392,6 +395,13 @@ async function start(){
      resumeMouse=resumeTouch=false;doorPrompt();refresh();
    },
    onReply(speech,reply){
+     if(speech.id==='marcel'&&reply.action==='marcel-stand'){
+       if(standQuest.start()){
+         showQuest('Infostand · Beobachte, was Marcel vorhat.');
+         npcDialogue({...speech,...reply,choices:undefined});
+       }else showQuest('Infostand · Das geht gerade nicht.');
+       names.clear();doorPrompt();refresh();return;
+     }
      if(reply.action==='return-fundsache'||reply.action==='feed-fundsache'){
        endFundsache(speech,reply);return;
      }
@@ -667,6 +677,7 @@ async function start(){
      if(meditation.update(dt,player.body.position,layer===0))dirty=true;
      if(marcel.update(dt,player.body.position,layer===0))dirty=true;
      if(infoStand.update(dt,player.body.position,layer===0))dirty=true;
+     if(standQuest.update(dt,layer===0))dirty=true;
      if(grey.update(dt,player.body.position,layer===0,c))dirty=true;
      if(garden.festival.tick(dt,player.body.position,layer===0,audio.festivalDart))dirty=true;
      if(tickFundsache(dt))dirty=true;

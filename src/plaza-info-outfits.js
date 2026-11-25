@@ -4,9 +4,9 @@ import {bindInfoMesh,dressInfoWardrobe} from './plaza-info-clothes.js';
 
 const tau=2*Math.PI;
 const looks=[
-  {name:'Heide · brustlanges Haar mit Pony',root:0x61422a,tip:0xbc8b4e,length:.337,part:-.18,wave:.006,body:.017},
+  {name:'Heidi · brustlanges Haar mit Pony',root:0x61422a,tip:0xbc8b4e,length:.337,part:-.18,wave:.006,body:.017},
   {name:'Luisa · Mittelscheitel mit honigblonden Spitzen',root:0x685345,tip:0xcba879,length:.219,part:.02,wave:.008,body:.013},
-  {name:'Grete · aschblond, tief gebunden',root:0x8a7d68,tip:0xc1ac86,length:.049,part:-.25,wave:.002,body:.009}
+  {name:'Greta · aschblond, tief gebunden',root:0x8a7d68,tip:0xc1ac86,length:.049,part:-.25,wave:.002,body:.009}
 ];
 
 function strands(T){
@@ -123,7 +123,7 @@ export function standOutfits(T){
     if(tied){
       const mount=rig.costumeMount('head');
       const band=new T.Mesh(new T.TorusGeometry(.021,.0033,7,20),new T.MeshStandardMaterial({color:0x333637,roughness:.92}));
-      band.position.copy(V(.003,-.104,-.081));band.rotation.x=1.09;band.name='Grete · dunkles Haarband';mount.add(band);
+      band.position.copy(V(.003,-.104,-.081));band.rotation.x=1.09;band.name='Greta · dunkles Haarband';mount.add(band);
     }
     return t=>{breeze.value=t*(tied?.65:1);};
   }

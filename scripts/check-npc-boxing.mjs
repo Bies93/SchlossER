@@ -34,7 +34,7 @@ assert.ok(!world.blocked(MARCEL_SITE.x,MARCEL_SITE.z,0));
 assert.ok(Math.hypot(MARCEL_SITE.x,MARCEL_SITE.z-FRIEDRICH.z)<4&&
   Math.hypot(MARCEL_SITE.x-SPAWN.x,MARCEL_SITE.z-SPAWN.z)<13);
 const marcel=addPlazaMarcel(T,scene,world,()=>0),npc=marcel.rig.npcInfo,home=npc.actor.position.clone();
-assert.equal(npc.line,'Ich warte auf Bestimmung!');
+assert.equal(npc.line,'Hey, hilfst du mir die linken Spinner aufzumischen?');
 assert.ok(npc.actor.getObjectByName('Marcel · geflochtener Zopf'));
 const neighbor=createHuman(T,'festAnni').npcInfo;
 neighbor.actor.position.set(home.x+3,home.y,home.z);scene.add(neighbor.actor);

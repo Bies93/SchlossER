@@ -1160,15 +1160,16 @@ export function createHuman(T,id='base'){
     }
     face(t,1.16,grab*(.53+.34*Math.abs(tremor))*(1-.52*fold),.06,0,0,.33*fold);
   }
-  function boxPose(t,distance,pace,guard,lead,reach){
-    const phase=distance/1.12,w=phase*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
+  function boxPose(t,distance,pace,guard,lead,reach,sprint=0){
+    const phase=distance/(1.12+.58*sprint),w=phase*tau,pulse=sin(t*6.3),turn=reach*lead*guard;
+    const run=sprint*pace*(1-guard);
     torso(.023*sin(w)*pace,-.028-.039*guard-.025*(.5+.5*cos(w*2))*pace,
-      .026*guard+.059*reach*guard,.018+.074*pace+.145*guard+.125*reach*guard,
+      .026*guard+.059*reach*guard+.026*run,.018+.074*pace+.145*guard+.125*reach*guard+.13*run,
       .14*guard-.42*turn+.133*sin(w)*pace,.037*sin(w)*pace-.055*turn,t,0,-.06*guard);
     for(const [j,s] of ['l','r'].entries()){
-      const sign=j===0?1:-1,f=frac(phase+j*.5),stance=.59,u=clamp((f-stance)/(1-stance)),
-        stride=(f<stance?1-2*f/stance:-cos(u*Math.PI))*.327,
-        lift=sin(u*Math.PI)**1.27*.102,a=read('foot_'+s);
+      const sign=j===0?1:-1,f=frac(phase+j*.5),stance=.59-.09*sprint,u=clamp((f-stance)/(1-stance)),
+        stride=(f<stance?1-2*f/stance:-cos(u*Math.PI))*(.327+.096*sprint),
+        lift=sin(u*Math.PI)**1.27*(.102+.075*sprint),a=read('foot_'+s);
       // Ground phase sweeps back at walking speed; the foot only lifts
       // during the measured forward swing.
       solve(LIMB[s].leg,a.x*.91+sign*.034*guard,a.y+lift*pace,
@@ -1176,8 +1177,9 @@ export function createHuman(T,id='base'){
       foot('foot_'+s,sin(u*tau)*.19*pace,sign*(.045+.091*guard));
       const jab=sign===lead?reach*guard:0;
       const x=mix(sign*(.213+.019*pace),sign*(.176-.072*jab),guard);
-      const y=mix(hipsY-.155+.029*pace*(1+sign*cos(w)),1.38+.014*pulse+sign*.035+.047*jab,guard);
-      const z=mix(.051+.205*sign*cos(w)*pace,.252+.342*jab,guard);
+      const pump=sign*cos(w);
+      const y=mix(hipsY-.155+.029*pace*(1+pump)+run*(.22+.112*pump),1.38+.014*pulse+sign*.035+.047*jab,guard);
+      const z=mix(.051+.205*pump*pace+run*(.063+.075*pump),.252+.342*jab,guard);
       solve(LIMB[s].arm,x,y,z,sign*mix(.59,.86,guard),-.45,mix(-.69,-.31,guard));
       rot('hand_'+s,.025-.34*jab+sign*.045*cos(w)*pace,sign*(.055+.48*guard),sign*(.045-.27*guard));
       curl(s,.35+1.62*guard);

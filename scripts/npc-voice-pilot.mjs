@@ -38,9 +38,21 @@ const profiles=[
     text:'Aaaah!',targetLufs:-17,peakCeiling:-1.5,finish:'atempo=0.84,',
     direction:'Ein einziger echter kurzer Schreckensschrei eines erwachsenen Mannes. Ein lautes offenes A, das plötzlich ansetzt und dann heiser ausläuft. Keine gesprochenen Wörter, kein Husten, keine Hintergrundgeräusche, kein Hall. Nur dieser eine Schrei.',
     cues:[cue('labPatient',NPCS.labPatient.line,'lab-patient-tobias.mp3')]},
-  {name:'Marcel',take:'marcel-take01',seed:3451,threads:4,
-    direction:'Ein deutscher Mann Mitte dreißig, warme natürliche Stimme, entspannter Berliner Hippie ohne starken Dialekt. Sagt das gelassen und etwas verträumt, beim Wort Bestimmung ganz leicht feierlich. Nur den Satz, klar gesprochen, kein Lachen, kein Hintergrund.',
-    cues:[cue('marcel',NPCS.marcel.line)]},
+  {name:'Marcel',take:'marcel-stand-frage01',seed:3451,threads:4,autoTrim:true,
+    direction:'Ein deutscher Mann Mitte dreißig, warme natürliche Stimme, entspannter Berliner Anklang ohne starken Dialekt. Vertraulich und ein bisschen übermütig, so als würde er jemanden auf dem Platz im Vorbeigehen ansprechen. Die Frage hat einen freundschaftlichen Rhythmus mit einer leichten Betonung auf „hilfst“. Hochdeutsch, keine zusätzlichen Worte, kein Lachen, kein Hintergrund.',
+    cues:[cue('marcel',NPCS.marcel.line,'dialog-marcel-bestimmung-vl.mp3')]},
+  {name:'MarcelSuper',displayName:'Marcel · Zusage',take:'marcel-stand-super01',seed:3451,threads:4,autoTrim:true,targetLufs:-16.5,
+    direction:'Ein deutscher Mann Mitte dreißig, warme natürliche Stimme, entspannter Berliner Anklang ohne starken Dialekt. Ein einziger kurzer, kräftiger und erfreuter Ausruf als spontane Reaktion auf eine Zusage. Das Wort Super klar mit heller Energie ausrufen, nicht singen und nichts hinterher sagen.',
+    cues:[reply(NPCS.marcel,0)]},
+  {name:'Heidi',take:'heidi-stand01',seed:7811,threads:4,autoTrim:true,
+    direction:'Eine erwachsene deutsche Frau, reife warme Altstimme mit leicht rauer, natürlicher Textur. Das erste freundlich im Vorbeigehen, die Thermoskanne am Ende mit trockenem Humor, als müsse sie das am Infotisch öfters sagen. Locker und normal schnell, Hochdeutsch, kein Pathos, kein Hintergrund, keine weiteren Worte.',
+    cues:[cue('infoHeide',NPCS.infoHeide.line)]},
+  {name:'Luisa',take:'luisa-stand01',seed:977,threads:4,autoTrim:true,
+    direction:'Eine junge erwachsene Frau mit heller lebendiger Stimme und natürlichem Hochdeutsch. Leicht stolz auf ihre handbemalten Herzen, am Ende kurze trockene Selbstironie. Kleine authentische Sprechpausen, kein Ansagerton, kein absichtliches Lachen, kein Hintergrund und nur die vorgegebenen Worte.',
+    cues:[cue('infoLuisa',NPCS.infoLuisa.line)]},
+  {name:'Greta',take:'greta-stand01',seed:2249,threads:4,autoTrim:true,
+    direction:'Eine deutsche Frau im mittleren Erwachsenenalter, klare mittlere Sprechlage mit ein wenig tiefer Resonanz und einer sehr leichten fränkischen Färbung. Die Sätze sagt sie trocken und beiläufig, die wacklige Ecke als kurzen geneigten Nachsatz mit hörbarem Schmunzeln. Normale Lautstärke, kein Lachen, kein Hintergrund, nur den Text.',
+    cues:[cue('infoGrete',NPCS.infoGrete.line)]},
   {name:'Niklas',take:'niklas-take02',seed:3817,threads:4,
     direction:'Ein deutscher Mann um die 28, natürliche ungekünstelte Sprechstimme in Hochdeutsch, mittlere Lage, warm und klar. Kein Ansager und kein Flüstern. Im ersten Satz etwas unsicher, im zweiten freundlich enttäuscht, im dritten spontan erleichtert. Wie in einem echten Gespräch, klar und ohne Übertreibung. Kurze Pause nach jedem Satz.',
     cues:[cue(niklas.id,niklas.line,'dialog-niklas-frage-vl.mp3'),reply(niklas,0,'dialog-niklas-antwort-vl.mp3'),cue(reward.clip,reward.line,'niklas-fundsache-vl.mp3')]},
@@ -74,7 +86,7 @@ const cuts={
   bergFritz:[.97,5.35],bergWirt:[0,4.10],
   grey:[0,2.02],greyGiggle:[3.06,3.67],
   festZwanni:[.14,3.43],festZwanniEier:[4.02,6.035],zwanniFundsache:[6.08,7.56],
-  marcel:[0,1.99],labAuer:[.25,4.01],labPatient:[0,.54]
+  labAuer:[.25,4.01],labPatient:[0,.54]
 };
 
 function run(bin,args,capture=false){
@@ -102,8 +114,8 @@ if(command==='synth'){
   const ffmpeg=option||'ffmpeg';
   for(const p of selected)for(const c of p.cues){
     const cut=cuts[c.id],file=NPC_VOICE_FILES[c.id];
-    if(!cut||!file||file===c.original)throw Error('Missing pilot edit for '+c.id);
-    const [start,end]=cut;
+    if((!cut&&!p.autoTrim)||!file||file===c.original)throw Error('Missing pilot edit for '+c.id);
+    const [start,end]=cut??[0,0];
     const input=['-nostdin','-hide_banner','-ss',String(start),'-i',wav(p.take)];
     let duration=end-start,edit=`atrim=duration=${duration.toFixed(4)}`;
     if(p.chant){
@@ -113,7 +125,9 @@ if(command==='synth'){
         '[a][b]concat=n=2:v=0:a=1';
       duration=headEnd-start+(end-tailStart)/rate;
     }
-    const chain=`${edit},highpass=f=65,${p.finish??''}afade=t=in:d=0.009,afade=t=out:st=${(duration-.018).toFixed(4)}:d=0.018`;
+    const trim='silenceremove=start_periods=1:start_duration=0.025:start_threshold=-53dB:start_silence=0.025';
+    const chain=p.autoTrim&&!cut?`highpass=f=65,${trim},areverse,${trim},afade=t=in:d=0.023,areverse,afade=t=in:d=0.008,apad=pad_dur=0.055`:
+      `${edit},highpass=f=65,${p.finish??''}afade=t=in:d=0.009,afade=t=out:st=${(duration-.018).toFixed(4)}:d=0.018`;
     // Measure once, then apply a constant gain: preserve the acting dynamics.
     const report=run(ffmpeg,[...input,'-af',chain+',loudnorm=print_format=json','-f','null','-'],true);
     const {input_i,input_tp}=JSON.parse(report.match(/\{\s*"input_i"[\s\S]*?\}/)[0]);

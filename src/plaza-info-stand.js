@@ -4,7 +4,8 @@ import {createHuman} from './human-character.js';
 import {contactShadow} from './palace-butler.js';
 import {sharedSet} from './surface-detail.js';
 import {standOutfits} from './plaza-info-outfits.js';
-import {INFO_MOTTO,PRIDE_TITLE,infoArt} from './plaza-info-art.js';
+import {addInfoFlags} from './plaza-info-flags.js';
+import {INFO_MOTTO,PRIDE_TITLE,CLIMATE_MOTTO,infoArt} from './plaza-info-art.js';
 
 export const INFO_SITE=Object.freeze({x:-6.8,z:18.85,half:1.38});
 export const INFO_CAST=Object.freeze([
@@ -51,6 +52,15 @@ export function addPlazaInfoStand(T,scene,world,floorAt){
     const roof=add(patch(14,9,(u,v)=>[(2*u-1)*span*(1-.993*v),eave+rise*v-
       (.024+.078*Math.sin(v*Math.PI))*Math.sin(u*Math.PI)*(1-v),span*(1-.993*v)]),tent,0,0,0,'Pavillon · grünes Spannfeld');
     roof.rotation.y=side*TW;roof.castShadow=true;
+    if(side===0){
+      // Project the print in plan so the rows of type do not pinch as the
+      // triangular roof panel narrows near its crown.
+      const g=roof.geometry.clone(),p=g.attributes.position,uv=g.attributes.uv;
+      for(let i=0;i<p.count;i++)uv.setXY(i,.5+p.getX(i)/(2*span),1-p.getZ(i)/span);
+      const print=add(g,M(0xffffff,.94,{map:art.flags.roof,side:T.BackSide,alphaTest:.21,
+        polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-3}),0,.002,0,CLIMATE_MOTTO);
+      print.userData.noSceneQuery=true;
+    }
     const hem=add(patch(14,3,(u,v)=>[(u-.5)*span*2,eave-.024*Math.sin(u*Math.PI)-.165*v-
       .018*v*Math.sin(u*Math.PI),span+.003+.012*Math.sin(u*Math.PI)*v]),tent,0,0,0,'Pavillon · Stoffkante');
     hem.rotation.y=side*TW;
@@ -60,6 +70,7 @@ export function addPlazaInfoStand(T,scene,world,floorAt){
       rod(a,b,r,edge);
     }
   }
+  const windFlags=addInfoFlags(T,root,world,floorAt,art.flags,cloth);
   const onSurface=p=>Math.abs(p.y-y)<1.10;
   for(const X of [-half,half])for(const Z of [-half,half]){
     rod(V(X,.047,Z),V(X,eave-.008,Z),.022,pole).name='Pavillon · Gestänge';
@@ -189,7 +200,8 @@ export function addPlazaInfoStand(T,scene,world,floorAt){
     const X=x+c.x,Z=z+c.z,Y=floorAt(X,Z),rig=createHuman(T,c.id),{actor,npcInfo}=rig;
     scene.add(actor);actor.position.set(X,rig.groundedY(Y),Z);actor.rotation.y=c.yaw;
     npcInfo.shadow=contactShadow(T,scene,X,Y+.009,Z,.73,.66);
-    world.circle(X,Z,.21,p=>rig.atStation()&&Math.abs(p.y-Y)<1.1);
+    world.circle(X,Z,.21,p=>rig.atStation()&&!npcInfo.questBusy&&Math.abs(p.y-Y)<1.1&&
+      Math.hypot(actor.position.x-X,actor.position.z-Z)<.18);
     const hair=dress(rig,i),state={rig,npcInfo,i,hair,time:i*.78,talk:0,look:0};
     npcInfo.speak=(d=2.3)=>{state.talk=d;};
     rig.infoPose(state.time,i);return state;
@@ -199,6 +211,7 @@ export function addPlazaInfoStand(T,scene,world,floorAt){
     if(!surface||Math.hypot(p.x-x,p.z-z)>27)return false;
     acc+=dt;if(acc<1/24)return false;
     const step=acc;acc=0;t+=step;
+    windFlags(t);
     for(const [i,g] of clusters.entries()){
       g.rotation.x=.046*Math.sin(t*1.57+i*1.8);g.rotation.z=.059*Math.sin(t*1.33+i*1.25);
     }

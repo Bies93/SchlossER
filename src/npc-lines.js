@@ -3,10 +3,13 @@
 const niklasReply={clip:'niklasAntwort',line:'Schade, wenn du sie findest, bringe sie mir!'};
 const bonsReply={clip:'bonsSchluchzen',line:'Bons schluchzt.',reaction:'sob',stageDirection:true};
 export const NPCS={
-  infoHeide:{name:'Heide',template:'guestMarlene',line:'Die Flugblätter sind zum Mitnehmen. Die Thermoskanne bleibt hier.'},
+  infoHeide:{name:'Heidi',template:'guestMarlene',line:'Die Flugblätter sind zum Mitnehmen. Die Thermoskanne bleibt hier.'},
   infoLuisa:{name:'Luisa',template:'guestSabine',line:'Die grünen Herzen hab ich alle selber draufgemalt. Bei Nummer fünf war die Luft raus.'},
-  infoGrete:{name:'Grete',template:'guestRike',line:'Den Tisch haben wir seit achtundsechzig. Die wacklige Ecke auch.'},
-  marcel:{name:'Marcel',template:'guestJona',line:'Ich warte auf Bestimmung!'},
+  infoGrete:{name:'Greta',template:'guestRike',line:'Den Tisch haben wir seit achtundsechzig. Die wacklige Ecke auch.'},
+  marcel:{name:'Marcel',template:'guestJona',line:'Hey, hilfst du mir die linken Spinner aufzumischen?',choices:[
+    {label:'Klar!',reply:{action:'marcel-stand',line:'Super!',clip:'marcelSuper'}},
+    {label:'Äh nee, lass mal..'}
+  ]},
   grey:{name:'Chris',template:'clubNiko',line:'Soll ich dir was zeigen?',choices:[
     {label:'Ja, zeig!',reply:{action:'grey-show'}},{label:'Verpiss dich!'}
   ]},
